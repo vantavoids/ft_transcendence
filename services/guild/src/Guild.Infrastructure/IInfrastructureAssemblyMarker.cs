@@ -1,0 +1,3 @@
+﻿namespace Guild.Infrastructure;
+
+public interface IInfrastructureAssemblyMarker;

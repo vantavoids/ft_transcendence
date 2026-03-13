@@ -1,0 +1,6 @@
+@Guild.Presentation_HostAddress = http://localhost:5010
+
+GET {{Guild.Presentation_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
