@@ -1,0 +1,8 @@
+docker_build(
+    'guild-service',
+    context='.',
+    dockerfile='Dockerfile.dev',
+    live_update=[
+        sync('./src', '/app/src'),
+    ],
+)
