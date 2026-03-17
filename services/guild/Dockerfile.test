@@ -7,13 +7,11 @@ COPY src/Guild.Application/Guild.Application.csproj src/Guild.Application/
 COPY src/Guild.Infrastructure/Guild.Infrastructure.csproj src/Guild.Infrastructure/
 COPY src/Guild.Persistence/Guild.Persistence.csproj src/Guild.Persistence/
 COPY src/Guild.Presentation/Guild.Presentation.csproj src/Guild.Presentation/
+COPY tests/Guild.ArchitectureTests/Guild.ArchitectureTests.csproj tests/Guild.ArchitectureTests/
 
-RUN dotnet restore src/Guild.Presentation/Guild.Presentation.csproj
+RUN dotnet restore
 
 COPY src/ src/
+COPY tests/ tests/
 
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Development
-EXPOSE 8080
-
-ENTRYPOINT ["dotnet", "watch", "--project", "src/Guild.Presentation/Guild.Presentation.csproj", "run", "--no-hot-reload", "--no-launch-profile"]
+ENTRYPOINT ["dotnet", "test", "--no-restore", "--logger", "console;verbosity=normal"]

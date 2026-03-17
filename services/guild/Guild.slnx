@@ -7,6 +7,6 @@
         <Project Path="src/Guild.Presentation/Guild.Presentation.csproj"/>
     </Folder>
     <Folder Name="/tests/">
-        <Project Path="tests/Guild.ArchitectureTests/Guild.ArchitectureTests.csproj"/>
+        <Project Path="tests/Guild.ArchitectureTests/Guild.ArchitectureTests.csproj" BuildByDefault="false"/>
     </Folder>
 </Solution>
