@@ -8,14 +8,13 @@ COPY src/Guild.Infrastructure/Guild.Infrastructure.csproj src/Guild.Infrastructu
 COPY src/Guild.Persistence/Guild.Persistence.csproj src/Guild.Persistence/
 COPY src/Guild.Presentation/Guild.Presentation.csproj src/Guild.Presentation/
 
-RUN dotnet restore
+RUN dotnet restore src/Guild.Presentation/Guild.Presentation.csproj
 
 COPY src/ src/
 
 RUN dotnet publish src/Guild.Presentation/Guild.Presentation.csproj \
     -c Release \
-    -o /out \
-    --no-restore
+    -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
