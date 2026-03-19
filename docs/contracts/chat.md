@@ -13,6 +13,12 @@ All REST responses are `application/json`. Errors follow the shape:
 
 All endpoints require `Authorization: Bearer <access_token>`.
 
+> **Storage note:** Chat Service uses **ScyllaDB** (Cassandra-compatible wide-column store).
+> - Channel messages are partitioned by `channel_id`, clustered by `(created_at DESC, id)`.
+> - DM messages are partitioned by `conversation_id` (deterministic UUID derived from the two user IDs), clustered by `(created_at DESC, id)`.
+> - **Pagination is cursor-based using `before_time` (ISO 8601 timestamp) - not offset.** ScyllaDB has no concept of row offsets; all range scans use clustering key bounds.
+> - Edit and delete by message `id` alone require an internal auxiliary lookup (`message_id → channel_id + created_at`). This is transparent to API callers.
+
 ---
 
 ## REST Endpoints
@@ -24,7 +30,7 @@ Fetch paginated message history for a channel.
 **Query params:**
 | Param | Type | Description |
 |-------|------|-------------|
-| `before` | uuid | Cursor - return messages before this message ID |
+| `before_time` | ISO 8601 timestamp | Cursor - return messages with `created_at < before_time`. Use the `created_at` of the oldest message in the previous page. Omit for the first page (returns the most recent messages). |
 | `limit` | int | Number of messages to return (default 50, max 100) |
 
 **Response `200`:**
@@ -41,7 +47,7 @@ Fetch paginated message history for a channel.
 ]
 ```
 
-Messages are returned newest-first.
+Messages are returned newest-first. To load more (scroll up), pass `before_time` = the `created_at` of the last (oldest) message in the current page.
 
 **Errors:**
 | Status | Reason |
@@ -124,7 +130,7 @@ Fetch DM message history with a specific user.
 **Query params:**
 | Param | Type | Description |
 |-------|------|-------------|
-| `before` | uuid | Cursor |
+| `before_time` | ISO 8601 timestamp | Cursor - return messages with `created_at < before_time`. Omit for the first page. |
 | `limit` | int | Default 50, max 100 |
 
 **Response `200`:**
@@ -154,7 +160,9 @@ Connect with the access token:
 wss://<host>/hubs/chat?access_token=<jwt>
 ```
 
-On connect, the server adds the client to all SignalR groups corresponding to the channels they are a member of, plus a personal group for DMs.
+On connect, the server:
+1. Adds the client to all SignalR groups for their guild channels, plus a personal group for DMs.
+2. Checks for a pending incoming call (caller sent `CallOffer` while this user was offline) - if one exists, immediately relays `IncomingCall` to the client so they can answer.
 
 ---
 
@@ -287,11 +295,257 @@ Broadcast to all shared guild members when a user connects or disconnects.
 
 ---
 
+---
+
+## WebRTC Signaling (via SignalR Hub)
+
+Voice and video calls are **1-on-1, peer-to-peer via WebRTC**. The Chat Service hub acts as the signaling server - it relays SDP offers/answers and ICE candidates between the two peers. No media ever touches the server.
+
+### Call flow
+
+```
+Caller                      Chat Hub                     Callee
+  │                             │                            │
+  ├─ CallOffer ────────────────►│                            │
+  │  { callee_id, call_id,      │─── IncomingCall ──────────►│
+  │    sdp, call_type }         │    { caller_id, call_id,   │
+  │                             │      sdp, call_type }      │
+  │                             │                            │
+  │                             │◄── CallAnswer ─────────────┤
+  │◄─── CallAnswered ───────────┤    { call_id, sdp }        │
+  │     { call_id, sdp }        │                            │
+  │                             │                            │
+  ├─ IceCandidate ─────────────►│─── IceCandidate ──────────►│
+  │◄─── IceCandidate ───────────┤◄── IceCandidate ───────────┤
+  │     (relay, both ways)      │    (relay, both ways)      │
+  │                             │                            │
+  │  [P2P connection established - media flows directly]     │
+  │                             │                            │
+  ├─ CallHangup ───────────────►│─── CallHungUp ────────────►│
+     { call_id }                │    { call_id }
+```
+
+If the callee **rejects** the call:
+```
+Callee ── CallReject ──► Hub ── CallRejected ──► Caller
+```
+
+If the callee is **offline or busy**, the Hub immediately replies to the caller with `CallFailed`.
+
+If neither party hangs up within **30 seconds of `IncomingCall`** with no answer, the Hub sends `CallFailed { reason: "timeout" }` to the caller and `CallMissed { call_id, caller_id }` to the callee.
+
+---
+
+### Client → Server (Invocations) - Signaling
+
+#### CallOffer
+
+Initiate a call. Caller generates `call_id` (UUID).
+
+```json
+{
+  "target": "CallOffer",
+  "arguments": [{
+    "callee_id": "<uuid>",
+    "call_id": "<uuid>",
+    "call_type": "video",
+    "sdp": "<SDP offer string>"
+  }]
+}
+```
+
+`call_type`: `"audio"` or `"video"`.
+
+Server actions:
+1. Check callee is not already in a call → if busy, send `CallFailed { call_id, reason: "user_busy" }` to caller
+2. Check callee is connected to hub
+   - **Connected** → relay `IncomingCall` to callee's personal group immediately
+   - **Not connected** → publish `call.incoming` to RabbitMQ `{ call_id, caller_id, callee_id, call_type }`. Notification Service will notify the callee. `IncomingCall` will be relayed when the callee next connects to the hub (see OnConnect above).
+3. Store the pending call state server-side (caller, callee, sdp, call_type)
+4. Start a 2-minute answer timeout - on expiry, send `CallFailed { call_id, reason: "timeout" }` to caller and clear call state
+
+---
+
+#### CallAnswer
+
+Accept an incoming call. Callee responds with their SDP answer.
+
+```json
+{
+  "target": "CallAnswer",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "sdp": "<SDP answer string>"
+  }]
+}
+```
+
+Server relays `CallAnswered` to the caller's personal group.
+
+---
+
+#### CallReject
+
+Decline an incoming call.
+
+```json
+{
+  "target": "CallReject",
+  "arguments": [{
+    "call_id": "<uuid>"
+  }]
+}
+```
+
+Server relays `CallRejected` to the caller's personal group.
+
+---
+
+#### CallHangup
+
+End an ongoing or ringing call (usable by either party at any point after `CallOffer`).
+
+```json
+{
+  "target": "CallHangup",
+  "arguments": [{
+    "call_id": "<uuid>"
+  }]
+}
+```
+
+Server relays `CallHungUp` to the other party's personal group and clears call state.
+
+---
+
+#### IceCandidate
+
+Relay a trickle ICE candidate to the remote peer.
+
+```json
+{
+  "target": "IceCandidate",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "candidate": "<ICE candidate string>",
+    "sdp_mid": "<string>",
+    "sdp_mline_index": 0
+  }]
+}
+```
+
+Server relays `IceCandidate` verbatim to the other party's personal group.
+
+---
+
+### Server → Client (Events) - Signaling
+
+#### IncomingCall
+
+Sent to the callee's personal group when someone calls them.
+
+```json
+{
+  "target": "IncomingCall",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "caller_id": "<uuid>",
+    "call_type": "video",
+    "sdp": "<SDP offer string>"
+  }]
+}
+```
+
+---
+
+#### CallAnswered
+
+Sent to the caller when the callee accepts.
+
+```json
+{
+  "target": "CallAnswered",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "sdp": "<SDP answer string>"
+  }]
+}
+```
+
+---
+
+#### CallRejected
+
+Sent to the caller when the callee declines.
+
+```json
+{
+  "target": "CallRejected",
+  "arguments": [{
+    "call_id": "<uuid>"
+  }]
+}
+```
+
+---
+
+#### CallHungUp
+
+Sent to the other party when someone ends the call.
+
+```json
+{
+  "target": "CallHungUp",
+  "arguments": [{
+    "call_id": "<uuid>"
+  }]
+}
+```
+
+---
+
+#### CallFailed
+
+Sent to the caller when the call cannot be established (callee offline, busy, or timeout).
+
+```json
+{
+  "target": "CallFailed",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "reason": "user_offline"
+  }]
+}
+```
+
+`reason`: `"user_offline"` | `"user_busy"` | `"timeout"`
+
+---
+
+#### IceCandidate
+
+Relayed verbatim from the remote peer.
+
+```json
+{
+  "target": "IceCandidate",
+  "arguments": [{
+    "call_id": "<uuid>",
+    "candidate": "<ICE candidate string>",
+    "sdp_mid": "<string>",
+    "sdp_mline_index": 0
+  }]
+}
+```
+
+---
+
 ## RabbitMQ Events Published
 
 | Event | Payload | Trigger |
 |-------|---------|---------|
 | `chat.message_sent` | `{ channel_id, guild_id, author_id, content, mentions: [uuid] }` | Message sent in a channel |
+| `call.incoming` | `{ call_id, caller_id, callee_id, call_type }` | Callee was offline when `CallOffer` arrived - Notification Service notifies them to open the app |
 | `user.online` | `{ user_id }` | Client connects to hub |
 | `user.offline` | `{ user_id }` | Client disconnects from hub |
 
