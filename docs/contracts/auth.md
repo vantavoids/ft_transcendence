@@ -164,7 +164,6 @@ Access tokens include:
 ```json
 {
   "sub": "<user_id>",
-  "email": "user@example.com",
   "iat": 1710000000,
   "exp": 1710000900
 }
