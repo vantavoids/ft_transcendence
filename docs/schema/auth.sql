@@ -1,0 +1,49 @@
+-- Auth Service — PostgreSQL schema
+-- Owns: credentials (email/password or OAuth), refresh tokens, account lifecycle
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE users_auth (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- email + password login (NULL for OAuth-only accounts)
+    email                       VARCHAR(255) UNIQUE,
+    password_hash               VARCHAR(255),
+    email_verified              BOOLEAN     NOT NULL DEFAULT FALSE,
+
+    -- OAuth login (NULL for email+password accounts)
+    oauth_provider              VARCHAR(32),   -- 'google' | 'github' | '42'
+    oauth_id                    VARCHAR(255),
+
+    -- refresh token (single active token per user; rotated on every use)
+    -- stored as bcrypt hash to prevent exposure if DB is read
+    refresh_token_hash          VARCHAR(255),
+    refresh_token_issued_at     TIMESTAMPTZ,
+    refresh_token_expires_at    TIMESTAMPTZ,
+    refresh_token_revoked       BOOLEAN     NOT NULL DEFAULT FALSE,
+
+    -- account lifecycle
+    deleted_at                  TIMESTAMPTZ,   -- soft-delete; NULL = active
+
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- every row must have either email/password OR OAuth credentials
+    CONSTRAINT email_or_oauth CHECK (
+        (email IS NOT NULL AND password_hash IS NOT NULL)
+        OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)
+    ),
+    CONSTRAINT unique_oauth UNIQUE (oauth_provider, oauth_id)
+);
+
+-- fast login by email
+CREATE INDEX idx_users_auth_email         ON users_auth (email)
+    WHERE deleted_at IS NULL;
+
+-- fast OAuth lookup
+CREATE INDEX idx_users_auth_oauth         ON users_auth (oauth_provider, oauth_id)
+    WHERE deleted_at IS NULL;
+
+-- fast token validation on every refresh (avoids full table scan)
+CREATE INDEX idx_users_auth_refresh_token ON users_auth (refresh_token_hash)
+    WHERE refresh_token_revoked = FALSE AND deleted_at IS NULL;

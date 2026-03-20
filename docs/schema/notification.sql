@@ -1,0 +1,79 @@
+-- Notification Service — PostgreSQL schema
+-- Owns: notification rows, read/dismiss status, per-user notification preferences
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TYPE notification_type AS ENUM (
+    'mention',          -- user was @mentioned in a channel message
+    'dm',               -- user received a direct message
+    'friend_request',   -- someone sent a friend request
+    'guild_invite',     -- user was invited to a guild
+    'guild_welcome',    -- welcome notification after joining a guild
+    'incoming_call'     -- someone called while user was offline; open app to pick up
+);
+
+CREATE TABLE notifications (
+    id              UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID                NOT NULL,   -- logical ref → users_profile.id
+    type            notification_type   NOT NULL,
+    -- actor_id: the user who caused this notification
+    --   mention       → author_id of the message
+    --   dm            → sender_id
+    --   friend_request → from_user_id
+    --   guild_invite  → invited_by_user_id
+    --   guild_welcome → NULL (system event)
+    -- Used to suppress notifications from blocked users.
+    actor_id        UUID,
+    -- source_id: the entity this notification links to (for deep-linking)
+    --   mention       → message_id
+    --   dm            → message_id
+    --   friend_request → friendship row id
+    --   guild_invite  → guild_id
+    --   guild_welcome → guild_id
+    source_id       UUID,
+    -- flexible per-type extra payload (see actor_id comment for shape per type)
+    --   mention       → { channel_id, guild_id, preview }
+    --   dm            → { preview }
+    --   friend_request → {}
+    --   guild_invite  → { guild_name }
+    --   guild_welcome → { guild_name }
+    payload         JSONB               NOT NULL DEFAULT '{}',
+    read            BOOLEAN             NOT NULL DEFAULT FALSE,
+    -- distinct from read: user actively dismissed the notification from the panel
+    dismissed_at    TIMESTAMPTZ,
+    -- optional TTL for transient notifications (e.g. expired guild invite)
+    expires_at      TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+-- hot path: fetch all unread notifications on login
+CREATE INDEX idx_notifications_user_unread ON notifications (user_id, created_at DESC)
+    WHERE read = FALSE AND dismissed_at IS NULL;
+
+-- general paginated fetch (all notifications for a user)
+CREATE INDEX idx_notifications_user_all    ON notifications (user_id, created_at DESC);
+
+-- filter by type (e.g. Discord's "mentions" tab)
+CREATE INDEX idx_notifications_user_type   ON notifications (user_id, type, created_at DESC);
+
+-- suppress notifications from a blocked actor (query before inserting)
+CREATE INDEX idx_notifications_actor       ON notifications (actor_id);
+
+-- -----------------------------------------------------------------------
+-- Notification preferences — per-user mute settings for guilds / channels
+-- The Notification Service checks this table before inserting a notification.
+-- -----------------------------------------------------------------------
+
+CREATE TABLE notification_preferences (
+    user_id     UUID        NOT NULL,   -- logical ref → users_profile.id
+    -- 'guild' or 'channel'
+    scope_type  VARCHAR(8)  NOT NULL CHECK (scope_type IN ('guild', 'channel')),
+    scope_id    UUID        NOT NULL,   -- guild_id or channel_id
+    muted       BOOLEAN     NOT NULL DEFAULT FALSE,
+    -- NULL = muted indefinitely
+    muted_until TIMESTAMPTZ,
+
+    PRIMARY KEY (user_id, scope_type, scope_id)
+);
+
+CREATE INDEX idx_notif_prefs_scope ON notification_preferences (scope_type, scope_id);
