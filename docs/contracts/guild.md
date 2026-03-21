@@ -163,7 +163,8 @@ List guild members. Caller must be a member.
 [
   {
     "user_id": "<uuid>",
-    "role_id": "<uuid>",
+    "nickname": "Vanta",
+    "roles": ["<uuid>"],
     "joined_at": "2026-03-09T00:00:00Z"
   }
 ]
@@ -184,6 +185,23 @@ Kick a member. Requires `KICK_MEMBERS` permission. Cannot kick the owner or some
 | 404 | Guild or member not found |
 
 **Side effects:** Publishes `guild.member_left { guild_id, user_id }` to RabbitMQ.
+
+---
+
+### GET /guilds/{id}/bans
+
+List banned users. Requires `BAN_MEMBERS` permission.
+
+**Response `200`:**
+```json
+[
+  {
+    "user_id": "<uuid>",
+    "reason": "il a segfault sur des double quotes le con",
+    "banned_at": "2026-03-09T00:00:00Z"
+  }
+]
+```
 
 ---
 
@@ -279,11 +297,15 @@ Create a channel. Requires `MANAGE_CHANNELS` permission.
 {
   "name": "general",
   "type": "text",
-  "position": 0
+  "category_id": "<uuid>",
+  "position": 0,
+  "topic": "general chat",
+  "is_nsfw": false,
+  "slowmode_seconds": 0
 }
 ```
 
-`type` must be `text` or `announcement`.
+`type` must be `text`, `announcement`, or `voice`. `category_id` is optional (null = uncategorised).
 
 **Response `201`:** Channel object.
 
@@ -314,6 +336,271 @@ Update a channel. Requires `MANAGE_CHANNELS` permission.
 ### DELETE /guilds/{id}/channels/{channel_id}
 
 Delete a channel. Requires `MANAGE_CHANNELS` permission.
+
+**Response `204`:** No content.
+
+---
+
+## Channel Category Endpoints
+
+### POST /guilds/{id}/categories
+
+Create a channel category. Requires `MANAGE_CHANNELS` permission.
+
+**Request body:**
+```json
+{
+  "name": "Text Channels",
+  "position": 0
+}
+```
+
+**Response `201`:** Category object `{ id, guild_id, name, position }`.
+
+---
+
+### PATCH /guilds/{id}/categories/{category_id}
+
+Update a category name or position. Requires `MANAGE_CHANNELS` permission.
+
+**Request body** (all optional):
+```json
+{
+  "name": "Voice Channels",
+  "position": 1
+}
+```
+
+**Response `200`:** Updated category object.
+
+---
+
+### DELETE /guilds/{id}/categories/{category_id}
+
+Delete a category. Channels in it become uncategorised. Requires `MANAGE_CHANNELS` permission.
+
+**Response `204`:** No content.
+
+---
+
+## Ownership
+
+### PATCH /guilds/{id}/owner
+
+Transfer guild ownership to another member. Owner only.
+
+**Request body:**
+```json
+{
+  "new_owner_id": "<uuid>"
+}
+```
+
+**Response `200`:** Updated guild object.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Not the owner |
+| 404 | Target user is not a member |
+
+---
+
+## Permission Bitmask
+
+Each role has a `permissions` field - a `BIGINT` bitmask. Bit positions:
+
+| Permission | Bit | Value |
+|------------|-----|-------|
+| `VIEW_CHANNELS` | 0 | `1` |
+| `SEND_MESSAGES` | 1 | `2` |
+| `MANAGE_MESSAGES` | 2 | `4` |
+| `MANAGE_CHANNELS` | 3 | `8` |
+| `KICK_MEMBERS` | 4 | `16` |
+| `BAN_MEMBERS` | 5 | `32` |
+| `CREATE_INVITE` | 6 | `64` |
+| `MANAGE_ROLES` | 7 | `128` |
+| `MANAGE_GUILD` | 8 | `256` |
+| `ADMINISTRATOR` | 9 | `512` |
+
+`ADMINISTRATOR` grants all permissions regardless of other bits. The guild owner always has `ADMINISTRATOR`.
+
+---
+
+## Role Endpoints
+
+### GET /guilds/{id}/roles
+
+List all roles in a guild. Caller must be a member. Returns roles in priority order (position ascending - higher position = lower priority).
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<uuid>",
+    "guild_id": "<uuid>",
+    "name": "Moderator",
+    "color": "#FF5733",
+    "permissions": 52,
+    "position": 1,
+    "is_hoisted": true,
+    "is_mentionable": false,
+    "is_default": false
+  }
+]
+```
+
+---
+
+### POST /guilds/{id}/roles
+
+Create a new role. Requires `MANAGE_ROLES` permission.
+
+**Request body:**
+```json
+{
+  "name": "Moderator",
+  "color": "#FF5733",
+  "permissions": 52,
+  "is_hoisted": true,
+  "is_mentionable": false
+}
+```
+
+- `name`: required, 1–100 chars
+- `permissions`: bitmask (default `0`). Cannot grant permissions the caller doesn't have.
+
+**Response `201`:** Role object.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid name, color, or permissions value |
+| 403 | Missing `MANAGE_ROLES` or attempting to grant permissions caller lacks |
+
+---
+
+### PATCH /guilds/{id}/roles/{role_id}
+
+Update a role. Requires `MANAGE_ROLES` permission. Cannot grant permissions the caller doesn't have.
+
+**Request body** (all optional):
+```json
+{
+  "name": "Senior Moderator",
+  "color": "#3498DB",
+  "permissions": 60,
+  "position": 2,
+  "is_hoisted": true,
+  "is_mentionable": true
+}
+```
+
+**Response `200`:** Updated role object.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Missing `MANAGE_ROLES` or attempting to grant permissions caller lacks |
+| 404 | Role not found |
+
+---
+
+### DELETE /guilds/{id}/roles/{role_id}
+
+Delete a role. Requires `MANAGE_ROLES` permission. Cannot delete the default `@everyone` role.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Cannot delete the default role |
+| 403 | Missing `MANAGE_ROLES` |
+| 404 | Role not found |
+
+---
+
+## Role Assignment Endpoints
+
+### GET /guilds/{id}/members/{user_id}/permissions
+
+Get the effective permission bitmask for a user in a guild - resolves all their roles, channel overwrites are not applied here (use the internal endpoint for that).
+
+**Response `200`:**
+```json
+{
+  "user_id": "<uuid>",
+  "guild_id": "<uuid>",
+  "roles": [
+    { "id": "<uuid>", "name": "Moderator", "permissions": 52 }
+  ],
+  "effective_permissions": 52,
+  "is_owner": false
+}
+```
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | User is not a member of this guild |
+
+---
+
+### PUT /guilds/{id}/members/{user_id}/roles/{role_id}
+
+Assign a role to a guild member. Requires `MANAGE_ROLES`. Cannot assign a role with permissions the caller doesn't have.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Missing `MANAGE_ROLES` or role has higher permissions than caller |
+| 404 | User not a member, or role not found in this guild |
+
+---
+
+### DELETE /guilds/{id}/members/{user_id}/roles/{role_id}
+
+Remove a role from a guild member. Requires `MANAGE_ROLES`. Cannot remove the default `@everyone` role.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Missing `MANAGE_ROLES` |
+| 404 | User, role, or assignment not found |
+
+---
+
+## Channel Permission Overwrites
+
+Per-channel allow/deny overrides for a specific role or user.
+
+### PUT /channels/{channel_id}/permissions/{target_id}
+
+Create or update a permission overwrite. Requires `MANAGE_CHANNELS`.
+
+**Request body:**
+```json
+{
+  "target_type": "role",
+  "allow": 2,
+  "deny": 0
+}
+```
+
+`target_type`: `"role"` or `"user"`. `target_id` is the role or user UUID.
+
+**Response `204`:** No content.
+
+---
+
+### DELETE /channels/{channel_id}/permissions/{target_id}
+
+Delete a permission overwrite. Requires `MANAGE_CHANNELS`.
 
 **Response `204`:** No content.
 
