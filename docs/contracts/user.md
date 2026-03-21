@@ -1,4 +1,4 @@
-# API Contract — User Service
+# API Contract - User Service
 
 Base path: `/users`
 
@@ -24,8 +24,10 @@ Get the authenticated user's own profile.
   "username": "spuffoon238",
   "display_name": "Spuffie",
   "avatar_url": "https://...",
+  "banner_url": "https://...",
   "status": "online",
-  "bio": "..."
+  "bio": "...",
+  "last_seen_at": "2026-03-09T12:00:00Z"
 }
 ```
 
@@ -42,8 +44,10 @@ Get a user's public profile by ID.
   "username": "skaf_angel",
   "display_name": "Skaf",
   "avatar_url": "https://...",
-  "status": "online",
-  "bio": "..."
+  "banner_url": "https://...",
+  "status": "offline",
+  "bio": "...",
+  "last_seen_at": "2026-03-09T11:30:00Z"
 }
 ```
 
@@ -194,6 +198,53 @@ Remove a friend or decline/cancel a friend request.
 |--------|--------|
 | 403 | Not a participant in this friendship |
 | 404 | Friendship not found |
+
+---
+
+## Block Endpoints
+
+### POST /users/{id}/block
+
+Block a user. This is unilateral - the blocked user is not notified.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Cannot block yourself |
+| 404 | User not found |
+| 409 | Already blocking this user |
+
+---
+
+### DELETE /users/{id}/block
+
+Unblock a user.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | Block not found |
+
+---
+
+### GET /users/me/blocks
+
+List all users the authenticated user has blocked.
+
+**Response `200`:**
+```json
+[
+  {
+    "user_id": "<uuid>",
+    "username": "annoying_user",
+    "blocked_at": "2026-03-09T00:00:00Z"
+  }
+]
+```
 
 ---
 
