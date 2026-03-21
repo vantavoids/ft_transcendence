@@ -53,6 +53,8 @@ Fetch notifications for the authenticated user.
 | `dm` | `sender_id`, `preview` |
 | `friend_request` | `from_user_id` |
 | `guild_invite` | `guild_id`, `guild_name`, `from_user_id` |
+| `guild_welcome` | `guild_id`, `guild_name` |
+| `incoming_call` | `call_type` (`"audio"` or `"video"`) |
 
 ---
 
@@ -120,7 +122,8 @@ If the user is not connected, the notification row stays in DB and is fetched on
 | Event | Trigger | Notification created |
 |-------|---------|---------------------|
 | `chat.message_sent` | User is in `mentions[]` | `type: mention` for each mentioned user |
+| `call.incoming` | Always | `type: incoming_call` for `callee_id` - prompts them to open the app |
 | `friend.request_sent` | Always | `type: friend_request` for `to_user_id` |
 | `guild.invite_created` | Always | `type: guild_invite` for `invited_user_id` |
-| `guild.member_joined` | Always | `type: guild_invite` welcome notification for new member |
+| `guild.member_joined` | Always | `type: guild_welcome` for the joining user |
 
