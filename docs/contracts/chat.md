@@ -295,8 +295,6 @@ Broadcast to all shared guild members when a user connects or disconnects.
 
 ---
 
----
-
 ## WebRTC Signaling (via SignalR Hub)
 
 Voice and video calls are **1-on-1, peer-to-peer via WebRTC**. The Chat Service hub acts as the signaling server - it relays SDP offers/answers and ICE candidates between the two peers. No media ever touches the server.
@@ -330,9 +328,11 @@ If the callee **rejects** the call:
 Callee ── CallReject ──► Hub ── CallRejected ──► Caller
 ```
 
-If the callee is **offline or busy**, the Hub immediately replies to the caller with `CallFailed`.
+If the callee is **busy**, the Hub immediately replies to the caller with `CallFailed { reason: "user_busy" }`.
 
-If neither party hangs up within **30 seconds of `IncomingCall`** with no answer, the Hub sends `CallFailed { reason: "timeout" }` to the caller and `CallMissed { call_id, caller_id }` to the callee.
+If the callee is **offline**, the Hub publishes `call.incoming` to RabbitMQ (Notification Service notifies them) and keeps the call pending. `IncomingCall` is relayed when the callee next connects to the hub.
+
+If the callee does not answer within **2 minutes**, the Hub sends `CallFailed { reason: "timeout" }` to the caller and clears call state.
 
 ---
 
@@ -506,19 +506,19 @@ Sent to the other party when someone ends the call.
 
 #### CallFailed
 
-Sent to the caller when the call cannot be established (callee offline, busy, or timeout).
+Sent to the caller when the call cannot be established (callee busy or timeout).
 
 ```json
 {
   "target": "CallFailed",
   "arguments": [{
     "call_id": "<uuid>",
-    "reason": "user_offline"
+    "reason": "user_busy"
   }]
 }
 ```
 
-`reason`: `"user_offline"` | `"user_busy"` | `"timeout"`
+`reason`: `"user_busy"` | `"timeout"`
 
 ---
 
