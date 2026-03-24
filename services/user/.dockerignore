@@ -1,0 +1,23 @@
+.git
+.gitignore
+**/.DS_Store
+
+# Rust build artifacts
+target
+**/target
+
+# Cargo registry/git caches
+**/.cargo
+**/Cargo.toml.bak
+
+# Env / secrets
+.env
+.env.*
+
+# IDE / editor
+.vscode
+.idea
+
+# Tests / coverage / logs
+**/*.log
+coverage
