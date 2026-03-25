@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +5,22 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum NotificationType {
+	MENTION
+	DM
+	FRIEND_REQUEST
+	GUILD_INVITE
+}
+
+model NotificationEntity {
+  id					String		@id	@default(uuid())
+  userId			String
+	type				NotificationType
+	payload			Json
+	read				Boolean		@default(false)
+	created_at	DateTime	@default(now())
+
+	@@index([userId, read])
 }
