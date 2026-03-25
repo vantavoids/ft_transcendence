@@ -1,0 +1,13 @@
+services:
+  guild:
+    container_name: thing-guild
+    image: guild-service
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__VirtualHost: /
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
+      Services__UserService: http://user:8080
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
