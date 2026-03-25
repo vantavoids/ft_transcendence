@@ -29,7 +29,7 @@ export class GuildInvitePayload {
 
 export type NotificationPayload = MentionPayload | DmPayload | FriendRequestPayload | GuildInvitePayload;
 
-export class Notification {
+export class NotificationEntity {
     id: string;
     userId: string;
     type: NotificationType;

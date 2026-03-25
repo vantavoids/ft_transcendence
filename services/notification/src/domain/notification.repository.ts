@@ -1,5 +1,7 @@
+import { NotificationEntity } from "./notification.entity";
+
 export interface INotificationRepository {
-	getNotif(userId: string): Promise<Notification[]>;
-	readNotif(notifId: string): Promise<Notification>;
+	get(userId: string): Promise<NotificationEntity[]>;
+	read(notifId: string): Promise<NotificationEntity>;
 	readAll(userId: string): Promise<number>;
 }

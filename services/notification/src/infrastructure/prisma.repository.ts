@@ -1,16 +1,17 @@
-import { INotificationRepository } from "src/domain/notification.repository";
+import type { INotificationRepository } from "src/domain/notification.repository";
+import { NotificationEntity } from "src/domain/notification.entity";
 
 export class PrismaNotificationRepository implements INotificationRepository
 {
-	getNotif(userId: string): Promise<Notification[]> {
-		return new ;
+	get(userId: string): Promise<NotificationEntity[]> {
+		return Promise.resolve([]);
 	}
 
-	readNotif(notifId: string): Promise<Notification> {
-		
+	read(notifId: string): Promise<NotificationEntity> {
+		throw new Error('Not implemented yet');
 	}
 
 	readAll(userId: string): Promise<number> {
-		
+		return Promise.resolve(0);
 	}
 }
