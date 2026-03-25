@@ -2,6 +2,8 @@ services:
   guild:
     container_name: thing-guild
     image: guild-service
+    build:
+      context: ${PWD}/services/guild
     environment:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__VirtualHost: /

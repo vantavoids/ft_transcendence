@@ -6,13 +6,7 @@ include:
   #- services/notification/compose.yaml
   #- services/user/compose.yaml
 
-# for compatibility reasons between docker and podman, every single build context must
-# be declared here, otherwise stuff breaks (thanks podman <3)
 services:
-  guild:
-    build:
-      context: services/guild
-
   cert-gen:
     container_name: thing-cert-gen
     image: alpine/openssl
