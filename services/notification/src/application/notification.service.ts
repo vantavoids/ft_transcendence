@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { INotificationRepository } from 'src/domain/notification.repository';
 import { NotificationEntity } from "src/domain/notification.entity";
 
 @Injectable()
 export class NotificationService {
-	constructor(private repo: INotificationRepository) {}
+	constructor(
+		@Inject('INotificationRepository')
+		private repo: INotificationRepository
+	) {}
 
 	get(userId: string): Promise<NotificationEntity[]> {
 		return this.repo.get(userId);
