@@ -10,6 +10,8 @@ services:
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
       Services__UserService: http://user:8080
+      BackendConfiguration__BaseUrl: ${BASE_URL}
+      BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
     depends_on:
       rabbitmq:
         condition: service_healthy
