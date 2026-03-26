@@ -4,6 +4,12 @@
         <ProjectReference Include="..\Auth.Application\Auth.Application.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1"/>
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0"/>
+    </ItemGroup>
+
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <RootNamespace>Auth.Infrastructure</RootNamespace>
