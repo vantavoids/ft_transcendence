@@ -2,11 +2,21 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0
 
 WORKDIR /workspace
 
+COPY Auth.slnx ./
+COPY Directory.Build.props ./
+COPY src/Auth.Domain/Auth.Domain.csproj src/Auth.Domain/
+COPY src/Auth.Application/Auth.Application.csproj src/Auth.Application/
+COPY src/Auth.Infrastructure/Auth.Infrastructure.csproj src/Auth.Infrastructure/
+COPY src/Auth.Persistence/Auth.Persistence.csproj src/Auth.Persistence/
+COPY src/Auth.Presentation/Auth.Presentation.csproj src/Auth.Presentation/
+
+RUN dotnet restore src/Auth.Presentation/Auth.Presentation.csproj
+
+COPY src/ ./src/
+
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Development
-ENV DOTNET_USE_POLLING_FILE_WATCHER=1
-ENV DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
 
 EXPOSE 8080
 
-CMD ["dotnet", "watch", "--project", "src/Auth.Presentation/Auth.Presentation.csproj", "run", "--no-launch-profile"]
+CMD ["dotnet", "watch", "--project", "src/Auth.Presentation/Auth.Presentation.csproj", "run", "--no-hot-reload", "--no-launch-profile"]
