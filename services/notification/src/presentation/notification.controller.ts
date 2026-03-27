@@ -7,6 +7,11 @@ export class NotificationController {
 	constructor(private readonly notificationService: NotificationService) {}
 
 	@Get()
+		helloworld() : string {
+			return 'Hello World !';
+		}
+
+	@Get()
 		getNotif(@Request() req, @Query('read') read?: boolean, @Query('limit') limit?: number) {
 			const uid = req.user.sub;
 			return this.notificationService.get(uid);
