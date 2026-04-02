@@ -2,6 +2,8 @@ using Auth.Domain.Entities;
 
 namespace Auth.Application.Abstractions.Persistence;
 
+#nullable enable
+
 public interface IAuthUserRepository
 {
     Task<AuthUser?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
