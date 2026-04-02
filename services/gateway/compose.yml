@@ -1,10 +1,12 @@
 services:
   gateway-service:
+    restart: unless-stopped
     container_name: gateway-container
     image: gateway-image
     pull_policy: build
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
     ports:
       - "8090:8090"
-    env_file: .env
-    restart: unless-stopped

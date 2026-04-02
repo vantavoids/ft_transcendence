@@ -1,4 +1,7 @@
-# ---- Build stage ----
+#     ╭───────────────────────────────────────────────────────────╮
+#     │                        Build stage                        │
+#     ╰───────────────────────────────────────────────────────────╯
+
 FROM golang:1.26.1-alpine AS build
 WORKDIR /app
 
@@ -18,14 +21,19 @@ COPY handler/ handler/
 # Disable Go functionality using external C libraries
 # Then tell the compiler to target linux env even if on MacOS or Windows
 RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/
-# ---------------------
 
-# ---- Run stage ----
+# ──────────────────────────────────────────────────────────────────────
+
+#     ╭───────────────────────────────────────────────────────────╮
+#     │                         Run stage                         │
+#     ╰───────────────────────────────────────────────────────────╯
+
 FROM alpine:3.23.3
-COPY --from=build app/gateway_binary ./gateway_binary
+COPY --from=build /app/gateway_binary ./gateway_binary
 
 # For doc purpose
 EXPOSE 8090
 
 CMD ["./gateway_binary"]
-# -------------------
+
+# ──────────────────────────────────────────────────────────────────────
