@@ -33,4 +33,11 @@ public sealed class Result<TValue>(bool isSuccess, TValue value, Failure error) 
 
     public static implicit operator Result<TValue>(TValue value) => Ok(value);
     public static implicit operator Result<TValue>(Failure failure) => Fail<TValue>(failure);
+
+#nullable enable
+    public static implicit operator TValue?(Result<TValue> result) => result switch
+    {
+        { Succeeded: true, Value: var value } => value,
+        _ => default
+    };
 }
