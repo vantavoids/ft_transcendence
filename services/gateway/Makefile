@@ -40,19 +40,13 @@ clean:
 
 fclean: clean
 
-dbuild:
-	docker build -t gateway .
-
-drun:
-	docker run -d --rm --name gateway -p 8090:8090 gateway
-
-dstop:
-	docker stop gateway
-
 up:
-	docker compose up -d
+	docker compose -f compose.dev.yml up -d
 
 down:
 	docker compose down
 
-.PHONY: all build run re clean fclean dbuild drun dstop up down
+ps:
+	docker ps -a
+
+.PHONY: all build run re clean fclean up down ps

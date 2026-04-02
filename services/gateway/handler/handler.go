@@ -1,3 +1,4 @@
+// Package handler provides HTTP handlers for the gateway service
 package handler
 
 import (
@@ -7,7 +8,7 @@ import (
 
 func Hello(w http.ResponseWriter, req *http.Request) {
 
-	fmt.Fprintf(w, "hello\n")
+	fmt.Fprintf(w, "hello world\n")
 }
 
 func Headers(w http.ResponseWriter, req *http.Request) {
