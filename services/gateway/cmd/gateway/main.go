@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"log"
 	"net/http"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
@@ -9,8 +9,10 @@ import (
 
 func main() {
 
-	http.HandleFunc("/hello", handler.Hello)
-	http.HandleFunc("/headers", handler.Headers)
+	mux := http.NewServeMux()
 
-	http.ListenAndServe(":8090", nil)
+	mux.HandleFunc("/hello", handler.Hello)
+	mux.HandleFunc("/headers", handler.Headers)
+
+	log.Fatal(http.ListenAndServe(":8090", mux))
 }
