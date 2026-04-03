@@ -83,9 +83,9 @@ async fn main() {
     let state = AppState { db };
 
     let app = Router::new()
-        .route("/api", get(hello))
-        .route("/api/users", get(get_users))
-        .route("/api/users/:id", get(get_user))
+        .route("/hello-world", get(hello))
+        // .route("/api/users", get(get_users))
+        // .route("/api/users/:id", get(get_user))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
