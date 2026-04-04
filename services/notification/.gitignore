@@ -1,4 +1,5 @@
 # compiled output
+package.json
 /dist
 /node_modules
 /build
