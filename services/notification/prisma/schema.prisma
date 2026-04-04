@@ -34,14 +34,19 @@ model NotificationData {
   @@map("notifications")
 }
 
+enum ScopeType {
+  guild       @map("guild")
+  channel     @map("channel")
+}
+
 model NotificationPreference {
   user_id            BigInt
-  scope_types        String
+  scope_type         ScopeType
   scope_id           BigInt
   muted              Boolean             @default(false)
   muted_until        DateTime?
 
-  @@id([user_id, scope_types, scope_id])
-  @@index([scope_types, scope_id], map: "idx_notif_prefs_scope")
+  @@id([user_id, scope_type, scope_id])
+  @@index([scope_type, scope_id], map: "idx_notif_prefs_scope")
   @@map("notification_preferences")
 }
