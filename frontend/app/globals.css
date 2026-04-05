@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: linear-gradient(135deg, #f6f7fb 0%, #ffffff 55%, #f1f2f8 100%);
+  color: #0b0f19;
+}
+
+.container {
+  @apply mx-auto w-full max-w-6xl px-6;
+}
+
+.card {
+  @apply rounded-2xl bg-white/90 shadow-lg shadow-black/5 ring-1 ring-black/5;
+}
