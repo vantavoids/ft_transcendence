@@ -10,19 +10,18 @@ services:
   cert-gen:
     container_name: thing-cert-gen
     image: alpine/openssl
+    entrypoint: ["sh", "-c"]
+    command:
+      - "rm -f /certs/key.pem /certs/cert.pem && openssl req -x509 -newkey rsa:4096 -nodes -keyout /certs/key.pem -out /certs/cert.pem -days 365 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'"
     volumes:
       - certs:/certs
-    command: >
-      req -x509 -newkey rsa:4096 -nodes
-      -keyout /certs/key.pem
-      -out /certs/cert.pem
-      -days 365
-      -subj "/CN=localhost"
-      -addext "subjectAltName=DNS:localhost"
 
   nginx:
     container_name: thing-nginx
     image: nginx:alpine
+    entrypoint: ["sh", "-c"]
+    command:
+      - "until [ -f /etc/nginx/certs/cert.pem ]; do echo 'waiting for certs...'; sleep 1; done; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
     ports:
       - "1443:443"
     volumes:
@@ -39,7 +38,7 @@ services:
   rabbitmq:
     container_name: thing-rabbitmq
     image: rabbitmq:management-alpine
-    user: "0:0"
+    user: "100:101"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
@@ -47,7 +46,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq:z
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
