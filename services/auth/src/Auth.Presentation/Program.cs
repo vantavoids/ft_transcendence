@@ -8,12 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.ConfigureHostOptions(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
-builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddOpenApi()
+                .AddHealthChecks();
 
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
-builder.Services.AddPersistence();
+builder.Services.AddApplication()
+                .AddInfrastructure()
+                .AddPersistence(builder.Configuration);
 
 builder.Services.AddCarter();
 
