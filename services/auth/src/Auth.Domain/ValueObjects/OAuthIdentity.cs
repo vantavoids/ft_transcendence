@@ -5,6 +5,12 @@ namespace Auth.Domain.ValueObjects;
 
 public sealed record OAuthIdentity
 {
+    public OAuthIdentity() 
+    {
+        Provider = OAuthProvider.Unknown;
+        Id = string.Empty;
+    }
+
     private OAuthIdentity(OAuthProvider provider, string oauthId)
     {
         Provider = provider;
