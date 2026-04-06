@@ -35,7 +35,7 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
                 .HasMaxLength(32)
                 .HasConversion(
                     provider => OAuthProviderRegistry.ToValue(provider),
-                    str => (OAuthProvider)OAuthProviderRegistry.FromValue(str)
+                    str => OAuthProviderRegistry.FromValue(str) ?? OAuthProvider.Unknown
                 );
 
             oauth.Property(o => o.Id)
