@@ -8,6 +8,8 @@ namespace Auth.Domain.Entities;
 
 public sealed class AuthUser
 {
+    public AuthUser() {}
+
     private AuthUser(
         long id,
         Email? email,
