@@ -6,12 +6,12 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddOpenApi()
+                .AddHealthChecks();
 
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
-builder.Services.AddPersistence();
+builder.Services.AddApplication()
+                .AddInfrastructure()
+                .AddPersistence(builder.Configuration);
 
 builder.Services.AddCarter();
 
