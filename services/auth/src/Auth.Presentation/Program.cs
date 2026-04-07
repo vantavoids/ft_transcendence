@@ -3,6 +3,8 @@ using Auth.Application;
 using Auth.Infrastructure;
 using Auth.Persistence;
 using Scalar.AspNetCore;
+using Auth.Persistence.Db;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,14 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
+
+    app.MapGet("/auth/test/dbConnection", async (AuthDbContext db) => 
+    {
+        await db.Database.OpenConnectionAsync();
+        await db.Database.CloseConnectionAsync();
+
+        return TypedResults.Ok("Connected to PostgreSQL!");
+    });
 }
 
 app.MapHealthChecks("/healthz");
