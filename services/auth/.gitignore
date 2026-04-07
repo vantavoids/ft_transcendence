@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Vscode directory
 .vscode
+
+# Compose override for local development
+compose.override.yaml
