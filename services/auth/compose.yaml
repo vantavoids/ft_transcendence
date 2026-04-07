@@ -1,4 +1,23 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     container_name: auth-service
     build:
@@ -8,4 +27,19 @@ services:
     ports:
       - "8080:8080"
     env_file: .env
+    environment:
+      ASPNETCORE_ConnectionStrings__AuthDb:
+        "Host=postgres;Port=${DB_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Pooling=true;Minimum Pool Size=0;Maximum Pool Size=100;Connection Lifetime=0;"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth-network
     restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  auth-network:
+    driver: bridge
