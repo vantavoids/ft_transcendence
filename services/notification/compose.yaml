@@ -1,0 +1,46 @@
+services:
+  notification-db:
+    container_name: notification-db
+    image: postgres:17-alpine
+    env_file: ${PWD}/services/notification/.env
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "notification", "-d", "notification"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  notification-migrate:
+    container_name: notification-migrate
+    image: notification-service
+    pull_policy: never
+    command: npx prisma migrate deploy
+    env_file: ${PWD}/services/notification/.env
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+  notification:
+    container_name: notification
+    image: notification-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/notification
+      dockerfile: Dockerfile
+    env_file: ${PWD}/services/notification/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      notification-migrate:
+        condition: service_completed_successfully
+
+volumes:
+  notification_db_data:
