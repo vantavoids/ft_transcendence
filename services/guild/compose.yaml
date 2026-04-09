@@ -1,11 +1,45 @@
 services:
-  guild:
-    container_name: thing-guild
+  guild-db:
+    container_name: guild-db
+    image: postgres:17-alpine
+    env_file: ${PWD}/services/guild/.env
+    volumes:
+      - guild_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "guild", "-d", "guild"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  guild-migrate:
+    container_name: guild-migrate
     image: guild-service
     pull_policy: never
     build:
       context: ${PWD}/services/guild
       dockerfile: Dockerfile
+    command: dotnet ef database update --project src/Guild.Persistence/Guild.Persistence.csproj --startup-project src/Guild.Presentation/Guild.Presentation.csproj
+    env_file: ${PWD}/services/guild/.env
+    profiles: ["migrate"]
+    depends_on:
+      guild-db:
+        condition: service_healthy
+
+  guild:
+    container_name: guild
+    image: guild-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/guild
+      dockerfile: Dockerfile
+    env_file: ${PWD}/services/guild/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     environment:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__VirtualHost: /
@@ -17,3 +51,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      guild-db:
+        condition: service_healthy
+
+volumes:
+  guild_db_data:
