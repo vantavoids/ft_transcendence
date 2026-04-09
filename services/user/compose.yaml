@@ -1,0 +1,37 @@
+services:
+  user-db:
+    container_name: user-db
+    build:
+      context: ${PWD}/services/user
+      dockerfile: Dockerfile.db
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app_user", "-d", "app_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  user:
+    container_name: user
+    image: user-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/user
+      dockerfile: Dockerfile
+    env_file: ${PWD}/services/user/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      user-db:
+        condition: service_healthy
+
+volumes:
+  user_db_data:
