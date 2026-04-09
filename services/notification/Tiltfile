@@ -1,0 +1,33 @@
+local_resource(
+    'notification-db',
+    serve_cmd=(
+        'docker rm -f notification-db 2>/dev/null || true; ' +
+        'exec docker run --name notification-db --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v notification_db_data:/var/lib/postgresql/data ' +
+        'postgres:17-alpine'
+    ),
+    resource_deps=['dev-network'],
+    labels=['notification'],
+)
+
+local_resource(
+    'notification',
+    cmd='docker build -t notification-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f notification notification-migrate 2>/dev/null || true; ' +
+        'docker run --rm --name notification-migrate ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        'notification-service npx prisma migrate deploy && ' +
+        'exec docker run --name notification --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v $(pwd)/src:/app/src ' +
+        'notification-service'
+    ),
+    deps=['Dockerfile.dev', 'package.json', 'prisma'],
+    resource_deps=['notification-db', 'rabbitmq'],
+    labels=['notification'],
+)

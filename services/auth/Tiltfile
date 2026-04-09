@@ -1,0 +1,29 @@
+local_resource(
+    'auth-db',
+    serve_cmd=(
+        'docker rm -f auth-db 2>/dev/null || true; ' +
+        'exec docker run --name auth-db --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v auth_db_data:/var/lib/postgresql/data ' +
+        'postgres:17-alpine'
+    ),
+    resource_deps=['dev-network'],
+    labels=['auth'],
+)
+
+local_resource(
+    'auth',
+    cmd='docker build -t auth-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f auth 2>/dev/null || true; ' +
+        'exec docker run --name auth --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v $(pwd)/src:/workspace/src ' +
+        'auth-service'
+    ),
+    deps=['Dockerfile.dev', 'Auth.slnx'],
+    resource_deps=['auth-db', 'rabbitmq'],
+    labels=['auth'],
+)
