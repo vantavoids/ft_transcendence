@@ -1,11 +1,50 @@
 services:
-  auth-service:
-    container_name: auth-service
+  auth-db:
+    container_name: auth-db
+    image: postgres:17-alpine
+    env_file: ${PWD}/services/auth/.env
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "auth", "-d", "auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-migrate:
+    container_name: auth-migrate
+    image: auth-service
+    pull_policy: never
     build:
-      context: .
+      context: ${PWD}/services/auth
       dockerfile: Dockerfile
-    image: auth-service:local
-    ports:
-      - "8080:8080"
-    env_file: .env
+    command: dotnet ef database update --project src/Auth.Persistence/Auth.Persistence.csproj --startup-project src/Auth.Presentation/Auth.Presentation.csproj
+    env_file: ${PWD}/services/auth/.env
+    profiles: ["migrate"]
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  auth:
+    container_name: auth
+    image: auth-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/auth
+      dockerfile: Dockerfile
+    env_file: ${PWD}/services/auth/.env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      auth-db:
+        condition: service_healthy
+
+volumes:
+  auth_db_data:
