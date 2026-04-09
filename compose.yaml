@@ -1,14 +1,14 @@
 include:
-  #- services/auth/compose.yaml
+  - services/auth/compose.yaml
   #- services/chat/compose.yaml
   #- services/gateway/compose.yaml
   - services/guild/compose.yaml
-  #- services/notification/compose.yaml
-  #- services/user/compose.yaml
+  - services/notification/compose.yaml
+  - services/user/compose.yaml
 
 services:
   cert-gen:
-    container_name: thing-cert-gen
+    container_name: cert-gen
     image: alpine/openssl
     entrypoint: ["sh", "-c"]
     command:
@@ -17,7 +17,7 @@ services:
       - certs:/certs
 
   nginx:
-    container_name: thing-nginx
+    container_name: nginx
     image: nginx:alpine
     entrypoint: ["sh", "-c"]
     command:
@@ -36,7 +36,7 @@ services:
      #   condition: service_started
 
   rabbitmq:
-    container_name: thing-rabbitmq
+    container_name: rabbitmq
     image: rabbitmq:management-alpine
     user: "100:101"
     environment:
@@ -46,6 +46,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro,z
       - rabbitmq_data:/var/lib/rabbitmq:z
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
