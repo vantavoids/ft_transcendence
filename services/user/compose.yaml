@@ -1,13 +1,12 @@
 services:
   user-db:
     container_name: user-db
-    build:
-      context: ${PWD}/services/user
-      dockerfile: Dockerfile.db
+    image: postgres:17-alpine
+    env_file: ${PWD}/services/user/.env
     volumes:
       - user_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "app_user", "-d", "app_db"]
+      test: ["CMD", "pg_isready", "-U", "user", "-d", "user"]
       interval: 5s
       timeout: 3s
       retries: 10
