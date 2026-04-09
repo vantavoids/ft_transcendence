@@ -1,8 +1,44 @@
-docker_build(
-    'guild-service',
-    context='.',
-    dockerfile='Dockerfile.dev',
-    live_update=[
-        sync('./src', '/app/src'),
-    ],
+load('../../tiltlib.star', 'read_dotenv')
+
+root_env     = read_dotenv('../../.env')
+MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
+BASE_URL     = root_env.get('BASE_URL',     'https://localhost:1443')
+BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+
+local_resource(
+    'guild-db',
+    serve_cmd=(
+        'docker rm -f guild-db 2>/dev/null || true; ' +
+        'exec docker run --name guild-db --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v guild_db_data:/var/lib/postgresql/data ' +
+        'postgres:17-alpine'
+    ),
+    resource_deps=['dev-network'],
+    labels=['guild'],
+)
+
+local_resource(
+    'guild',
+    cmd='docker build -t guild-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f guild 2>/dev/null || true; ' +
+        'exec docker run --name guild --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-e RabbitMQ__Host=rabbitmq ' +
+        '-e RabbitMQ__VirtualHost=/ ' +
+        '-e RabbitMQ__Username=' + MQ_USER + ' ' +
+        '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
+        '-e Services__UserService=http://user:8080 ' +
+        '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
+        '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
+        '-v $(pwd)/src:/app/src ' +
+        'guild-service'
+    ),
+    deps=['Dockerfile.dev', 'Guild.slnx'],
+    resource_deps=['guild-db', 'rabbitmq'],
+    labels=['guild'],
 )
