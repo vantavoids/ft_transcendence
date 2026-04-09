@@ -1,13 +1,4 @@
-import { StatementResultingChanges } from "node:sqlite";
-
-export enum NotificationType {
-  MENTION = 'mention',
-  DM = 'dm',
-  FRIEND_REQUEST = 'friend_request',
-  GUILD_INVITE = 'guild_invite',
-  GUILD_WELCOME = 'guild_welcome',
-  INCOMING_CALL = 'incoming_call',
-}
+import { NotificationType } from '../../generated/prisma/enums.js';
 
 export type MentionPayload = {
   channel_id: string;
