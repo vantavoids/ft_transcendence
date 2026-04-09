@@ -5,14 +5,17 @@ import (
 	"net/http"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
+	"github.com/vantavoids/ft_transcendence/services/gateway/middleware"
 )
 
 func main() {
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/{rest...}", handler.Redirect)
 
-	mux.HandleFunc("/hello", handler.Hello)
-	mux.HandleFunc("/headers", handler.Headers)
+	// mux.HandleFunc("/headers", handler.Headers)
 
-	log.Fatal(http.ListenAndServe(":8090", mux))
+	wrapped := middleware.JwtAuthMiddleware(mux)
+
+	log.Fatal(http.ListenAndServe(":8090", wrapped))
 }
