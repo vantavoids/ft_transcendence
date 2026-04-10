@@ -62,6 +62,7 @@ local_resource(
 )
 
 include('./services/auth/Tiltfile')
+include('./services/chat/Tiltfile')
 include('./services/guild/Tiltfile')
 include('./services/notification/Tiltfile')
 include('./services/user/Tiltfile')

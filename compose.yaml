@@ -1,6 +1,6 @@
 include:
   - services/auth/compose.yaml
-  #- services/chat/compose.yaml
+  - services/chat/compose.yaml
   #- services/gateway/compose.yaml
   - services/guild/compose.yaml
   - services/notification/compose.yaml
