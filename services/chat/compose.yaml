@@ -1,0 +1,42 @@
+services:
+  chat-db:
+    container_name: chat-db
+    image: scylladb/scylla:6.2
+    volumes:
+      - chat_db_data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD", "cqlsh", "--execute", "SELECT now() FROM system.local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  chat:
+    container_name: chat
+    image: chat-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/chat
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__VirtualHost: /
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
+      ScyllaDb__ContactPoints: chat-db
+      ScyllaDb__Keyspace: chat
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      chat-db:
+        condition: service_healthy
+
+volumes:
+  chat_db_data:
