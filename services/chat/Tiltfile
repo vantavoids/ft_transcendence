@@ -1,0 +1,39 @@
+load('../../tiltlib.star', 'read_dotenv')
+
+root_env = read_dotenv('../../.env')
+MQ_USER  = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS  = root_env.get('RABBITMQ_PASS', 'guest')
+
+local_resource(
+    'chat-db',
+    serve_cmd=(
+        'docker rm -f chat-db 2>/dev/null || true; ' +
+        'exec docker run --name chat-db --rm ' +
+        '--network ft_transcendence ' +
+        '-v chat_db_data:/var/lib/scylla ' +
+        'scylladb/scylla:6.2'
+    ),
+    resource_deps=['dev-network'],
+    labels=['chat'],
+)
+
+local_resource(
+    'chat',
+    cmd='docker build -t chat-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f chat 2>/dev/null || true; ' +
+        'exec docker run --name chat --rm ' +
+        '--network ft_transcendence ' +
+        '-e RabbitMQ__Host=rabbitmq ' +
+        '-e RabbitMQ__VirtualHost=/ ' +
+        '-e RabbitMQ__Username=' + MQ_USER + ' ' +
+        '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
+        '-e ScyllaDb__ContactPoints=chat-db ' +
+        '-e ScyllaDb__Keyspace=chat ' +
+        '-v $(pwd)/src:/workspace/src ' +
+        'chat-service'
+    ),
+    deps=['Dockerfile.dev', 'Chat.slnx'],
+    resource_deps=['chat-db', 'rabbitmq'],
+    labels=['chat'],
+)
