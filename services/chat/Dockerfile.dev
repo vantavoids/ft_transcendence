@@ -1,0 +1,22 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+WORKDIR /workspace
+
+COPY Chat.slnx ./
+COPY Directory.Build.props ./
+COPY src/Chat.Domain/Chat.Domain.csproj src/Chat.Domain/
+COPY src/Chat.Application/Chat.Application.csproj src/Chat.Application/
+COPY src/Chat.Infrastructure/Chat.Infrastructure.csproj src/Chat.Infrastructure/
+COPY src/Chat.Persistence/Chat.Persistence.csproj src/Chat.Persistence/
+COPY src/Chat.Presentation/Chat.Presentation.csproj src/Chat.Presentation/
+
+RUN dotnet restore src/Chat.Presentation/Chat.Presentation.csproj
+
+COPY src/ ./src/
+
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+EXPOSE 8080
+
+CMD ["dotnet", "watch", "--project", "src/Chat.Presentation/Chat.Presentation.csproj", "run", "--no-hot-reload", "--no-launch-profile"]
