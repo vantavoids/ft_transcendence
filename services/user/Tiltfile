@@ -1,0 +1,29 @@
+local_resource(
+    'user-db',
+    serve_cmd=(
+        'docker rm -f user-db 2>/dev/null || true; ' +
+        'exec docker run --name user-db --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v user_db_data:/var/lib/postgresql/data ' +
+        'postgres:17-alpine'
+    ),
+    resource_deps=['dev-network'],
+    labels=['user'],
+)
+
+local_resource(
+    'user',
+    cmd='docker build -t user-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f user 2>/dev/null || true; ' +
+        'exec docker run --name user --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v $(pwd)/src:/app/src ' +
+        'user-service'
+    ),
+    deps=['Dockerfile.dev', 'Cargo.toml', 'Cargo.lock'],
+    resource_deps=['user-db', 'rabbitmq'],
+    labels=['user'],
+)

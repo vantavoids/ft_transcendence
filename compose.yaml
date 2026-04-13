@@ -1,0 +1,59 @@
+include:
+  - services/auth/compose.yaml
+  #- services/chat/compose.yaml
+  #- services/gateway/compose.yaml
+  - services/guild/compose.yaml
+  - services/notification/compose.yaml
+  - services/user/compose.yaml
+
+services:
+  cert-gen:
+    container_name: cert-gen
+    image: alpine/openssl
+    entrypoint: ["sh", "-c"]
+    command:
+      - "rm -f /certs/key.pem /certs/cert.pem && openssl req -x509 -newkey rsa:4096 -nodes -keyout /certs/key.pem -out /certs/cert.pem -days 365 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'"
+    volumes:
+      - certs:/certs
+
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    entrypoint: ["sh", "-c"]
+    command:
+      - "until [ -f /etc/nginx/certs/cert.pem ]; do echo 'waiting for certs...'; sleep 1; done; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    ports:
+      - "1443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro,z
+      - certs:/etc/nginx/certs:ro
+    depends_on:
+      cert-gen:
+        condition: service_completed_successfully
+      guild:
+        condition: service_started
+     # gateway:
+     #   condition: service_started
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:management-alpine
+    user: "100:101"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro,z
+      - rabbitmq_data:/var/lib/rabbitmq:z
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  certs:
+  rabbitmq_data:

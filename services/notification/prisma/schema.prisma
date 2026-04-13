@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum NotificationType {
+	MENTION           @map("mention")
+	DM                @map("dm")
+	FRIEND_REQUEST    @map("friend_request")
+	GUILD_INVITE      @map("guild_invite")
+  GUILD_WELCOME     @map("guild_welcome")
+  INCOMING_CALL     @map("incoming_call")
+}
+
+model NotificationData {
+  id                BigInt		          @id
+  user_id           BigInt
+  type              NotificationType
+  actor_id          BigInt?
+  source_id         BigInt?
+  payload           Json                @default("{}")
+  read              Boolean             @default(false)
+  dismissed_at      DateTime?
+  expires_at        DateTime?
+  created_at        DateTime            @default(now())
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_notifications_user_all")
+  @@index([user_id, type, created_at(sort: Desc)], map: "idx_notifications_user_type")
+  @@index([actor_id], map: "idx_notifications_actor")
+  @@map("notifications")
+}
+
+enum ScopeType {
+  guild       @map("guild")
+  channel     @map("channel")
+}
+
+model NotificationPreference {
+  user_id            BigInt
+  scope_type         ScopeType
+  scope_id           BigInt
+  muted              Boolean             @default(false)
+  muted_until        DateTime?
+
+  @@id([user_id, scope_type, scope_id])
+  @@index([scope_type, scope_id], map: "idx_notif_prefs_scope")
+  @@map("notification_preferences")
+}
