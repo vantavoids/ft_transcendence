@@ -14,6 +14,7 @@ COPY src/ src/
 
 RUN dotnet publish src/Guild.Presentation/Guild.Presentation.csproj \
     -c Release \
+    --no-restore \
     -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
