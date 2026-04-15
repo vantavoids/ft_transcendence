@@ -13,7 +13,7 @@ builder.Services.AddOpenApi()
 
 builder.Services.AddApplication()
                 .AddInfrastructure()
-                .AddPersistence(builder.Configuration);
+                .AddPersistence();
 
 builder.Services.AddCarter();
 
