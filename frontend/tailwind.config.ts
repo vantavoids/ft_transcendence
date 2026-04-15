@@ -1,21 +1,23 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
-  ],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
-      colors: {
-        ink: "#0B0F19",
-        fog: "#F6F7FB",
-        accent: "#FF6B35",
+      spacing: {
+        120: '30rem',
+        140: '35rem'
       },
-    },
+      colors: {
+        'primary-bg': '#191919',
+        'secondary-bg': '#09090b',
+        'grey-link': '#848485',
+        'input-bg': '#0f0f10',
+        'input-placeholder': '#343434'
+      }
+    }
   },
-  plugins: [],
+  plugins: []
 };
 
 export default config;
