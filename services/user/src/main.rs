@@ -24,7 +24,7 @@ struct AppState {
 }
 
 async fn hello() -> &'static str {
-    "hello world"
+    "tu compiles hein"
 }
 
 async fn get_users(
@@ -88,7 +88,7 @@ async fn main() {
         // .route("/api/users/:id", get(get_user))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .expect("bind failed");
 
