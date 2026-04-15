@@ -18,6 +18,7 @@ COPY src/ ./src/
 
 RUN dotnet publish src/Auth.Presentation/Auth.Presentation.csproj \
     -c Release \
+    --no-restore \
     -o /app/publish
 
 # =========================

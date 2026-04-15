@@ -15,6 +15,7 @@ COPY src/ ./src/
 
 RUN dotnet publish src/Chat.Presentation/Chat.Presentation.csproj \
     -c Release \
+    --no-restore \
     -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
