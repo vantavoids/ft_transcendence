@@ -1,12 +1,12 @@
-FROM rust:latest
+FROM rust:1.88-bookworm AS dev
 WORKDIR /app
 
-RUN cargo install cargo-watch
+RUN cargo install cargo-watch --locked
 
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo 'fn main() {}' > src/main.rs && \
     cargo build && \
-    rm -f target/debug/deps/hello_world*
+    rm -f target/debug/deps/user_service*
 
 COPY src/ src/
 
