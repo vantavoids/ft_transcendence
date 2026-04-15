@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
 COPY Guild.slnx .
+COPY Directory.Build.props .
 COPY src/Guild.Domain/Guild.Domain.csproj src/Guild.Domain/
 COPY src/Guild.Application/Guild.Application.csproj src/Guild.Application/
 COPY src/Guild.Infrastructure/Guild.Infrastructure.csproj src/Guild.Infrastructure/
