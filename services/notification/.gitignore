@@ -1,5 +1,4 @@
 # compiled output
-package-lock.json
 /dist
 /node_modules
 /build
