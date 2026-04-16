@@ -1,7 +1,7 @@
 include:
   - services/auth/compose.yaml
   - services/chat/compose.yaml
-  #- services/gateway/compose.yaml
+  - services/gateway/compose.yaml
   - services/guild/compose.yaml
   - services/notification/compose.yaml
   - services/user/compose.yaml
@@ -32,8 +32,8 @@ services:
         condition: service_completed_successfully
       guild:
         condition: service_started
-     # gateway:
-     #   condition: service_started
+      gateway:
+        condition: service_started
 
   rabbitmq:
     container_name: rabbitmq

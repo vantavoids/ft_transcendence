@@ -17,6 +17,9 @@ RUN go mod download
 # Copy the go files
 COPY cmd/ cmd/
 COPY handler/ handler/
+COPY middleware/ middleware/
+COPY utils/ utils/
+COPY config/ config/
 
 # Disable Go functionality using external C libraries
 # Then tell the compiler to target linux env even if on MacOS or Windows
@@ -30,6 +33,6 @@ FROM alpine:3.23.3
 COPY --from=build /app/gateway_binary ./gateway_binary
 
 # For doc purpose
-EXPOSE 8090
+EXPOSE 8080
 
 CMD ["./gateway_binary"]
