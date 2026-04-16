@@ -23,7 +23,7 @@ local_resource(
         '-e RABBITMQ_DEFAULT_PASS=' + MQ_PASS + ' ' +
         '-v $(pwd)/infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro ' +
         '-v rabbitmq_data:/var/lib/rabbitmq ' +
-        'rabbitmq:management-alpine'
+        'docker.io/rabbitmq:management-alpine'
     ),
     resource_deps=['dev-network'],
     labels=['infra'],
@@ -35,7 +35,7 @@ local_resource(
     cmd=(
         'docker run --rm ' +
         '-v certs:/certs ' +
-        '--entrypoint sh alpine/openssl ' +
+        '--entrypoint sh docker.io/alpine/openssl ' +
         '-c "rm -f /certs/key.pem /certs/cert.pem && ' +
         'openssl req -x509 -newkey rsa:4096 -nodes ' +
         '-keyout /certs/key.pem -out /certs/cert.pem ' +
@@ -54,7 +54,7 @@ local_resource(
         '-p 1443:443 ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v certs:/etc/nginx/certs:ro ' +
-        'nginx:alpine'
+        'docker.io/nginx:alpine'
     ),
     resource_deps=['cert-gen', 'dev-network'],
     labels=['infra'],

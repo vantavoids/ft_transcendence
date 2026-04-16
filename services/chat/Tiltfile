@@ -11,7 +11,7 @@ local_resource(
         'exec docker run --name chat-db --rm ' +
         '--network ft_transcendence ' +
         '-v chat_db_data:/var/lib/scylla ' +
-        'scylladb/scylla:6.2'
+        'docker.io/scylladb/scylla:6.2'
     ),
     resource_deps=['dev-network'],
     labels=['chat'],

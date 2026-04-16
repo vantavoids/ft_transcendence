@@ -1,7 +1,7 @@
 services:
   chat-db:
     container_name: chat-db
-    image: scylladb/scylla:6.2
+    image: docker.io/scylladb/scylla:6.2
     volumes:
       - chat_db_data:/var/lib/scylla
     healthcheck:

@@ -9,7 +9,7 @@ include:
 services:
   cert-gen:
     container_name: cert-gen
-    image: alpine/openssl
+    image: docker.io/alpine/openssl
     entrypoint: ["sh", "-c"]
     command:
       - "rm -f /certs/key.pem /certs/cert.pem && openssl req -x509 -newkey rsa:4096 -nodes -keyout /certs/key.pem -out /certs/cert.pem -days 365 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'"
@@ -18,7 +18,7 @@ services:
 
   nginx:
     container_name: nginx
-    image: nginx:alpine
+    image: docker.io/nginx:alpine
     entrypoint: ["sh", "-c"]
     command:
       - "until [ -f /etc/nginx/certs/cert.pem ]; do echo 'waiting for certs...'; sleep 1; done; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
@@ -37,7 +37,7 @@ services:
 
   rabbitmq:
     container_name: rabbitmq
-    image: rabbitmq:management-alpine
+    image: docker.io/rabbitmq:management-alpine
     user: "100:101"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
