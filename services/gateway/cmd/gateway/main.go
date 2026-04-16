@@ -16,8 +16,6 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/{rest...}", handler.Redirect)
 
-	// mux.HandleFunc("/headers", handler.Headers)
-
 	wrapped := middleware.JwtAuthMiddleware(mux)
 
 	log.Fatal(http.ListenAndServe(":8080", wrapped))
