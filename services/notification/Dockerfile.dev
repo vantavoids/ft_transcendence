@@ -4,6 +4,7 @@ WORKDIR /app
 COPY prisma/ prisma/
 COPY prisma.config.ts .
 COPY package.json .
+COPY pnpm-lock.yaml .
 COPY tsconfig.json .
 COPY tsconfig.build.json .
 
