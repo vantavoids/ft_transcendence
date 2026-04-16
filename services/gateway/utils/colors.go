@@ -1,3 +1,4 @@
+// Package utils is used to add colors to differenciate logs
 package utils
 
 const (
