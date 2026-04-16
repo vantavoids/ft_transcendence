@@ -7,10 +7,11 @@ COPY package.json .
 COPY tsconfig.json .
 COPY tsconfig.build.json .
 
-RUN npm install
-RUN npx prisma generate
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install
+RUN pnpm exec prisma generate
 COPY src/ src/
-RUN npm run build
+RUN pnpm run build
 
 FROM node:20-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
@@ -23,4 +24,4 @@ COPY package.json .
 COPY prisma.config.ts .
 COPY tsconfig.json .
 
-CMD ["npm", "run", "start:prod"]
+CMD ["pnpm", "run", "start:prod"]
