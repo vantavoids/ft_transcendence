@@ -10,6 +10,6 @@ RUN go mod download
 
 # Files are passed via bind mount
 
-EXPOSE 8090
+EXPOSE 8080
 
 CMD ["air", "-c", ".air.toml"]

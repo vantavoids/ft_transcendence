@@ -1,4 +1,4 @@
-// Package JWT middleware provides JWT authentification for the request hitting gateway
+// Package middleware provides JWT authentification for the request hitting gateway
 package middleware
 
 import (
@@ -43,8 +43,14 @@ func checkToken(tokenStr string) error {
 func isAuthRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
+	return parts[3] != "auth"
+}
 
-	if len(parts) < 4 || parts[1] != "api" || parts[3] != "auth" {
+func isAPIRoute(path string) bool {
+
+	parts := strings.Split(path, "/")
+
+	if len(parts) < 3 || parts[0] != "" || parts[1] != "api" {
 		return false
 	}
 
@@ -65,6 +71,11 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 		fmt.Println()
 		log.Printf("- Request from %s to %s", utils.BlueStr(r.RemoteAddr), utils.BlueStr(r.URL.String()))
 
+		if !isAPIRoute(r.URL.Path) {
+			http.NotFound(w, r)
+			return
+		}
+
 		if isAuthRoute(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
@@ -72,11 +83,10 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 
 		tokenStr := r.Header.Get("Authorization")
 
-		if tokenStr == "" || !strings.HasPrefix(tokenStr, "Bearer ") {
-			w.WriteHeader(http.StatusUnauthorized) // 401
-			err_msg := "missing authorization header"
-			fmt.Fprint(w, err_msg)
-			fmt.Println(utils.RedStr(err_msg))
+		if !strings.HasPrefix(tokenStr, "Bearer ") {
+			errMsg := "missing authorization header"
+			http.Error(w, errMsg, http.StatusUnauthorized)
+			fmt.Println(utils.RedStr(errMsg))
 			return
 		}
 
@@ -84,9 +94,9 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 
 		err := checkToken(tokenStr)
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized) // 401
-			fmt.Fprint(w, err.Error())
-			fmt.Println(utils.RedStr(err.Error()))
+			errMsg := err.Error()
+			http.Error(w, errMsg, http.StatusUnauthorized)
+			fmt.Println(utils.RedStr(errMsg))
 			return
 		}
 
