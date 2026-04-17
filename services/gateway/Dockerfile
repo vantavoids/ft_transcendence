@@ -32,7 +32,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/
 FROM alpine:3.23.3
 COPY --from=build /app/gateway_binary ./gateway_binary
 
-# For doc purpose
 EXPOSE 8080
 
 CMD ["./gateway_binary"]

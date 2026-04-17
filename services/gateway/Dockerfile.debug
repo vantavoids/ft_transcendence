@@ -1,0 +1,19 @@
+FROM golang:1.26.1-alpine
+
+RUN apk add --no-cache git
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+EXPOSE 8080 40000
+
+CMD ["dlv", "debug", \
+     "--listen=:40000", \
+     "--headless=true", \
+     "--api-version=2", \
+     "--accept-multiclient", \
+     "--continue", \
+     "./cmd/gateway"]

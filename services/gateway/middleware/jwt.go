@@ -43,7 +43,7 @@ func checkToken(tokenStr string) error {
 func isAuthRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
-	return parts[3] != "auth"
+	return parts[3] == "auth"
 }
 
 func isAPIRoute(path string) bool {
