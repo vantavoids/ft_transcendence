@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Infrastructure.Options;
 
-public sealed class SnowFlakeOptions
+public sealed class SnowFlakeOptions : IOptions
 {
-    public const string SectionName = "Snowflake";
+    static string IOptions.SectionName => "Snowflake";
 
     [Range(0, 1023)]
     public long WorkerId { get; init; } = 1;
