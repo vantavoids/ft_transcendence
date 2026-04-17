@@ -1,4 +1,5 @@
 using Auth.Domain.Entities;
+using Auth.Domain.Enums;
 
 namespace Auth.Application.Abstractions.Persistence;
 
@@ -9,7 +10,7 @@ public interface IAuthUserRepository
     Task<AuthUser?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
     Task<AuthUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<AuthUser?> GetByOAuthAsync(
-        string provider,
+        OAuthProvider provider,
         string oauthId,
         CancellationToken cancellationToken = default);
 
