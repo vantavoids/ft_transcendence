@@ -18,10 +18,10 @@ RUN dotnet publish src/Chat.Presentation/Chat.Presentation.csproj \
     --no-restore \
     -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl
 
 COPY --from=build /app/publish ./
 

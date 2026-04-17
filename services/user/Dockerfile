@@ -1,10 +1,10 @@
-FROM rust:1.88-bookworm AS chef
-RUN cargo install cargo-chef --locked
+FROM rust:1.88-alpine AS chef
+RUN apk add --no-cache musl-dev && cargo install cargo-chef --locked
 WORKDIR /app
 
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-COPY src/ src/
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
@@ -14,9 +14,9 @@ COPY Cargo.toml Cargo.lock ./
 COPY src/ src/
 RUN cargo build --release
 
-FROM debian:bookworm-slim AS runtime
+FROM alpine:3 AS runtime
 
-RUN apt-get update && apt-get install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates curl
 
 WORKDIR /app
 
