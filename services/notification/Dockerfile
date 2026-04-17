@@ -1,29 +1,29 @@
-FROM node:20-bookworm AS build
+FROM node:20-alpine AS build
 WORKDIR /app
+
+COPY package.json .
+COPY pnpm-lock.yaml .
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --frozen-lockfile
 
 COPY prisma/ prisma/
 COPY prisma.config.ts .
-COPY package.json .
-COPY pnpm-lock.yaml .
-COPY tsconfig.json .
-COPY tsconfig.build.json .
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile
 RUN pnpm exec prisma generate
+
+COPY tsconfig.json tsconfig.build.json ./
 COPY src/ src/
 RUN pnpm run build
 
-FROM node:20-bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM node:20-alpine AS runtime
+RUN apk add --no-cache curl
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/generated ./generated
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json .
 COPY prisma.config.ts .
 COPY tsconfig.json .
 
-CMD ["pnpm", "run", "start:prod"]
+CMD ["node", "dist/src/main"]
