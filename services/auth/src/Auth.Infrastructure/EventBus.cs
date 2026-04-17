@@ -3,7 +3,7 @@ using MassTransit;
 
 namespace Auth.Infrastructure;
 
-internal sealed class EventBus(IPublishEndpoint publishEndpoint) : IEventBus
+internal sealed class EventBus(IBusControl publishEndpoint) : IEventBus
 {
     public Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
         where T : class, IEvent
