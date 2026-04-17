@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Infrastructure.Options;
 
-public sealed class RabbitMqOptions
+public sealed class RabbitMqOptions : IOptions
 {
-    public const string SectionName = "RabbitMq";
+    static string IOptions.SectionName => "RabbitMq";
 
     [Required] public required string Host { get; init; }
 
