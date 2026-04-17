@@ -21,9 +21,9 @@ public class EvenNumberAttribute : ValidationAttribute
     }
 }
 
-public sealed class RefreshTokenOptions
+public sealed class RefreshTokenOptions : IOptions
 {
-    public const string SectionName = "RefreshToken";
+    static string IOptions.SectionName => "RefreshToken";
 
     [Required, Range(1, int.MaxValue)]
     public required int TtlDays { get; init; }
