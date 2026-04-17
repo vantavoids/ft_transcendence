@@ -4,6 +4,7 @@ using Auth.Application.Abstractions.Events;
 using Auth.Application.Abstractions.Security;
 using Auth.Infrastructure.Options;
 using Auth.Infrastructure.Security;
+using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -25,6 +26,18 @@ public static class DependencyInjection
 
             configureOptionsMethod.Invoke(null, [services]);
         }
+
+        services.AddMassTransit(x =>
+            x.UsingRabbitMq((ctx, conf) => {
+                var options = ctx.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+                conf.Host(options.Host, (ushort)options.Port, options.VirtualHost, h =>
+                {
+                    h.Username(options.Username);
+                    h.Password(options.Password);
+                });
+                conf.ConfigureEndpoints(ctx);
+            })
+        );
 
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<IClock, SystemClock>();
