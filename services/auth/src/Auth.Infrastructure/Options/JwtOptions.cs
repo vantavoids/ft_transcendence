@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Infrastructure.Options;
 
-public sealed class JwtOptions
+public sealed class JwtOptions : IOptions
 {
-    public const string SectionName = "Jwt";
+    static string IOptions.SectionName => "Jwt";
 
     [Required]
     public required string Issuer { get; init; }
