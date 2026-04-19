@@ -1,0 +1,15 @@
+local_resource(
+    'gateway',
+    cmd='docker build -t gateway-service -f Dockerfile.dev .',
+    serve_cmd=(
+        'docker rm -f gateway 2>/dev/null || true; ' +
+        'exec docker run --name gateway --rm ' +
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v $(pwd):/app ' +
+        'gateway-service'
+    ),
+    deps=['Dockerfile.dev', 'go.mod', 'go.sum'],
+    resource_deps=['auth', 'chat', 'guild', 'notification', 'user'],
+    labels=['gateway'],
+)

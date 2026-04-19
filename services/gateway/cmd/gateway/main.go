@@ -14,6 +14,7 @@ func main() {
 	handler.InitProxies(config.GetServices())
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/hello-world", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.HandleFunc("/api/{rest...}", handler.Redirect)
 
 	wrapped := middleware.JwtAuthMiddleware(mux)

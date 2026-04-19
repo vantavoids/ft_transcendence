@@ -30,6 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/
 #    ╰────────────────────────────╯
 
 FROM alpine:3.23.3
+RUN apk add --no-cache curl
 COPY --from=build /app/gateway_binary ./gateway_binary
 
 EXPOSE 8080

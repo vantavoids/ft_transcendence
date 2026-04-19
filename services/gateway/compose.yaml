@@ -1,10 +1,27 @@
 services:
   gateway:
-    restart: unless-stopped
     container_name: gateway
     image: gateway-service
-    pull_policy: build
-    build: 
-      context: .
+    pull_policy: never
+    build:
+      context: ${PWD}/services/gateway
       dockerfile: Dockerfile
-    env_file: .env
+    env_file: ${PWD}/services/gateway/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      auth:
+        condition: service_healthy
+      chat:
+        condition: service_healthy
+      guild:
+        condition: service_healthy
+      notification:
+        condition: service_healthy
+      user:
+        condition: service_healthy
