@@ -30,10 +30,8 @@ services:
     depends_on:
       cert-gen:
         condition: service_completed_successfully
-      guild:
-        condition: service_started
       gateway:
-        condition: service_started
+        condition: service_healthy
 
   rabbitmq:
     container_name: rabbitmq
