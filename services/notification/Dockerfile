@@ -26,4 +26,5 @@ COPY package.json .
 COPY prisma.config.ts .
 COPY tsconfig.json .
 
+EXPOSE 8080
 CMD ["node", "dist/src/main"]
