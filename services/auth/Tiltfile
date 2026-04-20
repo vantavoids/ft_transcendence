@@ -1,3 +1,9 @@
+load('../../tiltlib.star', 'read_dotenv')
+
+root_env = read_dotenv('../../.env')
+MQ_USER  = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS  = root_env.get('RABBITMQ_PASS', 'guest')
+
 local_resource(
     'auth-db',
     serve_cmd=(
@@ -20,7 +26,11 @@ local_resource(
         'exec docker run --name auth --rm ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
-        '-v $(pwd)/src:/workspace/src ' +
+        '-e RabbitMQ__Host=rabbitmq ' +
+        '-e RabbitMQ__VirtualHost=/ ' +
+        '-e RabbitMQ__Username=' + MQ_USER + ' ' +
+        '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
+        '-v $(pwd)/src:/app/src ' +
         'auth-service'
     ),
     deps=['Dockerfile.dev', 'Auth.slnx'],
