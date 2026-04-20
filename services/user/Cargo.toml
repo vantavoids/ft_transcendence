@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 serde = { version = "1", features = ["derive"] }
+aide = { version = "0.13", features = ["axum"] }
+schemars = { version = "0.8", features = ["uuid1", "chrono"] }
 
 sqlx = { version = "0.7", features = [
     "runtime-tokio",

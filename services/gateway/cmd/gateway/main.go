@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
@@ -14,7 +15,9 @@ func main() {
 	handler.InitProxies(config.GetServices())
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/hello-world", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	if os.Getenv("DEV") == "true" {
+		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI)
+	}
 	mux.HandleFunc("/api/{rest...}", handler.Redirect)
 
 	wrapped := middleware.JwtAuthMiddleware(mux)

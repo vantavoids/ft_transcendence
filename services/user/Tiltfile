@@ -20,6 +20,7 @@ local_resource(
         'exec docker run --name user --rm ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
+        '-e APP_ENV=development ' +
         '-v $(pwd)/src:/app/src ' +
         'user-service'
     ),

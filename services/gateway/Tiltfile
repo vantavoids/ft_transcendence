@@ -6,6 +6,7 @@ local_resource(
         'exec docker run --name gateway --rm ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
+        '-e DEV=true ' +
         '-v $(pwd):/app ' +
         'gateway-service'
     ),
