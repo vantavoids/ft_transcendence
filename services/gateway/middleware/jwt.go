@@ -43,18 +43,18 @@ func checkToken(tokenStr string) error {
 func isAuthRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
-	return parts[3] == "auth"
+	return len(parts) > 2 && parts[2] == "auth"
 }
 
 func isAPIRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
 
-	if len(parts) < 3 || parts[0] != "" || parts[1] != "api" {
+	if len(parts) < 4 || parts[0] != "" || parts[1] != "api" {
 		return false
 	}
 
-	version := parts[2]
+	version := parts[3]
 	if !strings.HasPrefix(version, "v") {
 		return false
 	}
@@ -72,7 +72,7 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 		log.Printf("- Request from %s to %s", utils.BlueStr(r.RemoteAddr), utils.BlueStr(r.URL.String()))
 
 		if !isAPIRoute(r.URL.Path) {
-			http.NotFound(w, r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
