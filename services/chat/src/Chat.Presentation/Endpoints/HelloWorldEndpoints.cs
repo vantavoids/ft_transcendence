@@ -10,7 +10,7 @@ public sealed class HelloWorldEndpoints : ICarterModule
 {
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
-		endpoints.MapGet("/api/v1/chat/hello-world", HelloWorld);
+		endpoints.MapGet("/v1/hello-world", HelloWorld);
 	}
 
 	private static async Task<Results<Ok<string>, BadRequest<string>>> HelloWorld(

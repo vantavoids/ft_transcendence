@@ -82,15 +82,41 @@ async fn main() {
 
     let state = AppState { db };
 
-    let app = Router::new()
-        .route("/api/v1/user/hello-world", get(hello))
-        // .route("/api/users", get(get_users))
-        // .route("/api/users/:id", get(get_user))
-        .with_state(state);
+    let mut api = OpenApi {
+        info: Info {
+            title: "User Service".into(),
+            version: "1.0.0".into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let mut router = ApiRouter::new()
+        .api_route("/v1/hello-world", get_with(hello, |t| t));
+
+    if is_dev {
+        router = router.route("/openapi/v1.json", get(serve_openapi));
+    }
+
+    let app = router.finish_api(&mut api);
+
+    let app = if is_dev {
+        app.layer(Extension(Arc::new(api)))
+    } else {
+        app
+    };
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .expect("bind failed");
 
-    axum::serve(listener, app).await.expect("server failed");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("failed to install SIGTERM handler")
+                .recv()
+                .await;
+        })
+        .await
+        .expect("server failed");
 }

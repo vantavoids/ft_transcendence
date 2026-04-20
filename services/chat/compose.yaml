@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
       interval: 10s
       timeout: 5s
       retries: 5

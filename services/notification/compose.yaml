@@ -15,7 +15,7 @@ services:
     container_name: notification-migrate
     image: notification-service
     pull_policy: never
-    command: pnpm exec prisma migrate deploy
+    command: npx prisma migrate deploy
     env_file: ${PWD}/services/notification/.env
     depends_on:
       notification-db:
@@ -31,11 +31,11 @@ services:
     env_file: ${PWD}/services/notification/.env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/notifications/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 30s
     depends_on:
       rabbitmq:
         condition: service_healthy
