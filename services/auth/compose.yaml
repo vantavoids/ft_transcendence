@@ -34,6 +34,11 @@ services:
       dockerfile: Dockerfile
     env_file: ${PWD}/services/auth/.env
     restart: unless-stopped
+    environment:
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__VirtualHost: /
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
       interval: 10s
