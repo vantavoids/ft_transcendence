@@ -9,7 +9,7 @@ services:
     env_file: ${PWD}/services/gateway/.env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      test: ["CMD", "./healthcheck_binary"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -23,7 +23,8 @@ COPY config/ config/
 
 # Disable Go functionality using external C libraries
 # Then tell the compiler to target linux env even if on MacOS or Windows
-RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/
+RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/ && \
+    CGO_ENABLED=0 GOOS=linux go build -o healthcheck_binary ./cmd/healthcheck/
 
 #    ╭────────────────────────────╮
 #    │         Run stage          │
@@ -32,6 +33,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o gateway_binary ./cmd/gateway/
 FROM alpine:3.23.3
 RUN apk add --no-cache curl
 COPY --from=build /app/gateway_binary ./gateway_binary
+COPY --from=build /app/healthcheck_binary ./healthcheck_binary
 
 EXPOSE 8080
 
