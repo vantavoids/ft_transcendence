@@ -1,13 +1,15 @@
-use axum::{
-    extract::{Path, State},
-    routing::get,
-    Json, Router,
+use aide::{
+    axum::{routing::get_with, ApiRouter},
+    openapi::{Info, OpenApi},
 };
+use axum::{routing::get, Extension, Json};
 use chrono::NaiveDateTime;
+use schemars::JsonSchema;
 use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
+use std::sync::Arc;
 use uuid::Uuid;
 
-#[derive(Debug, FromRow, serde::Serialize)]
+#[derive(Debug, FromRow, serde::Serialize, JsonSchema)]
 struct User {
     id: Uuid,
     auth_id: Uuid,
@@ -18,6 +20,7 @@ struct User {
     deleted_at: Option<NaiveDateTime>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 struct AppState {
     db: PgPool,
@@ -27,48 +30,8 @@ async fn hello() -> &'static str {
     "tu compiles hein"
 }
 
-async fn get_users(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<User>>, (axum::http::StatusCode, String)> {
-    let users = sqlx::query_as::<_, User>(
-        r#"
-        SELECT id, auth_id, username, discriminator, created_at, updated_at, deleted_at
-        FROM users
-        WHERE deleted_at IS NULL
-        ORDER BY created_at DESC
-        "#,
-    )
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(users))
-}
-
-async fn get_user(
-    Path(id): Path<Uuid>,
-    State(state): State<AppState>,
-) -> Result<Json<User>, (axum::http::StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>(
-        r#"
-        SELECT id, auth_id, username, discriminator, created_at, updated_at, deleted_at
-        FROM users
-        WHERE deleted_at IS NULL
-        AND id = $1
-        "#,
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or_else(|| {
-        (
-            axum::http::StatusCode::NOT_FOUND,
-            "user not found".to_string(),
-        )
-    })?;
-
-    Ok(Json(user))
+async fn serve_openapi(Extension(api): Extension<Arc<OpenApi>>) -> Json<OpenApi> {
+    Json((*api).clone())
 }
 
 #[tokio::main]
@@ -80,7 +43,9 @@ async fn main() {
         .await
         .expect("db connect failed");
 
-    let state = AppState { db };
+    let _state = AppState { db };
+
+    let is_dev = std::env::var("APP_ENV").as_deref() == Ok("development");
 
     let mut api = OpenApi {
         info: Info {

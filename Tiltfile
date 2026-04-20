@@ -54,12 +54,13 @@ local_resource(
         '-p 1080:80 ' +
         '-p 1443:443 ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
+        '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
         '-v certs:/etc/nginx/certs:ro ' +
         'docker.io/nginx:alpine'
     ),
     resource_deps=['cert-gen', 'dev-network', 'gateway'],
     labels=['infra'],
-    links=['https://localhost:1443'],
+    links=['https://localhost:1443', 'https://localhost:1443/docs'],
 )
 
 include('./services/auth/Tiltfile')

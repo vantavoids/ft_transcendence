@@ -24,6 +24,7 @@ local_resource(
         'exec docker run --name notification --rm ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
+        '-e NODE_ENV=development ' +
         '-v $(pwd)/src:/app/src ' +
         'notification-service'
     ),
