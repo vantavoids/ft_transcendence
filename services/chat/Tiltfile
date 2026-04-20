@@ -30,7 +30,7 @@ local_resource(
         '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
         '-e ScyllaDb__ContactPoints=chat-db ' +
         '-e ScyllaDb__Keyspace=chat ' +
-        '-v $(pwd)/src:/workspace/src ' +
+        '-v $(pwd)/src:/app/src ' +
         'chat-service'
     ),
     deps=['Dockerfile.dev', 'Chat.slnx'],

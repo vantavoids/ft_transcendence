@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 
-WORKDIR /workspace
+WORKDIR /app
 
 COPY Auth.slnx ./
 COPY Directory.Build.props ./
