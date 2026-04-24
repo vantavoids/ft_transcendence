@@ -2,20 +2,20 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
-func checkToken(tokenStr string) error {
+const subKey contextKey = "sub"
 
+<<<<<<< HEAD
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
 
 		secret := []byte(os.Getenv("JWT_SECRET"))
@@ -77,6 +77,16 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		if isAuthRoute(r.URL.Path) {
+=======
+func JwtAuth(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		isAuth := r.Context().Value(isAuthKey).(bool)
+		if isAuth {
+			// log
+			fmt.Println("JWT auth bypassed, forwarding ...")
+>>>>>>> 59a0b85 (feat: add basic rate limiting with IP and UID checks depending on the requested service, add separate routing middleware, start integrating Vanta branch, todo clean stale entries inside the memory store)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -92,7 +102,7 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 
 		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 
-		err := checkToken(tokenStr)
+		sub, err := checkToken(tokenStr)
 		if err != nil {
 			errMsg := err.Error()
 			http.Error(w, errMsg, http.StatusUnauthorized)
@@ -100,6 +110,45 @@ func JwtAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), subKey, sub)
+
+		// log
+		fmt.Println("JWT auth passed, forwarding ...")
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func checkToken(tokenStr string) (string, error) {
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+
+		secret := []byte(os.Getenv("JWT_SECRET"))
+		if len(secret) == 0 {
+			return secret, fmt.Errorf("missing secret")
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("invalid claims")
+	}
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return "", fmt.Errorf("missing sub claim")
+	}
+
+	// print token for debug, TODO remove
+	data, _ := json.MarshalIndent(token, "", "  ")
+	fmt.Println("\n" + string(data) + "\n")
+
+	return sub, nil
 }

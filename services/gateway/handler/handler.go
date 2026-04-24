@@ -2,10 +2,13 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+
+	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
 var proxies map[string]*httputil.ReverseProxy
@@ -13,7 +16,10 @@ var serviceURLs map[string]string
 
 func InitProxies(services map[string]string) {
 
+<<<<<<< HEAD
 	serviceURLs = services
+=======
+>>>>>>> 59a0b85 (feat: add basic rate limiting with IP and UID checks depending on the requested service, add separate routing middleware, start integrating Vanta branch, todo clean stale entries inside the memory store)
 	proxies = make(map[string]*httputil.ReverseProxy, len(services))
 	for name, addr := range services {
 		proxies[name] = newProxy(addr)
@@ -58,5 +64,7 @@ func Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// log
+	fmt.Println("Redirect done, forwarding to " + utils.BlueStr(parts[2]))
 	proxy.ServeHTTP(w, r)
 }
