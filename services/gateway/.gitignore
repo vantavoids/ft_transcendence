@@ -1,2 +1,3 @@
 gateway_binary
+__debug_bin*
 tmp/

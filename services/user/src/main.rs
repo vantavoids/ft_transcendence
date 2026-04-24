@@ -83,7 +83,7 @@ async fn main() {
     let state = AppState { db };
 
     let app = Router::new()
-        .route("/api/v1/user/hello-world", get(hello))
+        .route("/v1/hello-world", get(hello))
         // .route("/api/users", get(get_users))
         // .route("/api/users/:id", get(get_user))
         .with_state(state);
