@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile.debug
     env_file: .env
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
       - "40000:40000"
     volumes:
       - ./services/gateway:/app
