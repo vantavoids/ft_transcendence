@@ -1,0 +1,19 @@
+.git
+.gitignore
+**/.DS_Store
+
+# .NET build artifacts
+**/obj/
+**/bin/
+
+# Env / secrets
+.env
+.env.*
+
+# IDE / editor
+.vscode
+.idea
+
+# Tests / coverage / logs
+**/*.log
+coverage

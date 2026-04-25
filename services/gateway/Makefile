@@ -41,7 +41,7 @@ clean:
 fclean: clean
 
 up:
-	docker compose -f compose.dev.yml up -d
+	docker compose -f compose.dev.yaml up -d
 
 down:
 	docker compose down
