@@ -21,7 +21,7 @@ local_resource(
 local_resource(
     'auth',
     cmd=DOCKER + ' build -t auth-service -f Dockerfile.dev .',
-    serve_cmd=container_serve(DOCKER, FLAGS, 'auth',
+    serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'auth',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e RabbitMQ__Host=rabbitmq ' +

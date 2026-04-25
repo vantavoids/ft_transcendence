@@ -23,7 +23,7 @@ local_resource(
 local_resource(
     'guild',
     cmd=DOCKER + ' build -t guild-service -f Dockerfile.dev .',
-    serve_cmd=container_serve(DOCKER, FLAGS, 'guild',
+    serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'guild',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e RabbitMQ__Host=rabbitmq ' +

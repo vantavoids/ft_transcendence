@@ -18,7 +18,7 @@ local_resource(
 local_resource(
     'user',
     cmd=DOCKER + ' build -t user-service -f Dockerfile.dev .',
-    serve_cmd=container_serve(DOCKER, FLAGS, 'user',
+    serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'user',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +

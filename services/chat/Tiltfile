@@ -20,7 +20,7 @@ local_resource(
 local_resource(
     'chat',
     cmd=DOCKER + ' build -t chat-service -f Dockerfile.dev .',
-    serve_cmd=container_serve(DOCKER, FLAGS, 'chat',
+    serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'chat',
         '--network ft_transcendence ' +
         '-e RabbitMQ__Host=rabbitmq ' +
         '-e RabbitMQ__VirtualHost=/ ' +

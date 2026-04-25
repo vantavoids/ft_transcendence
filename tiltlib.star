@@ -15,8 +15,9 @@ def run_flags(engine):
 
 def container_serve(engine, flags, name, run_args):
     cleanup = engine + ' rm -f ' + name + ' 2>/dev/null || true'
+    watchdog = 'setsid sh -c "while kill -0 $PARENT 2>/dev/null; do sleep 1; done; ' + cleanup + '" &'
     return (
-        "trap '" + cleanup + "' TERM INT EXIT; " +
+        'PARENT=$PPID; ' + watchdog + ' ' +
         cleanup + '; ' +
         engine + ' run ' + flags + '--name ' + name + ' --rm ' + run_args
     )
