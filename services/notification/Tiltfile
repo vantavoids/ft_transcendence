@@ -1,8 +1,11 @@
+load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+
+DOCKER = detect_engine()
+FLAGS  = run_flags(DOCKER)
+
 local_resource(
     'notification-db',
-    serve_cmd=(
-        'docker rm -f notification-db 2>/dev/null || true; ' +
-        'exec docker run --name notification-db --rm ' +
+    serve_cmd=container_serve(DOCKER, FLAGS, 'notification-db',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-v notification_db_data:/var/lib/postgresql/data ' +
@@ -14,14 +17,15 @@ local_resource(
 
 local_resource(
     'notification',
-    cmd='docker build -t notification-service -f Dockerfile.dev .',
+    cmd=DOCKER + ' build -t notification-service -f Dockerfile.dev .',
     serve_cmd=(
-        'docker rm -f notification notification-migrate 2>/dev/null || true; ' +
-        'docker run --rm --name notification-migrate ' +
+        "trap '" + DOCKER + ' rm -f notification notification-migrate 2>/dev/null || true' + "' TERM INT EXIT; " +
+        DOCKER + ' rm -f notification notification-migrate 2>/dev/null || true; ' +
+        DOCKER + ' run ' + FLAGS + '--rm --name notification-migrate ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
         'notification-service npx prisma migrate deploy && ' +
-        'exec docker run --name notification --rm ' +
+        DOCKER + ' run ' + FLAGS + '--name notification --rm ' +
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e NODE_ENV=development ' +
