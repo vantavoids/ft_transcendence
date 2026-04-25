@@ -39,8 +39,9 @@ clean: down
 
 fclean: down
 	@echo "$(call ann,Red) docker system prune but make it personal"
-	@$(DOCKER) system prune -af
-	@$(DOCKER) volume prune -f
+	@$(DOCKER) container rm -af 2>/dev/null || true
+	@$(DOCKER) image rm -f $$($(DOCKER) image ls -q) 2>/dev/null || true
+	@$(DOCKER) system prune -a --volumes -f
 	@echo "$(call ann,Red) It's all gone. You won't have to download extra storage (no need to thank me) :)"
 
 logs:
