@@ -1,9 +1,12 @@
+load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+
+DOCKER = detect_engine()
+FLAGS  = run_flags(DOCKER)
+
 local_resource(
     'gateway',
-    cmd='docker build -t gateway-service -f Dockerfile.dev .',
-    serve_cmd=(
-        'docker rm -f gateway 2>/dev/null || true; ' +
-        'exec docker run --name gateway --rm ' +
+    cmd=DOCKER + ' build -t gateway-service -f Dockerfile.dev .',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'gateway',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e DEV=true ' +

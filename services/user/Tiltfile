@@ -1,8 +1,11 @@
+load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+
+DOCKER = detect_engine()
+FLAGS  = run_flags(DOCKER)
+
 local_resource(
     'user-db',
-    serve_cmd=(
-        'docker rm -f user-db 2>/dev/null || true; ' +
-        'exec docker run --name user-db --rm ' +
+    serve_cmd=container_serve(DOCKER, FLAGS, 'user-db',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-v user_db_data:/var/lib/postgresql/data ' +
@@ -14,10 +17,8 @@ local_resource(
 
 local_resource(
     'user',
-    cmd='docker build -t user-service -f Dockerfile.dev .',
-    serve_cmd=(
-        'docker rm -f user 2>/dev/null || true; ' +
-        'exec docker run --name user --rm ' +
+    cmd=DOCKER + ' build -t user-service -f Dockerfile.dev .',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'user',
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +

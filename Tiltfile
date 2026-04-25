@@ -1,22 +1,22 @@
-load('./tiltlib.star', 'read_dotenv')
+load('./tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
 root_env     = read_dotenv('.env')
 MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
 MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
 BASE_URL     = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+DOCKER       = detect_engine()
+FLAGS        = run_flags(DOCKER)
 
 local_resource(
     'dev-network',
-    cmd='docker network create ft_transcendence 2>/dev/null || true',
+    cmd=DOCKER + ' network create ft_transcendence 2>/dev/null || true',
     labels=['infra'],
 )
 
 local_resource(
     'rabbitmq',
-    serve_cmd=(
-        'docker rm -f rabbitmq 2>/dev/null || true; ' +
-        'exec docker run --name rabbitmq --rm ' +
+    serve_cmd=container_serve(DOCKER, FLAGS, 'rabbitmq',
         '--network ft_transcendence ' +
         '-p 5672:5672 -p 15672:15672 ' +
         '-e RABBITMQ_DEFAULT_USER=' + MQ_USER + ' ' +
@@ -33,7 +33,7 @@ local_resource(
 local_resource(
     'cert-gen',
     cmd=(
-        'docker run --rm ' +
+        DOCKER + ' run ' + FLAGS + '--rm ' +
         '-v certs:/certs ' +
         '--entrypoint sh docker.io/alpine/openssl ' +
         '-c "rm -f /certs/key.pem /certs/cert.pem && ' +
@@ -47,9 +47,7 @@ local_resource(
 
 local_resource(
     'nginx',
-    serve_cmd=(
-        'docker rm -f nginx 2>/dev/null || true; ' +
-        'exec docker run --name nginx --rm ' +
+    serve_cmd=container_serve(DOCKER, FLAGS, 'nginx',
         '--network ft_transcendence ' +
         '-p 1080:80 ' +
         '-p 1443:443 ' +
