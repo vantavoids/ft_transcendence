@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -104,6 +105,7 @@ func AggregateOpenAPI(w http.ResponseWriter, r *http.Request) {
 	for range serviceURLs {
 		res := <-ch
 		if res.err != nil {
+			log.Printf("openapi: skipping %s: %v", res.name, res.err)
 			continue
 		}
 
@@ -151,5 +153,7 @@ func AggregateOpenAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(merged)
+	if err := json.NewEncoder(w).Encode(merged); err != nil {
+		log.Printf("openapi: encode error: %v", err)
+	}
 }
