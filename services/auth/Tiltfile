@@ -1,10 +1,11 @@
 load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
-root_env = read_dotenv('../../.env')
-MQ_USER  = root_env.get('RABBITMQ_USER', 'guest')
-MQ_PASS  = root_env.get('RABBITMQ_PASS', 'guest')
-DOCKER   = detect_engine()
-FLAGS    = run_flags(DOCKER)
+root_env     = read_dotenv('../../.env')
+MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
+BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+DOCKER       = detect_engine()
+FLAGS        = run_flags(DOCKER)
 
 local_resource(
     'auth-db',
@@ -28,6 +29,7 @@ local_resource(
         '-e RabbitMQ__VirtualHost=/ ' +
         '-e RabbitMQ__Username=' + MQ_USER + ' ' +
         '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
+        '-e BASE_API_URL=' + BASE_API_URL + ' ' +
         '-v $(pwd)/src:/app/src ' +
         'auth-service'
     ),

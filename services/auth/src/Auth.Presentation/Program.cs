@@ -24,7 +24,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference((options, ctx) =>
+    {
+        var apiUrl = Environment.GetEnvironmentVariable("BASE_API_URL");
+        options.AddServer(new ScalarServer($"{apiUrl}/auth"));
+    });
 
     app.MapGet("/auth/test/dbConnection", async (AuthDbContext db) => 
     {
