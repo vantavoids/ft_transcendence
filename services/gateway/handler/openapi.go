@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"maps"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -69,30 +68,30 @@ func requiresAuth(path string) bool {
 	return err == nil
 }
 
-func rewriteRefs(v any, renames map[string]string) any {
-	switch val := v.(type) {
+func rewriteRefs(node any, refTranslations map[string]string) any {
+	switch typedNodes := node.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(val))
-		for k, v2 := range val {
-			if k == "$ref" {
-				if s, ok := v2.(string); ok {
-					if renamed, ok := renames[s]; ok {
-						out[k] = renamed
+		updatedObject := make(map[string]any, len(typedNodes))
+		for key, childNode := range typedNodes {
+			if key == "$ref" {
+				if refString, isString := childNode.(string); isString {
+					if newRefString, exists := refTranslations[refString]; exists {
+						updatedObject[key] = newRefString
 						continue
 					}
 				}
 			}
-			out[k] = rewriteRefs(v2, renames)
+			updatedObject[key] = rewriteRefs(childNode, refTranslations)
 		}
-		return out
+		return updatedObject
 	case []any:
-		out := make([]any, len(val))
-		for i, v2 := range val {
-			out[i] = rewriteRefs(v2, renames)
+		updatedArray := make([]any, len(typedNodes))
+		for i, childNode := range typedNodes {
+			updatedArray[i] = rewriteRefs(childNode, refTranslations)
 		}
-		return out
+		return updatedArray
 	default:
-		return v
+		return node
 	}
 }
 
@@ -150,7 +149,9 @@ func AggregateOpenAPI(w http.ResponseWriter, r *http.Request) {
 
 				if components, ok := res.spec["components"].(map[string]any); ok {
 					if svcSchemas, ok := components["schemas"].(map[string]any); ok {
-						maps.Copy(schemas, svcSchemas)
+						for name, value := range svcSchemas {
+							schemas[tag+name] = value
+						}
 					}
 				}
 			}
