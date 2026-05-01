@@ -12,13 +12,13 @@ type RateLimitStore interface {
 	Allow(identity string) bool
 }
 
-func IPLimitFunc(store RateLimitStore) func(http.Handler) http.Handler {
+func LimitIP(store RateLimitStore) Middleware {
 
 	return func(next http.Handler) http.Handler {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if !r.Context().Value(isAuthKey).(bool) {
+			if r.Context().Value(serviceKey{}).(string) != "auth" {
 				// log
 				fmt.Println("IP limit bypassed, forwarding...")
 				next.ServeHTTP(w, r)
@@ -46,20 +46,20 @@ func IPLimitFunc(store RateLimitStore) func(http.Handler) http.Handler {
 	}
 }
 
-func UIDLimitFunc(store RateLimitStore) func(http.Handler) http.Handler {
+func LimitUID(store RateLimitStore) Middleware {
 
 	return func(next http.Handler) http.Handler {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if r.Context().Value(isAuthKey).(bool) {
+			if r.Context().Value(serviceKey{}).(string) == "auth" {
 				// log
 				fmt.Println("UID limit bypassed, forwarding...")
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			uid := r.Context().Value(subKey).(string)
+			uid := r.Context().Value(subKey{}).(string)
 
 			if !store.Allow(uid) {
 				errMsg := "too many requests"

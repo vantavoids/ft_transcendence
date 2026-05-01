@@ -20,7 +20,7 @@ $(TARGET): $(SRCS)
 	@$(MAKE) --no-print-directory fmt
 	@$(MAKE) --no-print-directory vet
 	@printf '$(GREEN)Building...\n$(RESET)'
-	@go build -o $@ ./cmd/...
+	@go build -o $@ ./cmd/gateway
 
 fmt:
 	@printf '$(ORANGE)Formatting...\n$(RESET)'
@@ -41,7 +41,7 @@ clean:
 fclean: clean
 
 up:
-	docker compose -f compose.dev.yml up -d
+	docker compose -f compose.dev.yaml up -d
 
 down:
 	docker compose down

@@ -9,6 +9,6 @@ services:
       dockerfile: Dockerfile.dev
     env_file: .env
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
     volumes:
       - ./:/app

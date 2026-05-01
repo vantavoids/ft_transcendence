@@ -25,13 +25,15 @@ func NewMemoryStore(r float64, b int) *MemoryStore {
 func (store *MemoryStore) Allow(identity string) bool {
 
 	store.mu.Lock()
-	defer store.mu.Unlock()
 
 	limiter, ok := store.clients[identity]
 	if !ok {
 		limiter = rate.NewLimiter(store.rate, store.burst)
 		store.clients[identity] = limiter
 	}
+
+	// rate.Limiter is goroutine-safe, only the map access needs store.mu
+	store.mu.Unlock()
 
 	return limiter.Allow()
 }

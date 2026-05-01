@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
@@ -12,29 +13,55 @@ import (
 
 func main() {
 
-	handler.InitProxies(config.GetServices())
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	proxies, err := handler.InitProxies(cfg.Services)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/{rest...}", handler.Redirect)
+	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
 
-	// UID rate limiting layer (last)
-	UIDmemoryStore := ratelimit.NewMemoryStore(1, 10)
-	UIDLimit := middleware.UIDLimitFunc(UIDmemoryStore)
+	//  ────────────────────────────────────────────
 
-	UIDLimitWrap := UIDLimit(mux)
+	// TODO update timeouts based on category
 
-	// JWT auth layer
-	jwtAuthWrap := middleware.JwtAuth(UIDLimitWrap)
+	//    ╭───────────────────────────────╮
+	//    │    UID rate limiting layer    │
+	//    ╰───────────────────────────────╯
+	memoryStoreUID := ratelimit.NewMemoryStore(
+		cfg.Limits.RateUID, cfg.Limits.BucketUID)
+	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(mux)
+	//    ╭──────────────────────────────────────╮
+	//    │            JWT auth layer            │
+	//    ╰──────────────────────────────────────╯
+	jwtAuthHandler := middleware.JwtAuth(limitUIDHandler)
+	//    ╭──────────────────────────────────────╮
+	//    │        IP rate limiting layer        │
+	//    ╰──────────────────────────────────────╯
+	memoryStoreIP := ratelimit.NewMemoryStore(
+		cfg.Limits.RateIP, cfg.Limits.BucketIP)
+	limitIPHandler := middleware.LimitIP(memoryStoreIP)(jwtAuthHandler)
+	//    ╭──────────────────────────────────────╮
+	//    │    Route validation layer (first)    │
+	//    ╰──────────────────────────────────────╯
+	routeCheckHandler := middleware.RouteCheck(limitIPHandler)
+	//  ────────────────────────────────────────────
 
-	// IP rate limiting layer
-	IPmemoryStore := ratelimit.NewMemoryStore(0.2, 3)
-	IPLimit := middleware.IPLimitFunc(IPmemoryStore)
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: routeCheckHandler,
 
-	IPLimitWrap := IPLimit(jwtAuthWrap)
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 
-	// Route validation layer (first)
-	routeCheckWrap := middleware.RouteCheck(IPLimitWrap)
-
-	log.Fatal(http.ListenAndServe(":8080", routeCheckWrap))
+	log.Fatal(srv.ListenAndServe())
 }
