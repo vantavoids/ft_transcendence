@@ -9,6 +9,12 @@ using Auth.Application.Abstractions;
 using Auth.Presentation.Contracts;
 using Auth.Presentation.Contracts.Register;
 
+using RegisterEndpointHttpResults = Microsoft.AspNetCore.Http.HttpResults.Results<
+    Microsoft.AspNetCore.Http.HttpResults.Created<Auth.Presentation.Contracts.Register.RegisterResponse>,
+    Microsoft.AspNetCore.Http.HttpResults.BadRequest<Auth.Presentation.Contracts.ErrorResponse>,
+    Microsoft.AspNetCore.Http.HttpResults.Conflict<Auth.Presentation.Contracts.ErrorResponse>
+>;
+
 public sealed class RegisterEndpoint : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder endpoints)
@@ -23,9 +29,7 @@ public sealed class RegisterEndpoint : ICarterModule
     }
 
 
-    private async Task<
-        Results<Created<RegisterResponse>, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>
-    > Register(
+    private async Task<RegisterEndpointHttpResults> Register(
         RegisterRequest req,
         ICommandHandler<RegisterCommand, Result<RegisterResult>> handler,
         IClock clock,
@@ -36,9 +40,7 @@ public sealed class RegisterEndpoint : ICarterModule
         var command = new RegisterCommand(req.Email, req.Password);
         var result = await handler.HandleAsync(command);
 
-        return result.Match<
-            Results<Created<RegisterResponse>, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>
-        >(
+        return result.Match<RegisterEndpointHttpResults>(
             r => {
                 resp.Cookies.Append(
                     options.CookieName,
