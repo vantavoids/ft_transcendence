@@ -15,11 +15,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the go files
-COPY cmd/ cmd/
-COPY handler/ handler/
-COPY middleware/ middleware/
-COPY utils/ utils/
-COPY config/ config/
+COPY . .
 
 # Disable Go functionality using external C libraries
 # Then tell the compiler to target linux env even if on MacOS or Windows
