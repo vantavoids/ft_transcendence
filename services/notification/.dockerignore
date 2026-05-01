@@ -1,0 +1,20 @@
+.git
+.gitignore
+**/.DS_Store
+
+# Node build artifacts
+node_modules/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.*
+
+# IDE / editor
+.vscode
+.idea
+
+# Tests / coverage / logs
+**/*.log
+coverage

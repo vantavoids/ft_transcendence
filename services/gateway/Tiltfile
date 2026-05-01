@@ -1,0 +1,19 @@
+load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+
+DOCKER = detect_engine()
+FLAGS  = run_flags(DOCKER)
+
+local_resource(
+    'gateway',
+    cmd=DOCKER + ' build -t gateway-service -f Dockerfile.dev .',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'gateway',
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-e DEV=true ' +
+        '-v $(pwd):/app ' +
+        'gateway-service'
+    ),
+    deps=['Dockerfile.dev', 'go.mod', 'go.sum'],
+    resource_deps=['auth', 'chat', 'guild', 'notification', 'user'],
+    labels=['gateway'],
+)

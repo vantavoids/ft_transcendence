@@ -1,7 +1,7 @@
 services:
   chat-db:
     container_name: chat-db
-    image: scylladb/scylla:6.2
+    image: docker.io/scylladb/scylla:6.2
     volumes:
       - chat_db_data:/var/lib/scylla
     healthcheck:
@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
       interval: 10s
       timeout: 5s
       retries: 5

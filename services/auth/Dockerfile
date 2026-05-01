@@ -18,13 +18,16 @@ COPY src/ ./src/
 
 RUN dotnet publish src/Auth.Presentation/Auth.Presentation.csproj \
     -c Release \
+    --no-restore \
     -o /app/publish
 
 # =========================
 # Runtime stage
 # =========================
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
+
+RUN apk add --no-cache curl
 
 COPY --from=build /app/publish ./
 

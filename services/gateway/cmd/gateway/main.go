@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
@@ -24,6 +25,10 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+
+	if os.Getenv("DEV") == "true" {
+		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI)
+	}
 
 	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
 

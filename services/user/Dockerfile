@@ -1,21 +1,27 @@
-FROM rust:latest AS builder
-
+FROM rust:1.88-alpine AS chef
+RUN apk add --no-cache musl-dev && cargo install cargo-chef --locked
 WORKDIR /app
 
+FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo 'fn main() {}' > src/main.rs && \
-    cargo build --release && \
-    rm -f target/release/deps/hello_world*
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
+RUN cargo chef prepare --recipe-path recipe.json
 
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY Cargo.toml Cargo.lock ./
 COPY src/ src/
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+FROM alpine:3 AS runtime
 
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates curl
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/hello_world /app/app
+COPY --from=builder /app/target/release/user-service /app/app
+
+EXPOSE 8080
 
 CMD ["./app"]

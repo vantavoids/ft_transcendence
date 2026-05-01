@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Param, Query, Request } from '@nestjs/common';
 
-@Controller('notifications')
+@Controller()
 export class NotificationController {
 
 	@Get('hello-world')
