@@ -15,6 +15,14 @@ internal sealed class AuthUserRepository(AuthDbContext context) : IAuthUserRepos
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
+    public async Task<AuthUser?> GetByRefreshTokenHashAsync(string hash, CancellationToken cancellationToken = default)
+    {
+        return await context.AuthUsers
+            .FirstOrDefaultAsync(
+                u => u.RefreshToken != null && u.RefreshToken.Hash == hash,
+                cancellationToken);
+    }
+
     public async Task<AuthUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await context.AuthUsers
