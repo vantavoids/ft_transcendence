@@ -1,19 +1,20 @@
 using Carter;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Features.Register;
 using Auth.Domain.Results;
 using Auth.Infrastructure.Options;
-using Microsoft.Extensions.Options;
 using Auth.Application.Abstractions;
-using Auth.Presentation.Contracts.Responses;
+using Auth.Presentation.Contracts;
+using Auth.Presentation.Contracts.Register;
 
 public sealed class RegisterEndpoint : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/register", async (
-            RegisterCommand req,
+            RegisterRequest req,
             ICommandHandler<RegisterCommand, Result<RegisterResult>> handler,
             IClock clock,
             IOptions<RefreshTokenOptions> options,
@@ -25,14 +26,15 @@ public sealed class RegisterEndpoint : ICarterModule
     private async Task<
         Results<Created<RegisterResponse>, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>
     > Register(
-        RegisterCommand req,
+        RegisterRequest req,
         ICommandHandler<RegisterCommand, Result<RegisterResult>> handler,
         IClock clock,
         RefreshTokenOptions options,
         HttpResponse resp
     )
     {
-        var result = await handler.HandleAsync(req);
+        var command = new RegisterCommand(req.Email, req.Password);
+        var result = await handler.HandleAsync(command);
 
         return result.Match<
             Results<Created<RegisterResponse>, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>
