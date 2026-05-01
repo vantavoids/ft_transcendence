@@ -6,15 +6,16 @@ using Auth.Application.Abstractions;
 using Auth.Application.Features.Login;
 using Auth.Domain.Results;
 using Auth.Infrastructure.Options;
-using Auth.Presentation.Contracts.Responses;
+using Auth.Presentation.Contracts;
+using Auth.Presentation.Contracts.Login;
 
 // TODO: Confirm (user not found, user soft deleted, no password) => 401
 using LoginEndpointHttpResults = Microsoft.AspNetCore.Http.HttpResults.Results<
     Microsoft.AspNetCore.Http.HttpResults.Ok<
-        Auth.Presentation.Contracts.Responses.LoginResponse
+        Auth.Presentation.Contracts.Login.LoginResponse
     >,
     Microsoft.AspNetCore.Http.HttpResults.BadRequest<
-        Auth.Presentation.Contracts.Responses.ErrorResponse
+        Auth.Presentation.Contracts.ErrorResponse
     >,
     Microsoft.AspNetCore.Http.HttpResults.UnauthorizedHttpResult
 >;
@@ -26,7 +27,7 @@ public sealed class LoginEndpoint : ICarterModule
     public void AddRoutes(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/login", async (
-            LoginCommand req,
+            LoginRequest req,
             ICommandHandler<LoginCommand, Result<LoginResult>> handler,
             IClock clock,
             IOptions<RefreshTokenOptions> options,
@@ -35,13 +36,14 @@ public sealed class LoginEndpoint : ICarterModule
     }
 
     private static async Task<LoginEndpointHttpResults> Login(
-        LoginCommand req,
+        LoginRequest req,
         ICommandHandler<LoginCommand, Result<LoginResult>> handler,
         IClock clock,
         RefreshTokenOptions options,
         HttpResponse resp)
     {
-        var result = await handler.HandleAsync(req);
+        var command = new LoginCommand(req.Email, req.Password);
+        var result = await handler.HandleAsync(command);
 
         return result.Match<LoginEndpointHttpResults>(
             r =>
@@ -54,7 +56,7 @@ public sealed class LoginEndpoint : ICarterModule
                         HttpOnly = options.HttpOnly,
                         Secure = options.Secure,
                         SameSite = SameSiteMode.Strict,
-                        Expires = clock.UtcNow.Add(TimeSpan.FromDays(options.TtlDays))
+                        Expires = clock.UtcNow.AddDays(options.TtlDays)
                     }
                 );
                 return TypedResults.Ok(new LoginResponse(r.UserId, r.AccessToken));
