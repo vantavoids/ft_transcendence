@@ -5,10 +5,14 @@ using Auth.Persistence;
 using Scalar.AspNetCore;
 using Auth.Persistence.Db;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.ConfigureHostOptions(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
+builder.Services.ConfigureHttpJsonOptions(o =>
+                    o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+                );
 
 builder.Services.AddOpenApi()
                 .AddHealthChecks();
@@ -40,6 +44,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/healthz");
-app.MapCarter();
+var v1 = app.MapGroup("/v1");
+v1.MapCarter();
 
 app.Run();
