@@ -480,3 +480,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Vscode directory
+.vscode
+
+# Compose override for local development
+compose.override.yaml
