@@ -1,4 +1,4 @@
-namespace Auth.Presentation.Contracts.Responses;
+namespace Auth.Presentation.Contracts.Login;
 
 public sealed record LoginResponse(
     long UserId,
