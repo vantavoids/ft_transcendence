@@ -27,7 +27,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	if os.Getenv("DEV") == "true" {
-		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI)
+		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI(cfg))
 	}
 
 	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))

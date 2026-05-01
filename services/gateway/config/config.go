@@ -29,6 +29,17 @@ type Services struct {
 	User         string
 }
 
+func (s Services) Map() map[string]string {
+
+	return map[string]string{
+		"auth":         s.Auth,
+		"chat":         s.Chat,
+		"guild":        s.Guild,
+		"notification": s.Notification,
+		"user":         s.User,
+	}
+}
+
 func Load() (*Config, error) {
 
 	secret, err := requireEnv("JWT_SECRET")

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 )
 
 var httpClient = &http.Client{Timeout: 5 * time.Second}
@@ -98,6 +100,7 @@ func rewriteRefs(node any, refTranslations map[string]string) any {
 func processOperations(pathItem map[string]any, tag, fullPath string) {
 	secured := requiresAuth(fullPath)
 	for method, op := range pathItem {
+		// TODO update to http.Method...
 		if !httpMethods[method] {
 			continue
 		}
@@ -114,83 +117,89 @@ func processOperations(pathItem map[string]any, tag, fullPath string) {
 	}
 }
 
-func AggregateOpenAPI(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
+func AggregateOpenAPI(cfg *config.Config) func(w http.ResponseWriter, r *http.Request) {
 
-	ch := make(chan specResult, len(serviceURLs))
-	for name, url := range serviceURLs {
-		go func(name, url string) {
-			ch <- fetchSpec(ctx, name, url)
-		}(name, url)
-	}
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	paths := map[string]any{}
-	schemas := map[string]any{}
-	var tags []map[string]any
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
 
-	for range serviceURLs {
-		res := <-ch
-		if res.err != nil {
-			log.Printf("openapi: skipping %s: %v", res.name, res.err)
-			continue
+		servicesURL := cfg.Services.Map()
+
+		ch := make(chan specResult, len(servicesURL))
+		for name, url := range servicesURL {
+			go func(name, url string) {
+				ch <- fetchSpec(ctx, name, url)
+			}(name, url)
 		}
 
-		tag := tagName(res.name)
-		tags = append(tags, map[string]any{"name": tag})
+		paths := map[string]any{}
+		schemas := map[string]any{}
+		var tags []map[string]any
 
-		if components, ok := res.spec["components"].(map[string]any); ok {
-			if svcSchemas, ok := components["schemas"].(map[string]any); ok {
-				renames := make(map[string]string, len(svcSchemas))
-				for name := range svcSchemas {
-					renames["#/components/schemas/"+name] = "#/components/schemas/" + tag + name
-				}
-				res.spec = rewriteRefs(res.spec, renames).(map[string]any)
+		for range servicesURL {
+			res := <-ch
+			if res.err != nil {
+				log.Printf("openapi: skipping %s: %v", res.name, res.err)
+				continue
+			}
 
-				if components, ok := res.spec["components"].(map[string]any); ok {
-					if svcSchemas, ok := components["schemas"].(map[string]any); ok {
-						for name, value := range svcSchemas {
-							schemas[tag+name] = value
+			tag := tagName(res.name)
+			tags = append(tags, map[string]any{"name": tag})
+
+			if components, ok := res.spec["components"].(map[string]any); ok {
+				if svcSchemas, ok := components["schemas"].(map[string]any); ok {
+					renames := make(map[string]string, len(svcSchemas))
+					for name := range svcSchemas {
+						renames["#/components/schemas/"+name] = "#/components/schemas/" + tag + name
+					}
+					res.spec = rewriteRefs(res.spec, renames).(map[string]any)
+
+					if components, ok := res.spec["components"].(map[string]any); ok {
+						if svcSchemas, ok := components["schemas"].(map[string]any); ok {
+							for name, value := range svcSchemas {
+								schemas[tag+name] = value
+							}
 						}
+					}
+				}
+			}
+
+			if svcPaths, ok := res.spec["paths"].(map[string]any); ok {
+				for path, item := range svcPaths {
+					if pathItem, ok := item.(map[string]any); ok {
+						fullPath := "/api/" + res.name + path
+						processOperations(pathItem, tag, fullPath)
+						paths[fullPath] = pathItem
 					}
 				}
 			}
 		}
 
-		if svcPaths, ok := res.spec["paths"].(map[string]any); ok {
-			for path, item := range svcPaths {
-				if pathItem, ok := item.(map[string]any); ok {
-					fullPath := "/api/" + res.name + path
-					processOperations(pathItem, tag, fullPath)
-					paths[fullPath] = pathItem
-				}
-			}
-		}
-	}
-
-	merged := map[string]any{
-		"openapi": "3.0.0",
-		"info": map[string]any{
-			"title":   "ft_transcendence",
-			"version": "1.0.0",
-		},
-		"servers": []map[string]any{{"url": "/"}},
-		"tags":    tags,
-		"paths":   paths,
-		"components": map[string]any{
-			"schemas": schemas,
-			"securitySchemes": map[string]any{
-				"bearerAuth": map[string]any{
-					"type":         "http",
-					"scheme":       "bearer",
-					"bearerFormat": "JWT",
+		merged := map[string]any{
+			"openapi": "3.0.0",
+			"info": map[string]any{
+				"title":   "ft_transcendence",
+				"version": "1.0.0",
+			},
+			"servers": []map[string]any{{"url": "/"}},
+			"tags":    tags,
+			"paths":   paths,
+			"components": map[string]any{
+				"schemas": schemas,
+				"securitySchemes": map[string]any{
+					"bearerAuth": map[string]any{
+						"type":         "http",
+						"scheme":       "bearer",
+						"bearerFormat": "JWT",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(merged); err != nil {
-		log.Printf("openapi: encode error: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(merged); err != nil {
+			log.Printf("openapi: encode error: %v", err)
+		}
 	}
 }
