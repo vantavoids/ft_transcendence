@@ -1,4 +1,3 @@
-// Package middleware provides JWT authentification for the request hitting gateway
 package middleware
 
 import (
@@ -13,7 +12,7 @@ import (
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
-const subKey contextKey = "sub"
+type subKey struct{}
 
 <<<<<<< HEAD
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
@@ -82,8 +81,8 @@ func JwtAuth(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		isAuth := r.Context().Value(isAuthKey).(bool)
-		if isAuth {
+		serviceName := r.Context().Value(subKey{}).(string)
+		if serviceName == "auth" {
 			// log
 			fmt.Println("JWT auth bypassed, forwarding ...")
 >>>>>>> 59a0b85 (feat: add basic rate limiting with IP and UID checks depending on the requested service, add separate routing middleware, start integrating Vanta branch, todo clean stale entries inside the memory store)
@@ -102,7 +101,7 @@ func JwtAuth(next http.Handler) http.Handler {
 
 		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 
-		sub, err := checkToken(tokenStr)
+		subValue, err := checkToken(tokenStr)
 		if err != nil {
 			errMsg := err.Error()
 			http.Error(w, errMsg, http.StatusUnauthorized)
@@ -110,7 +109,7 @@ func JwtAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), subKey, sub)
+		ctx := context.WithValue(r.Context(), subKey{}, subValue)
 
 		// log
 		fmt.Println("JWT auth passed, forwarding ...")
@@ -120,6 +119,7 @@ func JwtAuth(next http.Handler) http.Handler {
 
 func checkToken(tokenStr string) (string, error) {
 
+	// TODO use cfg instead
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
 
 		secret := []byte(os.Getenv("JWT_SECRET"))

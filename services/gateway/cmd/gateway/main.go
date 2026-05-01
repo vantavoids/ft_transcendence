@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
+	"time"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
@@ -13,35 +13,55 @@ import (
 
 func main() {
 
-	handler.InitProxies(config.GetServices())
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	proxies, err := handler.InitProxies(cfg.Services)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mux := http.NewServeMux()
-<<<<<<< HEAD
-	if os.Getenv("DEV") == "true" {
-		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI)
+
+	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
+
+	//  ────────────────────────────────────────────
+
+	// TODO update timeouts based on category
+
+	//    ╭───────────────────────────────╮
+	//    │    UID rate limiting layer    │
+	//    ╰───────────────────────────────╯
+	memoryStoreUID := ratelimit.NewMemoryStore(
+		cfg.Limits.RateUID, cfg.Limits.BucketUID)
+	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(mux)
+	//    ╭──────────────────────────────────────╮
+	//    │            JWT auth layer            │
+	//    ╰──────────────────────────────────────╯
+	jwtAuthHandler := middleware.JwtAuth(limitUIDHandler)
+	//    ╭──────────────────────────────────────╮
+	//    │        IP rate limiting layer        │
+	//    ╰──────────────────────────────────────╯
+	memoryStoreIP := ratelimit.NewMemoryStore(
+		cfg.Limits.RateIP, cfg.Limits.BucketIP)
+	limitIPHandler := middleware.LimitIP(memoryStoreIP)(jwtAuthHandler)
+	//    ╭──────────────────────────────────────╮
+	//    │    Route validation layer (first)    │
+	//    ╰──────────────────────────────────────╯
+	routeCheckHandler := middleware.RouteCheck(limitIPHandler)
+	//  ────────────────────────────────────────────
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: routeCheckHandler,
+
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
-=======
 
->>>>>>> 59a0b85 (feat: add basic rate limiting with IP and UID checks depending on the requested service, add separate routing middleware, start integrating Vanta branch, todo clean stale entries inside the memory store)
-	mux.HandleFunc("/api/{rest...}", handler.Redirect)
-
-	// UID rate limiting layer (last)
-	UIDmemoryStore := ratelimit.NewMemoryStore(1, 10)
-	UIDLimit := middleware.UIDLimitFunc(UIDmemoryStore)
-
-	UIDLimitWrap := UIDLimit(mux)
-
-	// JWT auth layer
-	jwtAuthWrap := middleware.JwtAuth(UIDLimitWrap)
-
-	// IP rate limiting layer
-	IPmemoryStore := ratelimit.NewMemoryStore(0.2, 3)
-	IPLimit := middleware.IPLimitFunc(IPmemoryStore)
-
-	IPLimitWrap := IPLimit(jwtAuthWrap)
-
-	// Route validation layer (first)
-	routeCheckWrap := middleware.RouteCheck(IPLimitWrap)
-
-	log.Fatal(http.ListenAndServe(":8080", routeCheckWrap))
+	log.Fatal(srv.ListenAndServe())
 }

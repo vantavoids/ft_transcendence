@@ -5,15 +5,33 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
-type contextKey string
+type serviceKey struct{}
+type timeoutCatKey struct{}
 
-const isAuthKey contextKey = "isAuth"
+type TimeoutCategory uint8
+
+const (
+	CatJSON      TimeoutCategory = 1
+	CatUpload    TimeoutCategory = 2
+	CatWebSocket TimeoutCategory = 3
+)
+
+var validServices = map[string]bool{
+	"auth":          true,
+	"chat":          true,
+	"guild":         true,
+	"notifications": true,
+	"user":          true,
+}
+
+var wsCapable = map[string]bool{
+	"chat": true,
+}
 
 func RouteCheck(next http.Handler) http.Handler {
 
@@ -28,7 +46,7 @@ func RouteCheck(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), isAuthKey, isAuthRoute(r.URL.Path))
+		ctx := updateContext(r)
 
 		// log
 		fmt.Println("Route checked, forwarding...")
@@ -36,17 +54,14 @@ func RouteCheck(next http.Handler) http.Handler {
 	})
 }
 
-var validServices = map[string]bool{
-	"auth":          true,
-	"chat":          true,
-	"guild":         true,
-	"notifications": true,
-	"user":          true,
-}
-
 func isAPIRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
+
+	// special case for WS upgrades
+	if len(parts) == 3 && parts[0] == "" && parts[1] == "hubs" && parts[2] == "chat" {
+		return true
+	}
 
 	if len(parts) < 4 || parts[0] != "" || parts[1] != "api" {
 		return false
@@ -61,13 +76,73 @@ func isAPIRoute(path string) bool {
 		return false
 	}
 
-	_, err := strconv.Atoi(version[1:])
-
-	return err == nil
+	return isOnlyDigits(version[1:])
 }
 
-func isAuthRoute(path string) bool {
+func isOnlyDigits(s string) bool {
+
+	if s == "" {
+		return false
+	}
+
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+
+	return true
+}
+
+func updateContext(r *http.Request) context.Context {
+
+	service := fetchService(r.URL.Path)
+
+	ctxService := context.WithValue(r.Context(), serviceKey{}, service)
+	ctxTimeoutCat := context.WithValue(ctxService, timeoutCatKey{}, pickTimeoutCat(r))
+
+	return ctxTimeoutCat
+}
+
+func fetchService(path string) string {
 
 	parts := strings.Split(path, "/")
-	return len(parts) > 2 && parts[2] == "auth"
+	return parts[2]
+}
+
+func pickTimeoutCat(r *http.Request) TimeoutCategory {
+
+	if isWebSocketUpgrade(r) && wsCapable[fetchService(r.URL.Path)] {
+		return CatWebSocket // 3
+	}
+	if isAvatarUpload(r) {
+		return CatUpload // 2
+	}
+	return CatJSON // 1
+}
+
+func isWebSocketUpgrade(r *http.Request) bool {
+
+	return r.Method == http.MethodGet &&
+		strings.EqualFold(r.Header.Get("Upgrade"), "websocket") &&
+		strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade")
+}
+
+func isAvatarUpload(r *http.Request) bool {
+
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		return false
+	}
+
+	parts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
+	if len(parts) < 6 {
+		return false
+	}
+
+	service := parts[2]
+	if service != "user" && service != "guild" {
+		return false
+	}
+
+	return isOnlyDigits(parts[4]) && parts[5] == "avatar"
 }
