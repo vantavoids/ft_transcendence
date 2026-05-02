@@ -33,15 +33,17 @@ func main() {
 	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
 
 	//  ────────────────────────────────────────────
-
-	// TODO update timeouts based on category
-
-	//    ╭───────────────────────────────╮
-	//    │    UID rate limiting layer    │
-	//    ╰───────────────────────────────╯
+	//    ╭──────────────────────────────────────╮
+	//    │    Timeout Category layer (last)     │
+	//    ╰──────────────────────────────────────╯
+	timeoutCatHandler := middleware.TimeoutCat(mux)
+	//    ╭──────────────────────────────────────╮
+	//    │       UID rate limiting layer        │
+	//    ╰──────────────────────────────────────╯
 	memoryStoreUID := ratelimit.NewMemoryStore(
 		cfg.Limits.RateUID, cfg.Limits.BucketUID)
-	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(mux)
+
+	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(timeoutCatHandler)
 	//    ╭──────────────────────────────────────╮
 	//    │            JWT auth layer            │
 	//    ╰──────────────────────────────────────╯
@@ -51,6 +53,7 @@ func main() {
 	//    ╰──────────────────────────────────────╯
 	memoryStoreIP := ratelimit.NewMemoryStore(
 		cfg.Limits.RateIP, cfg.Limits.BucketIP)
+
 	limitIPHandler := middleware.LimitIP(memoryStoreIP)(jwtAuthHandler)
 	//    ╭──────────────────────────────────────╮
 	//    │    Route validation layer (first)    │
@@ -61,11 +64,12 @@ func main() {
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: routeCheckHandler,
-
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		// General values used before a timeout category
+		// can be attributed to the request in routeCheck()
+		ReadHeaderTimeout: 5 * time.Second,   // max time to read request headers from the client
+		ReadTimeout:       15 * time.Second,  // max time to read the entire request, headers + body
+		WriteTimeout:      20 * time.Second,  // max time to write the response, measured from end of header read
+		IdleTimeout:       120 * time.Second, // close idle keep-alive conns after this; falls back to ReadTimeout if zero
 	}
 
 	log.Fatal(srv.ListenAndServe())
