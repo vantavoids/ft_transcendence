@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,55 +13,75 @@ import (
 
 type subKey struct{}
 
-func JwtAuth(next http.Handler) http.Handler {
+func JwtAuth(secret string) Middleware {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(next http.Handler) http.Handler {
 
-		serviceName := r.Context().Value(subKey{}).(string)
-		if serviceName == "auth" {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			serviceName, ok := r.Context().Value(serviceKey{}).(string)
+			if !ok {
+				logMsg := "missing serviceKey in ctx inside JwtAuth"
+				errMsg := "internal server error"
+				http.Error(w, errMsg, http.StatusInternalServerError)
+				fmt.Println(utils.RedStr(logMsg))
+				return
+			}
+
+			if serviceName == "auth" {
+				// log
+				fmt.Println("JWT auth bypassed, forwarding ...")
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			tokenStr := extractToken(r)
+			if tokenStr == "" {
+				errMsg := "missing authorization header"
+				http.Error(w, errMsg, http.StatusUnauthorized)
+				fmt.Println(utils.RedStr(errMsg))
+				return
+			}
+
+			subValue, err := checkToken(tokenStr, secret)
+			if err != nil {
+				errMsg := err.Error()
+				http.Error(w, errMsg, http.StatusUnauthorized)
+				fmt.Println(utils.RedStr(errMsg))
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), subKey{}, subValue)
+
 			// log
-			fmt.Println("JWT auth bypassed, forwarding ...")
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		tokenStr := r.Header.Get("Authorization")
-
-		if !strings.HasPrefix(tokenStr, "Bearer ") {
-			errMsg := "missing authorization header"
-			http.Error(w, errMsg, http.StatusUnauthorized)
-			fmt.Println(utils.RedStr(errMsg))
-			return
-		}
-
-		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
-
-		subValue, err := checkToken(tokenStr)
-		if err != nil {
-			errMsg := err.Error()
-			http.Error(w, errMsg, http.StatusUnauthorized)
-			fmt.Println(utils.RedStr(errMsg))
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), subKey{}, subValue)
-
-		// log
-		fmt.Println("JWT auth passed, forwarding ...")
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			fmt.Println("JWT auth passed, forwarding ...")
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
-func checkToken(tokenStr string) (string, error) {
+func extractToken(r *http.Request) string {
 
-	// TODO use cfg instead
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
-
-		secret := []byte(os.Getenv("JWT_SECRET"))
-		if len(secret) == 0 {
-			return secret, fmt.Errorf("missing secret")
+	if h := r.Header.Get("Authorization"); h != "" {
+		if scheme, token, ok := strings.Cut(h, " "); ok && strings.EqualFold(scheme, "bearer") {
+			return strings.TrimSpace(token) // TrimSpace just to be safe if extra space is present
 		}
-		return secret, nil
+	}
+	if r.Header.Get("Upgrade") == "websocket" {
+		return r.URL.Query().Get("access_token")
+	}
+
+	return ""
+}
+
+func checkToken(tokenStr string, secret string) (string, error) {
+
+	// check the token alg to be HMAC and return secret
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
 	})
 
 	if err != nil {
@@ -70,16 +89,19 @@ func checkToken(tokenStr string) (string, error) {
 	}
 
 	if !token.Valid {
-		return "", fmt.Errorf("invalid token")
+		fmt.Println(utils.RedStr("invalid token"))
+		return "", fmt.Errorf("unauthorized")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", fmt.Errorf("invalid claims")
+		fmt.Println(utils.RedStr("invalid claims"))
+		return "", fmt.Errorf("unauthorized")
 	}
 	sub, ok := claims["sub"].(string)
 	if !ok {
-		return "", fmt.Errorf("missing sub claim")
+		fmt.Println(utils.RedStr("missing sub claim"))
+		return "", fmt.Errorf("unauthorized")
 	}
 
 	// print token for debug, TODO remove

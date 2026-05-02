@@ -45,7 +45,7 @@ func main() {
 	//    ╭──────────────────────────────────────╮
 	//    │            JWT auth layer            │
 	//    ╰──────────────────────────────────────╯
-	jwtAuthHandler := middleware.JwtAuth(limitUIDHandler)
+	jwtAuthHandler := middleware.JwtAuth(cfg.JWTSecret)(limitUIDHandler)
 	//    ╭──────────────────────────────────────╮
 	//    │        IP rate limiting layer        │
 	//    ╰──────────────────────────────────────╯
