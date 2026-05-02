@@ -22,11 +22,11 @@ const (
 )
 
 var validServices = map[string]bool{
-	"auth":          true,
-	"chat":          true,
-	"guild":         true,
-	"notifications": true,
-	"user":          true,
+	"auth":         true,
+	"chat":         true,
+	"guild":        true,
+	"notification": true,
+	"user":         true,
 }
 
 var wsCapable = map[string]bool{
@@ -46,6 +46,8 @@ func RouteCheck(next http.Handler) http.Handler {
 			return
 		}
 
+		// update context with the requested service
+		// and the timeout category (CatJSON, CatUpload, CatWebSocket)
 		ctx := updateContext(r)
 
 		// log
@@ -99,7 +101,7 @@ func updateContext(r *http.Request) context.Context {
 	service := fetchService(r.URL.Path)
 
 	ctxService := context.WithValue(r.Context(), serviceKey{}, service)
-	ctxTimeoutCat := context.WithValue(ctxService, timeoutCatKey{}, pickTimeoutCat(r))
+	ctxTimeoutCat := context.WithValue(ctxService, timeoutCatKey{}, pickTimeoutCat(r, service))
 
 	return ctxTimeoutCat
 }
@@ -110,9 +112,9 @@ func fetchService(path string) string {
 	return parts[2]
 }
 
-func pickTimeoutCat(r *http.Request) TimeoutCategory {
+func pickTimeoutCat(r *http.Request, service string) TimeoutCategory {
 
-	if isWebSocketUpgrade(r) && wsCapable[fetchService(r.URL.Path)] {
+	if isWebSocketUpgrade(r) && wsCapable[service] {
 		return CatWebSocket // 3
 	}
 	if isAvatarUpload(r) {
