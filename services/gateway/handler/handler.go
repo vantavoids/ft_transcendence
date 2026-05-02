@@ -3,10 +3,12 @@ package handler
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
@@ -46,11 +48,28 @@ func InitProxies(s config.Services) (Proxies, error) {
 	}, nil
 }
 
+var dialer = &net.Dialer{
+	Timeout:   5 * time.Second,  // max time to establish a TCP connection (SYN to ESTABLISHED)
+	KeepAlive: 30 * time.Second, // OS-level TCP keepalive probe interval to detect dead peers
+}
+
+var transport = &http.Transport{
+	DialContext:           dialer.DialContext, // function used to open new TCP connections
+	MaxIdleConns:          500,                // total idle conns kept in the pool across all backends
+	MaxIdleConnsPerHost:   100,                // idle conns kept per backend host (defaults to 2 if unset)
+	IdleConnTimeout:       90 * time.Second,   // close idle conns after this; keep below backend's idle timeout
+	ResponseHeaderTimeout: 30 * time.Second,   // max wait from request sent to first response header byte
+	DisableCompression:    true,               // don't auto-add Accept-Encoding gzip; let client's header pass through
+}
+
 func newProxy(name, addr string) (*httputil.ReverseProxy, error) {
 
 	target, err := url.Parse(addr)
 	if err != nil {
 		return nil, fmt.Errorf("init %s proxy: %w", name, err)
+	}
+	if target.Scheme == "" || target.Host == "" {
+		return nil, fmt.Errorf("init %s proxy: invalid address %q", name, addr)
 	}
 
 	return &httputil.ReverseProxy{
@@ -67,6 +86,8 @@ func newProxy(name, addr string) (*httputil.ReverseProxy, error) {
 			}
 			preq.SetXForwarded()
 		},
+
+		Transport: transport,
 	}, nil
 }
 
