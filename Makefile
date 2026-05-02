@@ -4,6 +4,13 @@ ANNOUNCER    := Announcer
 COMPOSE      ?= podman-compose
 DOCKER       ?= podman
 
+CERTDIR      := .mkcert certs
+USERID	     := $(shell id -u)
+GRPID        := $(shell id -g)
+
+export USERID
+export GRPID
+
 ENV_FILES := .env \
              frontend/.env \
              services/auth/.env \
@@ -45,6 +52,10 @@ fclean: down
 	@$(DOCKER) image rm -f $$($(DOCKER) image ls -q) 2>/dev/null || true
 	@$(DOCKER) system prune -a --volumes -f
 	@echo "$(call ann,Red) It's all gone. You won't have to download extra storage (no need to thank me) :)"
+
+rmcert:
+	@echo "$(call ann,Red) removing all certificates"
+	@rm -rf $(CERTDIR)
 
 logs:
 	@echo "$(call ann,Cyan) Looking at the containers' yapping... (Ctrl+C to look away)"
