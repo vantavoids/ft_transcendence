@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+WORKDIR /app
+
+RUN dotnet tool install --global dotnet-ef --version 10.0.4
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+COPY Auth.slnx ./
+COPY Directory.Build.props ./
+COPY src/Auth.Domain/Auth.Domain.csproj src/Auth.Domain/
+COPY src/Auth.Application/Auth.Application.csproj src/Auth.Application/
+COPY src/Auth.Persistence/Auth.Persistence.csproj src/Auth.Persistence/
+
+RUN dotnet restore src/Auth.Persistence/Auth.Persistence.csproj
+
+COPY src/Auth.Domain/ ./src/Auth.Domain/
+COPY src/Auth.Application/ ./src/Auth.Application/
+COPY src/Auth.Persistence/ ./src/Auth.Persistence/
+
+RUN dotnet build src/Auth.Persistence/Auth.Persistence.csproj --no-restore -c Release
+
+ENTRYPOINT ["bash", "-c", "\
+    until exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null; do \
+        echo \"waiting for ${POSTGRES_HOST}:${POSTGRES_PORT}...\"; sleep 1; \
+    done; exec 3<&-; \
+    dotnet ef database update \
+        --project src/Auth.Persistence/Auth.Persistence.csproj \
+        --startup-project src/Auth.Persistence/Auth.Persistence.csproj \
+        --no-build --configuration Release"]
