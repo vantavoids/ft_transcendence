@@ -75,18 +75,18 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
         /* Index */
         builder.OwnsOne(u => u.Email).HasIndex(e => e.Value)
                 .IsUnique()
-                .HasFilter("[deleted_at] IS NULL AND [email] IS NOT NULL")
+                .HasFilter("deleted_at IS NULL AND email IS NOT NULL")
                 .HasDatabaseName("idx_users_auth_email");
 
         builder.OwnsOne(u => u.OAuthIdentity).HasIndex(o => new { o.Provider, o.Id })
                 .IsUnique()
-                .HasFilter("[deleted_at] IS NULL AND [oauth_provider] IS NOT NULL")
+                .HasFilter("deleted_at IS NULL AND oauth_provider IS NOT NULL")
                 .HasDatabaseName("idx_users_auth_oauth");
 
         builder.OwnsOne(u => u.RefreshToken).HasIndex(r => r.Hash)
-                .HasFilter(@"[deleted_at] IS NULL
-                        AND [refresh_token_revoked] = FALSE
-                        AND [refresh_token_hash IS NOT NULL]")
+                .HasFilter(@"deleted_at IS NULL
+                        AND refresh_token_revoked = FALSE
+                        AND refresh_token_hash IS NOT NULL")
                 .HasDatabaseName("idx_users_auth_refresh_token");
     }
 }
