@@ -3,6 +3,8 @@ services:
     container_name: auth-db
     image: docker.io/postgres:17-alpine
     env_file: ${PWD}/services/auth/.env
+    ports:
+      - "5432:5432"
     volumes:
       - auth_db_data:/var/lib/postgresql/data
     healthcheck:
@@ -13,14 +15,12 @@ services:
 
   auth-migrate:
     container_name: auth-migrate
-    image: auth-service
+    image: auth-migrate-service
     pull_policy: never
     build:
       context: ${PWD}/services/auth
-      dockerfile: Dockerfile
-    command: dotnet ef database update --project src/Auth.Persistence/Auth.Persistence.csproj --startup-project src/Auth.Presentation/Auth.Presentation.csproj
+      dockerfile: Dockerfile.migrate
     env_file: ${PWD}/services/auth/.env
-    profiles: ["migrate"]
     depends_on:
       auth-db:
         condition: service_healthy
@@ -50,6 +50,8 @@ services:
         condition: service_healthy
       auth-db:
         condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
 
 volumes:
   auth_db_data:
