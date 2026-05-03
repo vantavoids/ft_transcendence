@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Auth.Persistence.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20260503004845_InitialCreate")]
+    [Migration("20260503143221_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -29,7 +29,8 @@ namespace Auth.Persistence.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
@@ -53,12 +54,11 @@ namespace Auth.Persistence.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("NOW()");
 
-                    b.HasKey("Id")
-                        .HasName("id");
+                    b.HasKey("Id");
 
-                    b.ToTable("AuthUsers", t =>
+                    b.ToTable("auth_users", null, t =>
                         {
-                            t.HasCheckConstraint("email_or_oauth", "(\n                (email IS NOT NULL AND password_hash IS NOT NULL)\n                OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)\n            )");
+                            t.HasCheckConstraint("email_or_oauth", "(\n            (email IS NOT NULL AND password_hash IS NOT NULL)\n            OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)\n        )");
                         });
                 });
 
@@ -88,7 +88,7 @@ namespace Auth.Persistence.Migrations
                                 .HasDatabaseName("idx_users_auth_email")
                                 .HasFilter("deleted_at IS NULL AND email IS NOT NULL");
 
-                            b1.ToTable("AuthUsers");
+                            b1.ToTable("auth_users");
 
                             b1.WithOwner()
                                 .HasForeignKey("AuthUserId");
@@ -118,7 +118,7 @@ namespace Auth.Persistence.Migrations
                                 .HasDatabaseName("idx_users_auth_oauth")
                                 .HasFilter("deleted_at IS NULL AND oauth_provider IS NOT NULL");
 
-                            b1.ToTable("AuthUsers");
+                            b1.ToTable("auth_users");
 
                             b1.WithOwner()
                                 .HasForeignKey("AuthUserId");
@@ -155,7 +155,7 @@ namespace Auth.Persistence.Migrations
                                 .HasDatabaseName("idx_users_auth_refresh_token")
                                 .HasFilter("deleted_at IS NULL\n                        AND refresh_token_revoked = FALSE\n                        AND refresh_token_hash IS NOT NULL");
 
-                            b1.ToTable("AuthUsers");
+                            b1.ToTable("auth_users");
 
                             b1.WithOwner()
                                 .HasForeignKey("AuthUserId");
