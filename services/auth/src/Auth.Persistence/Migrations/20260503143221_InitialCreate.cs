@@ -13,10 +13,10 @@ namespace Auth.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "AuthUsers",
+                name: "auth_users",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
+                    id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     email_verified = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
@@ -33,27 +33,27 @@ namespace Auth.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("id", x => x.Id);
-                    table.CheckConstraint("email_or_oauth", "(\n                (email IS NOT NULL AND password_hash IS NOT NULL)\n                OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)\n            )");
+                    table.PrimaryKey("PK_auth_users", x => x.id);
+                    table.CheckConstraint("email_or_oauth", "(\n            (email IS NOT NULL AND password_hash IS NOT NULL)\n            OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)\n        )");
                 });
 
             migrationBuilder.CreateIndex(
                 name: "idx_users_auth_email",
-                table: "AuthUsers",
+                table: "auth_users",
                 column: "email",
                 unique: true,
                 filter: "deleted_at IS NULL AND email IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "idx_users_auth_oauth",
-                table: "AuthUsers",
+                table: "auth_users",
                 columns: new[] { "oauth_provider", "oauth_id" },
                 unique: true,
                 filter: "deleted_at IS NULL AND oauth_provider IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "idx_users_auth_refresh_token",
-                table: "AuthUsers",
+                table: "auth_users",
                 column: "refresh_token_hash",
                 filter: "deleted_at IS NULL\n                        AND refresh_token_revoked = FALSE\n                        AND refresh_token_hash IS NOT NULL");
         }
@@ -62,7 +62,7 @@ namespace Auth.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AuthUsers");
+                name: "auth_users");
         }
     }
 }
