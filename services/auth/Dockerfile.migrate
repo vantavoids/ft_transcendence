@@ -19,9 +19,13 @@ COPY src/Auth.Persistence/ ./src/Auth.Persistence/
 RUN dotnet build src/Auth.Persistence/Auth.Persistence.csproj --no-restore -c Release
 
 ENTRYPOINT ["bash", "-c", "\
-    until exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null; do \
-        echo \"waiting for ${POSTGRES_HOST}:${POSTGRES_PORT}...\"; sleep 1; \
-    done; exec 3<&-; \
+    : ${POSTGRES_HOST:?POSTGRES_HOST not set}; \
+    : ${POSTGRES_PORT:?POSTGRES_PORT not set}; \
+    for i in $(seq 1 30); do \
+        exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null && { exec 3<&-; break; }; \
+        echo \"waiting for ${POSTGRES_HOST}:${POSTGRES_PORT}... ($i/30)\"; sleep 1; \
+    done; \
+    exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null || { echo \"${POSTGRES_HOST} never woke up :(\"; exit 1; }; exec 3<&-; \
     dotnet ef database update \
         --project src/Auth.Persistence/Auth.Persistence.csproj \
         --startup-project src/Auth.Persistence/Auth.Persistence.csproj \
