@@ -11,8 +11,14 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
 {
     public void Configure(EntityTypeBuilder<AuthUser> builder)
     {
+        builder.ToTable("auth_users", b => b.HasCheckConstraint("email_or_oauth", @"(
+            (email IS NOT NULL AND password_hash IS NOT NULL)
+            OR (oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)
+        )"));
+
         /* Key */
-        builder.HasKey(u => u.Id).HasName("id");
+        builder.HasKey(u => u.Id);
+        builder.Property(u => u.Id).HasColumnName("id");
 
         /* Embded Properties */
         builder.OwnsOne(u => u.Email, email =>
