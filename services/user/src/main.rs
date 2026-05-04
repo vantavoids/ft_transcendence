@@ -1,24 +1,12 @@
+mod models;
+
 use aide::{
     axum::{routing::get_with, ApiRouter},
     openapi::{Info, OpenApi},
 };
 use axum::{routing::get, Extension, Json};
-use chrono::NaiveDateTime;
-use schemars::JsonSchema;
-use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
-use uuid::Uuid;
-
-#[derive(Debug, FromRow, serde::Serialize, JsonSchema)]
-struct User {
-    id: Uuid,
-    auth_id: Uuid,
-    username: String,
-    discriminator: Option<String>,
-    created_at: NaiveDateTime,
-    updated_at: NaiveDateTime,
-    deleted_at: Option<NaiveDateTime>,
-}
 
 #[allow(dead_code)]
 #[derive(Clone)]
