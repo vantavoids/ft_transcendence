@@ -57,7 +57,7 @@ export default function RegisterPage() {
           <input
             name="username"
             placeholder="cartoo"
-            className="h-12 rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
         </div>
@@ -66,7 +66,7 @@ export default function RegisterPage() {
             name="password"
             type="password"
             placeholder="password"
-            className="h-12 rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.password ? <p className="text-sm text-pink">{errors.password}</p> : null}
         </div>
@@ -75,7 +75,7 @@ export default function RegisterPage() {
             name="confirm"
             type="password"
             placeholder="confirm"
-            className="h-12 rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.confirm ? <p className="text-sm text-pink">{errors.confirm}</p> : null}
         </div>

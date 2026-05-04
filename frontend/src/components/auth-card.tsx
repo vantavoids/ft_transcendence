@@ -11,15 +11,7 @@ export function AuthCard({ title, alternateHref, alternateLabel, children }: Aut
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-10">
       <div className="relative w-full max-w-[26rem]">
-        <div className="absolute inset-x-[-2rem] inset-y-8 rounded-[2rem] bg-transparent shadow-glow" />
-        <div className="absolute left-[-18rem] top-[-8rem] hidden lg:block">
-          <Link
-            href="/"
-            className="mono-detail text-[2.2rem] font-bold tracking-[-0.06em] text-white"
-          >
-            Logo<span className="text-aqua">_</span>
-          </Link>
-        </div>
+        <div className="absolute inset-0 rounded-xl bg-transparent shadow-glow" />
         <div className="relative rounded-xl bg-secondary-bg px-8 py-10 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:px-12 sm:py-14">
           <div className="mb-10 flex flex-col items-center">
             <h1 className="font-display text-[4rem] font-extrabold leading-none tracking-[-0.07em] text-white sm:text-[4.5rem]">
@@ -33,6 +25,14 @@ export function AuthCard({ title, alternateHref, alternateLabel, children }: Aut
             </Link>
           </div>
           {children}
+        </div>
+        <div className="absolute left-[-18rem] top-[-8rem] hidden lg:block">
+          <Link
+            href="/"
+            className="mono-detail text-[2.2rem] font-bold tracking-[-0.06em] text-white"
+          >
+            Logo<span className="text-aqua">_</span>
+          </Link>
         </div>
       </div>
     </div>

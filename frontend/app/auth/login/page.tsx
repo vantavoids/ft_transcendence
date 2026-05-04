@@ -6,10 +6,7 @@ import { CircleCheck } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { login } from '../../../src/shared/api/auth';
 import { SESSION_USERNAME_KEY } from '../../../src/shared/lib/session';
-import {
-  validateLoginForm,
-  type LoginFormErrors
-} from '../../../src/shared/lib/validators/auth';
+import { validateLoginForm, type LoginFormErrors } from '../../../src/shared/lib/validators/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,7 +45,7 @@ export default function LoginPage() {
           <input
             name="username"
             placeholder="username"
-            className="h-12 rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
         </div>
@@ -57,7 +54,7 @@ export default function LoginPage() {
             name="password"
             type="password"
             placeholder="password"
-            className="h-12 rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.password ? <p className="text-sm text-pink">{errors.password}</p> : null}
         </div>
