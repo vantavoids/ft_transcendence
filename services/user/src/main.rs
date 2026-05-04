@@ -4,7 +4,8 @@ use aide::{
     axum::{routing::get_with, ApiRouter},
     openapi::{Info, OpenApi},
 };
-use axum::{routing::get, Extension, Json};
+use axum::{extract::{Path, State}, http::StatusCode, routing::get, Extension, Json};
+use models::UserProfile;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
 
@@ -16,6 +17,41 @@ struct AppState {
 
 async fn hello() -> &'static str {
     "tu compiles hein"
+}
+
+async fn list_users(State(state): State<AppState>) -> Result<Json<Vec<UserProfile>>, StatusCode> {
+    let users = sqlx::query_as::<_, UserProfile>(
+        r#"
+        SELECT id, username, display_name, avatar_url, banner_url, status, last_seen_at, bio, created_at, updated_at
+        FROM users_profile
+        ORDER BY created_at ASC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(users))
+}
+
+async fn get_user(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<UserProfile>, StatusCode> {
+    let user = sqlx::query_as::<_, UserProfile>(
+        r#"
+        SELECT id, username, display_name, avatar_url, banner_url, status, last_seen_at, bio, created_at, updated_at
+        FROM users_profile
+        WHERE id = $1
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+    Ok(Json(user))
 }
 
 async fn serve_openapi(Extension(api): Extension<Arc<OpenApi>>) -> Json<OpenApi> {
@@ -31,7 +67,7 @@ async fn main() {
         .await
         .expect("db connect failed");
 
-    let _state = AppState { db };
+    let state = AppState { db };
 
     let is_dev = std::env::var("APP_ENV").as_deref() == Ok("development");
 
@@ -45,7 +81,10 @@ async fn main() {
     };
 
     let mut router = ApiRouter::new()
-        .api_route("/v1/hello-world", get_with(hello, |t| t));
+        .api_route("/v1/hello-world", get_with(hello, |t| t))
+        .route("/v1/users", get(list_users))
+        .route("/v1/users/:id", get(get_user))
+        .with_state(state);
 
     if is_dev {
         router = router.route("/openapi/v1.json", get(serve_openapi));
