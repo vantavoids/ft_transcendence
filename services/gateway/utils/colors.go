@@ -6,6 +6,8 @@ const (
 	Green  = "\033[32m"
 	Yellow = "\033[33m"
 	Blue   = "\033[36m"
+	Purple = "\033[35m"
+	Grey   = "\033[90m"
 	Reset  = "\033[0m"
 )
 
@@ -23,4 +25,12 @@ func YellowStr(str string) string {
 
 func BlueStr(str string) string {
 	return Blue + str + Reset
+}
+
+func PurpleStr(str string) string {
+	return Purple + str + Reset
+}
+
+func GreyStr(str string) string {
+	return Grey + str + Reset
 }

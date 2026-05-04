@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
 )
 
 func TimeoutCat(next http.Handler) http.Handler {
@@ -24,15 +26,18 @@ func TimeoutCat(next http.Handler) http.Handler {
 		// the conn's deadlines via SetDeadline(time.Time{}) and transitions
 		// the conn to StateHijacked so server timeouts no longer apply.
 		case CatWebSocket:
+			logs.Info(r.RemoteAddr, "Attributed timeout category WebSocket...")
 			_ = rc.SetWriteDeadline(time.Time{})
 			_ = rc.SetReadDeadline(time.Time{})
 
 		case CatUpload:
+			logs.Info(r.RemoteAddr, "Attributed timeout category Upload...")
 			r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5 MB
 			_ = rc.SetReadDeadline(time.Now().Add(60 * time.Second))
 			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
 
-		default: // CatJSON
+		default:
+			logs.Info(r.RemoteAddr, "Attributed timeout category JSON...")
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB
 			_ = rc.SetReadDeadline(time.Now().Add(5 * time.Second))
 			_ = rc.SetWriteDeadline(time.Now().Add(10 * time.Second))
