@@ -10,9 +10,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <main className="app-shell min-h-screen">
-          {children}
-        </main>
+        <main className="app-shell min-h-screen">{children}</main>
       </body>
     </html>
   );

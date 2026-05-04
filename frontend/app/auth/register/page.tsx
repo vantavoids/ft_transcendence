@@ -56,7 +56,7 @@ export default function RegisterPage() {
         <div className="grid gap-2">
           <input
             name="username"
-            placeholder="cartoo"
+            placeholder="username"
             className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
           />
           {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
