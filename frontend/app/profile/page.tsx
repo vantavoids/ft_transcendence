@@ -1,5 +1,10 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Gamepad2, Hash, Mic2, Settings, Users2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CalendarDays, Gamepad2, Hash, LogOut, Mic2, Settings, Users2 } from 'lucide-react';
+import { clearFakeSession, SESSION_USERNAME_KEY } from '../../src/shared/lib/session';
 
 const roles = [
   { name: 'Admin', tone: 'bg-pink/18 text-pink ring-pink/25' },
@@ -29,6 +34,22 @@ const activity = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const [username, setUsername] = useState('player');
+
+  useEffect(() => {
+    const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
+  function handleFakeDisconnect() {
+    clearFakeSession();
+    router.push('/auth/login');
+    router.refresh();
+  }
+
   return (
     <section className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
@@ -61,9 +82,9 @@ export default function ProfilePage() {
                   </div>
                   <div className="min-w-0 pb-1">
                     <h1 className="truncate text-[2.25rem] font-extrabold tracking-[-0.05em] text-white">
-                      cartoone
+                      {username}
                     </h1>
-                    <p className="mono-detail mt-1 text-white/40">cartoone#4242</p>
+                    <p className="mono-detail mt-1 text-white/40">{username}#4242</p>
                   </div>
                 </div>
 
@@ -86,6 +107,14 @@ export default function ProfilePage() {
                   >
                     <Settings className="h-4 w-4" strokeWidth={1.8} />
                     Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFakeDisconnect}
+                    className="flex items-center gap-2 rounded-xl border border-pink/25 bg-pink/10 px-4 py-2.5 font-semibold text-pink transition hover:border-pink/40 hover:bg-pink/15"
+                  >
+                    <LogOut className="h-4 w-4" strokeWidth={1.8} />
+                    Disconnect
                   </button>
                 </div>
               </div>
