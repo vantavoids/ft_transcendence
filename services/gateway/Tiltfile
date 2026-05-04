@@ -14,6 +14,7 @@ local_resource(
         '--env-file .env ' +
         '-e DEV=true ' +
         '-e JWT_SECRET=' + JWT_SECRET + ' ' +
+        '-e GATEWAY_DEV=true ' +
         '-v $(pwd):/app ' +
         'gateway-service'
     ),

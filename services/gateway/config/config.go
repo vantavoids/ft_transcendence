@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Dev       string
 	Port      string
 	JWTSecret string
 	Limits    Limits
@@ -40,6 +41,17 @@ func (s Services) Map() map[string]string {
 	}
 }
 
+func (s Services) Slice() []string {
+
+	return []string{
+		"auth",
+		"chat",
+		"guild",
+		"notification",
+		"user",
+	}
+}
+
 func Load() (*Config, error) {
 
 	secret, err := requireEnv("JWT_SECRET")
@@ -58,6 +70,7 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
+		Dev:       envOrDefault("GATEWAY_DEV", "false"),
 		Port:      envOrDefault("GATEWAY_PORT", "8080"),
 		JWTSecret: secret,
 		Limits:    limits,
