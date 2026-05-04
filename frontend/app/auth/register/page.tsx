@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CircleCheck } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { register } from '../../../src/shared/api/auth';
-import { SESSION_USERNAME_KEY } from '../../../src/shared/lib/session';
+import { createFakeSession } from '../../../src/shared/lib/session';
 import {
   validateRegisterForm,
   type RegisterFormErrors
@@ -41,7 +41,7 @@ export default function RegisterPage() {
         password,
         confirm
       });
-      window.localStorage.setItem(SESSION_USERNAME_KEY, username.trim());
+      createFakeSession(username.trim());
       router.push('/chat');
     } catch (error) {
       setServerError(error instanceof Error ? error.message : 'Registration failed.');

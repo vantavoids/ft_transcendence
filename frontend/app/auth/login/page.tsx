@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CircleCheck } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { login } from '../../../src/shared/api/auth';
-import { SESSION_USERNAME_KEY } from '../../../src/shared/lib/session';
+import { createFakeSession } from '../../../src/shared/lib/session';
 import { validateLoginForm, type LoginFormErrors } from '../../../src/shared/lib/validators/auth';
 
 export default function LoginPage() {
@@ -29,7 +29,7 @@ export default function LoginPage() {
     try {
       setIsSubmitting(true);
       await login({ username: username.trim(), password });
-      window.localStorage.setItem(SESSION_USERNAME_KEY, username.trim());
+      createFakeSession(username.trim());
       router.push('/chat');
     } catch (error) {
       setServerError(error instanceof Error ? error.message : 'Login failed.');

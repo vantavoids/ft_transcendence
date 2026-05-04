@@ -1,5 +1,3 @@
-import { apiFetch } from './client';
-
 export type AuthPayload = {
   username: string;
   password: string;
@@ -9,16 +7,23 @@ export type RegisterPayload = AuthPayload & {
   confirm: string;
 };
 
+type FakeAuthResponse = {
+  username: string;
+};
+
+async function simulateAuth<T>(result: T): Promise<T> {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  return result;
+}
+
 export async function login(payload: AuthPayload) {
-  return apiFetch('auth', '/login', {
-    method: 'POST',
-    body: payload
+  return simulateAuth<FakeAuthResponse>({
+    username: payload.username.trim()
   });
 }
 
 export async function register(payload: RegisterPayload) {
-  return apiFetch('auth', '/register', {
-    method: 'POST',
-    body: payload
+  return simulateAuth<FakeAuthResponse>({
+    username: payload.username.trim()
   });
 }
