@@ -4,6 +4,21 @@ const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontSize: {
+        xs: ['0.7rem', { lineHeight: '1rem' }],
+        sm: ['0.8rem', { lineHeight: '1.15rem' }],
+        base: ['0.9rem', { lineHeight: '1.35rem' }],
+        lg: ['1rem', { lineHeight: '1.5rem' }],
+        xl: ['1.1rem', { lineHeight: '1.6rem' }],
+        '2xl': ['1.25rem', { lineHeight: '1.75rem' }],
+        '3xl': ['1.5rem', { lineHeight: '1.9rem' }],
+        '4xl': ['1.8rem', { lineHeight: '2.1rem' }],
+        '5xl': ['2.2rem', { lineHeight: '1' }],
+        '6xl': ['2.8rem', { lineHeight: '1' }],
+        '7xl': ['3.4rem', { lineHeight: '1' }],
+        '8xl': ['4.2rem', { lineHeight: '1' }],
+        '9xl': ['5rem', { lineHeight: '1' }]
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
