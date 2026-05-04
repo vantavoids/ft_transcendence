@@ -25,40 +25,57 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	if cfg.Dev == "true" {
+		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI(cfg))
+	}
+	mux.HandleFunc("/api/gateway/health", handler.Healthcheck())
 	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
 
-	//  ────────────────────────────────────────────
-	//    ╭──────────────────────────────────────╮
-	//    │    Timeout Category layer (last)     │
-	//    ╰──────────────────────────────────────╯
+	//  ─────────────────────────────────────────────
+	//    ╭───────────────────────────────────────╮
+	//    │     Timeout Category layer (last)     │
+	//    ╰───────────────────────────────────────╯
 	timeoutCatHandler := middleware.TimeoutCat(mux)
-	//    ╭──────────────────────────────────────╮
-	//    │       UID rate limiting layer        │
-	//    ╰──────────────────────────────────────╯
+
+	//    ╭───────────────────────────────────────╮
+	//    │        UID rate limiting layer        │
+	//    ╰───────────────────────────────────────╯
 	memoryStoreUID := ratelimit.NewMemoryStore(
 		cfg.Limits.RateUID, cfg.Limits.BucketUID)
 
 	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(timeoutCatHandler)
-	//    ╭──────────────────────────────────────╮
-	//    │            JWT auth layer            │
-	//    ╰──────────────────────────────────────╯
+
+	//    ╭───────────────────────────────────────╮
+	//    │            JWT auth layer             │
+	//    ╰───────────────────────────────────────╯
 	jwtAuthHandler := middleware.JwtAuth(cfg.JWTSecret)(limitUIDHandler)
-	//    ╭──────────────────────────────────────╮
-	//    │        IP rate limiting layer        │
-	//    ╰──────────────────────────────────────╯
+
+	//    ╭───────────────────────────────────────╮
+	//    │        IP rate limiting layer         │
+	//    ╰───────────────────────────────────────╯
 	memoryStoreIP := ratelimit.NewMemoryStore(
 		cfg.Limits.RateIP, cfg.Limits.BucketIP)
 
 	limitIPHandler := middleware.LimitIP(memoryStoreIP)(jwtAuthHandler)
-	//    ╭──────────────────────────────────────╮
-	//    │    Route validation layer (first)    │
-	//    ╰──────────────────────────────────────╯
+
+	// special handler to limit request not aimed at backend services
+	limitIPHandlerSpecial := middleware.LimitIP(memoryStoreIP)(mux)
+
+	//    ╭───────────────────────────────────────╮
+	//    │        Route validation layer         │
+	//    ╰───────────────────────────────────────╯
 	routeCheckHandler := middleware.RouteCheck(limitIPHandler)
-	//  ────────────────────────────────────────────
+
+	//    ╭───────────────────────────────────────╮
+	//    │    Bypass middleware layer (first)    │
+	//    ╰───────────────────────────────────────╯
+	dispatchHandler := middleware.Dispatch(limitIPHandlerSpecial, routeCheckHandler)
+
+	//  ─────────────────────────────────────────────
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: routeCheckHandler,
+		Handler: dispatchHandler,
 		// General values used before a timeout category
 		// can be attributed to the request in routeCheck()
 		ReadHeaderTimeout: 5 * time.Second,   // max time to read request headers from the client
