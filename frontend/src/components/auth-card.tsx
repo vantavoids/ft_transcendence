@@ -9,9 +9,9 @@ type AuthCardProps = {
 
 export function AuthCard({ title, alternateHref, alternateLabel, children }: AuthCardProps) {
   return (
-    <div className="flex min-h-screen w-full items-stretch justify-center sm:items-center sm:px-6 sm:py-10">
-      <div className="relative w-full sm:max-w-[26rem]">
-        <div className="relative min-h-screen bg-secondary-bg px-6 py-10 shadow-glow ring-1 ring-white/5 sm:min-h-0 sm:rounded-xl sm:px-12 sm:py-14">
+    <div className="flex min-h-screen w-full items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+      <div className="relative w-full max-w-[26rem]">
+        <div className="relative w-full rounded-xl bg-secondary-bg px-6 py-10 shadow-glow ring-1 ring-white/5 sm:px-12 sm:py-14">
           <div className="mb-10 flex flex-col items-center">
             <h1 className="font-display text-[4rem] font-extrabold leading-none tracking-[-0.07em] text-white sm:text-[4.5rem]">
               {title}
