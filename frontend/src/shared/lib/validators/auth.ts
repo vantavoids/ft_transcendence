@@ -6,7 +6,18 @@ export type RegisterFormValues = {
   confirm: string;
 };
 
+export type LoginFormValues = {
+  username: string;
+  password: string;
+};
+
 export type RegisterFormErrors = Partial<Record<keyof RegisterFormValues, string>>;
+export type LoginFormErrors = Partial<Record<keyof LoginFormValues, string>>;
+
+const loginSchema = z.object({
+  username: z.string().trim().min(1, 'Username is required.'),
+  password: z.string().min(1, 'Password is required.')
+});
 
 const registerSchema = z
   .object({
@@ -49,6 +60,29 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterFormEr
     const field = issue.path[0];
 
     if ((field === 'username' || field === 'password' || field === 'confirm') && !errors[field]) {
+      errors[field] = issue.message;
+    }
+  }
+
+  return errors;
+}
+
+export function validateLoginForm(values: LoginFormValues): LoginFormErrors {
+  const result = loginSchema.safeParse({
+    username: values.username.trim(),
+    password: values.password
+  });
+
+  if (result.success) {
+    return {};
+  }
+
+  const errors: LoginFormErrors = {};
+
+  for (const issue of result.error.issues) {
+    const field = issue.path[0];
+
+    if ((field === 'username' || field === 'password') && !errors[field]) {
       errors[field] = issue.message;
     }
   }

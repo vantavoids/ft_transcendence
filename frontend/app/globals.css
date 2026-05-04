@@ -6,9 +6,30 @@
   color-scheme: light;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #191919;
+  color: #fff;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+button {
+  font: inherit;
 }
 
 .container {
@@ -17,4 +38,19 @@ body {
 
 .card {
   @apply rounded-2xl bg-white/90 shadow-lg shadow-black/5 ring-1 ring-black/5;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(169, 220, 118, 0.14), transparent 22%),
+    radial-gradient(circle at 42% 60%, rgba(120, 220, 232, 0.12), transparent 18%),
+    radial-gradient(circle at 58% 78%, rgba(255, 216, 102, 0.12), transparent 16%),
+    radial-gradient(circle at 50% 84%, rgba(171, 157, 242, 0.12), transparent 16%),
+    radial-gradient(circle at 50% 92%, rgba(255, 97, 136, 0.15), transparent 16%),
+    #191919;
+}
+
+.mono-detail {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
