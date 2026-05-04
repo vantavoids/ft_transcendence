@@ -2,12 +2,10 @@ package middleware
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
-	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
+	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
 )
 
 type serviceKey struct{}
@@ -37,10 +35,6 @@ func RouteCheck(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// log
-		fmt.Println()
-		log.Printf("- Request from %s to %s", utils.BlueStr(r.RemoteAddr), utils.BlueStr(r.URL.String()))
-
 		if !isAPIRoute(r.URL.Path) {
 			http.NotFound(w, r)
 			return
@@ -51,7 +45,7 @@ func RouteCheck(next http.Handler) http.Handler {
 		ctx := updateContext(r)
 
 		// log
-		fmt.Println("Route checked, forwarding...")
+		logs.Info(r.RemoteAddr, "Route checked, forwarding...")
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

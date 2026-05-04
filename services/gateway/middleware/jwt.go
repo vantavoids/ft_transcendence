@@ -2,13 +2,12 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
+	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
 )
 
 type subKey struct{}
@@ -21,16 +20,14 @@ func JwtAuth(secret string) Middleware {
 
 			serviceName, ok := r.Context().Value(serviceKey{}).(string)
 			if !ok {
-				logMsg := "missing serviceKey in ctx inside JwtAuth"
-				errMsg := "internal server error"
-				http.Error(w, errMsg, http.StatusInternalServerError)
-				fmt.Println(utils.RedStr(logMsg))
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				logs.Error(r.RemoteAddr, "missing serviceKey in ctx inside JwtAuth")
 				return
 			}
 
 			if serviceName == "auth" {
 				// log
-				fmt.Println("JWT auth bypassed, forwarding ...")
+				logs.Info(r.RemoteAddr, "JWT auth bypassed, forwarding ...")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -39,22 +36,23 @@ func JwtAuth(secret string) Middleware {
 			if tokenStr == "" {
 				errMsg := "missing authorization header"
 				http.Error(w, errMsg, http.StatusUnauthorized)
-				fmt.Println(utils.RedStr(errMsg))
+				logs.Error(r.RemoteAddr, errMsg)
+
 				return
 			}
 
 			subValue, err := checkToken(tokenStr, secret)
 			if err != nil {
 				errMsg := err.Error()
-				http.Error(w, errMsg, http.StatusUnauthorized)
-				fmt.Println(utils.RedStr(errMsg))
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				logs.Error(r.RemoteAddr, errMsg)
 				return
 			}
 
 			ctx := context.WithValue(r.Context(), subKey{}, subValue)
 
 			// log
-			fmt.Println("JWT auth passed, forwarding ...")
+			logs.Info(r.RemoteAddr, "JWT auth passed, forwarding ...")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -67,7 +65,7 @@ func extractToken(r *http.Request) string {
 			return strings.TrimSpace(token) // TrimSpace just to be safe if extra space is present
 		}
 	}
-	if r.Header.Get("Upgrade") == "websocket" {
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
 		return r.URL.Query().Get("access_token")
 	}
 
@@ -89,24 +87,21 @@ func checkToken(tokenStr string, secret string) (string, error) {
 	}
 
 	if !token.Valid {
-		fmt.Println(utils.RedStr("invalid token"))
-		return "", fmt.Errorf("unauthorized")
+		return "", fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		fmt.Println(utils.RedStr("invalid claims"))
-		return "", fmt.Errorf("unauthorized")
+		return "", fmt.Errorf("invalid claims")
 	}
 	sub, ok := claims["sub"].(string)
 	if !ok {
-		fmt.Println(utils.RedStr("missing sub claim"))
-		return "", fmt.Errorf("unauthorized")
+		return "", fmt.Errorf("missing sub claim")
 	}
 
 	// print token for debug, TODO remove
-	data, _ := json.MarshalIndent(token, "", "  ")
-	fmt.Println("\n" + string(data) + "\n")
+	// data, _ := json.MarshalIndent(token, "", "  ")
+	// fmt.Println("\n" + string(data) + "\n")
 
 	return sub, nil
 }
