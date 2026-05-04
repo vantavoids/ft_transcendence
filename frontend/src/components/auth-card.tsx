@@ -29,6 +29,20 @@ export function AuthCard({ title, alternateHref, alternateLabel, children }: Aut
               {alternateLabel}
             </Link>
           </div>
+
+          <Link
+            href="/auth/oauth/42"
+            className="flex h-12 w-full items-center justify-center rounded-lg border border-aqua/30 bg-aqua/10 text-[1.05rem] font-semibold text-aqua transition hover:border-aqua/50 hover:bg-aqua/15 hover:text-white"
+          >
+            Continue with 42 OAuth
+          </Link>
+
+          <div className="my-6 flex items-center gap-4 text-white/25">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="mono-detail text-xs uppercase tracking-[0.24em]">or</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
           {children}
         </div>
       </div>
