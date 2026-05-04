@@ -11,7 +11,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "./healthcheck_binary"]
+      test: ["CMD", "curl", "-f", "http://localhost:${GATEWAY_PORT}/api/gateway/health"]
       interval: 10s
       timeout: 5s
       retries: 5
