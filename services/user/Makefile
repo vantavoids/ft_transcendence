@@ -1,4 +1,4 @@
-COMPOSE ?= docker compose
+COMPOSE ?= podman compose
 
 .PHONY: up down build logs ps restart dummy-user
 

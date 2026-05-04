@@ -4,16 +4,14 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SERVICE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-REPO_ROOT=$(CDPATH= cd -- "$SERVICE_DIR/../.." && pwd)
 ENV_FILE="$SERVICE_DIR/.env"
-COMPOSE_FILE="$SERVICE_DIR/compose.yaml"
 
 if [ -f "$ENV_FILE" ]; then
-    # Export DB credentials used by the compose service fallback.
-    set -a
-    # shellcheck disable=SC1090
-    . "$ENV_FILE"
-    set +a
+  # Export DB credentials used by the compose service fallback.
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
 fi
 
 USER_ID=${USER_ID:-$(date +%s%N)}
@@ -26,26 +24,26 @@ BANNER_URL=${BANNER_URL:-}
 LAST_SEEN_AT=${LAST_SEEN_AT:-}
 
 run_sql() {
-    if [ -n "${DATABASE_URL:-}" ] && command -v psql >/dev/null 2>&1; then
-        psql "$DATABASE_URL" "$@"
-        return
-    fi
+  if [ -n "${DATABASE_URL:-}" ] && command -v psql >/dev/null 2>&1; then
+    psql "$DATABASE_URL" "$@"
+    return
+  fi
 
-    env PWD="$REPO_ROOT" docker compose -f "$COMPOSE_FILE" exec -T user-db \
-        psql -U "${POSTGRES_USER:-user}" -d "${POSTGRES_DB:-user}" "$@"
+  podman exec -i user-db \
+    psql -U "${POSTGRES_USER:-user}" -d "${POSTGRES_DB:-user}" "$@"
 }
 
 run_sql \
-    -v ON_ERROR_STOP=1 \
-    -v user_id="$USER_ID" \
-    -v username="$USERNAME" \
-    -v display_name="$DISPLAY_NAME" \
-    -v status="$STATUS" \
-    -v bio="$BIO" \
-    -v avatar_url="$AVATAR_URL" \
-    -v banner_url="$BANNER_URL" \
-    -v last_seen_at="$LAST_SEEN_AT" \
-<<'SQL'
+  -v ON_ERROR_STOP=1 \
+  -v user_id="$USER_ID" \
+  -v username="$USERNAME" \
+  -v display_name="$DISPLAY_NAME" \
+  -v status="$STATUS" \
+  -v bio="$BIO" \
+  -v avatar_url="$AVATAR_URL" \
+  -v banner_url="$BANNER_URL" \
+  -v last_seen_at="$LAST_SEEN_AT" \
+  <<'SQL'
 INSERT INTO users_profile (
     id,
     username,
