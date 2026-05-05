@@ -3,6 +3,7 @@ using Auth.Application;
 using Auth.Infrastructure;
 using Auth.Persistence;
 using Auth.Presentation.Middleware;
+using Auth.Presentation;
 using Scalar.AspNetCore;
 using System.Text.Json;
 
@@ -18,7 +19,8 @@ builder.Services.AddOpenApi()
 
 builder.Services.AddApplication()
                 .AddInfrastructure()
-                .AddPersistence();
+                .AddPersistence()
+                .AddJwtAuthentication();
 
 builder.Services.AddCarter();
 
@@ -35,6 +37,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/healthz");
 var v1 = app.MapGroup("/v1");
