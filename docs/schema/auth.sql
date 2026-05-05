@@ -13,7 +13,7 @@ CREATE TABLE users_auth (
     email_verified              BOOLEAN     NOT NULL DEFAULT FALSE,
 
     -- OAuth login (NULL for email+password accounts)
-    oauth_provider              VARCHAR(32),   -- 'google' | 'github' | '42'
+    oauth_provider              BIGINT,   -- 'google' | 'github' | '42'
     oauth_id                    VARCHAR(255),
 
     -- refresh token (single active token per user; rotated on every use)
