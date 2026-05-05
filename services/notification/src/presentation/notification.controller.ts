@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Query, Req, ParseBoolPipe, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Query, Req, ParseBoolPipe, ParseIntPipe, Delete } from '@nestjs/common';
 import { NotificationService } from "../application/notification.service";
 
 @Controller()
@@ -24,25 +24,35 @@ export class NotificationController {
       created_at: n.created_at,
     }));
   }
-
-  @Patch(':id/read')
-  async read(
-    @Req() req: Request,
-    @Param('id') id: bigint, 
-  ) {
-    const uid = (req as any).user.id as bigint; // TODO: typer req.user selon le JWT guard
-    const notif = await this.service.read(uid, id);
-    return {
-      id: notif.id.toString(),
-      read: notif.read,
-    }
-  }
-
+  
   @Patch('read-all')
   async readAll(
     @Req() req: Request,
   ) {
     const uid = (req as any).user.id as bigint; // TODO: typer req.user selon le JWT guard
     return this.service.readAll(uid);
+  }
+
+  @Patch(':id/read')
+  async read(
+    @Req() req: Request,
+    @Param('id') id: string, 
+  ) {
+    const uid = (req as any).user.id as bigint; // TODO: typer req.user selon le JWT guard
+    const notif = await this.service.read(uid, BigInt(id));
+    return {
+      id: notif.id.toString(),
+      read: notif.read,
+    }
+  }
+
+  @Delete(':id')
+  async delete(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    const uid = (req as any).user.id as bigint; // TODO: typer req.user selon le JWT guard
+    const result = await this.service.delete(uid, BigInt(id));
+    return ;
   }
 }

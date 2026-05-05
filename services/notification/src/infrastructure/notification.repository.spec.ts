@@ -62,6 +62,32 @@ describe('PrismaNotificationRepository', () => {
     });
   });
 
+  describe('readAll()', () => {
+    it('readAll have send the right number of notifications he have updated', async () => {
+      prismaMock.notificationData.updateMany.mockResolvedValue({ count: 10 });
+
+      const uid = 1n;
+      const result = await repository.readAll(uid);
+
+      expect(result).toEqual({ updated: 10 });
+    });
+
+    it('readAll have filtered the updated notifications with \'user_id\' and not \'id\'', async () => {
+      prismaMock.notificationData.updateMany.mockResolvedValue({ count: 1 });
+
+      const uid = 1n;
+      await repository.readAll(uid);
+
+      expect(prismaMock.notificationData.updateMany).toHaveBeenCalledWith({
+        where: {
+          user_id: uid,
+          read: false,
+        },
+        data: {read: true},
+      });
+    });
+  });
+
   describe('read()', () => {
     it('read should throw \'NotFoundException\', if he doesnt find the notif with the same id', async () => {
       prismaMock.notificationData.findUnique.mockResolvedValue(null);
@@ -102,29 +128,7 @@ describe('PrismaNotificationRepository', () => {
     });
   });
 
-  describe('readAll()', () => {
-    it('readAll have send the right number of notifications he have updated', async () => {
-      prismaMock.notificationData.updateMany.mockResolvedValue({ count: 10 });
+  describe('delete()', () => {
 
-      const uid = 1n;
-      const result = await repository.readAll(uid);
-
-      expect(result).toEqual({ updated: 10 });
-    });
-
-    it('readAll have filtered the updated notifications with \'user_id\' and not \'id\'', async () => {
-      prismaMock.notificationData.updateMany.mockResolvedValue({ count: 1 });
-
-      const uid = 1n;
-      await repository.readAll(uid);
-
-      expect(prismaMock.notificationData.updateMany).toHaveBeenCalledWith({
-        where: {
-          user_id: uid,
-          read: false,
-        },
-        data: {read: true},
-      });
-    });
   });
 });

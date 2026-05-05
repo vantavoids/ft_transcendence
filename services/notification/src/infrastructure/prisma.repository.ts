@@ -27,6 +27,18 @@ export class PrismaNotificationRepository implements INotificationRepository {
     }) as unknown as Promise<NotificationData[]> ;
   }
 
+  async readAll(uid: bigint): Promise<{ updated: number }> {
+    const readed = await this.prisma.notificationData.updateMany({
+      where: {
+        user_id: uid,
+        read: false,
+      },
+      data: {read: true},
+    });
+  
+    return { updated: readed.count };
+  }
+
   async read(uid: bigint, id:bigint): Promise<NotificationData> {
     const find = await this.prisma.notificationData.findUnique({
       where: { id: id }
@@ -43,15 +55,15 @@ export class PrismaNotificationRepository implements INotificationRepository {
     return notif as unknown as Promise<NotificationData>;
   }
 
-  async readAll(uid: bigint): Promise<{ updated: number }> {
-    const readed = await this.prisma.notificationData.updateMany({
-      where: {
-        user_id: uid,
-        read: false,
-      },
-      data: {read: true},
+  async delete(uid: bigint, id: bigint): Promise<void> {
+    const find = await this.prisma.notificationData.findUnique({
+      where: { id: id }
     });
-  
-    return { updated: readed.count };
+
+    if (!find) throw new NotFoundException();
+    if (find.user_id !== uid) throw new ForbiddenException();
+
+    await this.prisma.notificationData.delete({ where: { id } });
+    return ;
   }
 }

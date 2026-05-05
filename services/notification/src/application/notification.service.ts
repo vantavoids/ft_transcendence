@@ -13,11 +13,15 @@ export class NotificationService {
     return this.repo.get(uid, read, limit, before);
   }
 
+  async readAll(uid: bigint): Promise<{ updated: number }> {
+    return this.repo.readAll(uid);
+  }
+
   async read(uid: bigint, id:bigint): Promise<NotificationData> {
     return this.repo.read(uid, id);
   }
 
-  async readAll(uid: bigint): Promise<{ updated: number }> {
-    return this.repo.readAll(uid);
+  async delete(uid: bigint, id: bigint): Promise<void> {
+    return this.repo.delete(uid, id);
   }
 }
