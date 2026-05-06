@@ -2,8 +2,8 @@ namespace Auth.Domain.AuthUser;
 
 public enum OAuthProvider
 {
-    Unknown,
-    Github,
-    Google,
-    FortyTwo
+    Unknown = 0,
+    Github = 1,
+    Google = 2,
+    FortyTwo = 3
 }
