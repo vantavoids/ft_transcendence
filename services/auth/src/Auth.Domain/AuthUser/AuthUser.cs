@@ -1,8 +1,6 @@
-using Auth.Domain.Enums;
 using Auth.Domain.Results;
-using Auth.Domain.ValueObjects;
 
-namespace Auth.Domain.Entities;
+namespace Auth.Domain.AuthUser;
 
 #nullable enable
 

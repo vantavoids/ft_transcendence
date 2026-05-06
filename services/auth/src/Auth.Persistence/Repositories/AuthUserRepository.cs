@@ -1,10 +1,11 @@
 using Auth.Application.Abstractions.Persistence;
-using Auth.Domain.Entities;
-using Auth.Domain.Enums;
+using Auth.Domain.AuthUser;
 using Auth.Persistence.Db;
 using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Persistence.Repositories;
+
+#nullable enable
 
 internal sealed class AuthUserRepository(AuthDbContext context) : IAuthUserRepository
 {

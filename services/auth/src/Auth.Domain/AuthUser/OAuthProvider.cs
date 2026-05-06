@@ -1,4 +1,4 @@
-namespace Auth.Domain.Enums;
+namespace Auth.Domain.AuthUser;
 
 public enum OAuthProvider
 {

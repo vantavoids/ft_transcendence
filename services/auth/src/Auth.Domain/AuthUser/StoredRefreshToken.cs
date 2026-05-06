@@ -1,6 +1,6 @@
 using Auth.Domain.Results;
 
-namespace Auth.Domain.ValueObjects;
+namespace Auth.Domain.AuthUser;
 
 public sealed record StoredRefreshToken
 {

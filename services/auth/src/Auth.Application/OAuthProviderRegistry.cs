@@ -1,4 +1,4 @@
-using Auth.Domain.Enums;
+using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
 
 namespace Auth.Application;
