@@ -1,4 +1,4 @@
-using Auth.Domain.Entities;
+using Auth.Domain.AuthUser;
 using Microsoft.EntityFrameworkCore;
 
 

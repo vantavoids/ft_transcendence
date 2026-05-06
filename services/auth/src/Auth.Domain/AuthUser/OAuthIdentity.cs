@@ -1,7 +1,6 @@
 using Auth.Domain.Results;
-using Auth.Domain.Enums;
 
-namespace Auth.Domain.ValueObjects;
+namespace Auth.Domain.AuthUser;
 
 public sealed record OAuthIdentity
 {

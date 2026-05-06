@@ -1,9 +1,7 @@
-using Auth.Domain.Entities;
-using Auth.Domain.ValueObjects;
+using Auth.Domain.AuthUser;
 using Auth.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Auth.Domain.Enums;
 
 namespace Auth.Persistence.Db;
 

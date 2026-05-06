@@ -1,5 +1,4 @@
-using Auth.Domain.Entities;
-using Auth.Domain.Enums;
+using Auth.Domain.AuthUser;
 
 namespace Auth.Application.Abstractions.Persistence;
 
