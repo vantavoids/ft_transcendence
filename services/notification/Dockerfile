@@ -1,9 +1,9 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json .
 COPY pnpm-lock.yaml .
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 RUN pnpm install --frozen-lockfile
 
 COPY prisma/ prisma/
@@ -14,7 +14,7 @@ COPY tsconfig.json tsconfig.build.json ./
 COPY src/ src/
 RUN pnpm run build
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 RUN apk add --no-cache curl
 WORKDIR /app
 
