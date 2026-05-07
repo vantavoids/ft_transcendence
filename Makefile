@@ -5,6 +5,7 @@ COMPOSE      ?= podman-compose
 DOCKER       ?= podman
 
 ENV_FILES := .env \
+             frontend/.env \
              services/auth/.env \
              services/gateway/.env \
              services/guild/.env \

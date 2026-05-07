@@ -3,5 +3,8 @@ node_modules
 .git
 Dockerfile
 Dockerfile.dev
+compose.yaml
+Tiltfile
 npm-debug.log
 yarn-error.log
+.pnpm-debug.log

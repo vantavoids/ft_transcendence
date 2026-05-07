@@ -1,0 +1,16 @@
+services:
+  frontend:
+    container_name: frontend
+    image: frontend
+    pull_policy: never
+    build:
+      context: ${PWD}/frontend
+      dockerfile: Dockerfile
+    env_file: ${PWD}/frontend/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
