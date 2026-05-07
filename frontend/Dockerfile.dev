@@ -3,7 +3,7 @@ WORKDIR /app
 ENV HUSKY=0
 
 COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 RUN pnpm install --frozen-lockfile
 
 COPY . .

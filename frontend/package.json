@@ -13,6 +13,12 @@
     "format:check": "prettier --check .",
     "prepare": "husky"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
   "dependencies": {
     "lucide-react": "1.8.0",
     "next": "^16.2.4",
