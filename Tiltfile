@@ -56,11 +56,12 @@ local_resource(
         '-v certs:/etc/nginx/certs:ro ' +
         'docker.io/nginx:alpine'
     ),
-    resource_deps=['cert-gen', 'dev-network', 'gateway'],
+    resource_deps=['cert-gen', 'dev-network', 'gateway', 'frontend'],
     labels=['infra'],
     links=['https://localhost:1443', 'https://localhost:1443/docs'],
 )
 
+include('./frontend/Tiltfile')
 include('./services/auth/Tiltfile')
 include('./services/chat/Tiltfile')
 include('./services/gateway/Tiltfile')

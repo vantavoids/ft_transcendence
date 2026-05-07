@@ -1,0 +1,24 @@
+load('../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+
+DOCKER = detect_engine()
+FLAGS  = run_flags(DOCKER)
+
+local_resource(
+    'frontend',
+    cmd=DOCKER + ' build -t frontend -f Dockerfile.dev .',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'frontend',
+        '--network ft_transcendence ' +
+        '--env-file .env ' +
+        '-v $(pwd)/app:/app/app ' +
+        '-v $(pwd)/src:/app/src ' +
+        '-v $(pwd)/public:/app/public ' +
+        '-v $(pwd)/next.config.js:/app/next.config.js ' +
+        '-v $(pwd)/tailwind.config.ts:/app/tailwind.config.ts ' +
+        '-v $(pwd)/postcss.config.js:/app/postcss.config.js ' +
+        '-v $(pwd)/tsconfig.json:/app/tsconfig.json ' +
+        'frontend'
+    ),
+    deps=['Dockerfile.dev', 'package.json'],
+    resource_deps=['dev-network'],
+    labels=['frontend'],
+)
