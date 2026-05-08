@@ -33,14 +33,6 @@ if (app.Environment.IsDevelopment())
         var apiUrl = Environment.GetEnvironmentVariable("BASE_API_URL");
         options.AddServer(new ScalarServer($"{apiUrl}/auth"));
     });
-
-    app.MapGet("/auth/test/dbConnection", async (AuthDbContext db) => 
-    {
-        await db.Database.OpenConnectionAsync();
-        await db.Database.CloseConnectionAsync();
-
-        return TypedResults.Ok("Connected to PostgreSQL!");
-    });
 }
 
 app.MapHealthChecks("/healthz");
