@@ -41,7 +41,8 @@ func main() {
 	//    │        UID rate limiting layer        │
 	//    ╰───────────────────────────────────────╯
 	memoryStoreUID := ratelimit.NewMemoryStore(
-		cfg.Limits.RateUID, cfg.Limits.BucketUID)
+		time.Duration(cfg.Limits.IdleUID)*time.Minute,
+		cfg.Limits.RateUID, cfg.Limits.BucketUID, "UID")
 
 	limitUIDHandler := middleware.LimitUID(memoryStoreUID)(timeoutCatHandler)
 
@@ -54,7 +55,8 @@ func main() {
 	//    │        IP rate limiting layer         │
 	//    ╰───────────────────────────────────────╯
 	memoryStoreIP := ratelimit.NewMemoryStore(
-		cfg.Limits.RateIP, cfg.Limits.BucketIP)
+		time.Duration(cfg.Limits.IdleIP)*time.Minute,
+		cfg.Limits.RateIP, cfg.Limits.BucketIP, "IP")
 
 	limitIPHandler := middleware.LimitIP(memoryStoreIP)(jwtAuthHandler)
 
@@ -83,6 +85,16 @@ func main() {
 		WriteTimeout:      20 * time.Second,  // max time to write the response, measured from end of header read
 		IdleTimeout:       120 * time.Second, // close idle keep-alive conns after this; falls back to ReadTimeout if zero
 	}
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			memoryStoreIP.CleanPartial()
+			memoryStoreUID.CleanPartial()
+		}
+	}()
 
 	log.Fatal(srv.ListenAndServe())
 }
