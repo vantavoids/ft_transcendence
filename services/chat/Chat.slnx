@@ -6,4 +6,7 @@
         <Project Path="src/Chat.Persistence/Chat.Persistence.csproj"/>
         <Project Path="src/Chat.Presentation/Chat.Presentation.csproj"/>
     </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/Chat.ArchitectureTests/Chat.ArchitectureTests.csproj" BuildByDefault="false"/>
+    </Folder>
 </Solution>
