@@ -28,5 +28,6 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/healthz");
 app.MapCarter();
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<SignalingHub>("/hubs/signaling");
 
 app.Run();
