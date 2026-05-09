@@ -7,6 +7,7 @@ DOCKER       ?= podman
 ENV_FILES := .env \
              frontend/.env \
              services/auth/.env \
+             services/chat/.env \
              services/gateway/.env \
              services/guild/.env \
              services/notification/.env \
