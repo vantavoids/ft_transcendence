@@ -9,7 +9,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 60s
+      start_period: 120s
+
+  chat-migrate:
+    container_name: chat-migrate
+    image: docker.io/scylladb/scylla:6.2
+    entrypoint: ["sh", "/schema/apply.sh"]
+    volumes:
+      - ${PWD}/services/chat/schema:/schema:ro,z
+    depends_on:
+      chat-db:
+        condition: service_healthy
 
   chat:
     container_name: chat
@@ -18,9 +28,10 @@ services:
     build:
       context: ${PWD}/services/chat
       dockerfile: Dockerfile
+    env_file: ${PWD}/services/chat/.env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,13 +41,16 @@ services:
       RabbitMQ__VirtualHost: /
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
-      ScyllaDb__ContactPoints: chat-db
-      ScyllaDb__Keyspace: chat
+      BackendConfiguration__BaseUrl: ${BASE_URL}
+      BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
+      Services__GuildService: http://guild:8080
     depends_on:
       rabbitmq:
         condition: service_healthy
       chat-db:
         condition: service_healthy
+      chat-migrate:
+        condition: service_completed_successfully
 
 volumes:
   chat_db_data:
