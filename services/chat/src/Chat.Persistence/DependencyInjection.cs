@@ -1,6 +1,8 @@
 using Cassandra;
+using Chat.Persistence.Health;
 using Chat.Persistence.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
 namespace Chat.Persistence;
@@ -27,4 +29,7 @@ public static class DependencyInjection
 				});
 		return services;
 	}
+
+	public static IHealthChecksBuilder AddPersistenceHealthChecks(this IHealthChecksBuilder builder)
+		=> builder.AddCheck<ScyllaHealthCheck>("scylla");
 }
