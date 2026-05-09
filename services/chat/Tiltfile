@@ -1,10 +1,12 @@
 load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
-root_env = read_dotenv('../../.env')
-MQ_USER  = root_env.get('RABBITMQ_USER', 'guest')
-MQ_PASS  = root_env.get('RABBITMQ_PASS', 'guest')
-DOCKER   = detect_engine()
-FLAGS    = run_flags(DOCKER)
+root_env    = read_dotenv('../../.env')
+MQ_USER     = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS     = root_env.get('RABBITMQ_PASS', 'guest')
+BASE_URL    = root_env.get('BASE_URL',     'https://localhost:1443')
+BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+DOCKER      = detect_engine()
+FLAGS       = run_flags(DOCKER)
 
 local_resource(
     'chat-db',
@@ -18,20 +20,32 @@ local_resource(
 )
 
 local_resource(
+    'chat-migrate',
+    cmd=DOCKER + ' run ' + FLAGS + '--rm --network ft_transcendence ' +
+        '-v $(pwd)/schema:/schema:ro ' +
+        '--entrypoint sh docker.io/scylladb/scylla:6.2 /schema/apply.sh',
+    deps=['schema'],
+    resource_deps=['chat-db'],
+    labels=['chat'],
+)
+
+local_resource(
     'chat',
     cmd=DOCKER + ' build -t chat-service -f Dockerfile.dev .',
     serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'chat',
         '--network ft_transcendence ' +
+        '--env-file .env ' +
         '-e RabbitMQ__Host=rabbitmq ' +
         '-e RabbitMQ__VirtualHost=/ ' +
         '-e RabbitMQ__Username=' + MQ_USER + ' ' +
         '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
-        '-e ScyllaDb__ContactPoints=chat-db ' +
-        '-e ScyllaDb__Keyspace=chat ' +
+        '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
+        '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
+        '-e Services__GuildService=http://guild:8080 ' +
         '-v $(pwd)/src:/app/src ' +
         'chat-service'
     ),
     deps=['Dockerfile.dev', 'Chat.slnx'],
-    resource_deps=['chat-db', 'rabbitmq'],
+    resource_deps=['chat-db', 'chat-migrate', 'rabbitmq'],
     labels=['chat'],
 )
