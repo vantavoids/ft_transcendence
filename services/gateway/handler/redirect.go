@@ -108,7 +108,7 @@ func Redirect(proxies Proxies) http.HandlerFunc {
 		}
 
 		// log
-		logs.Info(r.RemoteAddr, "Redirect done, forwarding to " + utils.PurpleStr(parts[2]))
+		logs.Info(r.RemoteAddr, "Redirect done, forwarding to "+utils.PurpleStr(parts[2]))
 		proxy.ServeHTTP(w, r)
 	}
 }
