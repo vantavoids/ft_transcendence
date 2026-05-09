@@ -18,8 +18,10 @@ type Config struct {
 type Limits struct {
 	RateUID   float64
 	BucketUID int
+	IdleUID   int
 	RateIP    float64
 	BucketIP  int
+	IdleIP    int
 }
 
 type Services struct {
@@ -88,6 +90,10 @@ func loadLimits() (Limits, error) {
 	if err != nil {
 		return Limits{}, err
 	}
+	idleUID, err := requireEnvInt("UID_MAX_IDLE")
+	if err != nil {
+		return Limits{}, err
+	}
 	rateIP, err := requireEnvFloat("IP_RATE")
 	if err != nil {
 		return Limits{}, err
@@ -96,12 +102,18 @@ func loadLimits() (Limits, error) {
 	if err != nil {
 		return Limits{}, err
 	}
+	idleIP, err := requireEnvInt("IP_MAX_IDLE")
+	if err != nil {
+		return Limits{}, err
+	}
 
 	return Limits{
 		RateUID:   rateUID,
 		BucketUID: bucketUID,
+		IdleUID:   idleUID,
 		RateIP:    rateIP,
 		BucketIP:  bucketIP,
+		IdleIP:    idleIP,
 	}, nil
 }
 
