@@ -35,12 +35,7 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
         builder.OwnsOne(u => u.OAuthIdentity, oauth =>
         {
             oauth.Property(o => o.Provider)
-                .HasColumnName("oauth_provider")
-                .HasMaxLength(32)
-                .HasConversion(
-                    provider => OAuthProviderRegistry.ToValue(provider),
-                    str => OAuthProviderRegistry.FromValue(str) ?? OAuthProvider.Unknown
-                );
+                .HasColumnName("oauth_provider");
 
             oauth.Property(o => o.Id)
                 .HasColumnName("oauth_id")
