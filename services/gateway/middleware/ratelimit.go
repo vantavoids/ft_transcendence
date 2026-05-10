@@ -22,7 +22,7 @@ func LimitIP(store RateLimitStore) Middleware {
 			svc := serviceFromCtx(r.Context())
 			if svc == "" {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
-				logs.Error(r.RemoteAddr, "LimitUID: missing service from context")
+				logs.Error(r.RemoteAddr, "LimitIP: missing service from context")
 				return
 			}
 

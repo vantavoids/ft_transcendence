@@ -1,5 +1,9 @@
 *_binary
+__debug_bin*
 .git
 .env
 *.md
 Dockerfile*
+tmp/
+.air.toml
+.air/

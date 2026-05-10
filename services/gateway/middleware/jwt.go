@@ -65,7 +65,7 @@ func extractToken(r *http.Request) string {
 			return strings.TrimSpace(token) // TrimSpace just to be safe if extra space is present
 		}
 	}
-	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+	if isWebSocketUpgrade(r) {
 		return r.URL.Query().Get("access_token")
 	}
 
