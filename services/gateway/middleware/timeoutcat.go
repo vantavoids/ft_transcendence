@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -14,7 +13,7 @@ func TimeoutCat(next http.Handler) http.Handler {
 
 		category, ok := r.Context().Value(timeoutCatKey{}).(TimeoutCategory)
 		if !ok {
-			fmt.Printf("missing timeout category, default to CatJSON")
+			logs.Warning(r.RemoteAddr, "missing timeout category, default to CatJSON")
 			category = CatJSON
 		}
 		rc := http.NewResponseController(w)
