@@ -42,7 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, SnowflakeIdGenerator>();
-        services.AddSingleton<ISecretHasher, BcryptHasher>();
+        services.AddSingleton<ISecretHasher, SecretHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
 
         // services.AddKeyedTransient<IOAuthProviderClient, GithubOAuthProviderClient>(OAuthProvider.Github);
