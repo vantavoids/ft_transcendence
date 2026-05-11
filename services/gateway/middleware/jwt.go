@@ -18,16 +18,18 @@ func JwtAuth(secret string) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			host := r.Context().Value(SourceAddrKey{}).(string)
+
 			serviceName, ok := r.Context().Value(serviceKey{}).(string)
 			if !ok {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
-				logs.Error(r.RemoteAddr, "missing serviceKey in ctx inside JwtAuth")
+				logs.Error(host, "missing serviceKey in ctx inside JwtAuth")
 				return
 			}
 
 			if serviceName == "auth" {
 				// log
-				logs.Info(r.RemoteAddr, "JWT auth bypassed, forwarding ...")
+				logs.Info(host, "JWT auth bypassed, forwarding ...")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -36,7 +38,7 @@ func JwtAuth(secret string) Middleware {
 			if tokenStr == "" {
 				errMsg := "missing authorization header"
 				http.Error(w, errMsg, http.StatusUnauthorized)
-				logs.Error(r.RemoteAddr, errMsg)
+				logs.Error(host, errMsg)
 
 				return
 			}
@@ -45,14 +47,14 @@ func JwtAuth(secret string) Middleware {
 			if err != nil {
 				errMsg := err.Error()
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				logs.Error(r.RemoteAddr, errMsg)
+				logs.Error(host, errMsg)
 				return
 			}
 
 			ctx := context.WithValue(r.Context(), subKey{}, subValue)
 
 			// log
-			logs.Info(r.RemoteAddr, "JWT auth passed, forwarding ...")
+			logs.Info(host, "JWT auth passed, forwarding ...")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

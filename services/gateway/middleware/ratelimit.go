@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"slices"
 
@@ -19,25 +18,19 @@ func LimitIP(store RateLimitStore) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			host := r.Context().Value(SourceAddrKey{}).(string)
+
 			svc := serviceFromCtx(r.Context())
 			if svc == "" {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
-				logs.Error(r.RemoteAddr, "LimitIP: missing service from context")
+				logs.Error(host, "LimitIP: missing service from context")
 				return
 			}
 
 			if svc != "auth" && svc != "special" {
 				// log
-				logs.Info(r.RemoteAddr, "IP limit bypassed, forwarding...")
+				logs.Info(host, "IP limit bypassed, forwarding...")
 				next.ServeHTTP(w, r)
-				return
-			}
-
-			host, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				errMsg := "bad request"
-				http.Error(w, errMsg, http.StatusBadRequest)
-				logs.Error(r.RemoteAddr, errMsg)
 				return
 			}
 
@@ -45,12 +38,12 @@ func LimitIP(store RateLimitStore) Middleware {
 				if !store.Allow(host) {
 					errMsg := "too many requests"
 					http.Error(w, errMsg, http.StatusTooManyRequests)
-					logs.Error(r.RemoteAddr, errMsg)
+					logs.Error(host, errMsg)
 					return
 				}
-				logs.Info(r.RemoteAddr, "IP limit passed, forwarding...")
+				logs.Info(host, "IP limit passed, forwarding...")
 			} else {
-				logs.Info(r.RemoteAddr, "IP limit bypassed by localhost, forwarding...")
+				logs.Info(host, "IP limit bypassed by localhost, forwarding...")
 			}
 
 			// log
@@ -65,16 +58,18 @@ func LimitUID(store RateLimitStore) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			host := r.Context().Value(SourceAddrKey{}).(string)
+
 			svc := serviceFromCtx(r.Context())
 			if svc == "" {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
-				logs.Error(r.RemoteAddr, "LimitUID: missing service from context")
+				logs.Error(host, "LimitUID: missing service from context")
 				return
 			}
 
 			if svc == "auth" {
 				// log
-				logs.Info(r.RemoteAddr, "UID limit bypassed, forwarding...")
+				logs.Info(host, "UID limit bypassed, forwarding...")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -84,12 +79,12 @@ func LimitUID(store RateLimitStore) Middleware {
 			if !store.Allow(uid) {
 				errMsg := "too many requests"
 				http.Error(w, errMsg, http.StatusTooManyRequests)
-				logs.Error(r.RemoteAddr, errMsg)
+				logs.Error(host, errMsg)
 				return
 			}
 
 			// log
-			logs.Info(r.RemoteAddr, "UID limit passed, forwarding...")
+			logs.Info(host, "UID limit passed, forwarding...")
 			next.ServeHTTP(w, r)
 		})
 	}

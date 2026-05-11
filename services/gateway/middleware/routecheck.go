@@ -45,7 +45,8 @@ func RouteCheck(next http.Handler) http.Handler {
 		ctx := updateContext(r)
 
 		// log
-		logs.Info(r.RemoteAddr, "Route checked, forwarding...")
+		host := ctx.Value(SourceAddrKey{}).(string)
+		logs.Info(host, "Route checked, forwarding...")
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
