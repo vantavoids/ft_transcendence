@@ -27,7 +27,7 @@ internal sealed class LoginCommandHandler(
         var accessToken = tokenGenerator.GenerateAccessToken(user.Id);
         var refreshToken = tokenGenerator.GenerateRefreshToken();
 
-        var refreshTokenHash = secretHasher.Hash(refreshToken);
+        var refreshTokenHash = secretHasher.HashDeterministic(refreshToken);
         var now = clock.UtcNow;
         user.SetRefreshToken(
             refreshTokenHash,
