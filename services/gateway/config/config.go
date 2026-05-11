@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	Dev       string
+	Debug     string
 	Port      string
 	JWTSecret string
 	Limits    Limits
@@ -54,6 +55,8 @@ func (s Services) Slice() []string {
 	}
 }
 
+var DebugFlag string = "false"
+
 func Load() (*Config, error) {
 
 	secret, err := requireEnv("JWT_SECRET")
@@ -71,8 +74,12 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	debug := envOrDefault("GATEWAY_DEBUG", "false")
+	DebugFlag = debug
+
 	return &Config{
 		Dev:       envOrDefault("GATEWAY_DEV", "false"),
+		Debug:     debug,
 		Port:      envOrDefault("GATEWAY_PORT", "8080"),
 		JWTSecret: secret,
 		Limits:    limits,

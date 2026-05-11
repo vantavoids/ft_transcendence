@@ -12,6 +12,7 @@ import (
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
+	"github.com/vantavoids/ft_transcendence/services/gateway/middleware"
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
@@ -108,7 +109,8 @@ func Redirect(proxies Proxies) http.HandlerFunc {
 		}
 
 		// log
-		logs.Info(r.RemoteAddr, "Redirect done, forwarding to "+utils.PurpleStr(parts[2]))
+		host := r.Context().Value(middleware.SourceAddrKey{}).(string)
+		logs.Info(host, "Redirect done, forwarding to "+utils.PurpleStr(parts[2]))
 		proxy.ServeHTTP(w, r)
 	}
 }
