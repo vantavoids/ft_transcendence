@@ -42,7 +42,8 @@ internal sealed class RegisterHandler(
         var accessTk = tokenGenerator.GenerateAccessToken(uid);
         var refreshTk = tokenGenerator.GenerateRefreshToken();
 
-        newUser.Value.SetRefreshToken(secretHasher.Hash(refreshTk),
+        newUser.Value.SetRefreshToken(
+            secretHasher.HashDeterministic(refreshTk),
             now,
             now + tokenGenerator.GetRefreshTokenLifetime()
         );
