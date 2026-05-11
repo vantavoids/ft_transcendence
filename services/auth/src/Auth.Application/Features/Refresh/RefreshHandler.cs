@@ -17,7 +17,7 @@ internal sealed class RefreshHandler(
         RefreshCommand command,
         CancellationToken cancellationToken = default)
     {
-        var hash = secretHasher.Hash(command.RefreshToken);
+        var hash = secretHasher.HashDeterministic(command.RefreshToken);
         var user = await userRepository.GetByRefreshTokenHashAsync(hash, cancellationToken);
 
         if (user is null || user.IsDeleted)
@@ -31,7 +31,7 @@ internal sealed class RefreshHandler(
         var now = clock.UtcNow;
 
         user.SetRefreshToken(
-            secretHasher.Hash(newRefreshToken),
+            secretHasher.HashDeterministic(newRefreshToken),
             now,
             now.Add(tokenGenerator.GetRefreshTokenLifetime())
         );
