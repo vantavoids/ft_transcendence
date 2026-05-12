@@ -28,4 +28,10 @@ public static class AuthFailures
 
     public static readonly Failure InvalidAuthUserState =
         new("Auth.InvalidAuthUserState", "Auth user state is invalid.");
+
+    public static readonly Failure InvalidOAuthState =
+        new("Auth.InvalidOAuthState", "OAuth state is invalid or expired.");
+
+    public static readonly Failure OAuthProviderError =
+        new("Auth.OAuthProviderError", "OAuth provider returned an error.");
 }
