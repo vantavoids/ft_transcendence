@@ -8,8 +8,8 @@ import (
 )
 
 type Config struct {
-	Dev       string
-	Debug     string
+	Dev       bool
+	Debug     bool
 	Port      string
 	JWTSecret string
 	Limits    Limits
@@ -55,8 +55,6 @@ func (s Services) Slice() []string {
 	}
 }
 
-var DebugFlag string = "false"
-
 func Load() (*Config, error) {
 
 	secret, err := requireEnv("JWT_SECRET")
@@ -74,13 +72,20 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	debug := envOrDefault("GATEWAY_DEBUG", "false")
-	DebugFlag = debug
+	dev, err := envOrDefaultBool("GATEWAY_DEV", false)
+	if err != nil {
+		return nil, err
+	}
+
+	debug, err := envOrDefaultBool("GATEWAY_DEBUG", false)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Config{
-		Dev:       envOrDefault("GATEWAY_DEV", "false"),
+		Dev:       dev,
 		Debug:     debug,
-		Port:      envOrDefault("GATEWAY_PORT", "8080"),
+		Port:      envOrDefaultStr("GATEWAY_PORT", "8080"),
 		JWTSecret: secret,
 		Limits:    limits,
 		Services:  services,
@@ -165,12 +170,27 @@ func requireEnv(key string) (string, error) {
 	return val, nil
 }
 
-func envOrDefault(key, fallback string) string {
+func envOrDefaultStr(key, fallback string) string {
 
 	if val := os.Getenv(key); val != "" {
 		return val
 	}
 	return fallback
+}
+
+func envOrDefaultBool(key string, fallback bool) (bool, error) {
+
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseBool(val)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s: %w", key, err)
+	}
+
+	return parsed, nil
 }
 
 func requireEnvInt(key string) (int, error) {
