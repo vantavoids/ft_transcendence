@@ -19,7 +19,7 @@ func Dispatch(bypassHandler http.Handler, fullpathHandler http.Handler) http.Han
 		ctx := updateContextSource(r)
 
 		// log
-		host := ctx.Value(SourceAddrKey{}).(string)
+		host := SourceAddrFromCtx(ctx)
 		logs.Info(host, "Request to "+utils.BlueStr(r.URL.String()))
 
 		bypass := func(path string) bool {
@@ -37,6 +37,9 @@ func Dispatch(bypassHandler http.Handler, fullpathHandler http.Handler) http.Han
 }
 
 func updateContextSource(r *http.Request) context.Context {
+
+	// logs.Debug("X-Real-IP", r.Header.Get("X-Real-IP"))
+	// logs.Debug("X-Forwarded-For", r.Header.Get("X-Forwarded-For"))
 
 	source := strings.TrimSpace(r.Header.Get("X-Real-IP"))
 	if source != "" {

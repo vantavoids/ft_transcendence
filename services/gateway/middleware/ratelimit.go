@@ -18,10 +18,11 @@ func LimitIP(store RateLimitStore) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			host := r.Context().Value(SourceAddrKey{}).(string)
+			ctx := r.Context()
+			host := SourceAddrFromCtx(ctx)
 
-			svc := serviceFromCtx(r.Context())
-			if svc == "" {
+			svc, ok := serviceFromCtx(ctx)
+			if !ok {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 				logs.Error(host, "LimitIP: missing service from context")
 				return
@@ -58,10 +59,10 @@ func LimitUID(store RateLimitStore) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			host := r.Context().Value(SourceAddrKey{}).(string)
-
-			svc := serviceFromCtx(r.Context())
-			if svc == "" {
+			ctx := r.Context()
+			host := SourceAddrFromCtx(ctx)
+			svc, ok := serviceFromCtx(ctx)
+			if !ok {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 				logs.Error(host, "LimitUID: missing service from context")
 				return
@@ -74,7 +75,13 @@ func LimitUID(store RateLimitStore) Middleware {
 				return
 			}
 
-			uid := r.Context().Value(subKey{}).(string)
+			uid, ok := subFromCtx(ctx)
+			if !ok {
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+
+				logs.Error(host, "LimitUID: missing sub from context")
+				return
+			}
 
 			if !store.Allow(uid) {
 				errMsg := "too many requests"
@@ -90,9 +97,21 @@ func LimitUID(store RateLimitStore) Middleware {
 	}
 }
 
-func serviceFromCtx(ctx context.Context) string {
+func serviceFromCtx(ctx context.Context) (string, bool) {
 
-	s, _ := ctx.Value(serviceKey{}).(string)
+	s, ok := ctx.Value(serviceKey{}).(string)
+	return s, ok && s != ""
+}
+
+func subFromCtx(ctx context.Context) (string, bool) {
+
+	s, ok := ctx.Value(subKey{}).(string)
+	return s, ok && s != ""
+}
+
+func SourceAddrFromCtx(ctx context.Context) string {
+
+	s, _ := ctx.Value(SourceAddrKey{}).(string)
 	return s
 }
 

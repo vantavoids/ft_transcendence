@@ -109,7 +109,7 @@ func Redirect(proxies Proxies) http.HandlerFunc {
 		}
 
 		// log
-		host := r.Context().Value(middleware.SourceAddrKey{}).(string)
+		host := middleware.SourceAddrFromCtx(r.Context())
 		logs.Info(host, "Redirect done, forwarding to "+utils.PurpleStr(parts[2]))
 		proxy.ServeHTTP(w, r)
 	}

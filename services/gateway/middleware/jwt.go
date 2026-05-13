@@ -18,12 +18,13 @@ func JwtAuth(secret string) Middleware {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			host := r.Context().Value(SourceAddrKey{}).(string)
+			ctx := r.Context()
+			host := SourceAddrFromCtx(ctx)
 
-			serviceName, ok := r.Context().Value(serviceKey{}).(string)
+			serviceName, ok := serviceFromCtx(ctx)
 			if !ok {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
-				logs.Error(host, "missing serviceKey in ctx inside JwtAuth")
+				logs.Error(host, "JwtAuth: missing service in context")
 				return
 			}
 
@@ -51,11 +52,11 @@ func JwtAuth(secret string) Middleware {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), subKey{}, subValue)
+			ctxSub := context.WithValue(ctx, subKey{}, subValue)
 
 			// log
 			logs.Info(host, "JWT auth passed, forwarding ...")
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r.WithContext(ctxSub))
 		})
 	}
 }
