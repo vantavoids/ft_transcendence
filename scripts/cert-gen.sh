@@ -5,7 +5,7 @@ BLUE="\033[36m"
 RESET="\033[0m"
 
 MKCERT_VERSION="v1.4.4"
-MKCERT_BIN=".mkcert/bin"
+MKCERT_BIN=".mkcert/binary"
 CAROOT=".mkcert"
 
 if [ -f "certs/cert.pem" ] && [ -f "certs/key.pem" ]; then
