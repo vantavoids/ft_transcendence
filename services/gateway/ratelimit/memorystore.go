@@ -84,9 +84,10 @@ func (store *MemoryStore) CleanPartial() {
 			logs.Debug(store.which+" Store", "nothing in store")
 			return
 		}
-		temp := store.unchecked
-		store.unchecked = store.checked
-		store.checked = temp
+
+		// swap stores and len, between checked and unchecked
+		store.unchecked, store.checked = store.checked, store.unchecked
+		lenUnchecked, lenChecked = lenChecked, lenUnchecked
 	}
 
 	toClean := lenUnchecked + lenChecked
