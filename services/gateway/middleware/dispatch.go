@@ -32,7 +32,7 @@ func Dispatch(bypassHandler http.Handler, fullpathHandler http.Handler) http.Han
 			bypassHandler.ServeHTTP(w, r.WithContext(ctx)) // skip the middlewares except rate limit
 			return
 		}
-		fullpathHandler.ServeHTTP(w, r) // full chain
+		fullpathHandler.ServeHTTP(w, r.WithContext(ctx)) // full chain
 	})
 }
 
