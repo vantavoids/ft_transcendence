@@ -4,13 +4,19 @@ package logs
 import (
 	"log"
 
-	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/utils"
 )
 
+var debugFlag bool = false
+
+func SetDebug(enabled bool) {
+
+	debugFlag = enabled
+}
+
 func Debug(source string, msg string) {
 
-	if config.DebugFlag == "true" {
+	if debugFlag {
 		log.Printf("%s - %s: %s", utils.GreyStr("DEBUG"), utils.GreyStr("["+source+"]"), msg)
 	}
 }

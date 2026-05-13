@@ -7,6 +7,7 @@ import (
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
+	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
 	"github.com/vantavoids/ft_transcendence/services/gateway/middleware"
 	"github.com/vantavoids/ft_transcendence/services/gateway/ratelimit"
 )
@@ -17,6 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	logs.SetDebug(cfg.Debug)
 
 	proxies, err := handler.InitProxies(cfg.Services)
 	if err != nil {
@@ -25,7 +27,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	if cfg.Dev == "true" {
+	if cfg.Dev == true {
 		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI(cfg))
 	}
 	mux.HandleFunc("/api/gateway/health", handler.Healthcheck())
