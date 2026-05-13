@@ -29,10 +29,10 @@ func Dispatch(bypassHandler http.Handler, fullpathHandler http.Handler) http.Han
 
 		if bypass(r.URL.Path) {
 			ctx = updateContextSpecial(ctx)
-			bypassHandler.ServeHTTP(w, r.WithContext(ctx)) // skip the middlewares except rate limit
+			bypassHandler.ServeHTTP(w, r.WithContext(ctx)) // skip route check, JWT authentication, UID limit, and timeout categorization; only IP rate limit applies
 			return
 		}
-		fullpathHandler.ServeHTTP(w, r.WithContext(ctx)) // full chain
+		fullpathHandler.ServeHTTP(w, r.WithContext(ctx)) // full middleware chain
 	})
 }
 

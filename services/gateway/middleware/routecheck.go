@@ -53,11 +53,6 @@ func isAPIRoute(path string) bool {
 
 	parts := strings.Split(path, "/")
 
-	// special case for WS upgrades
-	if len(parts) == 3 && parts[0] == "" && parts[1] == "hubs" && parts[2] == "chat" {
-		return true
-	}
-
 	if len(parts) < 4 || parts[0] != "" || parts[1] != "api" {
 		return false
 	}

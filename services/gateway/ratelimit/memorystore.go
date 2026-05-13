@@ -25,15 +25,15 @@ type MemoryStore struct {
 	which     string
 }
 
-func NewMemoryStore(idle time.Duration, r float64, b int, w string) *MemoryStore {
+func NewMemoryStore(idle time.Duration, rateVal float64, bucketSize int, label string) *MemoryStore {
 
 	return &MemoryStore{
 		unchecked: make(map[string]*Client),
 		checked:   make(map[string]*Client),
 		maxIdle:   idle,
-		rate:      rate.Limit(r),
-		burst:     b,
-		which:     w,
+		rate:      rate.Limit(rateVal),
+		burst:     bucketSize,
+		which:     label,
 	}
 }
 
