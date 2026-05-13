@@ -6,6 +6,8 @@ services:
     build:
       context: ${PWD}/services/gateway
       dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
     env_file: ${PWD}/services/gateway/.env
     environment:
       JWT_SECRET: ${JWT_SECRET}
