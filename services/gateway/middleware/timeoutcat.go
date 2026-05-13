@@ -11,7 +11,8 @@ func TimeoutCat(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		host := r.Context().Value(SourceAddrKey{}).(string)
+		ctx := r.Context()
+		host := SourceAddrFromCtx(ctx)
 
 		category, ok := r.Context().Value(timeoutCatKey{}).(TimeoutCategory)
 		if !ok {

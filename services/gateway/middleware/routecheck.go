@@ -40,12 +40,10 @@ func RouteCheck(next http.Handler) http.Handler {
 			return
 		}
 
-		// update context with the requested service
-		// and the timeout category (CatJSON, CatUpload, CatWebSocket)
-		ctx := updateContext(r)
+		ctx := updateContextServiceAndTimeout(r)
 
 		// log
-		host := ctx.Value(SourceAddrKey{}).(string)
+		host := SourceAddrFromCtx(ctx)
 		logs.Info(host, "Route checked, forwarding...")
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -91,7 +89,7 @@ func isOnlyDigits(s string) bool {
 	return true
 }
 
-func updateContext(r *http.Request) context.Context {
+func updateContextServiceAndTimeout(r *http.Request) context.Context {
 
 	service := fetchService(r.URL.Path)
 

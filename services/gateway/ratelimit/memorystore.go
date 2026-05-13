@@ -98,6 +98,7 @@ func (store *MemoryStore) CleanPartial() {
 	}
 
 	count := 0
+	cleaned := 0
 	for key, client := range store.unchecked {
 		if count >= toClean {
 			break
@@ -105,6 +106,8 @@ func (store *MemoryStore) CleanPartial() {
 
 		if time.Since(client.lastSeen) < store.maxIdle {
 			store.checked[key] = store.unchecked[key]
+		} else {
+			cleaned++
 		}
 		delete(store.unchecked, key)
 
@@ -112,8 +115,9 @@ func (store *MemoryStore) CleanPartial() {
 	}
 
 	store.mu.Unlock()
-	logs.Debug(store.which+" Store", "to clean "+strconv.Itoa(toClean)+" entries")
-	logs.Debug(store.which+" Store", "cleaned "+strconv.Itoa(count)+" entries")
+	logs.Debug(store.which+" Store", "to check "+strconv.Itoa(toClean)+" entries")
+	logs.Debug(store.which+" Store", "checked "+strconv.Itoa(count)+" entries")
+	logs.Debug(store.which+" Store", "cleaned "+strconv.Itoa(cleaned)+" entries")
 }
 
 // transferLocked MUST be called AFTER holding the mutex lock
