@@ -27,7 +27,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	if cfg.Dev == true {
+	if cfg.Dev {
 		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI(cfg))
 	}
 	mux.HandleFunc("/api/gateway/health", handler.Healthcheck())
