@@ -1,10 +1,14 @@
 load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
 root_env     = read_dotenv('../../.env')
+guild_env    = read_dotenv('.env')
 MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
 MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
 BASE_URL     = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+PG_USER      = guild_env.get('POSTGRES_USER', 'guild')
+PG_PASS      = guild_env.get('POSTGRES_PASSWORD', 'guild')
+PG_DB        = guild_env.get('POSTGRES_DB', 'guild')
 DOCKER       = detect_engine()
 FLAGS        = run_flags(DOCKER)
 
@@ -30,6 +34,11 @@ local_resource(
         '-e RabbitMQ__VirtualHost=/ ' +
         '-e RabbitMQ__Username=' + MQ_USER + ' ' +
         '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
+        '-e Database__Host=guild-db ' +
+        '-e Database__Port=5432 ' +
+        '-e Database__Name=' + PG_DB + ' ' +
+        '-e Database__User=' + PG_USER + ' ' +
+        '-e Database__Password=' + PG_PASS + ' ' +
         '-e Services__UserService=http://user:8080 ' +
         '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
