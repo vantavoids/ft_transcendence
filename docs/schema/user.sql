@@ -24,10 +24,13 @@ CREATE TABLE users_profile (
 -- -----------------------------------------------------------------------
 -- Friend relationships
 --
--- Canonical ordering: requester_id < addressee_id (enforced by constraint).
--- This prevents (A→B) and (B→A) ghost duplicates.
--- To check "are A and B friends", query with: (min(A,B), max(A,B)).
--- Works naturally with BIGINT Snowflake IDs (numeric ordering).
+-- requester_id is the user who initiated the friend request (= JWT sub at
+-- POST /friends). addressee_id is the target. The direction matters for UI
+-- ("X wants to be your friend" only shows on the addressee's side).
+--
+-- Duplicate prevention is independent of who initiated: there can only be
+-- one row for the pair {A, B} regardless of ordering. Enforced by an
+-- expression unique index on (LEAST, GREATEST).
 -- -----------------------------------------------------------------------
 
 CREATE TYPE friendship_status AS ENUM ('pending', 'accepted', 'blocked');
@@ -40,10 +43,13 @@ CREATE TABLE friendships (
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT no_self_friendship   CHECK (requester_id != addressee_id),
-    -- enforce canonical ordering so (A,B) and (B,A) cannot both exist
-    CONSTRAINT canonical_pair       CHECK (requester_id < addressee_id),
-    CONSTRAINT unique_friendship    UNIQUE (requester_id, addressee_id)
+    CONSTRAINT no_self_friendship   CHECK (requester_id != addressee_id)
+);
+
+-- order-independent uniqueness: at most one row per unordered pair {A, B}
+CREATE UNIQUE INDEX unique_friendship_pair ON friendships (
+    LEAST(requester_id, addressee_id),
+    GREATEST(requester_id, addressee_id)
 );
 
 CREATE INDEX idx_friendships_requester          ON friendships (requester_id);

@@ -86,8 +86,6 @@ CREATE TABLE guild_bans (
     user_id     BIGINT      NOT NULL,   -- logical ref → users_profile.id
     banned_by   BIGINT      NOT NULL,   -- logical ref → users_profile.id
     reason      TEXT,
-    -- NULL = permanent ban
-    expires_at  TIMESTAMPTZ,
     banned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (guild_id, user_id)
 );

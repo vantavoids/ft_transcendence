@@ -13,7 +13,12 @@ CREATE TABLE users_auth (
     email_verified              BOOLEAN     NOT NULL DEFAULT FALSE,
 
     -- OAuth login (NULL for email+password accounts)
-    oauth_provider              INTEGER,   -- 'google' | 'github' | '42'
+    -- oauth_provider encoding (mirrors Auth.Domain.AuthUser.OAuthProvider enum):
+    --   0 = unknown (sentinel; never persisted)
+    --   1 = github
+    --   2 = google
+    --   3 = 42
+    oauth_provider              INTEGER,
     oauth_id                    VARCHAR(255),
 
     -- refresh token (single active token per user; rotated on every use)
