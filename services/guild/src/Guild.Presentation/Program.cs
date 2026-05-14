@@ -9,18 +9,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureHostOptions(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+	.AddPersistenceHealthChecks();
+
 builder.Services.AddApplication()
-    .AddInfrastructure()
-    .AddPersistence();
+	.AddInfrastructure()
+	.AddPersistence();
 builder.Services.AddCarter();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+	app.MapOpenApi();
+	app.MapScalarApiReference();
 }
 
 app.MapHealthChecks("/healthz");

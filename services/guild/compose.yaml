@@ -20,6 +20,12 @@ services:
       dockerfile: Dockerfile
     command: dotnet ef database update --project src/Guild.Persistence/Guild.Persistence.csproj --startup-project src/Guild.Presentation/Guild.Presentation.csproj
     env_file: ${PWD}/services/guild/.env
+    environment:
+      Database__Host: guild-db
+      Database__Port: 5432
+      Database__Name: ${POSTGRES_DB:-guild}
+      Database__User: ${POSTGRES_USER}
+      Database__Password: ${POSTGRES_PASSWORD}
     profiles: ["migrate"]
     depends_on:
       guild-db:
@@ -35,7 +41,7 @@ services:
     env_file: ${PWD}/services/guild/.env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,6 +51,11 @@ services:
       RabbitMQ__VirtualHost: /
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+      Database__Host: guild-db
+      Database__Port: 5432
+      Database__Name: ${POSTGRES_DB:-guild}
+      Database__User: ${POSTGRES_USER}
+      Database__Password: ${POSTGRES_PASSWORD}
       Services__UserService: http://user:8080
       BackendConfiguration__BaseUrl: ${BASE_URL}
       BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
