@@ -89,6 +89,44 @@ CREATE TABLE IF NOT EXISTS dm_attachments (
 ) WITH comment = 'File attachment metadata per DM';
 
 -- ---------------------------------------------------------------------------
+-- Draft attachments
+-- Uploaded via POST /attachments before any message exists to attach to.
+-- Cassandra default_time_to_live auto-expires unattached drafts after 1h.
+-- When a draft is referenced by a SendMessage / SendDirectMessage, the chat
+-- service writes a permanent row into message_attachments / dm_attachments
+-- and the draft row simply ages out.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS draft_attachments (
+    id          BIGINT PRIMARY KEY,
+    uploader_id BIGINT,
+    url         TEXT,
+    filename    TEXT,
+    size_bytes  BIGINT,
+    mime_type   TEXT,
+    created_at  TIMESTAMP
+) WITH default_time_to_live = 3600
+   AND comment = 'Pre-message attachment uploads; auto-expires in 1h';
+
+-- ---------------------------------------------------------------------------
+-- Attachment lookup
+-- Supports GET /attachments/{id}/{filename}, which only carries the attachment
+-- id in the URL. Maps attachment_id back to the owning message partition so
+-- the service can fetch the full row from message_attachments / dm_attachments.
+-- Written in the same logged batch as the attachment insert at message-send time.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS attachment_lookup (
+    attachment_id   BIGINT PRIMARY KEY,
+    -- routing
+    is_dm           BOOLEAN,
+    -- for channel attachments (is_dm = false)
+    channel_id      BIGINT,
+    -- for DM attachments (is_dm = true)
+    conversation_id BIGINT,
+    -- common
+    message_id      BIGINT
+) WITH comment = 'Maps attachment_id -> owning message PK for REST downloads';
+
+-- ---------------------------------------------------------------------------
 -- Message reactions
 --
 -- Two tables required (CQL forbids mixing COUNTER and non-COUNTER columns):

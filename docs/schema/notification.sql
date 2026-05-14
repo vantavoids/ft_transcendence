@@ -20,7 +20,7 @@ CREATE TABLE notifications (
     -- actor_id: the user who caused this notification
     --   mention        → author_id of the message
     --   dm             → sender_id
-    --   friend_request → from_user_id
+    --   friend_request → requester_id
     --   guild_invite   → invited_by_user_id
     --   guild_welcome  → NULL (system event)
     --   incoming_call  → caller_id
@@ -36,7 +36,7 @@ CREATE TABLE notifications (
     source_id       BIGINT,
     -- flexible per-type extra payload
     --   mention        → { channel_id, guild_id, preview }
-    --   dm             → { preview }
+    --   dm             → { conversation_id, preview }
     --   friend_request → {}
     --   guild_invite   → { guild_name }
     --   guild_welcome  → { guild_name }
@@ -45,8 +45,6 @@ CREATE TABLE notifications (
     read            BOOLEAN             NOT NULL DEFAULT FALSE,
     -- distinct from read: user actively dismissed the notification from the panel
     dismissed_at    TIMESTAMPTZ,
-    -- optional TTL for transient notifications (e.g. expired guild invite)
-    expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
 
