@@ -11,7 +11,7 @@ services:
   cert-gen:
     container_name: cert-gen
     image: docker.io/alpine/curl
-    user: "${USERID:?USERID not set}:${GRPID:?GRPID not set}"
+    user: "${FT_USERID:?FT_USERID not set}:${FT_GRPID:?FT_GRPID not set}"
     working_dir: /app
     volumes:
       - .:/app

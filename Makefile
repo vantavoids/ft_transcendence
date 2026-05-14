@@ -5,11 +5,11 @@ COMPOSE      ?= podman-compose
 DOCKER       ?= podman
 
 CERTDIR      := .mkcert certs
-USERID	     := $(shell id -u)
-GRPID        := $(shell id -g)
+FT_USERID    := $(shell id -u)
+FT_GRPID     := $(shell id -g)
 
-export USERID
-export GRPID
+export FT_USERID
+export FT_GRPID
 
 ENV_FILES := .env \
              frontend/.env \
