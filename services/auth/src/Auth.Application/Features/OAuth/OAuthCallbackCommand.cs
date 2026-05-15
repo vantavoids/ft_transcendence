@@ -4,5 +4,7 @@ using Auth.Domain.Results;
 
 namespace Auth.Application.Features.OAuth;
 
-public sealed record OAuthCallbackCommand(OAuthProvider Provider, string Code)
-    : ICommand<Result<OAuthCallbackResult>>;
+public sealed record OAuthCallbackCommand(
+                        OAuthProvider Provider,
+                        string Code,
+                        string State): ICommand<Result<OAuthCallbackResult>>;

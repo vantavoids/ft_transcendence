@@ -6,6 +6,6 @@ namespace Auth.Application.Abstractions.OAuth;
 public interface IOAuthProviderClient
 {
     Uri                         BuildAuthorizationUrl(string state);
-    Task<Result<OAuthUserInfo>> ExchangeCodeAsync(string code,
+    Task<Result<OAuthUserInfo>> ExchangeCodeAsync(string code, string state,
                                     CancellationToken cancellationToken = default);
 }
