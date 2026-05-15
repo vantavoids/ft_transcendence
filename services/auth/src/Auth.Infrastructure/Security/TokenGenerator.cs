@@ -21,13 +21,14 @@ internal sealed class TokenGenerator(
     {
         var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var now         = clock.UtcNow.ToUnixTimeMilliseconds();
+        var now         = clock.UtcNow.ToUnixTimeSeconds();
         var claims      = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, now.ToString(),
                 ClaimValueTypes.Integer64),
         };
+
 
         var token = new JwtSecurityToken(
             issuer: _jwtOptions.Issuer,
