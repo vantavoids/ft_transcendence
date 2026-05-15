@@ -2,9 +2,8 @@ using Carter;
 using Auth.Application;
 using Auth.Infrastructure;
 using Auth.Persistence;
+using Auth.Presentation.Middleware;
 using Scalar.AspNetCore;
-using Auth.Persistence.Db;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +33,8 @@ if (app.Environment.IsDevelopment())
         options.AddServer(new ScalarServer($"{apiUrl}/auth"));
     });
 }
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.MapHealthChecks("/healthz");
 var v1 = app.MapGroup("/v1");
