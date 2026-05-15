@@ -26,8 +26,7 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
                 .HasMaxLength((int)Email.MaxEmailLen);
 
             email.Property(e => e.IsVerified)
-                .HasColumnName("email_verified")
-                .HasDefaultValue(false);
+                .HasColumnName("email_verified");
         });
         builder.Property(u => u.PasswordHash)
                 .HasColumnName("password_hash");
@@ -55,8 +54,7 @@ public sealed class AuthUserConfig : IEntityTypeConfiguration<AuthUser>
                 .HasColumnName("refresh_token_expires_at");
 
             token.Property(t => t.Revoked)
-                .HasColumnName("refresh_token_revoked")
-                .HasDefaultValue(false);
+                .HasColumnName("refresh_token_revoked");
         });
 
         /* Properties */
