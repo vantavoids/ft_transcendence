@@ -1,7 +1,10 @@
-load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+load('../../tiltlib.star', 'detect_engine', 'read_dotenv', 'run_flags', 'container_serve')
 
-DOCKER = detect_engine()
-FLAGS  = run_flags(DOCKER)
+root_env = read_dotenv('../../.env')
+JWT_SECRET   = root_env.get('JWT_SECRET', '')
+
+DOCKER   = detect_engine()
+FLAGS    = run_flags(DOCKER)
 
 local_resource(
     'gateway',
@@ -10,6 +13,7 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e DEV=true ' +
+        '-e JWT_SECRET=' + JWT_SECRET + ' ' +
         '-v $(pwd):/app ' +
         'gateway-service'
     ),
