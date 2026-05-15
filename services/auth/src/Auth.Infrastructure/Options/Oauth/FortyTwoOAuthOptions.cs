@@ -2,7 +2,7 @@ namespace Auth.Infrastructure.Options.OAuth;
 
 public sealed class FortyTwoOAuthOptions : OAuthProviderOptions, IOptions
 {
-    public static string SectionName => "OAuth.FortyTwo";
+    public static string SectionName => "OAuth:FortyTwo";
 
     public override required string AuthorizationEndpoint
         { get; init; } = "https://api.intra.42.fr/oauth/authorize";
