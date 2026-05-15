@@ -1,7 +1,9 @@
 using System.Reflection;
 using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
+using Auth.Application.Abstractions.OAuth;
 using Auth.Application.Abstractions.Security;
+using Auth.Infrastructure.OAuth;
 using Auth.Infrastructure.Options;
 using Auth.Infrastructure.Security;
 using MassTransit;
@@ -14,18 +16,14 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        var optionsTypes = typeof(DependencyInjection).Assembly.GetTypes()
-            .Where(t => t is { IsAbstract: false, IsInterface: false } &&
-                        typeof(IOptions).IsAssignableFrom(t));
+        SetupFromAssembly(services,
+            t => typeof(IOptions).IsAssignableFrom(t),
+            nameof(ConfigureOptions));
 
-        foreach (var optionType in optionsTypes)
-        {
-            var configureOptionsMethod = typeof(DependencyInjection)
-                .GetMethod("ConfigureOptions", BindingFlags.NonPublic | BindingFlags.Static)!
-                .MakeGenericMethod(optionType);
-
-            configureOptionsMethod.Invoke(null, [services]);
-        }
+        SetupFromAssembly(services,
+            t => typeof(IOAuthProviderClient).IsAssignableFrom(t) &&
+                t.GetCustomAttribute<OAuthProviderKeyAttribute>() is not null,
+            nameof(RegisterOAuthProvider));
 
         services.AddMassTransit(x =>
             x.UsingRabbitMq((ctx, conf) => {
@@ -47,19 +45,38 @@ public static class DependencyInjection
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
         services.AddTransient<ICurrentUser, CurrentUser>();
 
-        // services.AddKeyedTransient<IOAuthProviderClient, GithubOAuthProviderClient>(OAuthProvider.Github);
-        // services.AddKeyedTransient<IOAuthProviderClient, GoogleOAuthProviderClient>(OAuthProvider.Google);
-        // services.AddKeyedTransient<IOAuthProviderClient, FortyTwoOAuthProviderClient>(OAuthProvider.FortyTwo);
-
         return services;
     }
 
-    private static OptionsBuilder<T> ConfigureOptions<T>(IServiceCollection services)
+    private static void SetupFromAssembly(
+        IServiceCollection services,
+        Func<Type, bool> filter,
+        string methodName)
+    {
+        var method = typeof(DependencyInjection)
+            .GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        foreach (var type in typeof(DependencyInjection).Assembly.GetTypes()
+            .Where(t => t is { IsAbstract: false, IsInterface: false } && filter(t)))
+        {
+            method.MakeGenericMethod(type).Invoke(null, [services]);
+        }
+    }
+
+    private static void ConfigureOptions<T>(IServiceCollection services)
         where T : class, IOptions
     {
-        return services.AddOptions<T>()
+        services.AddOptions<T>()
             .BindConfiguration(T.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
+    }
+
+    private static void RegisterOAuthProvider<T>(IServiceCollection services)
+        where T : class, IOAuthProviderClient
+    {
+        var key = typeof(T).GetCustomAttribute<OAuthProviderKeyAttribute>()!.Provider;
+        services.AddHttpClient<T>();
+        services.AddKeyedTransient<IOAuthProviderClient, T>(key);
     }
 }
