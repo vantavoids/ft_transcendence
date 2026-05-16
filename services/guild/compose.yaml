@@ -13,20 +13,20 @@ services:
 
   guild-migrate:
     container_name: guild-migrate
-    image: guild-service
+    image: guild-migrate-service
     pull_policy: never
     build:
       context: ${PWD}/services/guild
-      dockerfile: Dockerfile
-    command: dotnet ef database update --project src/Guild.Persistence/Guild.Persistence.csproj --startup-project src/Guild.Presentation/Guild.Presentation.csproj
+      dockerfile: Dockerfile.migrate
     env_file: ${PWD}/services/guild/.env
     environment:
+      POSTGRES_HOST: guild-db
+      POSTGRES_PORT: 5432
       Database__Host: guild-db
       Database__Port: 5432
       Database__Name: ${POSTGRES_DB:-guild}
       Database__User: ${POSTGRES_USER}
       Database__Password: ${POSTGRES_PASSWORD}
-    profiles: ["migrate"]
     depends_on:
       guild-db:
         condition: service_healthy
@@ -66,6 +66,8 @@ services:
         condition: service_healthy
       guild-db:
         condition: service_healthy
+      guild-migrate:
+        condition: service_completed_successfully
 
 volumes:
   guild_db_data:
