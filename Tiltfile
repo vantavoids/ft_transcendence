@@ -48,9 +48,7 @@ local_resource(
 local_resource(
     'nginx',
     serve_cmd=container_serve(DOCKER, FLAGS, 'nginx',
-        '--network ft_transcendence ' +
-        '-p 1080:80 ' +
-        '-p 1443:443 ' +
+        '--network host ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
         '-v certs:/etc/nginx/certs:ro ' +
