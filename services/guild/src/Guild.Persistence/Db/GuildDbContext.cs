@@ -1,9 +1,16 @@
+using Guild.Domain.Guild;
 using Microsoft.EntityFrameworkCore;
+using GuildEntity = Guild.Domain.Guild.Guild;
 
 namespace Guild.Persistence.Db;
 
 public sealed class GuildDbContext(DbContextOptions<GuildDbContext> options) : DbContext(options)
 {
+	public DbSet<GuildEntity> Guilds => Set<GuildEntity>();
+	public DbSet<Role> Roles => Set<Role>();
+	public DbSet<GuildMember> Members => Set<GuildMember>();
+	public DbSet<MemberRole> MemberRoles => Set<MemberRole>();
+
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		base.OnModelCreating(modelBuilder);

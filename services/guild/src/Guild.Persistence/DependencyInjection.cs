@@ -1,5 +1,7 @@
+using Guild.Application.Abstractions.Persistence;
 using Guild.Persistence.Db;
 using Guild.Persistence.Health;
+using Guild.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -21,6 +23,8 @@ public static class DependencyInjection
 			var options = ctx.GetRequiredService<IOptions<DbOptions>>().Value;
 			config.UseNpgsql(options.ToConnectionString());
 		});
+
+		services.AddScoped<IGuildRepository, GuildRepository>();
 
 		return services;
 	}

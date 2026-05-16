@@ -59,6 +59,8 @@ services:
       Services__UserService: http://user:8080
       BackendConfiguration__BaseUrl: ${BASE_URL}
       BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
+      Jwt__SecretKey: ${JWT_SECRET}
+      Snowflake__WorkerId: 2
     depends_on:
       rabbitmq:
         condition: service_healthy
