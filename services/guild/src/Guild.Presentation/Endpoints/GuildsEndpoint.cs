@@ -51,10 +51,7 @@ public sealed class GuildsEndpoint : ICarterModule
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(new GetGuildQuery(id), cancellationToken);
-		if (result.Succeeded)
-			return TypedResults.Ok(result.Value);
-
-		return MapErrorGet(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorGet(result.Error);
 	}
 
 	private static async Task<Results<
@@ -72,10 +69,7 @@ public sealed class GuildsEndpoint : ICarterModule
 			new UpdateGuildCommand(id, request.Name, request.Description, request.IconUrl, request.BannerUrl),
 			cancellationToken);
 
-		if (result.Succeeded)
-			return TypedResults.Ok(result.Value);
-
-		return MapErrorUpdate(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorUpdate(result.Error);
 	}
 
 	private static async Task<Results<
@@ -88,10 +82,7 @@ public sealed class GuildsEndpoint : ICarterModule
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(new DeleteGuildCommand(id), cancellationToken);
-		if (result.Succeeded)
-			return TypedResults.NoContent();
-
-		return MapErrorDelete(result.Error);
+		return result.Succeeded ? TypedResults.NoContent() : MapErrorDelete(result.Error);
 	}
 
 	private static async Task<Results<
@@ -112,10 +103,7 @@ public sealed class GuildsEndpoint : ICarterModule
 			new TransferOwnershipCommand(id, newOwnerId),
 			cancellationToken);
 
-		if (result.Succeeded)
-			return TypedResults.Ok(result.Value);
-
-		return MapErrorTransfer(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorTransfer(result.Error);
 	}
 
 	// ---- error mapping ----
@@ -162,17 +150,17 @@ public sealed class GuildsEndpoint : ICarterModule
 
 	// ---- request shapes (snake_case via ConfigureHttpJsonOptions) ----
 
-	public sealed record CreateGuildRequest(
+	private sealed record CreateGuildRequest(
 		string? Name,
 		string? Description,
 		string? IconUrl,
 		string? BannerUrl);
 
-	public sealed record UpdateGuildRequest(
+	private sealed record UpdateGuildRequest(
 		string? Name,
 		string? Description,
 		string? IconUrl,
 		string? BannerUrl);
 
-	public sealed record TransferOwnershipRequest(string NewOwnerId);
+	private sealed record TransferOwnershipRequest(string NewOwnerId);
 }
