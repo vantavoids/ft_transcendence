@@ -12,7 +12,6 @@ local_resource(
     serve_cmd=container_serve(DOCKER, FLAGS, 'gateway',
         '--network ft_transcendence ' +
         '--env-file .env ' +
-        '-e DEV=true ' +
         '-e JWT_SECRET=' + JWT_SECRET + ' ' +
         '-e GATEWAY_DEV=true ' +
         '-v $(pwd):/app ' +
