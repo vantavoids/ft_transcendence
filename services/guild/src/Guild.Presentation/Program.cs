@@ -64,3 +64,5 @@ var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
 
 app.Run();
+
+public partial class Program;

@@ -8,6 +8,8 @@ COPY src/Guild.Infrastructure/Guild.Infrastructure.csproj src/Guild.Infrastructu
 COPY src/Guild.Persistence/Guild.Persistence.csproj src/Guild.Persistence/
 COPY src/Guild.Presentation/Guild.Presentation.csproj src/Guild.Presentation/
 COPY tests/Guild.ArchitectureTests/Guild.ArchitectureTests.csproj tests/Guild.ArchitectureTests/
+COPY tests/Guild.UnitTests/Guild.UnitTests.csproj tests/Guild.UnitTests/
+COPY tests/Guild.FunctionalTests/Guild.FunctionalTests.csproj tests/Guild.FunctionalTests/
 
 RUN dotnet restore
 
