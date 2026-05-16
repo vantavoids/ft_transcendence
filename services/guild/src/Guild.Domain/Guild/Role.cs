@@ -82,9 +82,9 @@ public sealed class Role
 
 	internal static Role CreateEveryone(long id, long guildId, DateTimeOffset now)
 	{
-		long perms = (long)Permission.SendMessages
-				   | (long)Permission.ReadMessages
-				   | (long)Permission.CreateInvite; // 1 | 2 | 512 = 515
+		const long perms = (long)Permission.SendMessages
+						   | (long)Permission.ReadMessages
+						   | (long)Permission.CreateInvite; // 1 | 2 | 512 = 515
 
 		return new Role(
 			id: id,
@@ -118,15 +118,13 @@ public sealed class Role
 
 	private static bool IsValidHexColor(string color)
 	{
-		if (color.Length != 7 || color[0] != '#')
+		if (color is not ['#', _, _, _, _, _, _])
 			return false;
 
-		for (int i = 1; i < 7; i++)
+		for (var i = 1; i < 7; i++)
 		{
-			char c = color[i];
-			bool isHex = (c >= '0' && c <= '9')
-					  || (c >= 'a' && c <= 'f')
-					  || (c >= 'A' && c <= 'F');
+			var c = color[i];
+			var isHex = c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
 			if (!isHex) return false;
 		}
 		return true;
