@@ -16,15 +16,9 @@ public static class PermissionResolver
 		if (userId == ownerId)
 			return (long)Permission.Administrator;
 
-		long mask = 0L;
-
 		// the default (@everyone) role is always granted, regardless of explicit
 		// assignment. it encodes the baseline permissions for all members
-		foreach (var role in allGuildRoles)
-		{
-			if (role.IsDefault)
-				mask |= role.Permissions;
-		}
+		var mask = allGuildRoles.Where(role => role.IsDefault).Aggregate(0L, (current, role) => current | role.Permissions);
 
 		// explicitly assigned roles add to the mask
 		var assignedRoleIds = new HashSet<long>();
@@ -34,16 +28,7 @@ public static class PermissionResolver
 				assignedRoleIds.Add(assignment.RoleId);
 		}
 
-		if (assignedRoleIds.Count > 0)
-		{
-			foreach (var role in allGuildRoles)
-			{
-				if (assignedRoleIds.Contains(role.Id))
-					mask |= role.Permissions;
-			}
-		}
-
-		return mask;
+		return assignedRoleIds.Count <= 0 ? mask : allGuildRoles.Where(role => assignedRoleIds.Contains(role.Id)).Aggregate(mask, (current, role) => current | role.Permissions);
 	}
 
 	/// <summary>
