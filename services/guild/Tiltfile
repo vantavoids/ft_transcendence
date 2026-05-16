@@ -4,6 +4,7 @@ root_env     = read_dotenv('../../.env')
 guild_env    = read_dotenv('.env')
 MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
 MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
+JWT_SECRET   = root_env.get('JWT_SECRET', '')
 BASE_URL     = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
 PG_USER      = guild_env.get('POSTGRES_USER', 'guild')
@@ -42,6 +43,8 @@ local_resource(
         '-e Services__UserService=http://user:8080 ' +
         '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
+        '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
+        '-e Snowflake__WorkerId=2 ' +
         '-v $(pwd)/src:/app/src ' +
         'guild-service'
     ),
