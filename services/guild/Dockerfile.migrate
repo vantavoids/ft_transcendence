@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+WORKDIR /app
+
+RUN dotnet tool install --global dotnet-ef --version 10.0.1
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+COPY Guild.slnx ./
+COPY Directory.Build.props ./
+COPY src/Guild.Domain/Guild.Domain.csproj src/Guild.Domain/
+COPY src/Guild.Application/Guild.Application.csproj src/Guild.Application/
+COPY src/Guild.Persistence/Guild.Persistence.csproj src/Guild.Persistence/
+
+RUN dotnet restore src/Guild.Persistence/Guild.Persistence.csproj
+
+COPY src/Guild.Domain/ ./src/Guild.Domain/
+COPY src/Guild.Application/ ./src/Guild.Application/
+COPY src/Guild.Persistence/ ./src/Guild.Persistence/
+
+RUN dotnet build src/Guild.Persistence/Guild.Persistence.csproj --no-restore -c Release
+
+ENTRYPOINT ["bash", "-c", "\
+    : ${POSTGRES_HOST:?POSTGRES_HOST not set}; \
+    : ${POSTGRES_PORT:?POSTGRES_PORT not set}; \
+    for i in $(seq 1 30); do \
+        exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null && { exec 3<&-; break; }; \
+        echo \"waiting for ${POSTGRES_HOST}:${POSTGRES_PORT}... ($i/30)\"; sleep 1; \
+    done; \
+    exec 3<>/dev/tcp/${POSTGRES_HOST}/${POSTGRES_PORT} 2>/dev/null || { echo \"${POSTGRES_HOST} never woke up :(\"; exit 1; }; exec 3<&-; \
+    dotnet ef database update \
+        --project src/Guild.Persistence/Guild.Persistence.csproj \
+        --startup-project src/Guild.Persistence/Guild.Persistence.csproj \
+        --no-build --configuration Release"]
