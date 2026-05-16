@@ -11,5 +11,5 @@ public sealed class GoogleOAuthOptions : OAuthProviderOptions, IOptions
         { get; init; } = "https://oauth2.googleapis.com/token";
 
     public override required string UserEndpoint
-        { get; init; } = String.Empty;
+        { get; init; } = "null";
 }
