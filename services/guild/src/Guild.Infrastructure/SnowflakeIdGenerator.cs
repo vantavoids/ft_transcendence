@@ -27,7 +27,7 @@ internal sealed class SnowflakeIdGenerator : IIdGenerator
 		_epoch = snowflakeOptions.Epoch;
 		_clock = clock;
 
-		if (_workerId < 0 || _workerId > MaxWorkerId)
+		if (_workerId is < 0 or > MaxWorkerId)
 			throw new ArgumentException(
 				$"Worker ID must be between 0 and {MaxWorkerId}, but got {_workerId}",
 				nameof(snowflakeOptions.WorkerId)
@@ -38,7 +38,7 @@ internal sealed class SnowflakeIdGenerator : IIdGenerator
 	{
 		lock (_lock)
 		{
-			long timestamp = GetCurrentTimestamp();
+			var timestamp = GetCurrentTimestamp();
 
 			if (timestamp < _lastTimestamp)
 				throw new InvalidOperationException(
@@ -67,7 +67,7 @@ internal sealed class SnowflakeIdGenerator : IIdGenerator
 
 	private long WaitUntilNextMillisecond(long lastTimestamp)
 	{
-		long timestamp = GetCurrentTimestamp();
+		var timestamp = GetCurrentTimestamp();
 		while (timestamp <= lastTimestamp)
 		{
 			timestamp = GetCurrentTimestamp();
