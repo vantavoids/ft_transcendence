@@ -9,6 +9,7 @@ local_resource(
     serve_cmd=container_serve(DOCKER, FLAGS, 'frontend',
         '--network ft_transcendence ' +
         '--env-file .env ' +
+        '-p 127.0.0.1:3000:3000 ' +
         '-v $(pwd)/app:/app/app ' +
         '-v $(pwd)/src:/app/src ' +
         '-v $(pwd)/public:/app/public ' +
