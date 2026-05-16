@@ -8,5 +8,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/Guild.ArchitectureTests/Guild.ArchitectureTests.csproj" BuildByDefault="false"/>
+        <Project Path="tests/Guild.UnitTests/Guild.UnitTests.csproj" BuildByDefault="false"/>
+        <Project Path="tests/Guild.FunctionalTests/Guild.FunctionalTests.csproj" BuildByDefault="false"/>
     </Folder>
 </Solution>
