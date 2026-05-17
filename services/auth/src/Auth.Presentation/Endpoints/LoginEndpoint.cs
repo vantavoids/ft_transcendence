@@ -8,6 +8,7 @@ using Auth.Domain.Results;
 using Auth.Infrastructure.Options;
 using Auth.Presentation.Contracts;
 using Auth.Presentation.Contracts.Login;
+using Auth.Presentation.Filters;
 
 // TODO: Confirm (user not found, user soft deleted, no password) => 401
 using LoginEndpointHttpResults = Microsoft.AspNetCore.Http.HttpResults.Results<
@@ -32,7 +33,8 @@ public sealed class LoginEndpoint : ICarterModule
             IClock clock,
             IOptions<RefreshTokenOptions> options,
             HttpResponse resp
-        ) => await Login(req, handler, clock, options.Value, resp));
+        ) => await Login(req, handler, clock, options.Value, resp))
+            .AddEndpointFilter<RequiredFieldsFilter<LoginRequest>>();
     }
 
     private static async Task<LoginEndpointHttpResults> Login(
