@@ -2,6 +2,7 @@ using Carter;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using Auth.Application.Abstractions.Messaging;
+using Auth.Application.Abstractions.Security;
 using Auth.Application.Features.Logout;
 using Auth.Domain.Results;
 using Auth.Infrastructure.Options;
@@ -18,23 +19,21 @@ public sealed class LogoutEndpoint : ICarterModule
     public void AddRoutes(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/logout", async (
-            HttpContext ctx,
+            ICurrentUser currentUser,
             ICommandHandler<LogoutCommand, Result> handler,
-            IOptions<RefreshTokenOptions> options
-        ) => await Logout(ctx, handler, options.Value))
+            IOptions<RefreshTokenOptions> options,
+            HttpContext ctx
+        ) => await Logout(currentUser, handler, options.Value, ctx))
         .RequireAuthorization();
     }
 
     private static async Task<LogoutEndpointHttpResults> Logout(
-        HttpContext ctx,
+        ICurrentUser currentUser,
         ICommandHandler<LogoutCommand, Result> handler,
-        RefreshTokenOptions options)
+        RefreshTokenOptions options,
+        HttpContext ctx)
     {
-        var userIdStr = ctx.User.FindFirst("sub")?.Value;
-        if (!long.TryParse(userIdStr, out var userId))
-            return TypedResults.Unauthorized();
-
-        var command = new LogoutCommand(userId);
+        var command = new LogoutCommand(currentUser.Id);
         var result = await handler.HandleAsync(command, ctx.RequestAborted);
 
         return result.Match<LogoutEndpointHttpResults>(
