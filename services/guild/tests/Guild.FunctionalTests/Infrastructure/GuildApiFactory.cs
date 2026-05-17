@@ -131,6 +131,24 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 		return client;
 	}
 
+	/// <summary>
+	/// inserts a bare GuildMember row (no role assignments) directly via the
+	/// scoped DbContext, so the test can exercise the "member without a
+	/// permission-granting role" branch even though no public endpoint to add
+	/// members exists yet. uses the Domain.Guild.GuildMember factory so the
+	/// invariants stay enforced and the entity is then attached as Added
+	/// </summary>
+	public async Task AddBareMemberAsync(long guildId, long userId)
+	{
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+		var memberResult = Guild.Domain.Guild.GuildMember.Create(guildId, userId, DateTimeOffset.UtcNow);
+		if (memberResult.IsFailure)
+			throw new InvalidOperationException(memberResult.Error.Message);
+		db.Members.Add(memberResult.Value);
+		await db.SaveChangesAsync();
+	}
+
 	private sealed class NoopEventBus : IEventBus
 	{
 		public Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
