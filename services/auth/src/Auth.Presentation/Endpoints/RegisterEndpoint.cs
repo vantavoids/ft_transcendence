@@ -14,6 +14,7 @@ using RegisterEndpointHttpResults = Microsoft.AspNetCore.Http.HttpResults.Result
     Microsoft.AspNetCore.Http.HttpResults.BadRequest<Auth.Presentation.Contracts.ErrorResponse>,
     Microsoft.AspNetCore.Http.HttpResults.Conflict<Auth.Presentation.Contracts.ErrorResponse>
 >;
+using Auth.Presentation.Filters;
 
 public sealed class RegisterEndpoint : ICarterModule
 {
@@ -25,7 +26,8 @@ public sealed class RegisterEndpoint : ICarterModule
             IClock clock,
             IOptions<RefreshTokenOptions> options,
             HttpResponse resp
-        ) => await Register(req, handler, clock, options.Value, resp));
+        ) => await Register(req, handler, clock, options.Value, resp))
+            .AddEndpointFilter<RequiredFieldsFilter<RegisterRequest>>();
     }
 
 
