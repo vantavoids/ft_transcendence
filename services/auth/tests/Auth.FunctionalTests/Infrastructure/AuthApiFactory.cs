@@ -1,5 +1,6 @@
 using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
+using Auth.Application.Abstractions.OAuth;
 using Auth.Application.Abstractions.Persistence;
 using Auth.Application.Abstractions.Security;
 using Auth.Domain.AuthUser;
@@ -28,6 +29,8 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     }
 
     private readonly string _dbName = "auth-tests-" + Guid.NewGuid();
+
+    public FakeOAuthProviderClient OAuthClient { get; } = new();
 
     public async Task SeedEmailUserAsync(string email, string rawPassword)
     {
@@ -86,7 +89,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["App:BaseUrl"]       = "https://localhost:1443",
+                ["App:BaseUrl"] = "https://app.test",
 
                 ["Database:Host"]     = "test",
                 ["Database:Port"]     = "5432",
@@ -107,17 +110,18 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
                 ["RefreshToken:ByteLength"] = "64",
                 ["RefreshToken:CookieName"] = "refresh_token",
 
-                ["OAuth:FortyTwo:ClientId"]     = "test",
-                ["OAuth:FortyTwo:ClientSecret"] = "test",
-                ["OAuth:FortyTwo:RedirectUri"]  = "https://localhost:1443/auth/callback/42",
+                ["OAuthStateCookie:CookieName"] = "oauth_state",
+                ["OAuthStateCookie:TtlMinutes"] = "10",
 
-                ["OAuth:Github:ClientId"]     = "test",
-                ["OAuth:Github:ClientSecret"] = "test",
-                ["OAuth:Github:RedirectUri"]  = "https://localhost:1443/auth/callback/github",
-
-                ["OAuth:Google:ClientId"]     = "test",
-                ["OAuth:Google:ClientSecret"] = "test",
-                ["OAuth:Google:RedirectUri"]  = "https://localhost:1443/auth/callback/google",
+                ["OAuth:FortyTwo:ClientId"]     = "test-client-id",
+                ["OAuth:FortyTwo:ClientSecret"] = "test-client-secret",
+                ["OAuth:FortyTwo:RedirectUri"]  = "https://app.test/callback",
+                ["OAuth:Google:ClientId"]       = "test-client-id",
+                ["OAuth:Google:ClientSecret"]   = "test-client-secret",
+                ["OAuth:Google:RedirectUri"]    = "https://app.test/callback",
+                ["OAuth:Github:ClientId"]       = "test-client-id",
+                ["OAuth:Github:ClientSecret"]   = "test-client-secret",
+                ["OAuth:Github:RedirectUri"]    = "https://app.test/callback",
             });
         });
 
@@ -128,6 +132,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEventBus>();
             services.AddSingleton<IEventBus, NoopEventBus>();
+
+            foreach (var provider in new[] { OAuthProvider.FortyTwo, OAuthProvider.Google, OAuthProvider.Github })
+                services.AddKeyedSingleton<IOAuthProviderClient>(provider, OAuthClient);
         });
     }
 
@@ -169,4 +176,21 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         public Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
             where T : class, IEvent => Task.CompletedTask;
     }
+}
+
+public sealed class FakeOAuthProviderClient : IOAuthProviderClient
+{
+    private Result<OAuthUserInfo> _exchangeResult =
+        new OAuthUserInfo("fake-provider-id", "fake@example.com", true);
+
+    public Uri BuildAuthorizationUrl(string state)
+        => new($"https://fake-provider.example.com/oauth/authorize?state={state}");
+
+    public Task<Result<OAuthUserInfo>> ExchangeCodeAsync(
+        string code, string state, CancellationToken cancellationToken = default)
+        => Task.FromResult(_exchangeResult);
+
+    public void SetupSuccess(OAuthUserInfo info) => _exchangeResult = info;
+
+    public void SetupFailure(Failure failure) => _exchangeResult = failure;
 }
