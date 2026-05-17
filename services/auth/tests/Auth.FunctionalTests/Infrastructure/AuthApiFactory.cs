@@ -1,4 +1,8 @@
+using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
+using Auth.Application.Abstractions.Persistence;
+using Auth.Application.Abstractions.Security;
+using Auth.Domain.AuthUser;
 using Auth.Persistence.Db;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -23,6 +27,25 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     }
 
     private readonly string _dbName = "auth-tests-" + Guid.NewGuid();
+
+    public async Task SeedEmailUserAsync(string email, string rawPassword)
+    {
+        using var scope = Services.CreateScope();
+        var sp     = scope.ServiceProvider;
+        var repo   = sp.GetRequiredService<IAuthUserRepository>();
+        var hasher = sp.GetRequiredService<ISecretHasher>();
+        var clock  = sp.GetRequiredService<IClock>();
+        var idGen  = sp.GetRequiredService<IIdGenerator>();
+
+        var user = AuthUser.CreateEmailPasswordUser(
+            id: idGen.NextId(),
+            email: email,
+            passwordHash: hasher.Hash(rawPassword),
+            now: clock.UtcNow).Value;
+
+        await repo.AddAsync(user);
+        await repo.SaveChangesAsync();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
