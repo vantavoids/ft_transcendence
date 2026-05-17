@@ -10,6 +10,7 @@ public sealed class GuildDbContext(DbContextOptions<GuildDbContext> options) : D
 	public DbSet<Role> Roles => Set<Role>();
 	public DbSet<GuildMember> Members => Set<GuildMember>();
 	public DbSet<MemberRole> MemberRoles => Set<MemberRole>();
+	public DbSet<ChannelCategory> ChannelCategories => Set<ChannelCategory>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{

@@ -37,4 +37,13 @@ public static class GuildFailures
 
 	public static readonly Failure InvalidColor =
 		new("Guild.InvalidColor", "Color must be a hex string of the form '#RRGGBB'.");
+
+	public static readonly Failure CategoryNameRequired =
+		new("Guild.CategoryNameRequired", "Category name is required.");
+
+	public static readonly Failure CategoryNameTooLong =
+		new("Guild.CategoryNameTooLong", "Category name must be 100 characters or fewer.");
+
+	public static readonly Failure CategoryNotFound =
+		new("Guild.CategoryNotFound", "Channel category not found.");
 }
