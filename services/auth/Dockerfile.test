@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+WORKDIR /app
+
+COPY Auth.slnx ./
+COPY Directory.Build.props ./
+COPY src/Auth.Domain/Auth.Domain.csproj             src/Auth.Domain/
+COPY src/Auth.Application/Auth.Application.csproj   src/Auth.Application/
+COPY src/Auth.Infrastructure/Auth.Infrastructure.csproj src/Auth.Infrastructure/
+COPY src/Auth.Persistence/Auth.Persistence.csproj   src/Auth.Persistence/
+COPY src/Auth.Presentation/Auth.Presentation.csproj src/Auth.Presentation/
+COPY tests/Auth.UnitTests/Auth.UnitTests.csproj                 tests/Auth.UnitTests/
+COPY tests/Auth.FunctionalTests/Auth.FunctionalTests.csproj     tests/Auth.FunctionalTests/
+COPY tests/Auth.ArchitectureTests/Auth.ArchitectureTests.csproj tests/Auth.ArchitectureTests/
+
+RUN dotnet restore
+
+COPY src/   ./src/
+COPY tests/ ./tests/
+
+CMD ["dotnet", "test", "--no-restore", "--logger", "console;verbosity=normal"]
