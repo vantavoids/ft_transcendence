@@ -3,6 +3,7 @@ using Auth.Application.Abstractions.Events;
 using Auth.Application.Abstractions.Persistence;
 using Auth.Application.Abstractions.Security;
 using Auth.Domain.AuthUser;
+using Auth.Domain.Results;
 using Auth.Persistence.Db;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -45,6 +46,36 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
         await repo.AddAsync(user);
         await repo.SaveChangesAsync();
+    }
+
+    public async Task<string> SeedUserWithRefreshTokenAsync(string email, string rawPassword)
+    {
+        using var scope  = Services.CreateScope();
+        var sp           = scope.ServiceProvider;
+        var repo         = sp.GetRequiredService<IAuthUserRepository>();
+        var hasher       = sp.GetRequiredService<ISecretHasher>();
+        var clock        = sp.GetRequiredService<IClock>();
+        var idGen        = sp.GetRequiredService<IIdGenerator>();
+        var tokenGen     = sp.GetRequiredService<ITokenGenerator>();
+
+        var rawRefreshToken = tokenGen.GenerateRefreshToken();
+        var now             = clock.UtcNow;
+
+        var user = AuthUser.CreateEmailPasswordUser(
+            id: idGen.NextId(),
+            email: email,
+            passwordHash: hasher.Hash(rawPassword),
+            now: now).Value;
+
+        user.SetRefreshToken(
+            hasher.HashDeterministic(rawRefreshToken),
+            now,
+            now.Add(tokenGen.GetRefreshTokenLifetime()));
+
+        await repo.AddAsync(user);
+        await repo.SaveChangesAsync();
+
+        return rawRefreshToken;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
