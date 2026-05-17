@@ -3,14 +3,14 @@
 env_files = []
 root = "."
 testdata_dir = "testdata"
-tmp_dir = "tmp"
+tmp_dir = "/tmp/air"
 
 [build]
   args_bin = []
-  bin = "./tmp/main"
-  cmd = "CGO_ENABLED=0 go build -o ./tmp/main ./cmd/gateway/"
+  bin = "/tmp/air/main"
+  cmd = "CGO_ENABLED=0 go build -o /tmp/air/main ./cmd/gateway/"
   delay = 1000
-  entrypoint = ["./tmp/main"]
+  entrypoint = ["/tmp/air/main"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_file = []
   exclude_regex = ["_test.go"]
