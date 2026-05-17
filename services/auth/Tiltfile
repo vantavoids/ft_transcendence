@@ -39,6 +39,18 @@ local_resource(
 )
 
 local_resource(
+    'auth-test',
+    cmd=(
+        DOCKER + ' build -t auth-test-service -f Dockerfile.test . && ' +
+        DOCKER + ' run --rm auth-test-service'
+    ),
+    deps=['Dockerfile.test', 'src', 'tests'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    labels=['auth'],
+)
+
+local_resource(
     'auth',
     cmd=DOCKER + ' build -t auth-service -f Dockerfile.dev .',
     serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'auth',
