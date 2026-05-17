@@ -39,11 +39,13 @@ public static class DependencyInjection
             })
         );
 
+        services.AddHttpContextAccessor();
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, SnowflakeIdGenerator>();
         services.AddSingleton<ISecretHasher, BcryptHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
+        services.AddTransient<ICurrentUser, CurrentUser>();
 
         // services.AddKeyedTransient<IOAuthProviderClient, GithubOAuthProviderClient>(OAuthProvider.Github);
         // services.AddKeyedTransient<IOAuthProviderClient, GoogleOAuthProviderClient>(OAuthProvider.Google);
