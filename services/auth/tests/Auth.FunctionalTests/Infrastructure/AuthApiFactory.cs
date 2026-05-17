@@ -81,6 +81,67 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         return rawRefreshToken;
     }
 
+    public async Task<string> SeedUserWithAccessTokenAsync(string email, string rawPassword)
+    {
+        using var scope = Services.CreateScope();
+        var sp          = scope.ServiceProvider;
+        var repo        = sp.GetRequiredService<IAuthUserRepository>();
+        var hasher      = sp.GetRequiredService<ISecretHasher>();
+        var clock       = sp.GetRequiredService<IClock>();
+        var idGen       = sp.GetRequiredService<IIdGenerator>();
+        var tokenGen    = sp.GetRequiredService<ITokenGenerator>();
+
+        var user = AuthUser.CreateEmailPasswordUser(
+            id: idGen.NextId(),
+            email: email,
+            passwordHash: hasher.Hash(rawPassword),
+            now: clock.UtcNow).Value;
+
+        await repo.AddAsync(user);
+        await repo.SaveChangesAsync();
+
+        return tokenGen.GenerateAccessToken(user.Id);
+    }
+
+    public async Task<(string AccessToken, long UserId)> SeedUserWithBothTokensAsync(
+        string email, string rawPassword)
+    {
+        using var scope = Services.CreateScope();
+        var sp          = scope.ServiceProvider;
+        var repo        = sp.GetRequiredService<IAuthUserRepository>();
+        var hasher      = sp.GetRequiredService<ISecretHasher>();
+        var clock       = sp.GetRequiredService<IClock>();
+        var idGen       = sp.GetRequiredService<IIdGenerator>();
+        var tokenGen    = sp.GetRequiredService<ITokenGenerator>();
+
+        var rawRefreshToken = tokenGen.GenerateRefreshToken();
+        var now             = clock.UtcNow;
+
+        var user = AuthUser.CreateEmailPasswordUser(
+            id: idGen.NextId(),
+            email: email,
+            passwordHash: hasher.Hash(rawPassword),
+            now: now).Value;
+
+        user.SetRefreshToken(
+            hasher.HashDeterministic(rawRefreshToken),
+            now,
+            now.Add(tokenGen.GetRefreshTokenLifetime()));
+
+        await repo.AddAsync(user);
+        await repo.SaveChangesAsync();
+
+        return (tokenGen.GenerateAccessToken(user.Id), user.Id);
+    }
+
+    public async Task<bool> IsRefreshTokenRevokedAsync(long userId)
+    {
+        using var scope = Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IAuthUserRepository>();
+        var user = await repo.GetByIdAsync(userId);
+        return user?.RefreshToken?.Revoked ?? false;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
