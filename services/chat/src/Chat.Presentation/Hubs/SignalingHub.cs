@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;
 
+[Authorize]
 public sealed class SignalingHub : Hub<ISignalingClient>
 {
 	public Task SendOffer(Guid targetUserId, string sdp) =>
