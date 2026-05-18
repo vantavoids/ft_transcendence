@@ -6,15 +6,15 @@ namespace Chat.Presentation.Hubs;
 [Authorize]
 public sealed class SignalingHub : Hub<ISignalingClient>
 {
-	public Task SendOffer(Guid targetUserId, string sdp) =>
+	public Task SendOffer(long targetUserId, string sdp) =>
 		Clients.User(targetUserId.ToString())
 			.Offer(Context.UserIdentifier, sdp);
 
-	public Task SendAnswer(Guid targetUserId, string sdp) =>
+	public Task SendAnswer(long targetUserId, string sdp) =>
 		Clients.User(targetUserId.ToString())
 			.Answer(Context.UserIdentifier, sdp);
 
-	public Task SendIceCandidate(Guid targetUserId, string candidate) =>
+	public Task SendIceCandidate(long targetUserId, string candidate) =>
 		Clients.User(targetUserId.ToString())
 			.IceCandidate(Context.UserIdentifier, candidate);
 }
