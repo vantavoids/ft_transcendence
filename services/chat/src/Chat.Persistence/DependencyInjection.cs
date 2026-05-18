@@ -1,6 +1,8 @@
 using Cassandra;
+using Chat.Application.Abstractions.Persistence;
 using Chat.Persistence.Health;
 using Chat.Persistence.Options;
+using Chat.Persistence.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -27,6 +29,8 @@ public static class DependencyInjection
 						builder.WithCredentials(opts.Username, opts.Password);
 					return builder.Build().Connect(opts.Keyspace);
 				});
+
+		services.AddScoped<IMessageRepository, MessageRepository>();
 		return services;
 	}
 

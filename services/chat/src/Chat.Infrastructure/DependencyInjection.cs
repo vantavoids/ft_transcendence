@@ -1,5 +1,7 @@
 using Chat.Application.Abstractions;
+using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
+using Chat.Infrastructure.Authentication;
 using Chat.Infrastructure.Http;
 using Chat.Infrastructure.Messaging;
 using Chat.Infrastructure.Messaging.Consumers;
@@ -26,6 +28,11 @@ public static class DependencyInjection
 
 		services.AddOptions<RabbitMqOptions>()
 			.BindConfiguration("RabbitMQ")
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+
+		services.AddOptions<SnowflakeOptions>()
+			.BindConfiguration("Snowflake")
 			.ValidateDataAnnotations()
 			.ValidateOnStart();
 
@@ -56,7 +63,12 @@ public static class DependencyInjection
 			});
 		});
 
+		services.AddHttpContextAccessor();
+
 		services.AddScoped<IEventBus, EventBus>();
+		services.AddSingleton<IClock, SystemClock>();
+		services.AddSingleton<ISnowflakeIdGenerator, SnowflakeIdGenerator>();
+		services.AddScoped<ICurrentUser, CurrentUser>();
 
 		services.AddHttpClient<IGuildClient, GuildClient>((sp, c) =>
 		{
