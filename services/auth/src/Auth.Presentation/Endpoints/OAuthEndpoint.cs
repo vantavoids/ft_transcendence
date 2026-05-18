@@ -33,7 +33,7 @@ public sealed class OAuthEndpoint : ICarterModule
 
     public void AddRoutes(IEndpointRouteBuilder app)
     {
-        app.MapGet("/auth/oauth/{provider}", async (
+        app.MapGet("/oauth/{provider}", async (
             string provider,
             ICommandHandler<OAuthLoginCommand, Result<OAuthLoginResult>> handler,
             IClock clock,
@@ -41,7 +41,7 @@ public sealed class OAuthEndpoint : ICarterModule
             HttpResponse resp
         ) => await InitOAuth(provider, handler, clock, stateOptions.Value, resp));
 
-        app.MapGet("/auth/oauth/{provider}/callback", async (
+        app.MapGet("/oauth/{provider}/callback", async (
             string provider,
             string code,
             string state,
