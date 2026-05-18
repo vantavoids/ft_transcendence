@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Chat.Application.Abstractions;
@@ -11,7 +12,18 @@ internal sealed class GuildClient(HttpClient http) : IGuildClient
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
 	};
 
-	public Task<ChannelMembership?> GetMembershipAsync(long channelId, long userId, CancellationToken ct) =>
-		http.GetFromJsonAsync<ChannelMembership>(
-			$"channels/{channelId}/membership?user_id={userId}", JsonOptions, ct);
+	public async Task<ChannelMembership?> GetMembershipAsync(long channelId, long userId, CancellationToken ct)
+	{
+		try
+		{
+			return await http.GetFromJsonAsync<ChannelMembership>(
+				$"channels/{channelId}/membership?user_id={userId}", JsonOptions, ct);
+		}
+		// GetFromJsonAsync throws on non-2xx; map 404 to null so the handler's
+		// `membership is null -> ChannelNotFound` branch fires as intended
+		catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+	}
 }
