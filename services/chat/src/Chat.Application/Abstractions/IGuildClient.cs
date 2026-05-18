@@ -5,4 +5,4 @@ public interface IGuildClient
 	Task<ChannelMembership?> GetMembershipAsync(long channelId, long userId, CancellationToken ct);
 }
 
-public sealed record ChannelMembership(bool IsMember, long Permissions);
+public sealed record ChannelMembership(bool IsMember, long GuildId, long Permissions);
