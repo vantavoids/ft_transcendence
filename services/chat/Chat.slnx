@@ -8,5 +8,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/Chat.ArchitectureTests/Chat.ArchitectureTests.csproj" BuildByDefault="false"/>
+        <Project Path="tests/Chat.UnitTests/Chat.UnitTests.csproj" BuildByDefault="false"/>
+        <Project Path="tests/Chat.FunctionalTests/Chat.FunctionalTests.csproj" BuildByDefault="false"/>
     </Folder>
 </Solution>
