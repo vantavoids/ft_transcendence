@@ -2,11 +2,13 @@ using System.Text;
 using System.Text.Json;
 using Carter;
 using Chat.Application;
+using Chat.Application.Abstractions;
 using Chat.Infrastructure;
 using Chat.Persistence;
 using Chat.Presentation.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -24,6 +26,7 @@ builder.Services.AddSignalR();
 builder.Services.AddApplication()
 	.AddInfrastructure()
 	.AddPersistence();
+builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
 builder.Services.AddCarter();
 
 var jwtSecret = builder.Configuration["Jwt:SecretKey"]
