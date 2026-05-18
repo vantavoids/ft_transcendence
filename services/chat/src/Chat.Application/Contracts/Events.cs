@@ -1,10 +1,10 @@
 namespace Chat.Application.Contracts;
 
-public sealed record ChatMessageSent(Guid ChannelId, Guid GuildId, Guid AuthorId, string Content, Guid[] Mentions);
-public sealed record CallIncoming(Guid CallId, Guid CallerId, Guid CalleeId, string CallType);
-public sealed record UserOnline(Guid UserId);
-public sealed record UserOffline(Guid UserId);
+public sealed record ChatMessageSent(long ChannelId, long GuildId, long AuthorId, long MessageId, string Content, long[] Mentions);
+public sealed record CallIncoming(long CallId, long CallerId, long CalleeId, string CallType);
+public sealed record UserOnline(long UserId);
+public sealed record UserOffline(long UserId);
 
-public sealed record GuildMemberJoined(Guid GuildId, Guid UserId);
-public sealed record GuildMemberLeft(Guid GuildId, Guid UserId);
-public sealed record UserLoggedOut(Guid UserId);
+public sealed record GuildMemberJoined(long GuildId, long UserId);
+public sealed record GuildMemberLeft(long GuildId, long UserId);
+public sealed record UserLoggedOut(long UserId);
