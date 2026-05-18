@@ -26,6 +26,8 @@ public static class DependencyInjection
 
 		services.AddScoped<IGuildRepository, GuildRepository>();
 		services.AddScoped<IChannelCategoryRepository, ChannelCategoryRepository>();
+		services.AddScoped<IChannelRepository, ChannelRepository>();
+		services.AddScoped<IChannelPermissionOverwriteRepository, ChannelPermissionOverwriteRepository>();
 
 		return services;
 	}

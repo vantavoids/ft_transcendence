@@ -46,4 +46,31 @@ public static class GuildFailures
 
 	public static readonly Failure CategoryNotFound =
 		new("Guild.CategoryNotFound", "Channel category not found.");
+
+	public static readonly Failure CategoryFromDifferentGuild =
+		new("Guild.CategoryFromDifferentGuild", "Channel category belongs to a different guild.");
+
+	public static readonly Failure ChannelNameRequired =
+		new("Guild.ChannelNameRequired", "Channel name is required.");
+
+	public static readonly Failure ChannelNameTooLong =
+		new("Guild.ChannelNameTooLong", "Channel name must be 100 characters or fewer.");
+
+	public static readonly Failure ChannelTopicTooLong =
+		new("Guild.ChannelTopicTooLong", "Channel topic must be 1024 characters or fewer.");
+
+	public static readonly Failure ChannelInvalidType =
+		new("Guild.ChannelInvalidType", "Channel type is invalid.");
+
+	public static readonly Failure ChannelNotFound =
+		new("Guild.ChannelNotFound", "Channel not found.");
+
+	public static readonly Failure OverwriteInvalidTarget =
+		new("Guild.OverwriteInvalidTarget", "Overwrite target_id does not reference a real role or member in the guild.");
+
+	public static readonly Failure OverwriteAllowDenyOverlap =
+		new("Guild.OverwriteAllowDenyOverlap", "A bit cannot be both allowed and denied by the same overwrite.");
+
+	public static readonly Failure OverwriteNotFound =
+		new("Guild.OverwriteNotFound", "Channel permission overwrite not found.");
 }
