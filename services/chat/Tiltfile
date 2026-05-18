@@ -3,6 +3,7 @@ load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'contain
 root_env    = read_dotenv('../../.env')
 MQ_USER     = root_env.get('RABBITMQ_USER', 'guest')
 MQ_PASS     = root_env.get('RABBITMQ_PASS', 'guest')
+JWT_SECRET  = root_env.get('JWT_SECRET', '')
 BASE_URL    = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
 DOCKER      = detect_engine()
@@ -44,6 +45,7 @@ local_resource(
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
         '-e Services__GuildService=http://guild:8080 ' +
         '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
+        '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
         '-v $(pwd)/src:/app/src ' +
         'chat-service'
     ),
