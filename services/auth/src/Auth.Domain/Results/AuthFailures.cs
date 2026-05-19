@@ -34,4 +34,7 @@ public static class AuthFailures
 
     public static readonly Failure OAuthProviderError =
         new("Auth.OAuthProviderError", "OAuth provider returned an error.");
+
+    public static readonly Failure OAuthUpstreamError =
+        new("Auth.OAuthUpstreamError", "OAuth provider is temporarily unavailable.");
 }

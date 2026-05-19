@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Auth.Application.Abstractions.OAuth;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
@@ -36,15 +37,25 @@ internal abstract class OAuthProviderBase(HttpClient http) : IOAuthProviderClien
 
     protected async Task<Result<T>> Send<T>(HttpRequestMessage request, CancellationToken ct)
     {
-        var response = await http.SendAsync(request, ct);
+        // ? Intentionnaly let the exception throw => 500
+        var response = await http.SendAsync(request, ct); 
+
         if (!response.IsSuccessStatusCode)
-            return AuthFailures.OAuthProviderError;
+            return (int)response.StatusCode >= 500
+                ? AuthFailures.OAuthUpstreamError
+                : AuthFailures.OAuthProviderError;
 
-        var data = await response.Content.ReadFromJsonAsync<T>(ct);
-        if (data is null)
-            return AuthFailures.OAuthProviderError;
-
-        return data;
+        try
+        {
+            var data = await response.Content.ReadFromJsonAsync<T>(ct);
+            return data is null
+                ? AuthFailures.OAuthUpstreamError
+                : data;
+        }
+        catch (JsonException)
+        {
+            return AuthFailures.OAuthUpstreamError;
+        }
     }
 
     protected static string BuildQueryString(params (string key, string value)[] pairs)

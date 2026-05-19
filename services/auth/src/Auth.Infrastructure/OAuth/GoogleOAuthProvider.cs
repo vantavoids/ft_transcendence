@@ -41,26 +41,42 @@ internal sealed class GoogleOAuthProvider(
         if (tokenResult.IsFailure)
             return tokenResult.Error;
 
-        var payload = DecodeIdToken(tokenResult.Value.IdToken);
+        var payloadResult = DecodeIdToken(tokenResult.Value.IdToken);
+        if (payloadResult.IsFailure)
+            return payloadResult.Error;
+
+        var payload = payloadResult.Value;
         return new OAuthUserInfo(payload.Sub, payload.Email, payload.EmailVerified);
     }
 
-    private static GoogleIdTokenPayload DecodeIdToken(string idToken)
+    private static Result<GoogleIdTokenPayload> DecodeIdToken(string idToken)
     {
-        var parts = idToken.Split('.');
-        if (parts.Length != 3)
-            throw new FormatException("Invalid JWT format.");
+        try
+        {
+            var parts = idToken.Split('.');
+            if (parts.Length != 3)
+                return AuthFailures.OAuthUpstreamError;
 
-        var base64 = parts[1].Replace('-', '+').Replace('_', '/');
-        base64 = base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
+            var base64 = parts[1].Replace('-', '+').Replace('_', '/');
+            base64 = base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
 
-        return JsonSerializer.Deserialize<GoogleIdTokenPayload>(Convert.FromBase64String(base64))!;
+            var payload = JsonSerializer.Deserialize<GoogleIdTokenPayload>(Convert.FromBase64String(base64));
+            if (payload is null || string.IsNullOrEmpty(payload.Sub))
+                return AuthFailures.OAuthUpstreamError;
+
+            return payload;
+        }
+        catch (Exception ex) when (ex is FormatException or JsonException)
+        {
+            return AuthFailures.OAuthUpstreamError;
+        }
     }
 
     private sealed record GoogleTokenResp(
         [property: JsonPropertyName("access_token")] string AccessToken,
         [property: JsonPropertyName("id_token")]     string IdToken);
 
+#nullable enable
     private sealed record GoogleIdTokenPayload(
         [property: JsonPropertyName("sub")]   string  Sub,
         [property: JsonPropertyName("email")] string? Email,
