@@ -21,6 +21,13 @@ CREATE TABLE users_profile (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- trigram index for `GET /users/search?q=...` (ILIKE / similarity matching on
+-- username and display_name). pg_trgm is a contrib module shipped with
+-- Postgres core, no third-party dependency.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_users_profile_username_trgm     ON users_profile USING gin (username     gin_trgm_ops);
+CREATE INDEX idx_users_profile_display_name_trgm ON users_profile USING gin (display_name gin_trgm_ops);
+
 -- -----------------------------------------------------------------------
 -- Friend relationships
 --

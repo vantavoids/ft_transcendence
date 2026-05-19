@@ -61,6 +61,13 @@ CREATE INDEX idx_notifications_user_type   ON notifications (user_id, type, crea
 -- suppress notifications from a blocked actor (query before inserting)
 CREATE INDEX idx_notifications_actor       ON notifications (actor_id);
 
+-- hot path: `GET /notifications/unread-count` (navbar bell badge).
+-- Partial index keeps the count query O(unread-for-this-user) rather than
+-- O(total-for-this-user). The WHERE clause of the count query must match
+-- this predicate exactly to use the index.
+CREATE INDEX idx_notifications_unread      ON notifications (user_id)
+    WHERE read_at IS NULL AND dismissed_at IS NULL;
+
 -- -----------------------------------------------------------------------
 -- Notification preferences — per-user mute settings for guilds / channels
 -- The Notification Service checks this table before inserting a notification.
