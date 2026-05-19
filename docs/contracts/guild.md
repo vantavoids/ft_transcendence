@@ -15,6 +15,30 @@ All endpoints require `Authorization: Bearer <access_token>`.
 
 ## Guild Endpoints
 
+### GET /guilds/me
+
+List all guilds the authenticated user is a member of. Used by the frontend to render the guild sidebar on app load.
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<snowflake>",
+    "name": "e-girls bar",
+    "icon_url": "https://...",
+    "owner_id": "<snowflake>",
+    "member_count": 42,
+    "joined_at": "2026-03-09T00:00:00Z"
+  }
+]
+```
+
+Order is unspecified; the frontend sorts client-side (by `joined_at` descending, or by user preference).
+
+---
+
 ### POST /guilds
 
 Create a new guild. On creation, the service:
@@ -321,6 +345,63 @@ Revoke an invite. The invite becomes unusable immediately but the row is retaine
 
 ---
 
+### GET /invites/{code}
+
+Preview an invite by its code, without joining. Used by the frontend on the invite-link landing page to show guild name and icon before the user clicks "Accept".
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Response `200`:**
+```json
+{
+  "code": "abc123",
+  "guild": {
+    "id": "<snowflake>",
+    "name": "e-girls bar",
+    "icon_url": "https://...",
+    "member_count": 42
+  },
+  "inviter": {
+    "id": "<snowflake>",
+    "username": "yandry"
+  },
+  "expires_at": "2026-03-10T00:00:00Z"
+}
+```
+
+`expires_at` is `null` for non-expiring invites. `inviter` is the user who created the invite.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | Invite not found, expired, or revoked |
+
+---
+
+### POST /invites/{code}/join
+
+Accept an invite by its code, without needing to know the guild ID upfront. The natural complement to `GET /invites/{code}` and the entry point for "click an invite link" flows.
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Request body:** None (the code is in the path).
+
+**Response `200`:** Guild object (same shape as `GET /guilds/{id}`).
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | Invite not found, expired, or revoked |
+| 409 | Already a member of the target guild |
+
+**Side effects:**
+- Validates user exists via HTTP GET to User Service
+- Publishes `guild.member_joined { guild_id, guild_name, user_id }` to RabbitMQ
+
+This endpoint and `POST /guilds/{id}/join` are functionally equivalent; this one is preferred for invite-link flows where the client only knows the code, the other for flows where the client already knows the guild ID.
+
+---
+
 ## Channel Endpoints
 
 ### GET /guilds/{id}/channels
@@ -402,6 +483,32 @@ Delete a channel. Requires `MANAGE_CHANNELS` permission.
 ---
 
 ## Channel Category Endpoints
+
+### GET /guilds/{id}/categories
+
+List channel categories in a guild. Caller must be a member. Used by the frontend alongside `GET /guilds/{id}/channels` to render the sidebar's category tree (each channel carries `category_id`; this endpoint resolves those IDs to names and positions).
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<snowflake>",
+    "guild_id": "<snowflake>",
+    "name": "general",
+    "position": 0
+  }
+]
+```
+
+Results are sorted by `position` ascending. Channels without a category (uncategorised) are not represented here; they appear in `GET /guilds/{id}/channels` with `category_id: null`.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Not a member |
+| 404 | Guild not found |
+
+---
 
 ### POST /guilds/{id}/categories
 
@@ -711,11 +818,12 @@ Check if a user is a member of the guild that owns this channel, and get their e
 ```json
 {
   "is_member": true,
+  "guild_id": "<snowflake>",
   "permissions": 2147483647
 }
 ```
 
-`permissions` is a bitmask. Chat Service checks the `SEND_MESSAGES` bit before accepting the message.
+`guild_id` is the snowflake of the guild that owns this channel. Chat Service uses it as the `guild_id` field when publishing `chat.message_sent` to RabbitMQ, so it is returned regardless of `is_member` (the channel still has an owning guild even when the caller isn't a member). `permissions` is a bitmask; Chat Service checks the `SEND_MESSAGES` bit before accepting the message. Non-members get `permissions: 0`.
 
 **Errors:**
 | Status | Reason |
