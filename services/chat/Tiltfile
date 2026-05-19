@@ -42,6 +42,7 @@ local_resource(
         '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
         '-e Services__GuildService=http://guild:8080 ' +
+        '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
         '-v $(pwd)/src:/app/src ' +
         'chat-service'
     ),

@@ -23,7 +23,7 @@ local_resource(
         '--env-file .env ' +
         '-e APP_ENV=development ' +
         '-v $(pwd)/src:/app/src ' +
-        'user-service'
+        'user-service cargo watch --poll -x run'
     ),
     deps=['Dockerfile.dev', 'Cargo.toml', 'Cargo.lock'],
     resource_deps=['user-db', 'rabbitmq'],
