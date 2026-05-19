@@ -91,6 +91,25 @@ Mark a single notification as read.
 
 ---
 
+### GET /notifications/unread-count
+
+Fast badge counter for the authenticated user. Returns just the count without paginating the full list. Used by the navbar bell on every page load.
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Response `200`:**
+```json
+{
+  "count": 7
+}
+```
+
+`count` excludes dismissed notifications (`dismissed_at IS NOT NULL`) and read notifications (`read_at IS NOT NULL`). Backed by a partial index on `notifications (user_id) WHERE read_at IS NULL AND dismissed_at IS NULL` so the query stays O(rows-the-user-has-unread), not O(rows-the-user-has-total).
+
+The count is also pushed via SignalR (`NotificationReceived` and `NotificationRead` events update client-side state), so most navbar updates happen without polling this endpoint; it is used on initial load and as a reconciliation fallback.
+
+---
+
 ### PATCH /notifications/read-all
 
 Mark all notifications as read for the authenticated user.
