@@ -357,7 +357,7 @@ export function ChatWorkspace() {
                 <div className="min-w-0">
                   <div className="flex items-end gap-3">
                     <h3
-                      className={`text-[2rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
+                      className={`text-[1.5rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
                     >
                       {message.author}
                     </h3>
