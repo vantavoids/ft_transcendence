@@ -50,6 +50,7 @@ local_resource(
         '-e RabbitMQ__Password=' + MQ_PASS + ' ' +
         '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
         '-e BASE_API_URL=' + BASE_API_URL + ' ' +
+        '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
         '-v $(pwd)/src:/app/src ' +
         'auth-service'
     ),

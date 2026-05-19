@@ -68,6 +68,7 @@ local_resource(
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
         '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
         '-e Snowflake__WorkerId=2 ' +
+        '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
         '-v $(pwd)/src:/app/src ' +
         'guild-service'
     ),

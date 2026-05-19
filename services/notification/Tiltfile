@@ -29,6 +29,7 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e NODE_ENV=development ' +
+        '-e CHOKIDAR_USEPOLLING=1 ' +
         '-v $(pwd)/src:/app/src ' +
         'notification-service'
     ),
