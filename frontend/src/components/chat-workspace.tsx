@@ -32,6 +32,14 @@ type ChatMessage = {
   timestamp: string;
 };
 
+type Member = {
+  id: string;
+  name: string;
+  status: 'online' | 'idle' | 'offline';
+  accent: ChatMessage['accent'];
+  role: 'owner' | 'member';
+};
+
 const textChannels: Channel[] = [
   { id: 'general', name: 'general', type: 'text' },
   { id: 'idk', name: 'idk', type: 'text' },
@@ -41,6 +49,13 @@ const textChannels: Channel[] = [
 const voiceChannels: Channel[] = [
   { id: 'voice-general', name: 'General', type: 'voice' },
   { id: 'voice-mutinerie', name: 'Mutinerie', type: 'voice' }
+];
+
+const serverMembers: Member[] = [
+  { id: 'um4ss', name: 'um4ss', status: 'online', accent: 'lime', role: 'owner' },
+  { id: 'add', name: 'add', status: 'online', accent: 'aqua', role: 'member' },
+  { id: 'skydogzz', name: 'SkyDogzz', status: 'idle', accent: 'yellow', role: 'member' },
+  { id: 'vanta', name: 'Vanta', status: 'offline', accent: 'lavender', role: 'member' }
 ];
 
 const initialMessages: Record<string, ChatMessage[]> = {
@@ -130,6 +145,17 @@ function getAccentText(accent: ChatMessage['accent']) {
   }
 }
 
+function getStatusClasses(status: Member['status']) {
+  switch (status) {
+    case 'online':
+      return 'bg-lime';
+    case 'idle':
+      return 'bg-yellow';
+    default:
+      return 'bg-muted';
+  }
+}
+
 export function ChatWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [activeChannel, setActiveChannel] = useState('general');
@@ -156,6 +182,13 @@ export function ChatWorkspace() {
   }, [search]);
 
   const activeMessages = messagesByChannel[activeChannel] ?? [];
+  const members = useMemo<Member[]>(
+    () => [
+      { id: 'current-user', name: username, status: 'online', accent: 'pink', role: 'member' },
+      ...serverMembers
+    ],
+    [username]
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
@@ -361,7 +394,7 @@ export function ChatWorkspace() {
                     >
                       {message.author}
                     </h3>
-                    <span className="mono-detail pb-1 text-xs text-white/35">
+                    <span className="mono-detail pb-2 text-xs text-white/35">
                       {message.timestamp}
                     </span>
                   </div>
@@ -445,6 +478,55 @@ export function ChatWorkspace() {
           </div>
         </div>
       </section>
+
+      <aside className="hidden min-h-0 w-[20rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 xl:flex">
+        <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5">
+          <div>
+            <p className="font-category text-[0.78rem] uppercase tracking-[0.18em] text-category">
+              Members
+            </p>
+            <h2 className="mt-1 text-[1.25rem] font-bold tracking-[-0.03em] text-white">
+              {members.length} members
+            </h2>
+          </div>
+          <UserRound className="h-5 w-5 text-[#8c8c90]" strokeWidth={1.8} />
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
+          <div className="space-y-2">
+            {members.map((member) => (
+              <button
+                key={member.id}
+                type="button"
+                className="flex h-14 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-frame/70"
+              >
+                <span className="relative shrink-0">
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                      member.accent
+                    )}`}
+                  >
+                    {member.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getStatusClasses(
+                      member.status
+                    )}`}
+                  />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[0.95rem] font-semibold text-white">
+                    {member.name}
+                  </span>
+                  <span className="font-category block text-[0.7rem] uppercase tracking-[0.14em] text-white/35">
+                    {member.role}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
