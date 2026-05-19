@@ -16,7 +16,8 @@ using InitOAuthHttpResults = Microsoft.AspNetCore.Http.HttpResults.Results<
 >;
 using OAuthCallbackHttpResults = Microsoft.AspNetCore.Http.HttpResults.Results<
     Microsoft.AspNetCore.Http.HttpResults.RedirectHttpResult,
-    Microsoft.AspNetCore.Http.HttpResults.BadRequest<Auth.Presentation.Contracts.ErrorResponse>
+    Microsoft.AspNetCore.Http.HttpResults.BadRequest<Auth.Presentation.Contracts.ErrorResponse>,
+    Microsoft.AspNetCore.Http.HttpResults.JsonHttpResult<Auth.Presentation.Contracts.ErrorResponse>
 >;
 
 namespace Auth.Presentation.Endpoints;
@@ -104,25 +105,28 @@ public sealed class OAuthEndpoint : ICarterModule
 
         var result = await handler.HandleAsync(new OAuthCallbackCommand(oauthProvider, code, state));
 
-        return result.Match<OAuthCallbackHttpResults>(
-            r =>
-            {
-                ctx.Response.Cookies.Append(refreshOpts.CookieName, r.RefreshToken, new CookieOptions
-                {
-                    HttpOnly = refreshOpts.HttpOnly,
-                    Secure   = refreshOpts.Secure,
-                    SameSite = SameSiteMode.Strict,
-                    Expires  = clock.UtcNow.AddDays(refreshOpts.TtlDays),
-                });
+        if (result.IsFailure)
+        {
+            var error = new ErrorResponse(result.Error.Message);
+            return result.Error == AuthFailures.OAuthUpstreamError
+                ? TypedResults.Json(error, statusCode: StatusCodes.Status502BadGateway)
+                : TypedResults.BadRequest(error);
+        }
 
-                var baseUrl = appOpts.BaseUrl.TrimEnd('/');
-                var destination = r.IsNewUser
-                    ? $"{baseUrl}/?access_token={r.AccessToken}&new_user=true"
-                    : $"{baseUrl}/?access_token={r.AccessToken}";
+        var r = result.Value;
+        ctx.Response.Cookies.Append(refreshOpts.CookieName, r.RefreshToken, new CookieOptions
+        {
+            HttpOnly = refreshOpts.HttpOnly,
+            Secure   = refreshOpts.Secure,
+            SameSite = SameSiteMode.Strict,
+            Expires  = clock.UtcNow.AddDays(refreshOpts.TtlDays),
+        });
 
-                return TypedResults.Redirect(destination);
-            },
-            failure => TypedResults.BadRequest(new ErrorResponse(failure.Message))
-        );
+        var baseUrl = appOpts.BaseUrl.TrimEnd('/');
+        var destination = r.IsNewUser
+            ? $"{baseUrl}/?access_token={r.AccessToken}&new_user=true"
+            : $"{baseUrl}/?access_token={r.AccessToken}";
+
+        return TypedResults.Redirect(destination);
     }
 }
