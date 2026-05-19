@@ -23,7 +23,7 @@ body {
   margin: 0;
   background: #191919;
   color: #fff;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 a {
@@ -56,5 +56,9 @@ button {
 }
 
 .mono-detail {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+.font-category {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
 }
