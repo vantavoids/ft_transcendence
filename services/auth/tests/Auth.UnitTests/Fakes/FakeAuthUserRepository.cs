@@ -15,6 +15,12 @@ internal sealed class FakeAuthUserRepository : IAuthUserRepository
         return Task.FromResult(user);
     }
 
+    public Task<AuthUser?> GetByRefreshTokenHashAsync(string hash, CancellationToken cancellationToken = default)
+    {
+        var user = _store.Values.FirstOrDefault(u => u.RefreshToken?.Hash == hash);
+        return Task.FromResult(user);
+    }
+
     public Task<AuthUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var user = _store.Values.FirstOrDefault(u =>
