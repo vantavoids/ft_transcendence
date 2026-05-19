@@ -57,6 +57,7 @@ internal sealed class FortyTwoOAuthProvider(
         [property: JsonPropertyName("expires_in")]   int ExpiresIn,
         [property: JsonPropertyName("created_at")]   long CreatedAt);
 
+#nullable enable
     private sealed record FortyTwoUserResp(
         [property: JsonPropertyName("id")]    long    Id,
         [property: JsonPropertyName("email")] string? Email);
