@@ -108,6 +108,38 @@ Upload a new avatar image. Multipart form data.
 
 ---
 
+### GET /users/search
+
+Search users by username or display name. Used by the friend-add flow to look up a user before sending a friend request.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `q` | string | Search term, matched case-insensitively against `username` and `display_name`. Min length 2. |
+| `limit` | int | Max results to return (default 20, max 50). |
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<snowflake>",
+    "username": "skaf_angel",
+    "display_name": "Skaf",
+    "avatar_url": "https://...",
+    "status": "online"
+  }
+]
+```
+
+Users who have blocked the caller, or whom the caller has blocked, are filtered out of the response.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `q` shorter than 2 characters |
+
+---
+
 ## Friend Endpoints
 
 ### GET /users/{id}/friends
