@@ -18,7 +18,11 @@ CREATE KEYSPACE IF NOT EXISTS chat
         'class': 'NetworkTopologyStrategy',
         'replication_factor': 1   -- bump to 3 in production
     }
-    AND durable_writes = true;
+    AND durable_writes = true
+    -- Tablets are enabled by default in Scylla 6.x but don't yet support
+    -- COUNTER columns, which message_reaction_counts and dm_unread_counts
+    -- rely on. Disable until Scylla closes that gap.
+    AND tablets = {'enabled': false};
 
 USE chat;
 
