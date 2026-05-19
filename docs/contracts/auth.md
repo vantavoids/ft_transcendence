@@ -119,6 +119,67 @@ Revoke the refresh token.
 
 ---
 
+### GET /auth/me
+
+Get the authenticated principal's auth-side identity. Distinct from `GET /users/me` (User Service), which returns the public profile. This endpoint exposes only fields the User Service does not own: email, email-verified status, linked OAuth providers, account timestamps.
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Response `200`:**
+```json
+{
+  "id": "<snowflake>",
+  "email": "yandry@student.42.fr",
+  "email_verified": true,
+  "oauth_providers": ["fortytwo"],
+  "created_at": "2026-03-09T00:00:00Z",
+  "updated_at": "2026-03-09T00:00:00Z"
+}
+```
+
+`oauth_providers` lists the providers the user has linked (e.g. `fortytwo`, `google`, `github`). Empty array if the account was created via password registration only. `email` is `null` for accounts created via OAuth that did not expose an email.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 401 | Invalid or missing access token |
+
+---
+
+### PATCH /auth/me
+
+Update auth-side credentials (email and/or password). Profile data lives in the User Service and is updated via `PATCH /users/{id}` there.
+
+**Auth required:** Yes (`Authorization: Bearer <access_token>`)
+
+**Request body** (all fields optional, at least one required):
+```json
+{
+  "email": "new@example.com",
+  "current_password": "current-pw",
+  "new_password": "new-pw"
+}
+```
+
+Rules:
+- Changing `email` requires `current_password` for re-authentication. The new email must be unique (case-insensitive, scoped by `deleted_at IS NULL` per schema).
+- Changing the password requires both `current_password` and `new_password`. Sets `email_verified = false` if email changed.
+- OAuth-only accounts (no password set) cannot change email/password via this endpoint; they manage their identity at the OAuth provider.
+
+**Response `200`:** Returns the same shape as `GET /auth/me` with the updated fields.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Missing required fields, invalid email format, weak password |
+| 401 | Invalid or missing access token, or `current_password` mismatch |
+| 403 | OAuth-only account (no password set) |
+| 409 | Email already in use |
+
+**Side effects:** Revokes all refresh tokens for this user if the password changes (forces re-login on every other device).
+
+---
+
 ### DELETE /auth/me
 
 Permanently delete the authenticated user's account.
