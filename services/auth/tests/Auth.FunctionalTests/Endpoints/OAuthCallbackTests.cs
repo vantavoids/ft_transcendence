@@ -104,6 +104,16 @@ public sealed class OAuthCallbackTests(AuthApiFactory factory) : IClassFixture<A
     }
 
     [Fact]
+    public async Task UpstreamError_Returns502()
+    {
+        factory.OAuthClient.SetupFailure(AuthFailures.OAuthUpstreamError);
+
+        var resp = await DoFullCallback();
+
+        Assert.Equal(HttpStatusCode.BadGateway, resp.StatusCode);
+    }
+
+    [Fact]
     public async Task UnknownProvider_Returns400()
     {
         var client = CreateClient();
