@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -131,6 +131,7 @@ function getAccentText(accent: ChatMessage['accent']) {
 }
 
 export function ChatWorkspace() {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [activeChannel, setActiveChannel] = useState('general');
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
@@ -156,6 +157,10 @@ export function ChatWorkspace() {
 
   const activeMessages = messagesByChannel[activeChannel] ?? [];
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }, [activeChannel, activeMessages.length]);
+
   function handleSelectChannel(channelId: string) {
     setActiveChannel(channelId);
     setMobilePane('messages');
@@ -171,7 +176,7 @@ export function ChatWorkspace() {
       id: `${activeChannel}-${Date.now()}`,
       author: username,
       accent: 'pink',
-      content: [content],
+      content: content.split(/\r?\n/),
       timestamp: new Date().toLocaleTimeString('fr-FR', {
         hour: '2-digit',
         minute: '2-digit'
@@ -191,7 +196,7 @@ export function ChatWorkspace() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[88rem] gap-4 px-3 py-4 md:px-5 md:py-9">
+    <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
       <aside className="hidden w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-white/5 md:flex">
         <Link href="/" className="mono-detail text-[2rem] font-bold tracking-[-0.06em] text-white">
           Logo<span className="text-aqua">_</span>
@@ -287,7 +292,9 @@ export function ChatWorkspace() {
                     className="flex items-center gap-3 text-grey-link transition hover:text-white"
                   >
                     <Volume2 className="h-4 w-4" strokeWidth={1.8} />
-                    <span className="text-[1.9rem] leading-none tracking-[-0.05em]">{channel.name}</span>
+                    <span className="text-[1.9rem] leading-none tracking-[-0.05em]">
+                      {channel.name}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -314,9 +321,9 @@ export function ChatWorkspace() {
       <section
         className={`${
           mobilePane === 'messages' ? 'flex' : 'hidden'
-        } min-h-0 flex-1 flex-col rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex`}
+        } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex`}
       >
-        <div className="flex h-[4.9rem] items-center justify-between border-b border-white/8 px-5 sm:px-7">
+        <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5 sm:px-7">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -349,23 +356,30 @@ export function ChatWorkspace() {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-end gap-3">
-                    <h3 className={`text-[2rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}>
+                    <h3
+                      className={`text-[2rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
+                    >
                       {message.author}
                     </h3>
-                    <span className="mono-detail pb-1 text-xs text-white/35">{message.timestamp}</span>
+                    <span className="mono-detail pb-1 text-xs text-white/35">
+                      {message.timestamp}
+                    </span>
                   </div>
                   <div className="mt-1 space-y-2 text-[1.05rem] text-white/80 sm:text-[1.15rem]">
                     {message.content.map((line, index) => (
-                      <p key={`${message.id}-${index}`}>{line}</p>
+                      <p key={`${message.id}-${index}`} className="break-words">
+                        {line}
+                      </p>
                     ))}
                   </div>
                 </div>
               </article>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
-        <div className="border-t border-white/8 px-4 py-4 sm:px-5">
+        <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
           {isEmojiOpen ? (
             <div className="mb-3 rounded-xl border border-white/10 bg-panel p-3">
               <div className="grid grid-cols-6 gap-2">
@@ -383,17 +397,18 @@ export function ChatWorkspace() {
             </div>
           ) : null}
           <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
-            <input
+            <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter') {
+                if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault();
                   handleSubmitMessage();
                 }
               }}
               placeholder={`Message #${activeChannel}`}
-              className="w-full bg-transparent text-lg text-white outline-none placeholder:text-muted"
+              rows={1}
+              className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted"
             />
             <div className="ml-auto flex items-center gap-4">
               <button
@@ -410,7 +425,10 @@ export function ChatWorkspace() {
                 className="text-aqua transition hover:text-white"
                 aria-label="Send message"
               >
-                <ArrowRight className="h-5 w-5 rounded-full border border-aqua p-0.5" strokeWidth={2} />
+                <ArrowRight
+                  className="h-5 w-5 rounded-full border border-aqua p-0.5"
+                  strokeWidth={2}
+                />
               </button>
             </div>
           </div>
