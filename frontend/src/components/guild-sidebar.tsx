@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
+const guild = {
+  id: 'default',
+  name: 'Default guild',
+  iconUrl: 'https://placehold.co/160x160/png?text=G'
+};
+
 export function GuildSidebar() {
   return (
     <aside className="hidden w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-white/5 md:flex">
@@ -9,18 +15,13 @@ export function GuildSidebar() {
       </Link>
       <div className="mx-1 mt-5 border-t border-white/10" />
       <div className="mt-6 flex flex-1 flex-col gap-4">
-        {[0, 1, 2, 3].map((index) => (
-          <button
-            key={index}
-            type="button"
-            className={`h-[4.9rem] rounded-xl border transition ${
-              index === 1
-                ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
-                : 'border-frame'
-            }`}
-            aria-label={`Server ${index + 1}`}
-          />
-        ))}
+        <button
+          type="button"
+          className="h-[4.9rem] overflow-hidden rounded-xl border border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)] transition"
+          aria-label={guild.name}
+        >
+          <img src={guild.iconUrl} alt="" className="h-full w-full object-cover" />
+        </button>
         <button
           type="button"
           className="flex h-[4.9rem] items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
