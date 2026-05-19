@@ -94,6 +94,20 @@ public sealed class OAuthCallbackHandlerTests
     }
 
     [Fact]
+    public async Task UpstreamError_PropagatesFailure()
+    {
+        var (sp, client) = BuildServiceProvider();
+        client.SetupFailure(AuthFailures.OAuthUpstreamError);
+        var handler = BuildHandler(sp);
+
+        var result = await handler.HandleAsync(
+            new OAuthCallbackCommand(OAuthProvider.FortyTwo, "code", "state"));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(AuthFailures.OAuthUpstreamError.Code, result.Error.Code);
+    }
+
+    [Fact]
     public async Task UnknownProvider_ReturnsFailure()
     {
         var sp = new ServiceCollection().BuildServiceProvider();
