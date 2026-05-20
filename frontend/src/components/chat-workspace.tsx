@@ -1,28 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
   CircleEllipsis,
-  Headphones,
   MessageCircle,
-  MicOff,
-  Search,
-  Settings,
   Smile,
-  UserRound,
-  Volume2
+  UserRound
 } from 'lucide-react';
+import { ChannelList, getChannelName } from './channel-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
-
-type Channel = {
-  id: string;
-  name: string;
-  type: 'text' | 'voice';
-};
 
 type ChatMessage = {
   id: string;
@@ -39,17 +28,6 @@ type Member = {
   accent: ChatMessage['accent'];
   role: 'owner' | 'member';
 };
-
-const textChannels: Channel[] = [
-  { id: 'general', name: 'general', type: 'text' },
-  { id: 'idk', name: 'idk', type: 'text' },
-  { id: 'ideas_are_tough', name: 'ideas_are_tough', type: 'text' }
-];
-
-const voiceChannels: Channel[] = [
-  { id: 'voice-general', name: 'General', type: 'voice' },
-  { id: 'voice-mutinerie', name: 'Mutinerie', type: 'voice' }
-];
 
 const serverMembers: Member[] = [
   { id: 'um4ss', name: 'um4ss', status: 'online', accent: 'lime', role: 'owner' },
@@ -159,7 +137,6 @@ function getStatusClasses(status: Member['status']) {
 export function ChatWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [activeChannel, setActiveChannel] = useState('general');
-  const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
@@ -173,15 +150,8 @@ export function ChatWorkspace() {
     }
   }, []);
 
-  const filteredChannels = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) {
-      return textChannels;
-    }
-    return textChannels.filter((channel) => channel.name.toLowerCase().includes(term));
-  }, [search]);
-
   const activeMessages = messagesByChannel[activeChannel] ?? [];
+  const activeChannelName = getChannelName(activeChannel);
   const members = useMemo<Member[]>(
     () => [
       { id: 'current-user', name: username, status: 'online', accent: 'pink', role: 'member' },
@@ -232,97 +202,12 @@ export function ChatWorkspace() {
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
       <GuildSidebar />
 
-      <div
-        className={`${
-          mobilePane === 'channels' ? 'flex' : 'hidden'
-        } min-h-0 flex-1 flex-col rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex md:max-w-[25rem]`}
-      >
-        <div className="px-4 pb-5 pt-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="mono-detail text-[2rem] font-bold tracking-[-0.06em] text-white md:hidden"
-            >
-              Logo<span className="text-aqua">_</span>
-            </Link>
-            <h2 className="font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
-              server_name
-            </h2>
-            <div className="flex items-center gap-3 text-[#8c8c90]">
-              <UserRound className="h-5 w-5" strokeWidth={1.8} />
-              <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
-            </div>
-          </div>
-          <label className="mt-6 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-            <Search className="h-4 w-4" strokeWidth={1.75} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search"
-              className="mono-detail w-full bg-transparent text-xl text-white outline-none placeholder:text-muted"
-            />
-          </label>
-          <div className="mt-7 space-y-7">
-            <div>
-              <p className="font-category text-[0.95rem] uppercase tracking-[0.14em] text-category">
-                Text Channels
-              </p>
-              <div className="mt-4 space-y-3">
-                {filteredChannels.map((channel) => {
-                  const isActive = channel.id === activeChannel;
-                  return (
-                    <button
-                      key={channel.id}
-                      type="button"
-                      onClick={() => handleSelectChannel(channel.id)}
-                      className={`mono-detail flex h-11 w-full items-center rounded-md px-4 text-left text-[1.05rem] transition ${
-                        isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
-                      }`}
-                    >
-                      <span className="mr-3 text-[#8a8a96]">#</span>
-                      <span className={isActive ? 'font-bold' : 'font-normal'}>{channel.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <p className="font-category text-[0.95rem] uppercase tracking-[0.14em] text-category">
-                Voice Channels
-              </p>
-              <div className="mt-4 space-y-3">
-                {voiceChannels.map((channel) => (
-                  <button
-                    key={channel.id}
-                    type="button"
-                    className="flex items-center gap-3 text-grey-link transition hover:text-white"
-                  >
-                    <Volume2 className="h-4 w-4" strokeWidth={1.8} />
-                    <span className="text-[1.9rem] leading-none tracking-[-0.05em]">
-                      {channel.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-auto flex items-center justify-between border-t border-white/8 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)]" />
-            <span className="mono-detail text-[2rem] font-medium tracking-[-0.06em] text-white">
-              {username}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-pink">
-            <MicOff className="h-6 w-6" strokeWidth={1.8} />
-            <Headphones className="h-6 w-6 text-[#8b8b8f]" strokeWidth={1.8} />
-            <Link href="/profile" className="text-[#8b8b8f] transition hover:text-white">
-              <Settings className="h-6 w-6" strokeWidth={1.8} />
-            </Link>
-          </div>
-        </div>
-      </div>
+      <ChannelList
+        activeChannel={activeChannel}
+        mobilePane={mobilePane}
+        username={username}
+        onSelectChannel={handleSelectChannel}
+      />
 
       <section
         className={`${
@@ -340,7 +225,7 @@ export function ChatWorkspace() {
               <ArrowLeft className="h-5 w-5" strokeWidth={1.9} />
             </button>
             <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
-              # {activeChannel}
+              # {activeChannelName}
             </h2>
           </div>
           <div className="flex items-center gap-4 text-[#8c8c90]">
@@ -412,7 +297,7 @@ export function ChatWorkspace() {
                   handleSubmitMessage();
                 }
               }}
-              placeholder={`Message #${activeChannel}`}
+              placeholder={`Message #${activeChannelName}`}
               rows={1}
               className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted"
             />
