@@ -9,34 +9,24 @@ import {
   Smile,
   UserRound
 } from 'lucide-react';
-import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
+import { ChatMessage, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
+import { DmList, getDmName, hasDm } from './dm-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
+const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
+const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
 const BOTTOM_THRESHOLD_PX = 96;
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
+
+type ChatMode = 'guild' | 'dm';
 
 type ChannelScrollPosition = {
   messageId: string;
   topOffset: number;
 };
-
-type Member = {
-  id: string;
-  name: string;
-  status: 'online' | 'idle' | 'offline';
-  accent: ChatMessageData['accent'];
-  role: 'owner' | 'member';
-};
-
-const serverMembers: Member[] = [
-  { id: 'um4ss', name: 'um4ss', status: 'online', accent: 'lime', role: 'owner' },
-  { id: 'add', name: 'add', status: 'online', accent: 'aqua', role: 'member' },
-  { id: 'skydogzz', name: 'SkyDogzz', status: 'idle', accent: 'yellow', role: 'member' },
-  { id: 'vanta', name: 'Vanta', status: 'offline', accent: 'lavender', role: 'member' }
-];
 
 const initialMessages: Record<string, ChatMessageData[]> = {
   general: [
@@ -90,21 +80,62 @@ const initialMessages: Record<string, ChatMessageData[]> = {
       content: ['Brainstorm ici.'],
       timestamp: '20:17'
     }
+  ],
+  'dm-skydogzz': [
+    {
+      id: 'dm-skydogzz-1',
+      author: 'SkyDogzz',
+      accent: 'yellow',
+      content: ['On teste la nouvelle view DM ici.'],
+      timestamp: '19:42'
+    },
+    {
+      id: 'dm-skydogzz-2',
+      author: 'cartoone',
+      accent: 'pink',
+      content: ['Oui, la colonne de gauche doit juste lister les DMs.'],
+      timestamp: '19:44'
+    }
+  ],
+  'dm-add': [
+    {
+      id: 'dm-add-1',
+      author: 'add',
+      accent: 'aqua',
+      content: ['Je passe après le build.'],
+      timestamp: '18:12'
+    }
+  ],
+  'dm-um4ss': [
+    {
+      id: 'dm-um4ss-1',
+      author: 'um4ss',
+      accent: 'lime',
+      content: ['Ping quand tu peux.'],
+      timestamp: '17:58'
+    }
+  ],
+  'dm-vanta': [
+    {
+      id: 'dm-vanta-1',
+      author: 'Vanta',
+      accent: 'lavender',
+      content: ['Archive de conversation.'],
+      timestamp: '15:21'
+    }
+  ],
+  'dm-cartoone': [
+    {
+      id: 'dm-cartoone-1',
+      author: 'cartoone',
+      accent: 'pink',
+      content: ['Notes personnelles.'],
+      timestamp: '12:04'
+    }
   ]
 };
 
 const emojiOptions = ['😀', '😅', '🤣', '😂', '🙂', '🙃', '🤔', '😎', '🥳', '😍', '😘', '😉'];
-
-function getStatusClasses(status: Member['status']) {
-  switch (status) {
-    case 'online':
-      return 'bg-lime';
-    case 'idle':
-      return 'bg-yellow';
-    default:
-      return 'bg-muted';
-  }
-}
 
 function getTimestampMinutes(timestamp: string) {
   const [hours, minutes] = timestamp.split(':').map(Number);
@@ -132,10 +163,12 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 export function ChatWorkspace() {
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
-  const channelScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
+  const conversationScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
   const pendingScrollBottom = useRef(false);
   const isRestoringScroll = useRef(false);
+  const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [activeDm, setActiveDm] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -143,7 +176,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username, setUsername] = useState('cartoone');
-  const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
+  const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -151,11 +184,27 @@ export function ChatWorkspace() {
       setUsername(storedUsername);
     }
 
+    const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
     const storedChannel = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
+    const storedDm = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
+
+    setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
+    setActiveDm(storedDm && hasDm(storedDm) ? storedDm : 'dm-skydogzz');
   }, []);
 
-  const activeMessages = activeChannel ? (messagesByChannel[activeChannel] ?? []) : [];
+  const activeConversationId = chatMode === 'dm' ? activeDm : activeChannel;
+  const activeConversationName =
+    chatMode === 'dm'
+      ? activeDm
+        ? getDmName(activeDm)
+        : ''
+      : activeChannel
+        ? getChannelName(activeChannel)
+        : '';
+  const activeMessages = activeConversationId
+    ? (messagesByConversation[activeConversationId] ?? [])
+    : [];
   const activeMessageItems = useMemo(
     () =>
       activeMessages.map((message, index) => {
@@ -169,14 +218,6 @@ export function ChatWorkspace() {
       }),
     [activeMessages]
   );
-  const activeChannelName = activeChannel ? getChannelName(activeChannel) : '';
-  const members = useMemo<Member[]>(
-    () => [
-      { id: 'current-user', name: username, status: 'online', accent: 'pink', role: 'member' },
-      ...serverMembers
-    ],
-    [username]
-  );
 
   const updateNearBottomState = useCallback(() => {
     const viewport = messagesViewportRef.current;
@@ -189,9 +230,9 @@ export function ChatWorkspace() {
     setIsNearBottom(distanceFromBottom <= BOTTOM_THRESHOLD_PX);
   }, []);
 
-  const rememberChannelScrollPosition = useCallback(
-    (channelId: string | null) => {
-      if (!channelId || isRestoringScroll.current) {
+  const rememberConversationScrollPosition = useCallback(
+    (conversationId: string | null) => {
+      if (!conversationId || isRestoringScroll.current) {
         return;
       }
 
@@ -201,7 +242,7 @@ export function ChatWorkspace() {
       }
 
       const viewportTop = viewport.getBoundingClientRect().top;
-      const visibleMessage = (messagesByChannel[channelId] ?? [])
+      const visibleMessage = (messagesByConversation[conversationId] ?? [])
         .map((message) => {
           const element = messageRefs.current[message.id];
           if (!element) {
@@ -227,16 +268,16 @@ export function ChatWorkspace() {
         return;
       }
 
-      channelScrollPositions.current[channelId] = {
+      conversationScrollPositions.current[conversationId] = {
         messageId: visibleMessage.id,
         topOffset: visibleMessage.top - viewportTop
       };
     },
-    [messagesByChannel]
+    [messagesByConversation]
   );
 
   useLayoutEffect(() => {
-    if (!activeChannel) {
+    if (!activeConversationId) {
       return;
     }
 
@@ -251,7 +292,7 @@ export function ChatWorkspace() {
       viewport.scrollTop = viewport.scrollHeight;
       pendingScrollBottom.current = false;
     } else {
-      const savedPosition = channelScrollPositions.current[activeChannel];
+      const savedPosition = conversationScrollPositions.current[activeConversationId];
       const savedElement = savedPosition ? messageRefs.current[savedPosition.messageId] : null;
 
       if (savedPosition && savedElement) {
@@ -265,13 +306,18 @@ export function ChatWorkspace() {
 
     window.requestAnimationFrame(() => {
       isRestoringScroll.current = false;
-      rememberChannelScrollPosition(activeChannel);
+      rememberConversationScrollPosition(activeConversationId);
       updateNearBottomState();
     });
-  }, [activeChannel, activeMessages.length, rememberChannelScrollPosition, updateNearBottomState]);
+  }, [
+    activeConversationId,
+    activeMessages.length,
+    rememberConversationScrollPosition,
+    updateNearBottomState
+  ]);
 
   function handleMessagesScroll() {
-    rememberChannelScrollPosition(activeChannel);
+    rememberConversationScrollPosition(activeConversationId);
     updateNearBottomState();
   }
 
@@ -284,21 +330,44 @@ export function ChatWorkspace() {
     viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
   }
 
+  function handleOpenDms() {
+    rememberConversationScrollPosition(activeConversationId);
+    setChatMode('dm');
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
+  }
+
+  function handleOpenGuild() {
+    rememberConversationScrollPosition(activeConversationId);
+    setChatMode('guild');
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
+  }
+
   function handleSelectChannel(channelId: string) {
-    rememberChannelScrollPosition(activeChannel);
+    rememberConversationScrollPosition(activeConversationId);
+    setChatMode('guild');
     setActiveChannel(channelId);
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
     window.sessionStorage.setItem(LAST_CHAT_CHANNEL_KEY, channelId);
+    setMobilePane('messages');
+  }
+
+  function handleSelectDm(dmId: string) {
+    rememberConversationScrollPosition(activeConversationId);
+    setChatMode('dm');
+    setActiveDm(dmId);
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
+    window.sessionStorage.setItem(LAST_CHAT_DM_KEY, dmId);
     setMobilePane('messages');
   }
 
   function handleSubmitMessage() {
     const content = draft.trim();
-    if (!content || !activeChannel) {
+    if (!content || !activeConversationId) {
       return;
     }
 
     const nextMessage: ChatMessageData = {
-      id: `${activeChannel}-${Date.now()}`,
+      id: `${activeConversationId}-${Date.now()}`,
       author: username,
       accent: 'pink',
       content: content.split(/\r?\n/),
@@ -308,9 +377,9 @@ export function ChatWorkspace() {
       })
     };
 
-    setMessagesByChannel((current) => ({
+    setMessagesByConversation((current) => ({
       ...current,
-      [activeChannel]: [...(current[activeChannel] ?? []), nextMessage]
+      [activeConversationId]: [...(current[activeConversationId] ?? []), nextMessage]
     }));
     pendingScrollBottom.current = true;
     setDraft('');
@@ -322,13 +391,13 @@ export function ChatWorkspace() {
   }
 
   function handleToggleReaction(messageId: string) {
-    if (!activeChannel) {
+    if (!activeConversationId) {
       return;
     }
 
-    setMessagesByChannel((current) => ({
+    setMessagesByConversation((current) => ({
       ...current,
-      [activeChannel]: (current[activeChannel] ?? []).map((message) => {
+      [activeConversationId]: (current[activeConversationId] ?? []).map((message) => {
         if (message.id !== messageId) {
           return message;
         }
@@ -361,7 +430,7 @@ export function ChatWorkspace() {
   }
 
   function handleSaveEdit(messageId: string) {
-    if (!activeChannel) {
+    if (!activeConversationId) {
       return;
     }
 
@@ -370,9 +439,9 @@ export function ChatWorkspace() {
       return;
     }
 
-    setMessagesByChannel((current) => ({
+    setMessagesByConversation((current) => ({
       ...current,
-      [activeChannel]: (current[activeChannel] ?? []).map((message) =>
+      [activeConversationId]: (current[activeConversationId] ?? []).map((message) =>
         message.id === messageId ? { ...message, content: content.split(/\r?\n/) } : message
       )
     }));
@@ -380,13 +449,15 @@ export function ChatWorkspace() {
   }
 
   function handleDeleteMessage(messageId: string) {
-    if (!activeChannel) {
+    if (!activeConversationId) {
       return;
     }
 
-    setMessagesByChannel((current) => ({
+    setMessagesByConversation((current) => ({
       ...current,
-      [activeChannel]: (current[activeChannel] ?? []).filter((message) => message.id !== messageId)
+      [activeConversationId]: (current[activeConversationId] ?? []).filter(
+        (message) => message.id !== messageId
+      )
     }));
 
     if (editingMessageId === messageId) {
@@ -400,14 +471,23 @@ export function ChatWorkspace() {
 
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
-      <GuildSidebar />
+      <GuildSidebar activeMode={chatMode} onOpenDms={handleOpenDms} onOpenGuild={handleOpenGuild} />
 
-      <ChannelList
-        activeChannel={activeChannel ?? ''}
-        mobilePane={mobilePane}
-        username={username}
-        onSelectChannel={handleSelectChannel}
-      />
+      {chatMode === 'dm' ? (
+        <DmList
+          activeDm={activeDm ?? ''}
+          mobilePane={mobilePane}
+          username={username}
+          onSelectDm={handleSelectDm}
+        />
+      ) : (
+        <ChannelList
+          activeChannel={activeChannel ?? ''}
+          mobilePane={mobilePane}
+          username={username}
+          onSelectChannel={handleSelectChannel}
+        />
+      )}
 
       <section
         className={`${
@@ -420,12 +500,12 @@ export function ChatWorkspace() {
               type="button"
               onClick={() => setMobilePane('channels')}
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-frame text-[#7e7e82] md:hidden"
-              aria-label="Show channels"
+              aria-label={chatMode === 'dm' ? 'Show DMs' : 'Show channels'}
             >
               <ArrowLeft className="h-5 w-5" strokeWidth={1.9} />
             </button>
             <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
-              # {activeChannelName}
+              {chatMode === 'dm' ? '@' : '#'} {activeConversationName}
             </h2>
           </div>
           <div className="flex items-center gap-4 text-[#8c8c90]">
@@ -501,7 +581,7 @@ export function ChatWorkspace() {
                   handleSubmitMessage();
                 }
               }}
-              placeholder={`Message #${activeChannelName}`}
+              placeholder={`Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`}
               rows={1}
               className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted"
             />
@@ -528,67 +608,20 @@ export function ChatWorkspace() {
             </div>
           </div>
           <div className="mt-3 flex justify-between text-xs text-white/35">
-            <span>Canal interactif local</span>
+            <span>
+              {chatMode === 'dm' ? 'Conversation directe locale' : 'Canal interactif local'}
+            </span>
             <button
               type="button"
               onClick={() => setMobilePane('channels')}
               className="inline-flex items-center gap-2 md:hidden"
             >
               <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
-              Channels
+              {chatMode === 'dm' ? 'DMs' : 'Channels'}
             </button>
           </div>
         </div>
       </section>
-
-      <aside className="hidden min-h-0 w-[20rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 xl:flex">
-        <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5">
-          <div>
-            <p className="font-category text-[0.78rem] uppercase tracking-[0.18em] text-category">
-              Members
-            </p>
-            <h2 className="mt-1 text-[1.25rem] font-bold tracking-[-0.03em] text-white">
-              {members.length} members
-            </h2>
-          </div>
-          <UserRound className="h-5 w-5 text-[#8c8c90]" strokeWidth={1.8} />
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
-          <div className="space-y-2">
-            {members.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                className="flex h-14 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-frame/70"
-              >
-                <span className="relative shrink-0">
-                  <span
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                      member.accent
-                    )}`}
-                  >
-                    {member.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getStatusClasses(
-                      member.status
-                    )}`}
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[0.95rem] font-semibold text-white">
-                    {member.name}
-                  </span>
-                  <span className="font-category block text-[0.7rem] uppercase tracking-[0.14em] text-white/35">
-                    {member.role}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }
