@@ -55,4 +55,22 @@ public sealed class UpdateChannelTests(GuildApiFactory factory) : IClassFixture<
 
 		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
 	}
+
+	[Fact]
+	public async Task MemberWithoutManageChannels_Returns_403()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5205);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+
+		await factory.AddBareMemberAsync(guildId, userId: 5206);
+		var member = factory.CreateAuthenticatedClient(userId: 5206);
+
+		var resp = await member.PatchAsJsonAsync(
+			$"/v1/guilds/{guildId}/channels/{channelId}",
+			new { name = "haxx" }, JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+	}
 }

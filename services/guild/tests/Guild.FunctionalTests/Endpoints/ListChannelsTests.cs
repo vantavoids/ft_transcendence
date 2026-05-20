@@ -46,4 +46,19 @@ public sealed class ListChannelsTests(GuildApiFactory factory) : IClassFixture<G
 		var body = await resp.ReadJsonAsync();
 		Assert.Equal(0, body.GetArrayLength());
 	}
+
+	[Fact]
+	public async Task Member_Sees_All_Channels()
+	{
+		var client = factory.CreateAuthenticatedClient(userId: 5005);
+		var created = await client.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		await factory.AddChannelAsync(guildId, categoryId: null, name: "alpha");
+		await factory.AddChannelAsync(guildId, categoryId: null, name: "beta");
+
+		var resp = await client.GetAsync($"/v1/guilds/{guildId}/channels");
+		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		Assert.Equal(2, body.GetArrayLength());
+	}
 }
