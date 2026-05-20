@@ -9,6 +9,7 @@ import {
   Smile,
   UserRound
 } from 'lucide-react';
+import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
@@ -22,19 +23,11 @@ type ChannelScrollPosition = {
   topOffset: number;
 };
 
-type ChatMessage = {
-  id: string;
-  author: string;
-  accent: 'aqua' | 'yellow' | 'lime' | 'lavender' | 'pink';
-  content: string[];
-  timestamp: string;
-};
-
 type Member = {
   id: string;
   name: string;
   status: 'online' | 'idle' | 'offline';
-  accent: ChatMessage['accent'];
+  accent: ChatMessageData['accent'];
   role: 'owner' | 'member';
 };
 
@@ -45,7 +38,7 @@ const serverMembers: Member[] = [
   { id: 'vanta', name: 'Vanta', status: 'offline', accent: 'lavender', role: 'member' }
 ];
 
-const initialMessages: Record<string, ChatMessage[]> = {
+const initialMessages: Record<string, ChatMessageData[]> = {
   general: [
     {
       id: '1',
@@ -102,36 +95,6 @@ const initialMessages: Record<string, ChatMessage[]> = {
 
 const emojiOptions = ['😀', '😅', '🤣', '😂', '🙂', '🙃', '🤔', '😎', '🥳', '😍', '😘', '😉'];
 
-function getAccentClasses(accent: ChatMessage['accent']) {
-  switch (accent) {
-    case 'lime':
-      return 'bg-lime text-primary-bg';
-    case 'aqua':
-      return 'bg-aqua text-primary-bg';
-    case 'yellow':
-      return 'bg-yellow text-primary-bg';
-    case 'lavender':
-      return 'bg-lavender text-primary-bg';
-    default:
-      return 'bg-pink text-primary-bg';
-  }
-}
-
-function getAccentText(accent: ChatMessage['accent']) {
-  switch (accent) {
-    case 'lime':
-      return 'text-lime';
-    case 'aqua':
-      return 'text-aqua';
-    case 'yellow':
-      return 'text-yellow';
-    case 'lavender':
-      return 'text-lavender';
-    default:
-      return 'text-pink';
-  }
-}
-
 function getStatusClasses(status: Member['status']) {
   switch (status) {
     case 'online':
@@ -176,6 +139,8 @@ export function ChatWorkspace() {
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username, setUsername] = useState('cartoone');
   const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
@@ -332,7 +297,7 @@ export function ChatWorkspace() {
       return;
     }
 
-    const nextMessage: ChatMessage = {
+    const nextMessage: ChatMessageData = {
       id: `${activeChannel}-${Date.now()}`,
       author: username,
       accent: 'pink',
@@ -354,6 +319,83 @@ export function ChatWorkspace() {
 
   function appendEmoji(emoji: string) {
     setDraft((current) => `${current}${emoji}`);
+  }
+
+  function handleToggleReaction(messageId: string) {
+    if (!activeChannel) {
+      return;
+    }
+
+    setMessagesByChannel((current) => ({
+      ...current,
+      [activeChannel]: (current[activeChannel] ?? []).map((message) => {
+        if (message.id !== messageId) {
+          return message;
+        }
+
+        const currentCount = message.reactions?.['👍'] ?? 0;
+        const nextReactions = { ...message.reactions };
+
+        if (currentCount > 0) {
+          delete nextReactions['👍'];
+        } else {
+          nextReactions['👍'] = 1;
+        }
+
+        return {
+          ...message,
+          reactions: Object.keys(nextReactions).length > 0 ? nextReactions : undefined
+        };
+      })
+    }));
+  }
+
+  function handleStartEdit(message: ChatMessageData) {
+    setEditingMessageId(message.id);
+    setEditingDraft(message.content.join('\n'));
+  }
+
+  function handleCancelEdit() {
+    setEditingMessageId(null);
+    setEditingDraft('');
+  }
+
+  function handleSaveEdit(messageId: string) {
+    if (!activeChannel) {
+      return;
+    }
+
+    const content = editingDraft.trim();
+    if (!content) {
+      return;
+    }
+
+    setMessagesByChannel((current) => ({
+      ...current,
+      [activeChannel]: (current[activeChannel] ?? []).map((message) =>
+        message.id === messageId ? { ...message, content: content.split(/\r?\n/) } : message
+      )
+    }));
+    handleCancelEdit();
+  }
+
+  function handleDeleteMessage(messageId: string) {
+    if (!activeChannel) {
+      return;
+    }
+
+    setMessagesByChannel((current) => ({
+      ...current,
+      [activeChannel]: (current[activeChannel] ?? []).filter((message) => message.id !== messageId)
+    }));
+
+    if (editingMessageId === messageId) {
+      handleCancelEdit();
+    }
+  }
+
+  function setMessageRef(messageId: string, element: HTMLElement | null) {
+    messageRefs.current[messageId] = element;
   }
 
   return (
@@ -398,58 +440,28 @@ export function ChatWorkspace() {
           className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
         >
           <div>
-            {activeMessageItems.map(({ message, isGrouped }) => (
-              <article
-                key={message.id}
-                ref={(element) => {
-                  messageRefs.current[message.id] = element;
-                }}
-                className={`group -mx-3 rounded-md px-3 py-1 transition hover:bg-white/[0.04] ${
-                  isGrouped
-                    ? 'mt-1 grid grid-cols-[3rem_minmax(0,1fr)] gap-4'
-                    : 'mt-6 flex gap-4 first:mt-0'
-                }`}
-              >
-                {isGrouped ? (
-                  <span className="mono-detail pt-1 text-right text-[0.72rem] text-white/0 transition group-hover:text-white/35">
-                    {message.timestamp}
-                  </span>
-                ) : (
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
-                      message.accent
-                    )}`}
-                  >
-                    {message.author.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  {isGrouped ? null : (
-                    <div className="flex items-end gap-3">
-                      <h3
-                        className={`text-[1.5rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
-                      >
-                        {message.author}
-                      </h3>
-                      <span className="mono-detail pb-2 text-xs text-white/35">
-                        {message.timestamp}
-                      </span>
-                    </div>
-                  )}
-                  <div
-                    className={`space-y-2 text-[1.05rem] text-white/80 sm:text-[1.15rem] ${
-                      isGrouped ? '' : 'mt-1'
-                    }`}
-                  >
-                    {message.content.map((line, index) => (
-                      <p key={`${message.id}-${index}`} className="break-words">
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </article>
-            ))}
+            {activeMessageItems.map(({ message, isGrouped }) => {
+              const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
+              const isEditing = editingMessageId === message.id;
+
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  isGrouped={isGrouped}
+                  isOwnMessage={isOwnMessage}
+                  isEditing={isEditing}
+                  editingDraft={editingDraft}
+                  onEditDraftChange={setEditingDraft}
+                  onStartEdit={handleStartEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onDelete={handleDeleteMessage}
+                  onToggleReaction={handleToggleReaction}
+                  setMessageRef={setMessageRef}
+                />
+              );
+            })}
           </div>
           {!isNearBottom ? (
             <button
