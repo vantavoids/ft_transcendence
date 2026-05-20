@@ -404,9 +404,17 @@ export function ChatWorkspace() {
                 ref={(element) => {
                   messageRefs.current[message.id] = element;
                 }}
-                className={isGrouped ? 'ml-16 mt-2' : 'mt-7 flex gap-4 first:mt-0'}
+                className={`group -mx-3 rounded-md px-3 py-1 transition hover:bg-white/[0.04] ${
+                  isGrouped
+                    ? 'mt-1 grid grid-cols-[3rem_minmax(0,1fr)] gap-4'
+                    : 'mt-6 flex gap-4 first:mt-0'
+                }`}
               >
-                {isGrouped ? null : (
+                {isGrouped ? (
+                  <span className="mono-detail pt-1 text-right text-[0.72rem] text-white/0 transition group-hover:text-white/35">
+                    {message.timestamp}
+                  </span>
+                ) : (
                   <div
                     className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
                       message.accent
