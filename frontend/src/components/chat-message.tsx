@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Check, Pencil, SmilePlus, Trash2, X } from 'lucide-react';
+import { Pencil, SmilePlus, Trash2 } from 'lucide-react';
 
 export type ChatMessageData = {
   id: string;
@@ -176,24 +176,24 @@ export function ChatMessage({
               rows={Math.max(2, editingDraft.split(/\r?\n/).length)}
               className="w-full resize-none rounded-md border border-aqua/30 bg-panel px-3 py-2 text-[1.05rem] text-white outline-none sm:text-[1.15rem]"
             />
-            <div className="mt-2 flex gap-2">
+            <p className="mono-detail mt-2 text-xs text-white/35">
               <button
                 type="button"
                 onClick={() => onSaveEdit(message.id)}
-                className="flex h-8 items-center gap-2 rounded-md bg-aqua px-3 text-sm font-bold text-primary-bg"
+                className="text-aqua underline-offset-2 transition hover:text-white hover:underline"
               >
-                <Check className="h-4 w-4" strokeWidth={2} />
-                Save
+                Enter
               </button>
+              {' to save · Shift+Enter for newline · '}
               <button
                 type="button"
                 onClick={onCancelEdit}
-                className="flex h-8 items-center gap-2 rounded-md bg-frame px-3 text-sm font-bold text-white/70 transition hover:text-white"
+                className="text-aqua underline-offset-2 transition hover:text-white hover:underline"
               >
-                <X className="h-4 w-4" strokeWidth={2} />
-                Cancel
+                Escape
               </button>
-            </div>
+              {' to cancel'}
+            </p>
           </div>
         ) : (
           <div
