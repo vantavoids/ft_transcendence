@@ -9,9 +9,9 @@ import {
   Smile,
   UserRound
 } from 'lucide-react';
-import { ChatMessage, type ChatMessageData } from './chat-message';
+import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
-import { DmList, getDmName, hasDm } from './dm-list';
+import { DmList, getDmDetails, getDmName, getDmStatusClasses, hasDm } from './dm-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
@@ -205,6 +205,7 @@ export function ChatWorkspace() {
   const activeMessages = activeConversationId
     ? (messagesByConversation[activeConversationId] ?? [])
     : [];
+  const activeDmDetails = chatMode === 'dm' && activeDm ? getDmDetails(activeDm) : null;
   const activeMessageItems = useMemo(
     () =>
       activeMessages.map((message, index) => {
@@ -504,9 +505,36 @@ export function ChatWorkspace() {
             >
               <ArrowLeft className="h-5 w-5" strokeWidth={1.9} />
             </button>
-            <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
-              {chatMode === 'dm' ? '@' : '#'} {activeConversationName}
-            </h2>
+            {chatMode === 'dm' && activeDmDetails ? (
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="relative shrink-0">
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                      activeDmDetails.accent
+                    )}`}
+                  >
+                    {activeDmDetails.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
+                      activeDmDetails.status
+                    )}`}
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[1.2rem] font-bold tracking-[-0.03em] text-white">
+                    {activeDmDetails.name}
+                  </span>
+                  <span className="font-category block text-[0.72rem] uppercase tracking-[0.14em] text-white/35">
+                    {activeDmDetails.status}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
+                # {activeConversationName}
+              </h2>
+            )}
           </div>
           <div className="flex items-center gap-4 text-[#8c8c90]">
             <UserRound className="h-5 w-5" strokeWidth={1.8} />
