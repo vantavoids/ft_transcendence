@@ -62,11 +62,15 @@ export function getDmName(dmId: string) {
   return directMessages.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
+export function getDmDetails(dmId: string) {
+  return directMessages.find((dm) => dm.id === dmId) ?? null;
+}
+
 export function hasDm(dmId: string) {
   return directMessages.some((dm) => dm.id === dmId);
 }
 
-function getStatusClasses(status: DirectMessage['status']) {
+export function getDmStatusClasses(status: DirectMessage['status']) {
   switch (status) {
     case 'online':
       return 'bg-lime';
@@ -147,7 +151,7 @@ export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListPro
                     {dm.name.slice(0, 1).toUpperCase()}
                   </span>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getStatusClasses(
+                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
                       dm.status
                     )}`}
                   />
