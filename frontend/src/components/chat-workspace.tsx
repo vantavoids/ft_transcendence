@@ -183,6 +183,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username, setUsername] = useState('cartoone');
+  const [isHydrated, setIsHydrated] = useState(false);
   const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
 
@@ -198,14 +199,17 @@ export function ChatWorkspace() {
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
-    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : 'dm-skydogzz');
+    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
+    setIsHydrated(true);
   }, []);
 
-  const activeConversationId = chatMode === 'dm' ? activeDm : activeChannel;
+  const activeDmDetails =
+    chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
+  const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
   const activeConversationName =
     chatMode === 'dm'
-      ? activeDm
-        ? getDmName(activeDm, dmConversations)
+      ? activeDmDetails
+        ? getDmName(activeDmDetails.id, dmConversations)
         : ''
       : activeChannel
         ? getChannelName(activeChannel)
@@ -213,8 +217,7 @@ export function ChatWorkspace() {
   const activeMessages = activeConversationId
     ? (messagesByConversation[activeConversationId] ?? [])
     : [];
-  const activeDmDetails =
-    chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
+  const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
   const activeMessageItems = useMemo(
     () =>
       activeMessages.map((message, index) => {
@@ -343,6 +346,7 @@ export function ChatWorkspace() {
   function handleOpenDms() {
     rememberConversationScrollPosition(activeConversationId);
     setChatMode('dm');
+    setActiveDm(null);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
   }
 
@@ -502,185 +506,215 @@ export function ChatWorkspace() {
 
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
-      <GuildSidebar activeMode={chatMode} onOpenDms={handleOpenDms} onOpenGuild={handleOpenGuild} />
-
-      {chatMode === 'dm' ? (
-        <DmList
-          activeDm={activeDm ?? ''}
-          directMessages={dmConversations}
-          mobilePane={mobilePane}
-          username={username}
-          onSelectDm={handleSelectDm}
-        />
+      {!isHydrated ? (
+        <div className="flex min-h-0 flex-1 rounded-[1rem] bg-secondary-bg ring-1 ring-white/5" />
       ) : (
-        <ChannelList
-          activeChannel={activeChannel ?? ''}
-          mobilePane={mobilePane}
-          username={username}
-          onSelectChannel={handleSelectChannel}
-        />
-      )}
+        <>
+          <GuildSidebar
+            activeMode={chatMode}
+            onOpenDms={handleOpenDms}
+            onOpenGuild={handleOpenGuild}
+          />
 
-      <section
-        className={`${
-          mobilePane === 'messages' ? 'flex' : 'hidden'
-        } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex`}
-      >
-        <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5 sm:px-7">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobilePane('channels')}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-frame text-[#7e7e82] md:hidden"
-              aria-label={chatMode === 'dm' ? 'Show DMs' : 'Show channels'}
-            >
-              <ArrowLeft className="h-5 w-5" strokeWidth={1.9} />
-            </button>
-            {chatMode === 'dm' && activeDmDetails ? (
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="relative shrink-0">
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                      activeDmDetails.accent
-                    )}`}
-                  >
-                    {activeDmDetails.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                      activeDmDetails.status
-                    )}`}
-                  />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[1.2rem] font-bold tracking-[-0.03em] text-white">
-                    {activeDmDetails.name}
-                  </span>
-                  <span className="font-category block text-[0.72rem] uppercase tracking-[0.14em] text-white/35">
-                    {activeDmDetails.status}
-                  </span>
-                </span>
-              </div>
-            ) : (
-              <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
-                # {activeConversationName}
-              </h2>
-            )}
-          </div>
-          <div className="flex items-center gap-4 text-[#8c8c90]">
-            <UserRound className="h-5 w-5" strokeWidth={1.8} />
-            <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-        </div>
-
-        <div
-          ref={messagesViewportRef}
-          onScroll={handleMessagesScroll}
-          className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
-        >
-          <div>
-            {activeMessageItems.map(({ message, isGrouped }) => {
-              const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
-              const isEditing = editingMessageId === message.id;
-
-              return (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  isGrouped={isGrouped}
-                  isOwnMessage={isOwnMessage}
-                  isEditing={isEditing}
-                  editingDraft={editingDraft}
-                  onEditDraftChange={setEditingDraft}
-                  onStartEdit={handleStartEdit}
-                  onSaveEdit={handleSaveEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onDelete={handleDeleteMessage}
-                  onToggleReaction={handleToggleReaction}
-                  setMessageRef={setMessageRef}
-                />
-              );
-            })}
-          </div>
-          {!isNearBottom ? (
-            <button
-              type="button"
-              onClick={handleJumpToBottom}
-              className="mono-detail sticky bottom-0 z-10 ml-auto flex h-10 items-center rounded-full border border-aqua/40 bg-panel px-4 text-sm font-bold text-aqua shadow-lg shadow-black/30 transition hover:border-aqua hover:text-white"
-            >
-              Jump to bottom
-            </button>
-          ) : null}
-        </div>
-
-        <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
-          {isEmojiOpen ? (
-            <div className="mb-3 rounded-xl border border-white/10 bg-panel p-3">
-              <div className="grid grid-cols-6 gap-2">
-                {emojiOptions.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => appendEmoji(emoji)}
-                    className="rounded-lg bg-frame px-2 py-2 text-2xl transition hover:bg-white/10"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
-            <textarea
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSubmitMessage();
-                }
-              }}
-              placeholder={`Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`}
-              rows={1}
-              className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted"
+          {chatMode === 'dm' ? (
+            <DmList
+              activeDm={activeDm ?? ''}
+              directMessages={dmConversations}
+              mobilePane={mobilePane}
+              username={username}
+              onSelectDm={handleSelectDm}
             />
-            <div className="ml-auto flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setIsEmojiOpen((current) => !current)}
-                className="text-[#7e7e82] transition hover:text-white"
-                aria-label="Toggle emoji picker"
-              >
-                <Smile className="h-5 w-5" strokeWidth={1.8} />
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmitMessage}
-                className="text-aqua transition hover:text-white"
-                aria-label="Send message"
-              >
-                <ArrowRight
-                  className="h-5 w-5 rounded-full border border-aqua p-0.5"
-                  strokeWidth={2}
-                />
-              </button>
+          ) : (
+            <ChannelList
+              activeChannel={activeChannel ?? ''}
+              mobilePane={mobilePane}
+              username={username}
+              onSelectChannel={handleSelectChannel}
+            />
+          )}
+
+          <section
+            className={`${
+              mobilePane === 'messages' ? 'flex' : 'hidden'
+            } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex`}
+          >
+            <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5 sm:px-7">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobilePane('channels')}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-frame text-[#7e7e82] md:hidden"
+                  aria-label={chatMode === 'dm' ? 'Show DMs' : 'Show channels'}
+                >
+                  <ArrowLeft className="h-5 w-5" strokeWidth={1.9} />
+                </button>
+                {chatMode === 'dm' && activeDmDetails ? (
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="relative shrink-0">
+                      <span
+                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                          activeDmDetails.accent
+                        )}`}
+                      >
+                        {activeDmDetails.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
+                          activeDmDetails.status
+                        )}`}
+                      />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[1.2rem] font-bold tracking-[-0.03em] text-white">
+                        {activeDmDetails.name}
+                      </span>
+                      <span className="font-category block text-[0.72rem] uppercase tracking-[0.14em] text-white/35">
+                        {activeDmDetails.status}
+                      </span>
+                    </span>
+                  </div>
+                ) : chatMode === 'dm' ? (
+                  <h2 className="text-[1.25rem] font-bold tracking-[-0.03em] text-white">
+                    Direct Messages
+                  </h2>
+                ) : (
+                  <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
+                    # {activeConversationName}
+                  </h2>
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-[#8c8c90]">
+                <UserRound className="h-5 w-5" strokeWidth={1.8} />
+                <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
+              </div>
             </div>
-          </div>
-          <div className="mt-3 flex justify-between text-xs text-white/35">
-            <span>
-              {chatMode === 'dm' ? 'Conversation directe locale' : 'Canal interactif local'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setMobilePane('channels')}
-              className="inline-flex items-center gap-2 md:hidden"
+
+            <div
+              ref={messagesViewportRef}
+              onScroll={handleMessagesScroll}
+              className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
             >
-              <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
-              {chatMode === 'dm' ? 'DMs' : 'Channels'}
-            </button>
-          </div>
-        </div>
-      </section>
+              {isDmEmptyState ? (
+                <div className="flex min-h-full flex-col items-center justify-center px-6 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-panel text-[#8b8b8f]">
+                    <MessageCircle className="h-7 w-7" strokeWidth={1.8} />
+                  </div>
+                  <h3 className="mt-5 text-[1.25rem] font-bold tracking-[-0.03em] text-white">
+                    No DM selected
+                  </h3>
+                  <p className="mt-2 max-w-[22rem] text-sm leading-6 text-white/40">
+                    Select a conversation from the DM list to start reading or sending messages.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {activeMessageItems.map(({ message, isGrouped }) => {
+                    const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
+                    const isEditing = editingMessageId === message.id;
+
+                    return (
+                      <ChatMessage
+                        key={message.id}
+                        message={message}
+                        isGrouped={isGrouped}
+                        isOwnMessage={isOwnMessage}
+                        isEditing={isEditing}
+                        editingDraft={editingDraft}
+                        onEditDraftChange={setEditingDraft}
+                        onStartEdit={handleStartEdit}
+                        onSaveEdit={handleSaveEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onDelete={handleDeleteMessage}
+                        onToggleReaction={handleToggleReaction}
+                        setMessageRef={setMessageRef}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {!isNearBottom ? (
+                <button
+                  type="button"
+                  onClick={handleJumpToBottom}
+                  className="mono-detail sticky bottom-0 z-10 ml-auto flex h-10 items-center rounded-full border border-aqua/40 bg-panel px-4 text-sm font-bold text-aqua shadow-lg shadow-black/30 transition hover:border-aqua hover:text-white"
+                >
+                  Jump to bottom
+                </button>
+              ) : null}
+            </div>
+
+            <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
+              {isEmojiOpen ? (
+                <div className="mb-3 rounded-xl border border-white/10 bg-panel p-3">
+                  <div className="grid grid-cols-6 gap-2">
+                    {emojiOptions.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => appendEmoji(emoji)}
+                        className="rounded-lg bg-frame px-2 py-2 text-2xl transition hover:bg-white/10"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
+                <textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      handleSubmitMessage();
+                    }
+                  }}
+                  disabled={!activeConversationId}
+                  placeholder={`Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`}
+                  rows={1}
+                  className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted disabled:cursor-not-allowed disabled:text-white/30"
+                />
+                <div className="ml-auto flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEmojiOpen((current) => !current)}
+                    className="text-[#7e7e82] transition hover:text-white"
+                    aria-label="Toggle emoji picker"
+                  >
+                    <Smile className="h-5 w-5" strokeWidth={1.8} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitMessage}
+                    disabled={!activeConversationId}
+                    className="text-aqua transition hover:text-white disabled:cursor-not-allowed disabled:text-[#535353]"
+                    aria-label="Send message"
+                  >
+                    <ArrowRight
+                      className="h-5 w-5 rounded-full border border-aqua p-0.5"
+                      strokeWidth={2}
+                    />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex justify-between text-xs text-white/35">
+                <span>
+                  {chatMode === 'dm' ? 'Conversation directe locale' : 'Canal interactif local'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMobilePane('channels')}
+                  className="inline-flex items-center gap-2 md:hidden"
+                >
+                  <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
+                  {chatMode === 'dm' ? 'DMs' : 'Channels'}
+                </button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }
