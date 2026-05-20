@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Check, Pencil, SmilePlus, Trash2, X } from 'lucide-react';
 
 export type ChatMessageData = {
@@ -72,6 +73,25 @@ export function ChatMessage({
 }: ChatMessageProps) {
   const reactions = Object.entries(message.reactions ?? {});
 
+  useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      console.log('chat message edit escape pressed', message.id);
+      event.preventDefault();
+      onCancelEdit();
+    }
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isEditing, message.id, onCancelEdit]);
+
   return (
     <article
       ref={(element) => setMessageRef(message.id, element)}
@@ -141,6 +161,18 @@ export function ChatMessage({
             <textarea
               value={editingDraft}
               onChange={(event) => onEditDraftChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  onCancelEdit();
+                  return;
+                }
+
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  onSaveEdit(message.id);
+                }
+              }}
               rows={Math.max(2, editingDraft.split(/\r?\n/).length)}
               className="w-full resize-none rounded-md border border-aqua/30 bg-panel px-3 py-2 text-[1.05rem] text-white outline-none sm:text-[1.15rem]"
             />
