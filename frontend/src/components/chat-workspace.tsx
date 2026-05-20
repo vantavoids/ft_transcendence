@@ -14,6 +14,7 @@ import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
+const BOTTOM_THRESHOLD_PX = 96;
 
 type ChannelScrollPosition = {
   messageId: string;
@@ -150,6 +151,7 @@ export function ChatWorkspace() {
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(true);
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username, setUsername] = useState('cartoone');
   const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
@@ -173,6 +175,17 @@ export function ChatWorkspace() {
     ],
     [username]
   );
+
+  const updateNearBottomState = useCallback(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      setIsNearBottom(true);
+      return;
+    }
+
+    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    setIsNearBottom(distanceFromBottom <= BOTTOM_THRESHOLD_PX);
+  }, []);
 
   const rememberChannelScrollPosition = useCallback(
     (channelId: string | null) => {
@@ -251,8 +264,23 @@ export function ChatWorkspace() {
     window.requestAnimationFrame(() => {
       isRestoringScroll.current = false;
       rememberChannelScrollPosition(activeChannel);
+      updateNearBottomState();
     });
-  }, [activeChannel, activeMessages.length, rememberChannelScrollPosition]);
+  }, [activeChannel, activeMessages.length, rememberChannelScrollPosition, updateNearBottomState]);
+
+  function handleMessagesScroll() {
+    rememberChannelScrollPosition(activeChannel);
+    updateNearBottomState();
+  }
+
+  function handleJumpToBottom() {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+  }
 
   function handleSelectChannel(channelId: string) {
     rememberChannelScrollPosition(activeChannel);
@@ -329,7 +357,7 @@ export function ChatWorkspace() {
 
         <div
           ref={messagesViewportRef}
-          onScroll={() => rememberChannelScrollPosition(activeChannel)}
+          onScroll={handleMessagesScroll}
           className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
         >
           <div className="space-y-7">
@@ -370,6 +398,15 @@ export function ChatWorkspace() {
               </article>
             ))}
           </div>
+          {!isNearBottom ? (
+            <button
+              type="button"
+              onClick={handleJumpToBottom}
+              className="mono-detail sticky bottom-0 z-10 ml-auto flex h-10 items-center rounded-full border border-aqua/40 bg-panel px-4 text-sm font-bold text-aqua shadow-lg shadow-black/30 transition hover:border-aqua hover:text-white"
+            >
+              Jump to bottom
+            </button>
+          ) : null}
         </div>
 
         <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
