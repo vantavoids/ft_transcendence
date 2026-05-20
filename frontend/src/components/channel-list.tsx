@@ -105,6 +105,12 @@ export function getChannelName(channelId: string) {
   );
 }
 
+export function hasChannel(channelId: string) {
+  return channelCategories.some((category) =>
+    category.channels.some((channel) => channel.id === channelId)
+  );
+}
+
 export function ChannelList({
   activeChannel,
   mobilePane,

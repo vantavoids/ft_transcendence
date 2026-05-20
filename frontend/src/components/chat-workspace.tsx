@@ -9,9 +9,11 @@ import {
   Smile,
   UserRound
 } from 'lucide-react';
-import { ChannelList, getChannelName } from './channel-list';
+import { ChannelList, getChannelName, hasChannel } from './channel-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
+
+const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
 
 type ChatMessage = {
   id: string;
@@ -136,7 +138,7 @@ function getStatusClasses(status: Member['status']) {
 
 export function ChatWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [activeChannel, setActiveChannel] = useState('general');
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
@@ -148,10 +150,13 @@ export function ChatWorkspace() {
     if (storedUsername) {
       setUsername(storedUsername);
     }
+
+    const storedChannel = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
+    setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
   }, []);
 
-  const activeMessages = messagesByChannel[activeChannel] ?? [];
-  const activeChannelName = getChannelName(activeChannel);
+  const activeMessages = activeChannel ? (messagesByChannel[activeChannel] ?? []) : [];
+  const activeChannelName = activeChannel ? getChannelName(activeChannel) : '';
   const members = useMemo<Member[]>(
     () => [
       { id: 'current-user', name: username, status: 'online', accent: 'pink', role: 'member' },
@@ -166,12 +171,13 @@ export function ChatWorkspace() {
 
   function handleSelectChannel(channelId: string) {
     setActiveChannel(channelId);
+    window.sessionStorage.setItem(LAST_CHAT_CHANNEL_KEY, channelId);
     setMobilePane('messages');
   }
 
   function handleSubmitMessage() {
     const content = draft.trim();
-    if (!content) {
+    if (!content || !activeChannel) {
       return;
     }
 
@@ -203,7 +209,7 @@ export function ChatWorkspace() {
       <GuildSidebar />
 
       <ChannelList
-        activeChannel={activeChannel}
+        activeChannel={activeChannel ?? ''}
         mobilePane={mobilePane}
         username={username}
         onSelectChannel={handleSelectChannel}
