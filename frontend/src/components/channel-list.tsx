@@ -151,6 +151,10 @@ export function ChannelList({
           </div>
         </div>
 
+        <div className="mt-5 h-24 overflow-hidden rounded-lg border border-white/10 bg-[linear-gradient(135deg,#232329_0%,#2b3141_38%,#24545b_68%,#78dce8_100%)] shadow-inner shadow-black/40">
+          <div className="h-full w-full bg-[linear-gradient(90deg,rgba(16,16,20,0.68),transparent_58%),radial-gradient(circle_at_78%_30%,rgba(255,216,102,0.5),transparent_26%),radial-gradient(circle_at_60%_78%,rgba(255,97,136,0.38),transparent_24%)]" />
+        </div>
+
         <label className="mt-6 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
           <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
           <input
