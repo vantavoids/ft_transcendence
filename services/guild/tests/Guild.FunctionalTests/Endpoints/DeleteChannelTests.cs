@@ -46,4 +46,19 @@ public sealed class DeleteChannelTests(GuildApiFactory factory) : IClassFixture<
 		var resp = await stranger.DeleteAsync($"/v1/guilds/{guildId}/channels/{channelId}");
 		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
 	}
+
+	[Fact]
+	public async Task MemberWithoutManageChannels_Returns_403()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5305);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+
+		await factory.AddBareMemberAsync(guildId, userId: 5306);
+		var member = factory.CreateAuthenticatedClient(userId: 5306);
+
+		var resp = await member.DeleteAsync($"/v1/guilds/{guildId}/channels/{channelId}");
+		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+	}
 }

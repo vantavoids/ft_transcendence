@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Guild.Domain.Guild;
 using Guild.FunctionalTests.Infrastructure;
 using Xunit;
 
@@ -86,5 +87,80 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 			new { target_type = "role", allow = 5L, deny = 1L },
 			JsonOptions.SnakeCase);
 		Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+	}
+
+	// BUG: handler checks ManageRoles instead of ManageChannels -- should return 200, currently 403
+	[Fact]
+	public async Task MemberWithManageChannels_CanPutOverwrite()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5407);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+		var roleId = await factory.GetEveryoneRoleIdAsync(guildId);
+
+		await factory.AddMemberWithPermissionsAsync(guildId, userId: 5408, (long)Permission.ManageChannels);
+		var member = factory.CreateAuthenticatedClient(userId: 5408);
+
+		var resp = await member.PutAsJsonAsync(
+			$"/v1/channels/{channelId}/permissions/{roleId}",
+			new { target_type = "role", allow = (long)Permission.SendMessages, deny = 0L },
+			JsonOptions.SnakeCase);
+		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+	}
+
+	// BUG: handler checks ManageRoles instead of ManageChannels -- ManageRoles should NOT suffice
+	[Fact]
+	public async Task MemberWithOnlyManageRoles_CannotPutOverwrite()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5409);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+		var roleId = await factory.GetEveryoneRoleIdAsync(guildId);
+
+		await factory.AddMemberWithPermissionsAsync(guildId, userId: 5410, (long)Permission.ManageRoles);
+		var member = factory.CreateAuthenticatedClient(userId: 5410);
+
+		var resp = await member.PutAsJsonAsync(
+			$"/v1/channels/{channelId}/permissions/{roleId}",
+			new { target_type = "role", allow = (long)Permission.SendMessages, deny = 0L },
+			JsonOptions.SnakeCase);
+		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+	}
+
+	// BUG: "user" keyword not accepted as alias for member target -- should return 200, currently 400
+	[Fact]
+	public async Task UserKeyword_AcceptedAsMemberTarget()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5411);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+
+		var resp = await owner.PutAsJsonAsync(
+			$"/v1/channels/{channelId}/permissions/5411",
+			new { target_type = "user", allow = (long)Permission.SendMessages, deny = 0L },
+			JsonOptions.SnakeCase);
+		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+	}
+
+	// BUG: response serialises target_type as "member" instead of "user"
+	[Fact]
+	public async Task MemberTargetOverwrite_ResponseTargetTypeIsUser()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5412);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+
+		var resp = await owner.PutAsJsonAsync(
+			$"/v1/channels/{channelId}/permissions/5412",
+			new { target_type = "member", allow = (long)Permission.SendMessages, deny = 0L },
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		Assert.Equal("user", body.GetProperty("target_type").GetString());
 	}
 }

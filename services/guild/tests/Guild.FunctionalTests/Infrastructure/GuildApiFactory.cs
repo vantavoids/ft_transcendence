@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Reflection;
 using Guild.Application.Abstractions;
 using Guild.Persistence.Db;
 using Microsoft.AspNetCore.Hosting;
@@ -216,6 +217,54 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 		if (owResult.IsFailure)
 			throw new InvalidOperationException(owResult.Error.Message);
 		db.ChannelPermissionOverwrites.Add(owResult.Value);
+		await db.SaveChangesAsync();
+	}
+
+	/// <summary>
+	/// inserts a GuildMember with a custom role granting the given permission bits.
+	/// used to test permission-gated endpoints without going through an endpoint
+	/// that does not yet exist (member invite / role assignment)
+	/// </summary>
+	public async Task AddMemberWithPermissionsAsync(long guildId, long userId, long permissions)
+	{
+		const BindingFlags AnyInstance =
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+		var ids = scope.ServiceProvider.GetRequiredService<IIdGenerator>();
+		var now = DateTimeOffset.UtcNow;
+
+		var memberResult = Guild.Domain.Guild.GuildMember.Create(guildId, userId, now);
+		if (memberResult.IsFailure)
+			throw new InvalidOperationException(memberResult.Error.Message);
+		db.Members.Add(memberResult.Value);
+
+		var roleResult = Guild.Domain.Guild.Role.Create(
+			id: ids.NextId(), guildId: guildId, name: "TestRole", color: null,
+			permissions: permissions, position: 99,
+			isDefault: false, isHoisted: false, isMentionable: false, now: now);
+		if (roleResult.IsFailure)
+			throw new InvalidOperationException(roleResult.Error.Message);
+		db.Roles.Add(roleResult.Value);
+		await db.SaveChangesAsync();
+
+		var memberRole = (Guild.Domain.Guild.MemberRole)Activator.CreateInstance(
+			typeof(Guild.Domain.Guild.MemberRole), AnyInstance,
+			binder: null, args: null, culture: null)!;
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.GuildId), AnyInstance)!
+			.SetValue(memberRole, guildId);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.UserId), AnyInstance)!
+			.SetValue(memberRole, userId);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.RoleId), AnyInstance)!
+			.SetValue(memberRole, roleResult.Value.Id);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.AssignedAt), AnyInstance)!
+			.SetValue(memberRole, now);
+		db.MemberRoles.Add(memberRole);
 		await db.SaveChangesAsync();
 	}
 
