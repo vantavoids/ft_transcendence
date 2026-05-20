@@ -10,7 +10,10 @@ export type DirectMessage = {
   name: string;
   status: 'online' | 'idle' | 'offline';
   accent: ChatMessageData['accent'];
-  preview: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  lastActivityMinutes: number;
+  unreadCount: number;
 };
 
 type DmListProps = {
@@ -26,35 +29,50 @@ export const directMessages: DirectMessage[] = [
     name: 'SkyDogzz',
     status: 'online',
     accent: 'yellow',
-    preview: 'On teste la view DM.'
+    lastMessage: 'On teste la view DM.',
+    lastMessageAt: '19:44',
+    lastActivityMinutes: 19 * 60 + 44,
+    unreadCount: 2
   },
   {
     id: 'dm-add',
     name: 'add',
     status: 'online',
     accent: 'aqua',
-    preview: 'Je passe après le build.'
+    lastMessage: 'Je passe après le build.',
+    lastMessageAt: '18:12',
+    lastActivityMinutes: 18 * 60 + 12,
+    unreadCount: 0
   },
   {
     id: 'dm-um4ss',
     name: 'um4ss',
     status: 'idle',
     accent: 'lime',
-    preview: 'Ping quand tu peux.'
+    lastMessage: 'Ping quand tu peux.',
+    lastMessageAt: '17:58',
+    lastActivityMinutes: 17 * 60 + 58,
+    unreadCount: 1
   },
   {
     id: 'dm-vanta',
     name: 'Vanta',
     status: 'offline',
     accent: 'lavender',
-    preview: 'Archive de conversation.'
+    lastMessage: 'Archive de conversation.',
+    lastMessageAt: '15:21',
+    lastActivityMinutes: 15 * 60 + 21,
+    unreadCount: 0
   },
   {
     id: 'dm-cartoone',
     name: 'Cartoone',
     status: 'online',
     accent: 'pink',
-    preview: 'Notes personnelles.'
+    lastMessage: 'Notes personnelles.',
+    lastMessageAt: '12:04',
+    lastActivityMinutes: 12 * 60 + 4,
+    unreadCount: 0
   }
 ];
 
@@ -87,11 +105,17 @@ export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListPro
   const filteredDms = useMemo(() => {
     const term = search.trim().toLowerCase();
 
+    const sortedDms = [...directMessages].sort(
+      (first, second) => second.lastActivityMinutes - first.lastActivityMinutes
+    );
+
     if (!term) {
-      return directMessages;
+      return sortedDms;
     }
 
-    return directMessages.filter((dm) => dm.name.toLowerCase().includes(term));
+    return sortedDms.filter(
+      (dm) => dm.name.toLowerCase().includes(term) || dm.lastMessage.toLowerCase().includes(term)
+    );
   }, [search]);
 
   return (
@@ -138,7 +162,7 @@ export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListPro
                 key={dm.id}
                 type="button"
                 onClick={() => onSelectDm(dm.id)}
-                className={`flex h-16 w-full items-center gap-3 rounded-lg px-3 text-left transition ${
+                className={`flex h-[4.75rem] w-full items-center gap-3 rounded-lg px-3 text-left transition ${
                   isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
                 }`}
               >
@@ -157,8 +181,26 @@ export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListPro
                   />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
-                  <span className="block truncate text-sm text-white/35">{dm.preview}</span>
+                  <span className="flex min-w-0 items-center justify-between gap-3">
+                    <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
+                    <span className="mono-detail shrink-0 text-xs text-white/30">
+                      {dm.lastMessageAt}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
+                    <span
+                      className={`block truncate text-sm ${
+                        dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
+                      }`}
+                    >
+                      {dm.lastMessage}
+                    </span>
+                    {dm.unreadCount > 0 ? (
+                      <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
+                        {dm.unreadCount}
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
               </button>
             );
