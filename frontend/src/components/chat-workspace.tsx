@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,11 @@ import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
+
+type ChannelScrollPosition = {
+  messageId: string;
+  topOffset: number;
+};
 
 type ChatMessage = {
   id: string;
@@ -137,7 +142,11 @@ function getStatusClasses(status: Member['status']) {
 }
 
 export function ChatWorkspace() {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<Record<string, HTMLElement | null>>({});
+  const channelScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
+  const pendingScrollBottom = useRef(false);
+  const isRestoringScroll = useRef(false);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -165,11 +174,88 @@ export function ChatWorkspace() {
     [username]
   );
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  }, [activeChannel, activeMessages.length]);
+  const rememberChannelScrollPosition = useCallback(
+    (channelId: string | null) => {
+      if (!channelId || isRestoringScroll.current) {
+        return;
+      }
+
+      const viewport = messagesViewportRef.current;
+      if (!viewport) {
+        return;
+      }
+
+      const viewportTop = viewport.getBoundingClientRect().top;
+      const visibleMessage = (messagesByChannel[channelId] ?? [])
+        .map((message) => {
+          const element = messageRefs.current[message.id];
+          if (!element) {
+            return null;
+          }
+
+          return {
+            element,
+            id: message.id,
+            top: element.getBoundingClientRect().top
+          };
+        })
+        .filter((message): message is { element: HTMLElement; id: string; top: number } => {
+          if (!message) {
+            return false;
+          }
+
+          return message.element.getBoundingClientRect().bottom >= viewportTop;
+        })
+        .sort((a, b) => Math.abs(a.top - viewportTop) - Math.abs(b.top - viewportTop))[0];
+
+      if (!visibleMessage) {
+        return;
+      }
+
+      channelScrollPositions.current[channelId] = {
+        messageId: visibleMessage.id,
+        topOffset: visibleMessage.top - viewportTop
+      };
+    },
+    [messagesByChannel]
+  );
+
+  useLayoutEffect(() => {
+    if (!activeChannel) {
+      return;
+    }
+
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    isRestoringScroll.current = true;
+
+    if (pendingScrollBottom.current) {
+      viewport.scrollTop = viewport.scrollHeight;
+      pendingScrollBottom.current = false;
+    } else {
+      const savedPosition = channelScrollPositions.current[activeChannel];
+      const savedElement = savedPosition ? messageRefs.current[savedPosition.messageId] : null;
+
+      if (savedPosition && savedElement) {
+        const viewportTop = viewport.getBoundingClientRect().top;
+        const elementTop = savedElement.getBoundingClientRect().top;
+        viewport.scrollTop += elementTop - viewportTop - savedPosition.topOffset;
+      } else {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    }
+
+    window.requestAnimationFrame(() => {
+      isRestoringScroll.current = false;
+      rememberChannelScrollPosition(activeChannel);
+    });
+  }, [activeChannel, activeMessages.length, rememberChannelScrollPosition]);
 
   function handleSelectChannel(channelId: string) {
+    rememberChannelScrollPosition(activeChannel);
     setActiveChannel(channelId);
     window.sessionStorage.setItem(LAST_CHAT_CHANNEL_KEY, channelId);
     setMobilePane('messages');
@@ -196,6 +282,7 @@ export function ChatWorkspace() {
       ...current,
       [activeChannel]: [...(current[activeChannel] ?? []), nextMessage]
     }));
+    pendingScrollBottom.current = true;
     setDraft('');
     setIsEmojiOpen(false);
   }
@@ -240,10 +327,20 @@ export function ChatWorkspace() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7">
+        <div
+          ref={messagesViewportRef}
+          onScroll={() => rememberChannelScrollPosition(activeChannel)}
+          className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
+        >
           <div className="space-y-7">
             {activeMessages.map((message) => (
-              <article key={message.id} className="flex gap-4">
+              <article
+                key={message.id}
+                ref={(element) => {
+                  messageRefs.current[message.id] = element;
+                }}
+                className="flex gap-4"
+              >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
                     message.accent
@@ -272,7 +369,6 @@ export function ChatWorkspace() {
                 </div>
               </article>
             ))}
-            <div ref={messagesEndRef} />
           </div>
         </div>
 
