@@ -15,6 +15,7 @@ import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
 const BOTTOM_THRESHOLD_PX = 96;
+const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
 
 type ChannelScrollPosition = {
   messageId: string;
@@ -142,6 +143,29 @@ function getStatusClasses(status: Member['status']) {
   }
 }
 
+function getTimestampMinutes(timestamp: string) {
+  const [hours, minutes] = timestamp.split(':').map(Number);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) {
+  const previousMinutes = getTimestampMinutes(previousTimestamp);
+  const currentMinutes = getTimestampMinutes(currentTimestamp);
+
+  if (previousMinutes === null || currentMinutes === null) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return currentMinutes >= previousMinutes
+    ? currentMinutes - previousMinutes
+    : currentMinutes + 24 * 60 - previousMinutes;
+}
+
 export function ChatWorkspace() {
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -167,6 +191,19 @@ export function ChatWorkspace() {
   }, []);
 
   const activeMessages = activeChannel ? (messagesByChannel[activeChannel] ?? []) : [];
+  const activeMessageItems = useMemo(
+    () =>
+      activeMessages.map((message, index) => {
+        const previousMessage = activeMessages[index - 1];
+        const isGrouped =
+          previousMessage?.author === message.author &&
+          getMinutesBetween(previousMessage.timestamp, message.timestamp) <=
+            MESSAGE_GROUP_THRESHOLD_MINUTES;
+
+        return { message, isGrouped };
+      }),
+    [activeMessages]
+  );
   const activeChannelName = activeChannel ? getChannelName(activeChannel) : '';
   const members = useMemo<Member[]>(
     () => [
@@ -360,34 +397,42 @@ export function ChatWorkspace() {
           onScroll={handleMessagesScroll}
           className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
         >
-          <div className="space-y-7">
-            {activeMessages.map((message) => (
+          <div>
+            {activeMessageItems.map(({ message, isGrouped }) => (
               <article
                 key={message.id}
                 ref={(element) => {
                   messageRefs.current[message.id] = element;
                 }}
-                className="flex gap-4"
+                className={isGrouped ? 'ml-16 mt-2' : 'mt-7 flex gap-4 first:mt-0'}
               >
-                <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
-                    message.accent
-                  )}`}
-                >
-                  {message.author.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-end gap-3">
-                    <h3
-                      className={`text-[1.5rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
-                    >
-                      {message.author}
-                    </h3>
-                    <span className="mono-detail pb-2 text-xs text-white/35">
-                      {message.timestamp}
-                    </span>
+                {isGrouped ? null : (
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
+                      message.accent
+                    )}`}
+                  >
+                    {message.author.slice(0, 1).toUpperCase()}
                   </div>
-                  <div className="mt-1 space-y-2 text-[1.05rem] text-white/80 sm:text-[1.15rem]">
+                )}
+                <div className="min-w-0">
+                  {isGrouped ? null : (
+                    <div className="flex items-end gap-3">
+                      <h3
+                        className={`text-[1.5rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
+                      >
+                        {message.author}
+                      </h3>
+                      <span className="mono-detail pb-2 text-xs text-white/35">
+                        {message.timestamp}
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    className={`space-y-2 text-[1.05rem] text-white/80 sm:text-[1.15rem] ${
+                      isGrouped ? '' : 'mt-1'
+                    }`}
+                  >
                     {message.content.map((line, index) => (
                       <p key={`${message.id}-${index}`} className="break-words">
                         {line}
