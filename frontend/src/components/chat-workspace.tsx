@@ -176,7 +176,7 @@ export function ChatWorkspace() {
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [activeDm, setActiveDm] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
+  const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -217,6 +217,9 @@ export function ChatWorkspace() {
   const activeMessages = activeConversationId
     ? (messagesByConversation[activeConversationId] ?? [])
     : [];
+  const activeDraft = activeConversationId
+    ? (draftsByConversation[activeConversationId] ?? '')
+    : '';
   const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
   const activeMessageItems = useMemo(
     () =>
@@ -375,7 +378,7 @@ export function ChatWorkspace() {
   }
 
   function handleSubmitMessage() {
-    const content = draft.trim();
+    const content = activeDraft.trim();
     if (!content || !activeConversationId) {
       return;
     }
@@ -417,12 +420,34 @@ export function ChatWorkspace() {
       );
     }
 
-    setDraft('');
+    setDraftsByConversation((current) => {
+      const next = { ...current };
+      delete next[activeConversationId];
+      return next;
+    });
     setIsEmojiOpen(false);
   }
 
   function appendEmoji(emoji: string) {
-    setDraft((current) => `${current}${emoji}`);
+    if (!activeConversationId) {
+      return;
+    }
+
+    setDraftsByConversation((current) => ({
+      ...current,
+      [activeConversationId]: `${current[activeConversationId] ?? ''}${emoji}`
+    }));
+  }
+
+  function handleDraftChange(value: string) {
+    if (!activeConversationId) {
+      return;
+    }
+
+    setDraftsByConversation((current) => ({
+      ...current,
+      [activeConversationId]: value
+    }));
   }
 
   function handleToggleReaction(messageId: string) {
@@ -662,8 +687,8 @@ export function ChatWorkspace() {
               ) : null}
               <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
                 <textarea
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  value={activeDraft}
+                  onChange={(event) => handleDraftChange(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault();
