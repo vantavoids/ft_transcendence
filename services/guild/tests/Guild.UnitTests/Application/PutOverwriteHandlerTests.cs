@@ -110,6 +110,85 @@ public sealed class PutOverwriteHandlerTests
 		Assert.Equal("Guild.OverwriteAllowDenyOverlap", result.Error.Code);
 	}
 
+	[Fact]
+	public async Task MemberTarget_AcceptsUserKeyword()
+	{
+		// contract uses "user" for member-targeted overwrites, not "member";
+		// parser currently only recognises "member", so this should fail and pass
+		// once the alias is added
+		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		// owner (userId=1) is already a guild member -- use them as the target
+		var result = await handler.HandleAsync(
+			new PutOverwriteCommand(5, 1, "user", (long)Permission.SendMessages, 0L));
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
+	public async Task MemberTarget_ResponseTargetTypeIsUser()
+	{
+		// response should serialise member-targeted overwrites as "user", not "member"
+		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new PutOverwriteCommand(5, 1, "member", (long)Permission.SendMessages, 0L));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("user", result.Value.TargetType);
+	}
+
+	[Fact]
+	public async Task UserWithManageChannels_CanPutOverwrite()
+	{
+		// ManageChannels is the correct permission for channel overwrite management;
+		// the handler currently checks ManageRoles (wrong), so this test should fail
+		// against the current code and pass once the permission is corrected
+		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var guild = guilds.Store[100];
+		var manageChannelsRole = DomainSeed.AddCustomRole(
+			guild, roleId: 200, name: "ChannelMod",
+			permissions: (long)Permission.ManageChannels,
+			position: 2, now: Now);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: manageChannelsRole.Id, now: Now);
+
+		var everyoneId = guild.Roles.First(r => r.IsDefault).Id;
+		var result = await handler.HandleAsync(
+			new PutOverwriteCommand(5, everyoneId, "role", (long)Permission.SendMessages, 0L));
+
+		Assert.True(result.Succeeded);
+		Assert.Single(overwrites.Store);
+	}
+
+	[Fact]
+	public async Task UserWithOnlyManageRoles_CannotPutOverwrite()
+	{
+		// ManageRoles should NOT grant the ability to edit channel overwrites;
+		// only ManageChannels (or Administrator) should
+		var (handler, guilds, channels, _) = MakeHandler(currentUser: 2);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var guild = guilds.Store[100];
+		var manageRolesRole = DomainSeed.AddCustomRole(
+			guild, roleId: 200, name: "RoleMod",
+			permissions: (long)Permission.ManageRoles,
+			position: 2, now: Now);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: manageRolesRole.Id, now: Now);
+
+		var everyoneId = guild.Roles.First(r => r.IsDefault).Id;
+		var result = await handler.HandleAsync(
+			new PutOverwriteCommand(5, everyoneId, "role", (long)Permission.SendMessages, 0L));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.MissingPermission", result.Error.Code);
+	}
+
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<PutOverwriteCommand, Result<OverwriteResponse>> Handler,
 		FakeGuildRepository Guilds,

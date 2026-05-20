@@ -103,6 +103,29 @@ public sealed class PermissionResolverTests
 	}
 
 	[Fact]
+	public void NonOwner_TwoRolesGrantingSameBit_BitIsGrantedNotXored()
+	{
+		// if perms were accumulated with ^= instead of |=, a bit shared by two
+		// assigned roles would cancel back to 0; this test catches that mutation
+		var guild = CreateGuild(ownerId: 1);
+		long sharedBit = (long)Permission.ManageGuild;
+		var role1 = DomainSeed.AddCustomRole(
+			guild, roleId: 100, name: "R1", permissions: sharedBit, position: 2, now: Now);
+		var role2 = DomainSeed.AddCustomRole(
+			guild, roleId: 101, name: "R2", permissions: sharedBit, position: 3, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role1.Id, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role2.Id, now: Now);
+
+		var mask = PermissionResolver.Resolve(
+			userId: 2,
+			ownerId: 1,
+			allGuildRoles: guild.Roles,
+			userAssignments: guild.MemberRoles);
+
+		Assert.NotEqual(0L, mask & sharedBit);
+	}
+
+	[Fact]
 	public void Resolver_IgnoresAssignmentsForOtherUsers()
 	{
 		var guild = CreateGuild(ownerId: 1);

@@ -104,6 +104,28 @@ public sealed class ChannelCategoryTests
 	}
 
 	[Fact]
+	public void Create_NameAtMaxLength_Succeeds()
+	{
+		var name = new string('x', ChannelCategory.MaxNameLen);
+
+		var result = ChannelCategory.Create(id: 1, guildId: 10, name: name, position: 0, now: Now);
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
+	public void Rename_NameAtMaxLength_Succeeds()
+	{
+		var category = CreateValid();
+		var name = new string('x', ChannelCategory.MaxNameLen);
+
+		var result = category.Rename(name, Now);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(name, category.Name);
+	}
+
+	[Fact]
 	public void Reposition_UpdatesPositionAndTimestamp()
 	{
 		var category = CreateValid();

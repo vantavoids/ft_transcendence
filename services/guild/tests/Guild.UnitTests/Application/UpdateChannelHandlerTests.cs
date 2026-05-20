@@ -84,6 +84,35 @@ public sealed class UpdateChannelHandlerTests
 	}
 
 	[Fact]
+	public async Task NonMember_ReturnsNotAMember()
+	{
+		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 99);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: "x", Topic: null,
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: false));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.NotAMember", result.Error.Code);
+	}
+
+	[Fact]
+	public async Task MemberWithoutManageChannels_ReturnsMissingPermission()
+	{
+		var (handler, guilds, channels) = MakeHandler(ownerSeed: 1, currentUser: 2);
+		DomainSeed.AddMember(guilds.Store[100], userId: 2, joinedAt: Now);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: "x", Topic: null,
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: false));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.MissingPermission", result.Error.Code);
+	}
+
+	[Fact]
 	public async Task DetachFromCategory_NullCategoryId_IsAllowed()
 	{
 		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 1);
