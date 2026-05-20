@@ -18,6 +18,7 @@ export type DirectMessage = {
 
 type DmListProps = {
   activeDm: string;
+  directMessages: DirectMessage[];
   mobilePane: 'channels' | 'messages';
   username: string;
   onSelectDm: (dmId: string) => void;
@@ -76,16 +77,16 @@ export const directMessages: DirectMessage[] = [
   }
 ];
 
-export function getDmName(dmId: string) {
-  return directMessages.find((dm) => dm.id === dmId)?.name ?? dmId;
+export function getDmName(dmId: string, dms = directMessages) {
+  return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
-export function getDmDetails(dmId: string) {
-  return directMessages.find((dm) => dm.id === dmId) ?? null;
+export function getDmDetails(dmId: string, dms = directMessages) {
+  return dms.find((dm) => dm.id === dmId) ?? null;
 }
 
-export function hasDm(dmId: string) {
-  return directMessages.some((dm) => dm.id === dmId);
+export function hasDm(dmId: string, dms = directMessages) {
+  return dms.some((dm) => dm.id === dmId);
 }
 
 export function getDmStatusClasses(status: DirectMessage['status']) {
@@ -99,7 +100,13 @@ export function getDmStatusClasses(status: DirectMessage['status']) {
   }
 }
 
-export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListProps) {
+export function DmList({
+  activeDm,
+  directMessages,
+  mobilePane,
+  username,
+  onSelectDm
+}: DmListProps) {
   const [search, setSearch] = useState('');
 
   const filteredDms = useMemo(() => {
@@ -116,7 +123,7 @@ export function DmList({ activeDm, mobilePane, username, onSelectDm }: DmListPro
     return sortedDms.filter(
       (dm) => dm.name.toLowerCase().includes(term) || dm.lastMessage.toLowerCase().includes(term)
     );
-  }, [search]);
+  }, [directMessages, search]);
 
   return (
     <div
