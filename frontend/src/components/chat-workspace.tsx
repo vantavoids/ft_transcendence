@@ -169,6 +169,7 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 
 export function ChatWorkspace() {
   const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
   const conversationScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
   const pendingScrollBottom = useRef(false);
@@ -331,6 +332,14 @@ export function ChatWorkspace() {
     rememberConversationScrollPosition,
     updateNearBottomState
   ]);
+
+  useEffect(() => {
+    if (!activeConversationId || !isHydrated) {
+      return;
+    }
+
+    composerRef.current?.focus();
+  }, [activeConversationId, isHydrated]);
 
   function handleMessagesScroll() {
     rememberConversationScrollPosition(activeConversationId);
@@ -687,6 +696,7 @@ export function ChatWorkspace() {
               ) : null}
               <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
                 <textarea
+                  ref={composerRef}
                   value={activeDraft}
                   onChange={(event) => handleDraftChange(event.target.value)}
                   onKeyDown={(event) => {
