@@ -1,4 +1,5 @@
 using Guild.Domain.Guild;
+using Guild.Domain.Results;
 using Xunit;
 
 namespace Guild.UnitTests.Domain;
@@ -27,5 +28,41 @@ public sealed class GuildMemberTests
 		var member = GuildMember.Create(guildId: 10, userId: 42, now: Now).Value;
 
 		Assert.Null(member.Nickname);
+	}
+
+	[Fact]
+	public void Create_ZeroGuildId_Fails()
+	{
+		var result = GuildMember.Create(guildId: 0, userId: 42, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.TargetNotAMember, result.Error);
+	}
+
+	[Fact]
+	public void Create_NegativeGuildId_Fails()
+	{
+		var result = GuildMember.Create(guildId: -1, userId: 42, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.TargetNotAMember, result.Error);
+	}
+
+	[Fact]
+	public void Create_ZeroUserId_Fails()
+	{
+		var result = GuildMember.Create(guildId: 10, userId: 0, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.TargetNotAMember, result.Error);
+	}
+
+	[Fact]
+	public void Create_NegativeUserId_Fails()
+	{
+		var result = GuildMember.Create(guildId: 10, userId: -1, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.TargetNotAMember, result.Error);
 	}
 }

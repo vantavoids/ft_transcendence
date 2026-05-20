@@ -47,6 +47,19 @@ public sealed class DeleteChannelHandlerTests
 		Assert.Equal("Guild.NotAMember", result.Error.Code);
 	}
 
+	[Fact]
+	public async Task MemberWithoutManageChannels_ReturnsMissingPermission()
+	{
+		var (handler, guilds, channels) = MakeHandler(currentUser: 2);
+		DomainSeed.AddMember(guilds.Store[100], userId: 2, joinedAt: Now);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(new DeleteChannelCommand(100, 5));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.MissingPermission", result.Error.Code);
+	}
+
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<DeleteChannelCommand, Result> Handler,
 		FakeGuildRepository Guilds,

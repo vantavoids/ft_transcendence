@@ -104,6 +104,31 @@ public sealed class ChannelTests
 	}
 
 	[Fact]
+	public void Create_NegativePosition_ClampsToZero()
+	{
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "general", topic: null, type: ChannelType.Text,
+			position: -5, now: Now);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(0, result.Value.Position);
+	}
+
+	[Fact]
+	public void Create_NameAtMaxLength_Succeeds()
+	{
+		var name = new string('x', Channel.MaxNameLen);
+
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: name, topic: null, type: ChannelType.Text,
+			position: 0, now: Now);
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
 	public void Rename_HappyPath()
 	{
 		var channel = CreateValid();
@@ -122,6 +147,29 @@ public sealed class ChannelTests
 		var channel = CreateValid();
 		var result = channel.Rename("", Now);
 		Assert.True(result.IsFailure);
+	}
+
+	[Fact]
+	public void Rename_NameAtMaxLength_Succeeds()
+	{
+		var channel = CreateValid();
+		var name = new string('x', Channel.MaxNameLen);
+
+		var result = channel.Rename(name, Now);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(name, channel.Name);
+	}
+
+	[Fact]
+	public void UpdateTopic_NonEmptyTopic_PersistsValue()
+	{
+		var channel = CreateValid();
+
+		var result = channel.UpdateTopic("announcements only", Now);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("announcements only", channel.Topic);
 	}
 
 	[Fact]

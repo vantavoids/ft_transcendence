@@ -49,6 +49,54 @@ public sealed class DeleteOverwriteHandlerTests
 		Assert.Empty(overwrites.Store);
 	}
 
+	[Fact]
+	public async Task UserWithManageChannels_CanDeleteOverwrite()
+	{
+		// ManageChannels is the correct permission for channel overwrite management;
+		// the handler currently checks ManageRoles (wrong), so this test should fail
+		// against the current code and pass once the permission is corrected
+		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+		overwrites.Seed(ChannelPermissionOverwrite.Create(
+			1, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
+
+		var guild = guilds.Store[100];
+		var manageChannelsRole = DomainSeed.AddCustomRole(
+			guild, roleId: 200, name: "ChannelMod",
+			permissions: (long)Permission.ManageChannels,
+			position: 2, now: Now);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: manageChannelsRole.Id, now: Now);
+
+		var result = await handler.HandleAsync(new DeleteOverwriteCommand(5, 50));
+
+		Assert.True(result.Succeeded);
+		Assert.Empty(overwrites.Store);
+	}
+
+	[Fact]
+	public async Task UserWithOnlyManageRoles_CannotDeleteOverwrite()
+	{
+		// ManageRoles should NOT grant the ability to delete channel overwrites
+		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+		overwrites.Seed(ChannelPermissionOverwrite.Create(
+			1, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
+
+		var guild = guilds.Store[100];
+		var manageRolesRole = DomainSeed.AddCustomRole(
+			guild, roleId: 200, name: "RoleMod",
+			permissions: (long)Permission.ManageRoles,
+			position: 2, now: Now);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: manageRolesRole.Id, now: Now);
+
+		var result = await handler.HandleAsync(new DeleteOverwriteCommand(5, 50));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.MissingPermission", result.Error.Code);
+	}
+
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<DeleteOverwriteCommand, Result> Handler,
 		FakeGuildRepository Guilds,

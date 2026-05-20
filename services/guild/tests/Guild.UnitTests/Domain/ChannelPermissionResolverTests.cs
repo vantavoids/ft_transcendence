@@ -190,6 +190,90 @@ public sealed class ChannelPermissionResolverTests
 	}
 
 	[Fact]
+	public void Owner_WithoutAdminRole_StillGetsAllBits()
+	{
+		// create guild with real owner (userId=1), add userId=2 as a plain member,
+		// then reassign ownership to userId=2 via reflection -- userId=2 has no
+		// Administrator role, so the owner-check is the only thing returning ~0L;
+		// this kills the false/equality mutations on that branch
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		DomainSeed.SetOwnerId(guild, 2);
+
+		var channel = MakeChannel(guild.Id);
+
+		var mask = PermissionResolver.Resolve(
+			guild, userId: 2, channel, overwrites: Array.Empty<ChannelPermissionOverwrite>());
+
+		Assert.Equal(~0L, mask);
+	}
+
+	[Fact]
+	public void RoleOverwrites_TwoRolesAllowingSameBit_BitIsGrantedNotXored()
+	{
+		// if aggAllow were accumulated with ^= instead of |=, a bit allowed by two
+		// role overwrites would cancel to 0 -- this test catches that mutation
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+
+		var role1 = DomainSeed.AddCustomRole(guild, roleId: 200, name: "R1",
+			permissions: 0L, position: 1, now: Now);
+		var role2 = DomainSeed.AddCustomRole(guild, roleId: 201, name: "R2",
+			permissions: 0L, position: 2, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role1.Id, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role2.Id, now: Now);
+
+		var channel = MakeChannel(guild.Id);
+		long sharedBit = (long)Permission.ManageMessages;
+
+		var ow1 = ChannelPermissionOverwrite.Create(
+			id: 1, channelId: channel.Id,
+			targetType: OverwriteTargetType.Role, targetId: role1.Id,
+			allow: sharedBit, deny: 0L, now: Now).Value;
+		var ow2 = ChannelPermissionOverwrite.Create(
+			id: 2, channelId: channel.Id,
+			targetType: OverwriteTargetType.Role, targetId: role2.Id,
+			allow: sharedBit, deny: 0L, now: Now).Value;
+
+		var mask = PermissionResolver.Resolve(
+			guild, userId: 2, channel, overwrites: new[] { ow1, ow2 });
+
+		Assert.NotEqual(0L, mask & sharedBit);
+	}
+
+	[Fact]
+	public void RoleOverwrites_TwoRolesDenyingSameBit_BitIsDenied()
+	{
+		// mirrors the allow test but for aggDeny -- ^= would cancel the deny
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+
+		var role1 = DomainSeed.AddCustomRole(guild, roleId: 200, name: "R1",
+			permissions: 0L, position: 1, now: Now);
+		var role2 = DomainSeed.AddCustomRole(guild, roleId: 201, name: "R2",
+			permissions: 0L, position: 2, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role1.Id, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role2.Id, now: Now);
+
+		var channel = MakeChannel(guild.Id);
+		long sharedBit = (long)Permission.ReadMessages; // @everyone grants this
+
+		var ow1 = ChannelPermissionOverwrite.Create(
+			id: 1, channelId: channel.Id,
+			targetType: OverwriteTargetType.Role, targetId: role1.Id,
+			allow: 0L, deny: sharedBit, now: Now).Value;
+		var ow2 = ChannelPermissionOverwrite.Create(
+			id: 2, channelId: channel.Id,
+			targetType: OverwriteTargetType.Role, targetId: role2.Id,
+			allow: 0L, deny: sharedBit, now: Now).Value;
+
+		var mask = PermissionResolver.Resolve(
+			guild, userId: 2, channel, overwrites: new[] { ow1, ow2 });
+
+		Assert.Equal(0L, mask & sharedBit);
+	}
+
+	[Fact]
 	public void OverwritesForOtherRoles_AreIgnored()
 	{
 		var guild = CreateGuild(ownerId: 1);
