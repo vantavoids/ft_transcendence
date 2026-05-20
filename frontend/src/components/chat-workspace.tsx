@@ -11,7 +11,14 @@ import {
 } from 'lucide-react';
 import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
-import { DmList, getDmDetails, getDmName, getDmStatusClasses, hasDm } from './dm-list';
+import {
+  DmList,
+  directMessages,
+  getDmDetails,
+  getDmName,
+  getDmStatusClasses,
+  hasDm
+} from './dm-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
@@ -176,6 +183,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username, setUsername] = useState('cartoone');
+  const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
 
   useEffect(() => {
@@ -190,14 +198,14 @@ export function ChatWorkspace() {
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
-    setActiveDm(storedDm && hasDm(storedDm) ? storedDm : 'dm-skydogzz');
+    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : 'dm-skydogzz');
   }, []);
 
   const activeConversationId = chatMode === 'dm' ? activeDm : activeChannel;
   const activeConversationName =
     chatMode === 'dm'
       ? activeDm
-        ? getDmName(activeDm)
+        ? getDmName(activeDm, dmConversations)
         : ''
       : activeChannel
         ? getChannelName(activeChannel)
@@ -205,7 +213,8 @@ export function ChatWorkspace() {
   const activeMessages = activeConversationId
     ? (messagesByConversation[activeConversationId] ?? [])
     : [];
-  const activeDmDetails = chatMode === 'dm' && activeDm ? getDmDetails(activeDm) : null;
+  const activeDmDetails =
+    chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
   const activeMessageItems = useMemo(
     () =>
       activeMessages.map((message, index) => {
@@ -383,6 +392,27 @@ export function ChatWorkspace() {
       [activeConversationId]: [...(current[activeConversationId] ?? []), nextMessage]
     }));
     pendingScrollBottom.current = true;
+
+    if (chatMode === 'dm') {
+      const [hours, minutes] = nextMessage.timestamp.split(':').map(Number);
+      const lastActivityMinutes =
+        Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : Date.now();
+
+      setDmConversations((current) =>
+        current.map((dm) =>
+          dm.id === activeConversationId
+            ? {
+                ...dm,
+                lastMessage: content.split(/\r?\n/)[0] ?? content,
+                lastMessageAt: nextMessage.timestamp,
+                lastActivityMinutes,
+                unreadCount: 0
+              }
+            : dm
+        )
+      );
+    }
+
     setDraft('');
     setIsEmojiOpen(false);
   }
@@ -477,6 +507,7 @@ export function ChatWorkspace() {
       {chatMode === 'dm' ? (
         <DmList
           activeDm={activeDm ?? ''}
+          directMessages={dmConversations}
           mobilePane={mobilePane}
           username={username}
           onSelectDm={handleSelectDm}
