@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pencil, SmilePlus, Trash2 } from 'lucide-react';
 
 export type ChatMessageData = {
@@ -26,6 +26,10 @@ type ChatMessageProps = {
   onToggleReaction: (messageId: string) => void;
   setMessageRef: (messageId: string, element: HTMLElement | null) => void;
 };
+
+function isEscapeKey(event: KeyboardEvent | React.KeyboardEvent) {
+  return event.key === 'Escape' || event.key === 'Esc' || event.code === 'Escape';
+}
 
 export function getAccentClasses(accent: ChatMessageData['accent']) {
   switch (accent) {
@@ -71,6 +75,7 @@ export function ChatMessage({
   onToggleReaction,
   setMessageRef
 }: ChatMessageProps) {
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const reactions = Object.entries(message.reactions ?? {});
 
   useEffect(() => {
@@ -78,18 +83,27 @@ export function ChatMessage({
       return;
     }
 
+    editTextareaRef.current?.focus();
+    editTextareaRef.current?.setSelectionRange(editingDraft.length, editingDraft.length);
+  }, [editingDraft.length, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
     function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape') {
+      if (!isEscapeKey(event)) {
         return;
       }
 
-      console.log('chat message edit escape pressed', message.id);
       event.preventDefault();
+      event.stopPropagation();
       onCancelEdit();
     }
 
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
+    window.addEventListener('keydown', handleEscape, { capture: true });
+    return () => window.removeEventListener('keydown', handleEscape, { capture: true });
   }, [isEditing, message.id, onCancelEdit]);
 
   return (
@@ -159,11 +173,13 @@ export function ChatMessage({
         {isEditing ? (
           <div className={isGrouped ? '' : 'mt-2'}>
             <textarea
+              ref={editTextareaRef}
               value={editingDraft}
               onChange={(event) => onEditDraftChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
+              onKeyDownCapture={(event) => {
+                if (isEscapeKey(event)) {
                   event.preventDefault();
+                  event.stopPropagation();
                   onCancelEdit();
                   return;
                 }
