@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { MessageCircle, Plus } from 'lucide-react';
 
 type Guild = {
   id: string;
@@ -11,11 +11,19 @@ type Guild = {
   iconUrl: string;
 };
 
-const initialGuilds: Guild[] = [{
-  id: 'default',
-  name: 'Default guild',
-  iconUrl: 'https://placehold.co/160x160/png?text=G'
-}];
+type GuildSidebarProps = {
+  activeMode: 'guild' | 'dm';
+  onOpenDms: () => void;
+  onOpenGuild: () => void;
+};
+
+const initialGuilds: Guild[] = [
+  {
+    id: 'default',
+    name: 'Default guild',
+    iconUrl: 'https://placehold.co/160x160/png?text=G'
+  }
+];
 
 const guildNames = ['Neon Arena', 'Pixel Club', 'Pong Squad', 'Byte House', 'Arcade Hub'];
 const guildColors = ['78dce8', 'a9dc76', 'ffd866', 'ff6188', 'ab9df2'];
@@ -32,7 +40,7 @@ function createRandomGuild(): Guild {
   };
 }
 
-export function GuildSidebar() {
+export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const [guilds, setGuilds] = useState(initialGuilds);
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
@@ -41,17 +49,17 @@ export function GuildSidebar() {
     setGuilds((current) => [...current, createRandomGuild()]);
   }
 
-  function handleShowGuildName(guild: Guild, event: MouseEvent<HTMLButtonElement>) {
+  function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {
     const sidebarBox = sidebarRef.current?.getBoundingClientRect();
-    const guildBox = event.currentTarget.getBoundingClientRect();
+    const buttonBox = event.currentTarget.getBoundingClientRect();
 
     if (!sidebarBox) {
       return;
     }
 
     setTooltip({
-      name: guild.name,
-      top: guildBox.top - sidebarBox.top + guildBox.height / 2
+      name,
+      top: buttonBox.top - sidebarBox.top + buttonBox.height / 2
     });
   }
 
@@ -68,14 +76,30 @@ export function GuildSidebar() {
         className="mt-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
         onScroll={() => setTooltip(null)}
       >
+        <button
+          type="button"
+          onClick={onOpenDms}
+          onMouseEnter={(event) => handleShowLabel('Direct Messages', event)}
+          onMouseLeave={() => setTooltip(null)}
+          className={`flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl border transition ${
+            activeMode === 'dm'
+              ? 'border-aqua bg-panel text-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
+              : 'border-frame bg-panel text-[#8b8b8f] hover:text-white'
+          }`}
+          aria-label="Direct messages"
+        >
+          <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
+        </button>
+        <div className="mx-1 border-t border-white/10" />
         {guilds.map((guild, index) => (
           <button
             key={guild.id}
             type="button"
-            onMouseEnter={(event) => handleShowGuildName(guild, event)}
+            onClick={onOpenGuild}
+            onMouseEnter={(event) => handleShowLabel(guild.name, event)}
             onMouseLeave={() => setTooltip(null)}
             className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
-              index === 0
+              index === 0 && activeMode === 'guild'
                 ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
                 : 'border-frame'
             }`}
