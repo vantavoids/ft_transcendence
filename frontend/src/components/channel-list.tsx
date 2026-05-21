@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CircleEllipsis,
+  Bell,
   Hash,
   Headphones,
   MicOff,
@@ -27,6 +28,7 @@ type ChannelListProps = {
   activeChannel: string;
   mobilePane: 'channels' | 'messages';
   username: string;
+  onOpenNotifications: () => void;
   onSelectChannel: (channelId: string) => void;
 };
 
@@ -115,6 +117,7 @@ export function ChannelList({
   activeChannel,
   mobilePane,
   username,
+  onOpenNotifications,
   onSelectChannel
 }: ChannelListProps) {
   const [search, setSearch] = useState('');
@@ -218,6 +221,15 @@ export function ChannelList({
           <div className="flex shrink-0 items-center gap-3 text-pink">
             <MicOff className="h-6 w-6" strokeWidth={1.8} />
             <Headphones className="h-6 w-6 text-[#8b8b8f]" strokeWidth={1.8} />
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              className="relative text-[#8b8b8f] transition hover:text-white"
+              aria-label="Show notifications"
+            >
+              <Bell className="h-6 w-6" strokeWidth={1.8} />
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink" />
+            </button>
             <Link href="/profile" className="text-[#8b8b8f] transition hover:text-white">
               <Settings className="h-6 w-6" strokeWidth={1.8} />
             </Link>

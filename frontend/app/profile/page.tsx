@@ -60,12 +60,6 @@ export default function ProfilePage() {
           <Link href="/chat" className="rounded-lg border border-white/8 bg-panel px-3 py-2 transition hover:text-white">
             Chat
           </Link>
-          <Link
-            href="/notifications"
-            className="rounded-lg border border-white/8 bg-panel px-3 py-2 transition hover:text-white"
-          >
-            Notifications
-          </Link>
         </div>
       </div>
 

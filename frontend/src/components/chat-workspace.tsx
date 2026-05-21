@@ -25,6 +25,7 @@ import {
   type GuildMember
 } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
+import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
@@ -194,6 +195,7 @@ export function ChatWorkspace() {
   const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
+  const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -591,6 +593,7 @@ export function ChatWorkspace() {
               directMessages={dmConversations}
               mobilePane={mobilePane}
               username={username}
+              onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onSelectDm={handleSelectDm}
             />
           ) : (
@@ -598,6 +601,7 @@ export function ChatWorkspace() {
               activeChannel={activeChannel ?? ''}
               mobilePane={mobilePane}
               username={username}
+              onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onSelectChannel={handleSelectChannel}
             />
           )}
@@ -789,6 +793,10 @@ export function ChatWorkspace() {
 
           {profileMember ? (
             <ProfileCard member={profileMember} onClose={() => setProfileMember(null)} />
+          ) : null}
+
+          {isNotificationCardOpen ? (
+            <NotificationCard onClose={() => setIsNotificationCardOpen(false)} />
           ) : null}
         </>
       )}
