@@ -1,4 +1,5 @@
 import { getPublicApiBase } from "../config/env";
+import { getAccessToken } from "../lib/session";
 
 type Service = "auth" | "guild" | "user" | "notification" | "chat";
 
@@ -27,6 +28,12 @@ export async function apiFetch<T>(
   const url = buildUrl(base, path, options.query);
 
   const headers = new Headers(options.headers);
+  const accessToken = getAccessToken();
+
+  if (accessToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
   if (options.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
