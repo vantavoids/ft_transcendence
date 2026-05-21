@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CircleEllipsis, Headphones, MicOff, Search, Settings, UserRound } from 'lucide-react';
+import {
+  Bell,
+  CircleEllipsis,
+  Headphones,
+  MicOff,
+  Search,
+  Settings,
+  UserRound
+} from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 
 export type DirectMessage = {
@@ -21,6 +29,7 @@ type DmListProps = {
   directMessages: DirectMessage[];
   mobilePane: 'channels' | 'messages';
   username: string;
+  onOpenNotifications: () => void;
   onSelectDm: (dmId: string) => void;
 };
 
@@ -105,6 +114,7 @@ export function DmList({
   directMessages,
   mobilePane,
   username,
+  onOpenNotifications,
   onSelectDm
 }: DmListProps) {
   const [search, setSearch] = useState('');
@@ -244,6 +254,15 @@ export function DmList({
           <div className="flex shrink-0 items-center gap-3 text-pink">
             <MicOff className="h-6 w-6" strokeWidth={1.8} />
             <Headphones className="h-6 w-6 text-[#8b8b8f]" strokeWidth={1.8} />
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              className="relative text-[#8b8b8f] transition hover:text-white"
+              aria-label="Show notifications"
+            >
+              <Bell className="h-6 w-6" strokeWidth={1.8} />
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink" />
+            </button>
             <Link href="/profile" className="text-[#8b8b8f] transition hover:text-white">
               <Settings className="h-6 w-6" strokeWidth={1.8} />
             </Link>
