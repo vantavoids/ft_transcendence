@@ -40,6 +40,7 @@ type DmListProps = {
   onSelectDm: (dmId: string) => void;
 };
 
+// TODO(api:chat,user): replace local DMs with GET /chat/dms and hydrate partner profiles via GET /users/{id}.
 export const directMessages: DirectMessage[] = [
   {
     id: 'dm-skydogzz',

@@ -37,6 +37,7 @@ type ChannelListProps = {
   onSelectChannel: (channelId: string) => void;
 };
 
+// TODO(api:guild): replace local categories with GET /guilds/{id}/channels and category endpoints.
 export const channelCategories: ChannelCategory[] = [
   {
     id: 'welcome',

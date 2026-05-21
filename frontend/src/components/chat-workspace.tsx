@@ -42,6 +42,8 @@ type ChannelScrollPosition = {
   topOffset: number;
 };
 
+// TODO(api:chat,user): load channel history with GET /chat/channels/{channel_id}/messages
+// and DM history with GET /chat/dms/{user_id}/messages, then hydrate author profiles.
 const initialMessages: Record<string, ChatMessageData[]> = {
   general: [
     {
@@ -428,6 +430,7 @@ export function ChatWorkspace() {
   }
 
   function handleSubmitMessage() {
+    // TODO(api:chat): send guild messages through SignalR SendMessage and DMs through SendDirectMessage.
     const content = activeDraft.trim();
     if (!content || !activeConversationId) {
       return;
