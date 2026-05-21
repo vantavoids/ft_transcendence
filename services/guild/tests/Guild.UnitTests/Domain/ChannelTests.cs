@@ -129,6 +129,21 @@ public sealed class ChannelTests
 	}
 
 	[Fact]
+	public void Create_TopicAtMaxLength_Succeeds()
+	{
+		// topic.Length > MaxTopicLen is the boundary; a mutation to >= would reject
+		// exactly MaxTopicLen characters -- this test pins the inclusive upper bound
+		var topic = new string('x', Channel.MaxTopicLen);
+
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "general", topic: topic, type: ChannelType.Text,
+			position: 0, now: Now);
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
 	public void Rename_HappyPath()
 	{
 		var channel = CreateValid();

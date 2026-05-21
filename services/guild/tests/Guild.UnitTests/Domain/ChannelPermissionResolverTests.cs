@@ -296,6 +296,55 @@ public sealed class ChannelPermissionResolverTests
 		Assert.NotEqual(0L, mask & (long)Permission.ReadMessages);
 	}
 
+	[Fact]
+	public void TwoAssignedRoles_SameBasePermissionBit_BitIsGrantedNotXored()
+	{
+		// if base-permission accumulation used ^= instead of |=, a bit shared by two
+		// assigned roles would cancel back to 0; distinct from the role-overwrite
+		// accumulation tested by RoleOverwrites_TwoRolesAllowingSameBit_BitIsGrantedNotXored
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		long sharedBit = (long)Permission.ManageChannels;
+		var role1 = DomainSeed.AddCustomRole(guild, roleId: 200, name: "R1",
+			permissions: sharedBit, position: 1, now: Now);
+		var role2 = DomainSeed.AddCustomRole(guild, roleId: 201, name: "R2",
+			permissions: sharedBit, position: 2, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role1.Id, now: Now);
+		DomainSeed.AssignRole(guild, userId: 2, roleId: role2.Id, now: Now);
+		var channel = MakeChannel(guild.Id);
+
+		var mask = PermissionResolver.Resolve(
+			guild, userId: 2, channel, overwrites: Array.Empty<ChannelPermissionOverwrite>());
+
+		Assert.NotEqual(0L, mask & sharedBit);
+	}
+
+	[Fact]
+	public void MemberOverwrite_NotPickedUpByRoleOverwriteWithMatchingTargetId()
+	{
+		// the member-overwrite predicate is TargetType==Member && TargetId==userId.
+		// a mutation replacing && with || would match role overwrites whose targetId
+		// happens to equal userId; this test deliberately constructs that overlap.
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		// role whose Id is the same numeric value as userId=2; user does NOT hold it
+		DomainSeed.AddCustomRole(guild, roleId: 2, name: "Coincident",
+			permissions: 0L, position: 1, now: Now);
+		var channel = MakeChannel(guild.Id);
+
+		// role overwrite for roleId=2 denies ReadMessages
+		var roleOw = ChannelPermissionOverwrite.Create(
+			id: 1, channelId: channel.Id,
+			targetType: OverwriteTargetType.Role, targetId: 2,
+			allow: 0L, deny: (long)Permission.ReadMessages, now: Now).Value;
+
+		var mask = PermissionResolver.Resolve(
+			guild, userId: 2, channel, overwrites: new[] { roleOw });
+
+		// user doesn't hold the role, so the deny must NOT apply
+		Assert.NotEqual(0L, mask & (long)Permission.ReadMessages);
+	}
+
 	private static GuildEntity CreateGuild(long ownerId) =>
 		GuildEntity.Create(
 			id: 10, name: "Test", description: null, iconUrl: null, bannerUrl: null,

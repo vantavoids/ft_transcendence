@@ -176,6 +176,29 @@ public sealed class UpdateCategoryHandlerTests
 		Assert.Equal(originalPosition, result.Value.Position);
 	}
 
+	[Fact]
+	public async Task MemberCheck_UsesAnyNotAll_InMultiMemberGuild()
+	{
+		// Any(m => m.UserId == cuid) succeeds when cuid is one of several members;
+		// All would fail because the other member has a different userId
+		var guildRepo = new FakeGuildRepository();
+		var catRepo = new FakeChannelCategoryRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		await guildRepo.AddAsync(guild);
+		SeedCategory(catRepo, id: 500);
+
+		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
+			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "Renamed", Position: null));
+
+		Assert.True(result.Succeeded);
+	}
+
 	private static void Seed(
 		FakeGuildRepository guildRepo,
 		FakeChannelCategoryRepository catRepo,
