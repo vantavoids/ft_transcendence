@@ -196,6 +196,8 @@ export function ChatWorkspace() {
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(false);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -393,6 +395,22 @@ export function ChatWorkspace() {
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
     window.sessionStorage.setItem(LAST_CHAT_DM_KEY, dmId);
     setMobilePane('messages');
+  }
+
+  function handleToggleMicMute() {
+    setIsMicMuted((current) => !current);
+  }
+
+  function handleToggleDeafen() {
+    setIsDeafened((current) => {
+      const next = !current;
+
+      if (next) {
+        setIsMicMuted(true);
+      }
+
+      return next;
+    });
   }
 
   function handleSubmitMessage() {
@@ -593,6 +611,10 @@ export function ChatWorkspace() {
               directMessages={dmConversations}
               mobilePane={mobilePane}
               username={username}
+              isMicMuted={isMicMuted}
+              isDeafened={isDeafened}
+              onToggleDeafen={handleToggleDeafen}
+              onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onSelectDm={handleSelectDm}
             />
@@ -601,6 +623,10 @@ export function ChatWorkspace() {
               activeChannel={activeChannel ?? ''}
               mobilePane={mobilePane}
               username={username}
+              isMicMuted={isMicMuted}
+              isDeafened={isDeafened}
+              onToggleDeafen={handleToggleDeafen}
+              onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onSelectChannel={handleSelectChannel}
             />

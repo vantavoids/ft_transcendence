@@ -7,6 +7,7 @@ import {
   Bell,
   Hash,
   Headphones,
+  Mic,
   MicOff,
   Search,
   Settings,
@@ -28,6 +29,10 @@ type ChannelListProps = {
   activeChannel: string;
   mobilePane: 'channels' | 'messages';
   username: string;
+  isMicMuted: boolean;
+  isDeafened: boolean;
+  onToggleDeafen: () => void;
+  onToggleMicMute: () => void;
   onOpenNotifications: () => void;
   onSelectChannel: (channelId: string) => void;
 };
@@ -117,6 +122,10 @@ export function ChannelList({
   activeChannel,
   mobilePane,
   username,
+  isMicMuted,
+  isDeafened,
+  onToggleDeafen,
+  onToggleMicMute,
   onOpenNotifications,
   onSelectChannel
 }: ChannelListProps) {
@@ -218,9 +227,29 @@ export function ChannelList({
               {username}
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-3 text-pink">
-            <MicOff className="h-6 w-6" strokeWidth={1.8} />
-            <Headphones className="h-6 w-6 text-[#8b8b8f]" strokeWidth={1.8} />
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={onToggleMicMute}
+              className={`transition hover:text-white ${isMicMuted ? 'text-pink' : 'text-[#8b8b8f]'}`}
+              aria-label={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
+              aria-pressed={isMicMuted}
+            >
+              {isMicMuted ? (
+                <MicOff className="h-6 w-6" strokeWidth={1.8} />
+              ) : (
+                <Mic className="h-6 w-6" strokeWidth={1.8} />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onToggleDeafen}
+              className={`transition hover:text-white ${isDeafened ? 'text-pink' : 'text-[#8b8b8f]'}`}
+              aria-label={isDeafened ? 'Undeafen audio' : 'Deafen audio'}
+              aria-pressed={isDeafened}
+            >
+              <Headphones className="h-6 w-6" strokeWidth={1.8} />
+            </button>
             <button
               type="button"
               onClick={onOpenNotifications}
