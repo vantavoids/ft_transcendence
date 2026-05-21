@@ -106,6 +106,61 @@ public sealed class CreateChannelTests(GuildApiFactory factory) : IClassFixture<
 	}
 
 	[Fact]
+	public async Task AnnouncementType_Returns_201()
+	{
+		// contract: type must accept "text", "announcement", and "voice"
+		// currently only "text" and "voice" are in the ChannelType enum
+		var client = factory.CreateAuthenticatedClient(userId: 5110);
+		var created = await client.CreateGuildAsync("guild");
+		var id = created.GetProperty("id").GetString()!;
+
+		var resp = await client.PostAsJsonAsync(
+			$"/v1/guilds/{id}/channels",
+			new { name = "announcements", type = "announcement" },
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		Assert.Equal("announcement", body.GetProperty("type").GetString());
+	}
+
+	[Fact]
+	public async Task Response_IncludesIsNsfw()
+	{
+		// contract channel shape includes is_nsfw (defaults to false)
+		var client = factory.CreateAuthenticatedClient(userId: 5111);
+		var created = await client.CreateGuildAsync("guild");
+		var id = created.GetProperty("id").GetString()!;
+
+		var resp = await client.PostAsJsonAsync(
+			$"/v1/guilds/{id}/channels",
+			new { name = "general", type = "text" },
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		Assert.False(body.GetProperty("is_nsfw").GetBoolean());
+	}
+
+	[Fact]
+	public async Task Response_IncludesSlowmodeSeconds()
+	{
+		// contract channel shape includes slowmode_seconds (defaults to 0)
+		var client = factory.CreateAuthenticatedClient(userId: 5112);
+		var created = await client.CreateGuildAsync("guild");
+		var id = created.GetProperty("id").GetString()!;
+
+		var resp = await client.PostAsJsonAsync(
+			$"/v1/guilds/{id}/channels",
+			new { name = "general", type = "text" },
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		Assert.Equal(0, body.GetProperty("slowmode_seconds").GetInt32());
+	}
+
+	[Fact]
 	public async Task WithoutPosition_AutoAppendsPerCategory()
 	{
 		var client = factory.CreateAuthenticatedClient(userId: 5109);
