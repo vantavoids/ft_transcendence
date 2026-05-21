@@ -140,6 +140,29 @@ public sealed class CreateCategoryHandlerTests
 		Assert.Equal(6, result.Value.Position);
 	}
 
+	[Fact]
+	public async Task MemberCheck_UsesAnyNotAll_InMultiMemberGuild()
+	{
+		// Any(m => m.UserId == cuid) is true when cuid is ONE of several members.
+		// All(m => m.UserId == cuid) would be false (the other member has a different
+		// userId), incorrectly rejecting a valid member as NotAMember.
+		var guildRepo = new FakeGuildRepository();
+		var catRepo = new FakeChannelCategoryRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		await guildRepo.AddAsync(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
+			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateCategoryCommand(GuildId: 100, Name: "General", Position: 0));
+
+		Assert.True(result.Succeeded);
+	}
+
 	private static void Seed(FakeGuildRepository repo, long ownerId)
 	{
 		var guild = GuildEntity.Create(

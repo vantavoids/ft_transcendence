@@ -121,6 +121,32 @@ public sealed class CreateChannelHandlerTests
 		Assert.Equal(4, result.Value.Position);
 	}
 
+	[Fact]
+	public async Task MemberCheck_UsesAllNotAny_InMultiMemberGuild()
+	{
+		// All(m => m.UserId != cuid) = false when cuid IS a member -> correct, proceeds.
+		// Any(m => m.UserId != cuid) = true because the *other* member satisfies != cuid,
+		// which would incorrectly reject the current user as NotAMember.
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var cats = new FakeChannelCategoryRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		await guilds.AddAsync(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, cats,
+			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "general", Type: "text",
+				CategoryId: null, Topic: null, Position: 0));
+
+		Assert.True(result.Succeeded);
+	}
+
 	private static Guild.Application.Abstractions.Messaging.ICommandHandler<CreateChannelCommand, Result<ChannelResponse>>
 		MakeHandler(
 			out FakeGuildRepository guilds,

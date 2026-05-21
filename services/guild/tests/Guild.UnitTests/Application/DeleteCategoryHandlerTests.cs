@@ -98,6 +98,29 @@ public sealed class DeleteCategoryHandlerTests
 		Assert.Empty(catRepo.Store);
 	}
 
+	[Fact]
+	public async Task MemberCheck_UsesAnyNotAll_InMultiMemberGuild()
+	{
+		// Any(m => m.UserId == cuid) succeeds when cuid is one of several members;
+		// All would fail because the other member has a different userId
+		var guildRepo = new FakeGuildRepository();
+		var catRepo = new FakeChannelCategoryRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		await guildRepo.AddAsync(guild);
+		SeedCategory(catRepo, id: 500);
+
+		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
+			guildRepo, catRepo, new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new DeleteCategoryCommand(GuildId: 100, CategoryId: 500));
+
+		Assert.True(result.Succeeded);
+	}
+
 	private static void Seed(
 		FakeGuildRepository guildRepo,
 		FakeChannelCategoryRepository catRepo,

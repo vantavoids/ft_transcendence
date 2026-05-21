@@ -189,6 +189,39 @@ public sealed class PutOverwriteHandlerTests
 		Assert.Equal("Guild.MissingPermission", result.Error.Code);
 	}
 
+	[Fact]
+	public async Task SecondPut_AllowDenyOverlap_Rejected()
+	{
+		// first PUT creates the overwrite; second PUT with overlapping bits must
+		// surface the validation failure from the update path (not just from create)
+		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+		var roleId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
+
+		await handler.HandleAsync(new PutOverwriteCommand(5, roleId, "role", 1L, 0L));
+		var result = await handler.HandleAsync(new PutOverwriteCommand(5, roleId, "role", 1L, 1L));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.OverwriteAllowDenyOverlap", result.Error.Code);
+	}
+
+	[Fact]
+	public async Task MemberTarget_ValidMemberInMultiMemberGuild_Succeeds()
+	{
+		// ensures the member-existence check uses All(m => m.UserId != targetId):
+		// Any(m => m.UserId != 2) is true in a two-member guild because member 1
+		// satisfies != 2, which would incorrectly reject member 2 as a valid target
+		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+		DomainSeed.AddMember(guilds.Store[100], userId: 2, joinedAt: Now);
+
+		var result = await handler.HandleAsync(
+			new PutOverwriteCommand(5, 2, "member", (long)Permission.SendMessages, 0L));
+
+		Assert.True(result.Succeeded);
+		Assert.Single(overwrites.Store);
+	}
+
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<PutOverwriteCommand, Result<OverwriteResponse>> Handler,
 		FakeGuildRepository Guilds,
