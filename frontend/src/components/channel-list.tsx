@@ -231,7 +231,9 @@ export function ChannelList({
             <button
               type="button"
               onClick={onToggleMicMute}
-              className={`transition hover:text-white ${isMicMuted ? 'text-pink' : 'text-[#8b8b8f]'}`}
+              className={`transition ${
+                isMicMuted ? 'text-pink hover:text-[#ff8aa7]' : 'text-[#8b8b8f] hover:text-white'
+              }`}
               aria-label={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
               aria-pressed={isMicMuted}
             >
@@ -244,7 +246,9 @@ export function ChannelList({
             <button
               type="button"
               onClick={onToggleDeafen}
-              className={`transition hover:text-white ${isDeafened ? 'text-pink' : 'text-[#8b8b8f]'}`}
+              className={`transition ${
+                isDeafened ? 'text-pink hover:text-[#ff8aa7]' : 'text-[#8b8b8f] hover:text-white'
+              }`}
               aria-label={isDeafened ? 'Undeafen audio' : 'Deafen audio'}
               aria-pressed={isDeafened}
             >
