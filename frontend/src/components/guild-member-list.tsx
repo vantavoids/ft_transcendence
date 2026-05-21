@@ -86,10 +86,11 @@ function RoleIcon({ role }: { role: GuildMember['role'] }) {
 }
 
 type GuildMemberListProps = {
+  onToggleVisibility: () => void;
   onOpenProfile: (member: GuildMember) => void;
 };
 
-export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
+export function GuildMemberList({ onToggleVisibility, onOpenProfile }: GuildMemberListProps) {
   return (
     <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 xl:flex">
       <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5">
@@ -99,7 +100,15 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
             {guildMembers.length} online and offline
           </p>
         </div>
-        <UserRound className="h-5 w-5 text-[#8c8c90]" strokeWidth={1.8} />
+        <button
+          type="button"
+          onClick={onToggleVisibility}
+          className="text-aqua transition hover:text-white"
+          aria-label="Hide member list"
+          aria-pressed
+        >
+          <UserRound className="h-5 w-5" strokeWidth={1.8} />
+        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
