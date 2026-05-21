@@ -30,7 +30,7 @@ internal sealed class DeleteOverwriteHandler(
 
 		var mask = PermissionResolver.Resolve(
 			currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-		if (!PermissionResolver.HasPermission(mask, Permission.ManageRoles))
+		if (!PermissionResolver.HasPermission(mask, Permission.ManageChannels))
 			return GuildFailures.MissingPermission;
 
 		// the URL carries only (channel_id, target_id); since snowflake ids are

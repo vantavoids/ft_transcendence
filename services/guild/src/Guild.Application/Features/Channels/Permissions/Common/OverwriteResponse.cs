@@ -17,7 +17,7 @@ public sealed record OverwriteResponse(
 	public static OverwriteResponse From(ChannelPermissionOverwrite o) => new(
 		Id: o.Id.ToString(),
 		ChannelId: o.ChannelId.ToString(),
-		TargetType: o.TargetType == OverwriteTargetType.Role ? "role" : "member",
+		TargetType: o.TargetType == OverwriteTargetType.Role ? "role" : "user",
 		TargetId: o.TargetId.ToString(),
 		Allow: o.Allow,
 		Deny: o.Deny);
