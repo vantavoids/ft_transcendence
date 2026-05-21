@@ -126,6 +126,26 @@ public sealed class AuthUser
         UpdatedAt = now;
     }
 
+    public void VerifyEmail(DateTimeOffset now)
+    {
+        if (Email is not null)
+            Email = Email.Verify();
+
+        UpdatedAt = now;
+    }
+
+    public Result SetEmail(DateTimeOffset now, string email, bool ?verified = null)
+    {
+        var emailResult = Email.Create(email);
+        if (emailResult.IsFailure)
+            return emailResult.Error;
+
+        Email = verified == true ? emailResult.Value.Verify() : emailResult.Value;
+        UpdatedAt = now;
+
+        return Result.Ok();
+    }
+
     public void SoftDelete(DateTimeOffset now)
     {
         DeletedAt = now;
