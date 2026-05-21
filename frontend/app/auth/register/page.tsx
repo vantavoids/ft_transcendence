@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CircleCheck } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { register } from '../../../src/shared/api/auth';
 import { createFakeSession } from '../../../src/shared/lib/session';
@@ -51,44 +51,64 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthCard title="register" alternateHref="/auth/login" alternateLabel="login">
-      <form action={handleSubmit} className="grid gap-6">
+    <AuthCard
+      title="Register"
+      subtitle="Cree ton profil local pour tester le chat et les guildes."
+      alternateHref="/auth/login"
+      alternateLabel="Login"
+    >
+      <form action={handleSubmit} className="grid gap-4">
         <div className="grid gap-2">
+          <label htmlFor="username" className="text-sm font-semibold text-white/70">
+            Username
+          </label>
           <input
+            id="username"
             name="username"
             placeholder="username"
-            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
           {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
         </div>
         <div className="grid gap-2">
+          <label htmlFor="password" className="text-sm font-semibold text-white/70">
+            Password
+          </label>
           <input
+            id="password"
             name="password"
             type="password"
             placeholder="password"
-            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
           {errors.password ? <p className="text-sm text-pink">{errors.password}</p> : null}
         </div>
         <div className="grid gap-2">
+          <label htmlFor="confirm" className="text-sm font-semibold text-white/70">
+            Confirm password
+          </label>
           <input
+            id="confirm"
             name="confirm"
             type="password"
             placeholder="confirm"
-            className="h-12 w-full rounded-lg border border-transparent bg-input-bg px-5 text-center text-[1.55rem] text-white outline-none placeholder:text-input-placeholder"
+            className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
           {errors.confirm ? <p className="text-sm text-pink">{errors.confirm}</p> : null}
         </div>
-        {serverError ? <p className="text-center text-sm text-pink">{serverError}</p> : null}
+        {serverError ? (
+          <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
+            {serverError}
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 flex justify-center disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 flex h-11 items-center justify-center gap-2 rounded-md bg-aqua text-sm font-bold text-primary-bg transition hover:bg-white disabled:cursor-not-allowed disabled:bg-frame disabled:text-white/25"
           aria-label="Submit register"
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/40 text-white transition hover:border-white hover:bg-white/5">
-            <CircleCheck className="h-7 w-7" strokeWidth={1.3} />
-          </span>
+          <UserPlus className="h-4 w-4" strokeWidth={2} />
+          {isSubmitting ? 'Creating account...' : 'Create account'}
         </button>
       </form>
     </AuthCard>
