@@ -38,6 +38,7 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 	[Fact]
 	public async Task HappyPath_RoleTarget_Creates()
 	{
+		// contract: 204 No Content (body assertions belong in GET tests)
 		var owner = factory.CreateAuthenticatedClient(userId: 5404);
 		var created = await owner.CreateGuildAsync("guild");
 		var guildId = long.Parse(created.GetProperty("id").GetString()!);
@@ -50,11 +51,7 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 			new { target_type = "role", allow = 4L, deny = 0L },
 			JsonOptions.SnakeCase);
 
-		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-		var body = await resp.ReadJsonAsync();
-		Assert.Equal("role", body.GetProperty("target_type").GetString());
-		Assert.Equal(roleId, body.GetProperty("target_id").GetString());
-		Assert.Equal(4L, body.GetProperty("allow").GetInt64());
+		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 	}
 
 	[Fact]
@@ -89,7 +86,6 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 		Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
 	}
 
-	// BUG: handler checks ManageRoles instead of ManageChannels -- should return 200, currently 403
 	[Fact]
 	public async Task MemberWithManageChannels_CanPutOverwrite()
 	{
@@ -106,7 +102,7 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 			$"/v1/channels/{channelId}/permissions/{roleId}",
 			new { target_type = "role", allow = (long)Permission.SendMessages, deny = 0L },
 			JsonOptions.SnakeCase);
-		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 	}
 
 	// BUG: handler checks ManageRoles instead of ManageChannels -- ManageRoles should NOT suffice
@@ -129,7 +125,6 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
 	}
 
-	// BUG: "user" keyword not accepted as alias for member target -- should return 200, currently 400
 	[Fact]
 	public async Task UserKeyword_AcceptedAsMemberTarget()
 	{
@@ -142,25 +137,6 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 			$"/v1/channels/{channelId}/permissions/5411",
 			new { target_type = "user", allow = (long)Permission.SendMessages, deny = 0L },
 			JsonOptions.SnakeCase);
-		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-	}
-
-	// BUG: response serialises target_type as "member" instead of "user"
-	[Fact]
-	public async Task MemberTargetOverwrite_ResponseTargetTypeIsUser()
-	{
-		var owner = factory.CreateAuthenticatedClient(userId: 5412);
-		var created = await owner.CreateGuildAsync("guild");
-		var guildId = long.Parse(created.GetProperty("id").GetString()!);
-		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
-
-		var resp = await owner.PutAsJsonAsync(
-			$"/v1/channels/{channelId}/permissions/5412",
-			new { target_type = "member", allow = (long)Permission.SendMessages, deny = 0L },
-			JsonOptions.SnakeCase);
-
-		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-		var body = await resp.ReadJsonAsync();
-		Assert.Equal("user", body.GetProperty("target_type").GetString());
+		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 	}
 }

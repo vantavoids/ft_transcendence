@@ -104,6 +104,21 @@ public sealed class ChannelTests
 	}
 
 	[Fact]
+	public void Create_AnnouncementType_Succeeds()
+	{
+		// ChannelType.Announcement (value 2) must be added to the enum;
+		// using the raw cast so the test compiles before the enum value exists
+		const ChannelType Announcement = (ChannelType)2;
+
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "announcements", topic: null,
+			type: Announcement, position: 0, now: Now);
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
 	public void Create_NegativePosition_ClampsToZero()
 	{
 		var result = Channel.Create(

@@ -48,6 +48,23 @@ public sealed class ListChannelsTests(GuildApiFactory factory) : IClassFixture<G
 	}
 
 	[Fact]
+	public async Task Channel_Shape_IncludesIsNsfwAndSlowmodeSeconds()
+	{
+		// contract channel object always includes is_nsfw and slowmode_seconds
+		var client = factory.CreateAuthenticatedClient(userId: 5006);
+		var created = await client.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		await factory.AddChannelAsync(guildId, categoryId: null, name: "general");
+
+		var resp = await client.GetAsync($"/v1/guilds/{guildId}/channels");
+		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+		var body = await resp.ReadJsonAsync();
+		var channel = body[0];
+		Assert.False(channel.GetProperty("is_nsfw").GetBoolean());
+		Assert.Equal(0, channel.GetProperty("slowmode_seconds").GetInt32());
+	}
+
+	[Fact]
 	public async Task Member_Sees_All_Channels()
 	{
 		var client = factory.CreateAuthenticatedClient(userId: 5005);
