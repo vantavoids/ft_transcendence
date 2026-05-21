@@ -10,9 +10,11 @@ import {
   MicOff,
   Search,
   Settings,
+  UserPlus,
   UserRound
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
+import { FriendsList, friends } from './friends-list';
 
 export type DirectMessage = {
   id: string;
@@ -127,6 +129,7 @@ export function DmList({
   onSelectDm
 }: DmListProps) {
   const [search, setSearch] = useState('');
+  const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
 
   const filteredDms = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -145,6 +148,7 @@ export function DmList({
   }, [directMessages, search]);
 
   const hasAnyDms = directMessages.length > 0;
+  const isFriendsView = activeView === 'friends';
 
   return (
     <div
@@ -161,7 +165,7 @@ export function DmList({
             Logo<span className="text-aqua">_</span>
           </Link>
           <h2 className="min-w-0 truncate font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
-            Direct Messages
+            {isFriendsView ? 'Friends' : 'Direct Messages'}
           </h2>
           <div className="flex shrink-0 items-center gap-3 text-[#8c8c90]">
             <UserRound className="h-5 w-5" strokeWidth={1.8} />
@@ -169,88 +173,123 @@ export function DmList({
           </div>
         </div>
 
-        <label className="mt-6 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-          <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search DMs"
-            className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-          />
-        </label>
-      </div>
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-md bg-panel p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('dms');
+              setSearch('');
+            }}
+            className={`flex h-9 items-center justify-center gap-2 rounded text-sm font-bold transition ${
+              !isFriendsView ? 'bg-frame text-white' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <UserRound className="h-4 w-4" strokeWidth={1.8} />
+            DMs
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView('friends');
+              setSearch('');
+            }}
+            className={`flex h-9 items-center justify-center gap-2 rounded text-sm font-bold transition ${
+              isFriendsView ? 'bg-frame text-white' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <UserPlus className="h-4 w-4" strokeWidth={1.8} />
+            Friends
+          </button>
+        </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
-        {filteredDms.length === 0 ? (
-          <div className="flex h-full min-h-[16rem] flex-col items-center justify-center px-5 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-panel text-[#8b8b8f]">
-              <UserRound className="h-6 w-6" strokeWidth={1.8} />
-            </div>
-            <p className="mt-4 text-[1rem] font-bold text-white">
-              {hasAnyDms ? 'No DMs found' : 'No direct messages'}
-            </p>
-            <p className="mt-1 max-w-[16rem] text-sm leading-5 text-white/35">
-              {hasAnyDms
-                ? 'Try another name or message preview.'
-                : 'Your conversations will appear here.'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredDms.map((dm) => {
-              const isActive = dm.id === activeDm;
-
-              return (
-                <button
-                  key={dm.id}
-                  type="button"
-                  onClick={() => onSelectDm(dm.id)}
-                  className={`flex h-[4.75rem] w-full items-center gap-3 rounded-lg px-3 text-left transition ${
-                    isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
-                  }`}
-                >
-                  <span className="relative shrink-0">
-                    <span
-                      className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                        dm.accent
-                      )}`}
-                    >
-                      {dm.name.slice(0, 1).toUpperCase()}
-                    </span>
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                        dm.status
-                      )}`}
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center justify-between gap-3">
-                      <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
-                      <span className="mono-detail shrink-0 text-xs text-white/30">
-                        {dm.lastMessageAt}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
-                      <span
-                        className={`block truncate text-sm ${
-                          dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
-                        }`}
-                      >
-                        {dm.lastMessage}
-                      </span>
-                      {dm.unreadCount > 0 ? (
-                        <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
-                          {dm.unreadCount}
-                        </span>
-                      ) : null}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {isFriendsView ? null : (
+          <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
+            <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search DMs"
+              className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
+            />
+          </label>
         )}
       </div>
+
+      {isFriendsView ? (
+        <FriendsList friends={friends} search={search} onSearchChange={setSearch} />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
+          {filteredDms.length === 0 ? (
+            <div className="flex h-full min-h-[16rem] flex-col items-center justify-center px-5 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-panel text-[#8b8b8f]">
+                <UserRound className="h-6 w-6" strokeWidth={1.8} />
+              </div>
+              <p className="mt-4 text-[1rem] font-bold text-white">
+                {hasAnyDms ? 'No DMs found' : 'No direct messages'}
+              </p>
+              <p className="mt-1 max-w-[16rem] text-sm leading-5 text-white/35">
+                {hasAnyDms
+                  ? 'Try another name or message preview.'
+                  : 'Your conversations will appear here.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredDms.map((dm) => {
+                const isActive = dm.id === activeDm;
+
+                return (
+                  <button
+                    key={dm.id}
+                    type="button"
+                    onClick={() => onSelectDm(dm.id)}
+                    className={`flex h-[4.75rem] w-full items-center gap-3 rounded-lg px-3 text-left transition ${
+                      isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
+                    }`}
+                  >
+                    <span className="relative shrink-0">
+                      <span
+                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                          dm.accent
+                        )}`}
+                      >
+                        {dm.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
+                          dm.status
+                        )}`}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center justify-between gap-3">
+                        <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
+                        <span className="mono-detail shrink-0 text-xs text-white/30">
+                          {dm.lastMessageAt}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
+                        <span
+                          className={`block truncate text-sm ${
+                            dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
+                          }`}
+                        >
+                          {dm.lastMessage}
+                        </span>
+                        {dm.unreadCount > 0 ? (
+                          <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
+                            {dm.unreadCount}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="shrink-0 border-t border-white/8 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
