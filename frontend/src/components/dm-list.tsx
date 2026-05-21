@@ -39,6 +39,7 @@ type DmListProps = {
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
+  onOpenSettings: () => void;
   onSelectDm: (dmId: string) => void;
 };
 
@@ -75,6 +76,7 @@ export function DmList({
   onToggleDeafen,
   onToggleMicMute,
   onOpenNotifications,
+  onOpenSettings,
   onSelectDm
 }: DmListProps) {
   const [search, setSearch] = useState('');
@@ -284,9 +286,14 @@ export function DmList({
               <Bell className="h-6 w-6" strokeWidth={1.8} />
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink" />
             </button>
-            <Link href="/profile" className="text-[#8b8b8f] transition hover:text-white">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="text-[#8b8b8f] transition hover:text-white"
+              aria-label="Open settings"
+            >
               <Settings className="h-6 w-6" strokeWidth={1.8} />
-            </Link>
+            </button>
           </div>
         </div>
       </div>

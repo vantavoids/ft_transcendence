@@ -19,12 +19,6 @@ export default function GuildsPage() {
           >
             Ouvrir le chat
           </Link>
-          <Link
-            href="/profile"
-            className="rounded-full border border-white/10 px-5 py-3 font-semibold text-white/70 transition hover:border-white/20 hover:text-white"
-          >
-            Voir le profil
-          </Link>
         </div>
       </div>
     </section>
