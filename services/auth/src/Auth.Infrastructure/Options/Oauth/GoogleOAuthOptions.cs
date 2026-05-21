@@ -5,7 +5,7 @@ public sealed class GoogleOAuthOptions : OAuthProviderOptions, IOptions
     public static string SectionName => "OAuth:Google";
 
     public override required string AuthorizationEndpoint
-        { get; init; } = "https://accounts.google.com/o/oauth2/v2/auth";
+        { get; init; } = "https://accounts.google.com/o/oauth2/auth";
 
     public override required string TokenEndpoint
         { get; init; } = "https://oauth2.googleapis.com/token";

@@ -42,18 +42,17 @@ internal sealed class OAuthCallbackHandler(
 
         if (existingUser is not null)
         {
+            UpdateOAuthUser(now, existingUser, userInfo.Email, userInfo.EmailVerified == true);
             user = existingUser;
             isNewUser = false;
         }
         else
         {
-            var id = idGenerator.NextId();
-            var createResult = AuthUser.CreateOAuthUser(id, command.Provider, userInfo.ProviderId, now);
-            if (createResult.IsFailure)
-                return createResult.Error;
+            var newUserResult = await CreateOAuthUser(now, command.Provider, userInfo, cancellationToken);
+            if (newUserResult.IsFailure)
+                return newUserResult.Error;
 
-            user = createResult.Value;
-            await repository.AddAsync(user, cancellationToken);
+            user = newUserResult.Value;
             isNewUser = true;
         }
 
@@ -72,5 +71,29 @@ internal sealed class OAuthCallbackHandler(
 
         var accessToken = tokenGenerator.GenerateAccessToken(user.Id);
         return new OAuthCallbackResult(accessToken, rawRefreshToken, isNewUser);
+    }
+
+#nullable enable
+    private static void UpdateOAuthUser(DateTimeOffset now, AuthUser existing, string ?email, bool verified)
+    {
+        if (!string.IsNullOrWhiteSpace(email) && (existing.Email is null || existing.Email.Value != email))
+            existing.SetEmail(now, email, verified);
+
+        if (existing.Email is not null && !existing.Email.IsVerified && verified)
+            existing.VerifyEmail(now);
+    }
+#nullable disable
+
+    private async Task<Result<AuthUser>> CreateOAuthUser(DateTimeOffset now, OAuthProvider provider, OAuthUserInfo userInfo, CancellationToken ct)
+    {
+        var id = idGenerator.NextId();
+        var createResult = AuthUser.CreateOAuthUser(id, provider, userInfo.ProviderId, now);
+        if (createResult.IsFailure)
+            return createResult.Error;
+
+        var user = createResult.Value;
+        await repository.AddAsync(user, ct);
+        UpdateOAuthUser(now, user, userInfo.Email, userInfo.EmailVerified == true);
+        return user;
     }
 }
