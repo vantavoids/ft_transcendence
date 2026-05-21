@@ -4,7 +4,7 @@ import { Crown, Shield, UserRound } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 import { getDmStatusClasses, type DirectMessage } from './dm-list';
 
-type GuildMember = {
+export type GuildMember = {
   id: string;
   name: string;
   role: 'Owner' | 'Admin' | 'Member';
@@ -13,7 +13,7 @@ type GuildMember = {
   activity: string;
 };
 
-const guildMembers: GuildMember[] = [
+export const guildMembers: GuildMember[] = [
   {
     id: 'skydogzz',
     name: 'SkyDogzz',
@@ -56,6 +56,10 @@ const guildMembers: GuildMember[] = [
   }
 ];
 
+export function getGuildMemberByName(name: string) {
+  return guildMembers.find((member) => member.name.toLowerCase() === name.toLowerCase()) ?? null;
+}
+
 const memberGroups = [
   {
     id: 'staff',
@@ -81,7 +85,11 @@ function RoleIcon({ role }: { role: GuildMember['role'] }) {
   return null;
 }
 
-export function GuildMemberList() {
+type GuildMemberListProps = {
+  onOpenProfile: (member: GuildMember) => void;
+};
+
+export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
   return (
     <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 xl:flex">
       <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5">
@@ -106,6 +114,7 @@ export function GuildMemberList() {
                   <button
                     key={member.id}
                     type="button"
+                    onClick={() => onOpenProfile(member)}
                     className="flex h-14 w-full items-center gap-3 rounded-md px-2 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
                   >
                     <span className="relative shrink-0">

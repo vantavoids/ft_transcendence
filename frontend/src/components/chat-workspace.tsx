@@ -19,8 +19,13 @@ import {
   getDmStatusClasses,
   hasDm
 } from './dm-list';
-import { GuildMemberList } from './guild-member-list';
+import {
+  getGuildMemberByName,
+  GuildMemberList,
+  type GuildMember
+} from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
+import { ProfileCard } from './profile-card';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
@@ -188,6 +193,7 @@ export function ChatWorkspace() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
+  const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -539,6 +545,34 @@ export function ChatWorkspace() {
     messageRefs.current[messageId] = element;
   }
 
+  function handleOpenAuthorProfile(message: ChatMessageData) {
+    const guildMember = getGuildMemberByName(message.author);
+    const directMessage = dmConversations.find(
+      (dm) => dm.name.toLowerCase() === message.author.toLowerCase()
+    );
+
+    setProfileMember(
+      guildMember ??
+        (directMessage
+          ? {
+              id: directMessage.id,
+              name: directMessage.name,
+              role: 'Member',
+              status: directMessage.status,
+              accent: directMessage.accent,
+              activity: directMessage.lastMessage
+            }
+          : {
+              id: message.author.toLowerCase(),
+              name: message.author,
+              role: 'Member',
+              status: message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
+              accent: message.accent,
+              activity: 'No recent activity'
+            })
+    );
+  }
+
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
       {!isHydrated ? (
@@ -661,6 +695,7 @@ export function ChatWorkspace() {
                         onCancelEdit={handleCancelEdit}
                         onDelete={handleDeleteMessage}
                         onToggleReaction={handleToggleReaction}
+                        onOpenAuthorProfile={handleOpenAuthorProfile}
                         setMessageRef={setMessageRef}
                       />
                     );
@@ -750,7 +785,11 @@ export function ChatWorkspace() {
             </div>
           </section>
 
-          {chatMode === 'guild' ? <GuildMemberList /> : null}
+          {chatMode === 'guild' ? <GuildMemberList onOpenProfile={setProfileMember} /> : null}
+
+          {profileMember ? (
+            <ProfileCard member={profileMember} onClose={() => setProfileMember(null)} />
+          ) : null}
         </>
       )}
     </div>

@@ -24,6 +24,7 @@ type ChatMessageProps = {
   onCancelEdit: () => void;
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string) => void;
+  onOpenAuthorProfile?: (message: ChatMessageData) => void;
   setMessageRef: (messageId: string, element: HTMLElement | null) => void;
 };
 
@@ -73,6 +74,7 @@ export function ChatMessage({
   onCancelEdit,
   onDelete,
   onToggleReaction,
+  onOpenAuthorProfile,
   setMessageRef
 }: ChatMessageProps) {
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -149,13 +151,16 @@ export function ChatMessage({
           {message.timestamp}
         </span>
       ) : (
-        <div
+        <button
+          type="button"
+          onClick={() => onOpenAuthorProfile?.(message)}
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
             message.accent
-          )}`}
+          )} ${onOpenAuthorProfile ? 'transition hover:scale-105 hover:ring-2 hover:ring-white/25' : ''}`}
+          aria-label={`Open ${message.author} profile`}
         >
           {message.author.slice(0, 1).toUpperCase()}
-        </div>
+        </button>
       )}
 
       <div className="min-w-0">
