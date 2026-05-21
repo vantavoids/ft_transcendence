@@ -198,6 +198,7 @@ export function ChatWorkspace() {
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
+  const [isMemberListOpen, setIsMemberListOpen] = useState(true);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -683,7 +684,18 @@ export function ChatWorkspace() {
                 )}
               </div>
               <div className="flex items-center gap-4 text-[#8c8c90]">
-                <UserRound className="h-5 w-5" strokeWidth={1.8} />
+                <button
+                  type="button"
+                  onClick={() => setIsMemberListOpen((current) => !current)}
+                  className={`transition hover:text-white ${
+                    chatMode === 'guild' && isMemberListOpen ? 'text-aqua' : 'text-[#8c8c90]'
+                  } ${chatMode === 'dm' ? 'cursor-not-allowed opacity-45' : ''}`}
+                  disabled={chatMode === 'dm'}
+                  aria-label={isMemberListOpen ? 'Hide member list' : 'Show member list'}
+                  aria-pressed={chatMode === 'guild' && isMemberListOpen}
+                >
+                  <UserRound className="h-5 w-5" strokeWidth={1.8} />
+                </button>
                 <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
               </div>
             </div>
@@ -815,7 +827,12 @@ export function ChatWorkspace() {
             </div>
           </section>
 
-          {chatMode === 'guild' ? <GuildMemberList onOpenProfile={setProfileMember} /> : null}
+          {chatMode === 'guild' && isMemberListOpen ? (
+            <GuildMemberList
+              onToggleVisibility={() => setIsMemberListOpen((current) => !current)}
+              onOpenProfile={setProfileMember}
+            />
+          ) : null}
 
           {profileMember ? (
             <ProfileCard member={profileMember} onClose={() => setProfileMember(null)} />
