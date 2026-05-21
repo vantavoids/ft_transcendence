@@ -17,7 +17,7 @@ export default function HomePage() {
             { href: '/auth/register', title: 'Register', text: 'Création de compte avec validation' },
             { href: '/auth/login', title: 'Login', text: 'Connexion branchée à l’API auth' },
             { href: '/chat', title: 'Chat', text: 'Page responsive utilisable immédiatement' },
-            { href: '/profile', title: 'Profile', text: 'Point d’entrée utilisateur' }
+            { href: '/guilds', title: 'Guilds', text: 'Point d’entrée guildes' }
           ].map((item) => (
             <Link
               key={item.href}

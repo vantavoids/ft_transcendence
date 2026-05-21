@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,9 +27,10 @@ import {
 import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
+import { SettingsModal } from './settings-modal';
 import { directMessages } from './mocks/dm-mocks';
 import { initialMessages } from './mocks/message-mocks';
-import { SESSION_USERNAME_KEY } from '../shared/lib/session';
+import { clearFakeSession, SESSION_USERNAME_KEY } from '../shared/lib/session';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
@@ -69,6 +71,7 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 }
 
 export function ChatWorkspace() {
+  const router = useRouter();
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -90,6 +93,7 @@ export function ChatWorkspace() {
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
@@ -321,6 +325,12 @@ export function ChatWorkspace() {
     });
   }
 
+  function handleDisconnect() {
+    clearFakeSession();
+    router.push('/auth/login');
+    router.refresh();
+  }
+
   function handleSubmitMessage() {
     // TODO(api:chat): send guild messages through SignalR SendMessage and DMs through SendDirectMessage.
     const content = activeDraft.trim();
@@ -525,6 +535,7 @@ export function ChatWorkspace() {
               onToggleDeafen={handleToggleDeafen}
               onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectDm={handleSelectDm}
             />
           ) : (
@@ -537,6 +548,7 @@ export function ChatWorkspace() {
               onToggleDeafen={handleToggleDeafen}
               onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectChannel={handleSelectChannel}
             />
           )}
@@ -779,6 +791,14 @@ export function ChatWorkspace() {
 
           {isNotificationCardOpen ? (
             <NotificationCard onClose={() => setIsNotificationCardOpen(false)} />
+          ) : null}
+
+          {isSettingsOpen ? (
+            <SettingsModal
+              username={username}
+              onClose={() => setIsSettingsOpen(false)}
+              onDisconnect={handleDisconnect}
+            />
           ) : null}
         </>
       )}
