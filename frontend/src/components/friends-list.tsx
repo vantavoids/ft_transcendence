@@ -19,6 +19,7 @@ type FriendsListProps = {
   onSearchChange: (value: string) => void;
 };
 
+// TODO(api:user): replace local friends with GET /users/{id}/friends for the authenticated user.
 export const friends: Friend[] = [
   {
     id: 'friend-skydogzz',
@@ -118,6 +119,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
       </div>
 
       <div className="shrink-0 border-t border-white/8 px-4 py-4">
+        {/* TODO(api:user): resolve username to user id, then POST /friends with { addressee_id }. */}
         <div className="flex h-11 items-center gap-2 rounded-md bg-panel px-3 text-muted">
           <input
             value={friendName}

@@ -13,6 +13,7 @@ export type GuildMember = {
   activity: string;
 };
 
+// TODO(api:guild,user): load GET /guilds/{id}/members, then hydrate each user via GET /users/{id}.
 export const guildMembers: GuildMember[] = [
   {
     id: 'skydogzz',

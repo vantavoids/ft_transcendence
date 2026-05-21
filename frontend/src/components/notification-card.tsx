@@ -11,6 +11,7 @@ type NotificationItem = {
   tone: 'aqua' | 'yellow' | 'pink';
 };
 
+// TODO(api:notification): replace local items with GET /notifications?read=false&limit=50.
 const notifications: NotificationItem[] = [
   {
     id: 'match-win',
@@ -144,6 +145,7 @@ export function NotificationCard({ onClose }: NotificationCardProps) {
         </div>
 
         <div className="border-t border-white/8 px-4 py-4">
+          {/* TODO(api:notification): call PATCH /notifications/read-all and update unread local state. */}
           <button
             type="button"
             className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-frame text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
