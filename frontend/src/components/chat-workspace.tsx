@@ -19,6 +19,7 @@ import {
   getDmStatusClasses,
   hasDm
 } from './dm-list';
+import { GuildMemberList } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
 import { SESSION_USERNAME_KEY } from '../shared/lib/session';
 
@@ -748,6 +749,8 @@ export function ChatWorkspace() {
               </div>
             </div>
           </section>
+
+          {chatMode === 'guild' ? <GuildMemberList /> : null}
         </>
       )}
     </div>
