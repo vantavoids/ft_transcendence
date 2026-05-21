@@ -34,7 +34,7 @@ internal sealed class PutOverwriteHandler(
 
 		var mask = PermissionResolver.Resolve(
 			currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-		if (!PermissionResolver.HasPermission(mask, Permission.ManageRoles))
+		if (!PermissionResolver.HasPermission(mask, Permission.ManageChannels))
 			return GuildFailures.MissingPermission;
 
 		if (!TryParseTargetType(command.TargetType, out var targetType))
@@ -94,6 +94,7 @@ internal sealed class PutOverwriteHandler(
 				type = OverwriteTargetType.Role;
 				return true;
 			case "member":
+			case "user":
 				type = OverwriteTargetType.Member;
 				return true;
 			default:
