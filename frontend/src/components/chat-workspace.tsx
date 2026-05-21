@@ -199,6 +199,7 @@ export function ChatWorkspace() {
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
+  const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
 
   useEffect(() => {
     const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
@@ -234,6 +235,16 @@ export function ChatWorkspace() {
     ? (draftsByConversation[activeConversationId] ?? '')
     : '';
   const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
+  const activeDmProfileMember: GuildMember | null = activeDmDetails
+    ? {
+        id: activeDmDetails.id,
+        name: activeDmDetails.name,
+        role: 'Member',
+        status: activeDmDetails.status,
+        accent: activeDmDetails.accent,
+        activity: activeDmDetails.lastMessage
+      }
+    : null;
   const activeMessageItems = useMemo(
     () =>
       activeMessages.map((message, index) => {
@@ -371,6 +382,7 @@ export function ChatWorkspace() {
     rememberConversationScrollPosition(activeConversationId);
     setChatMode('dm');
     setActiveDm(null);
+    setIsDmProfileOpen(false);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
   }
 
@@ -393,6 +405,7 @@ export function ChatWorkspace() {
     rememberConversationScrollPosition(activeConversationId);
     setChatMode('dm');
     setActiveDm(dmId);
+    setIsDmProfileOpen(false);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
     window.sessionStorage.setItem(LAST_CHAT_DM_KEY, dmId);
     setMobilePane('messages');
@@ -686,13 +699,36 @@ export function ChatWorkspace() {
               <div className="flex items-center gap-4 text-[#8c8c90]">
                 <button
                   type="button"
-                  onClick={() => setIsMemberListOpen((current) => !current)}
+                  onClick={() => {
+                    if (chatMode === 'dm') {
+                      if (activeDmProfileMember) {
+                        setIsDmProfileOpen((current) => !current);
+                      }
+                      return;
+                    }
+
+                    setIsMemberListOpen((current) => !current);
+                  }}
                   className={`transition hover:text-white ${
-                    chatMode === 'guild' && isMemberListOpen ? 'text-aqua' : 'text-[#8c8c90]'
-                  } ${chatMode === 'dm' ? 'cursor-not-allowed opacity-45' : ''}`}
-                  disabled={chatMode === 'dm'}
-                  aria-label={isMemberListOpen ? 'Hide member list' : 'Show member list'}
-                  aria-pressed={chatMode === 'guild' && isMemberListOpen}
+                    (chatMode === 'guild' && isMemberListOpen) ||
+                    (chatMode === 'dm' && isDmProfileOpen)
+                      ? 'text-aqua'
+                      : 'text-[#8c8c90]'
+                  } ${chatMode === 'dm' && !activeDmProfileMember ? 'cursor-not-allowed opacity-45' : ''}`}
+                  disabled={chatMode === 'dm' && !activeDmProfileMember}
+                  aria-label={
+                    chatMode === 'dm'
+                      ? isDmProfileOpen
+                        ? 'Hide profile'
+                        : 'Show profile'
+                      : isMemberListOpen
+                        ? 'Hide member list'
+                        : 'Show member list'
+                  }
+                  aria-pressed={
+                    (chatMode === 'guild' && isMemberListOpen) ||
+                    (chatMode === 'dm' && isDmProfileOpen)
+                  }
                 >
                   <UserRound className="h-5 w-5" strokeWidth={1.8} />
                 </button>
@@ -831,6 +867,14 @@ export function ChatWorkspace() {
             <GuildMemberList
               onToggleVisibility={() => setIsMemberListOpen((current) => !current)}
               onOpenProfile={setProfileMember}
+            />
+          ) : null}
+
+          {chatMode === 'dm' && isDmProfileOpen && activeDmProfileMember ? (
+            <ProfileCard
+              member={activeDmProfileMember}
+              variant="side"
+              onClose={() => setIsDmProfileOpen(false)}
             />
           ) : null}
 
