@@ -105,7 +105,6 @@ public sealed class PutChannelOverwriteTests(GuildApiFactory factory) : IClassFi
 		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 	}
 
-	// BUG: handler checks ManageRoles instead of ManageChannels -- ManageRoles should NOT suffice
 	[Fact]
 	public async Task MemberWithOnlyManageRoles_CannotPutOverwrite()
 	{

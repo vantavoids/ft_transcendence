@@ -132,9 +132,6 @@ public sealed class PutOverwriteHandlerTests
 	[Fact]
 	public async Task UserWithManageChannels_CanPutOverwrite()
 	{
-		// ManageChannels is the correct permission for channel overwrite management;
-		// the handler currently checks ManageRoles (wrong), so this test should fail
-		// against the current code and pass once the permission is corrected
 		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 
