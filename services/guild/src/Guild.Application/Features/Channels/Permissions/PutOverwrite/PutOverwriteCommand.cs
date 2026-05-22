@@ -9,4 +9,4 @@ public sealed record PutOverwriteCommand(
 	long TargetId,
 	string? TargetType,
 	long Allow,
-	long Deny) : ICommand<Result<OverwriteResponse>>;
+	long Deny) : ICommand<Result>;
