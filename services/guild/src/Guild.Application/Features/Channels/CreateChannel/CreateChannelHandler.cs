@@ -63,7 +63,9 @@ internal sealed class CreateChannelHandler(
 			topic: command.Topic,
 			type: type,
 			position: position,
-			now: clock.UtcNow);
+			now: clock.UtcNow,
+			isNsfw: command.IsNsfw ?? false,
+			slowmodeSeconds: command.SlowmodeSeconds ?? 0);
 
 		if (channelResult.IsFailure)
 			return channelResult.Error;
@@ -76,13 +78,16 @@ internal sealed class CreateChannelHandler(
 
 	private static bool TryParseType(string? raw, out ChannelType type)
 	{
-		// accept lowercase "text"/"voice" per contract; tolerate case-insensitive
+		// accept lowercase "text"/"announcement"/"voice" per contract; tolerate case-insensitive
 		switch (raw?.Trim().ToLowerInvariant())
 		{
 			case null:
 			case "":
 			case "text":
 				type = ChannelType.Text;
+				return true;
+			case "announcement":
+				type = ChannelType.Announcement;
 				return true;
 			case "voice":
 				type = ChannelType.Voice;

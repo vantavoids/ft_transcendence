@@ -131,6 +131,44 @@ public sealed class ChannelTests
 	}
 
 	[Fact]
+	public void Create_PositiveSlowmodeSeconds_Preserved()
+	{
+		// kills mutations that would clamp a positive value to zero
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "general", topic: null, type: ChannelType.Text,
+			position: 0, now: Now, slowmodeSeconds: 30);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(30, result.Value.SlowmodeSeconds);
+	}
+
+	[Fact]
+	public void Create_NegativeSlowmodeSeconds_ClampsToZero()
+	{
+		// contract default: slowmode cannot be negative
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "general", topic: null, type: ChannelType.Text,
+			position: 0, now: Now, slowmodeSeconds: -10);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(0, result.Value.SlowmodeSeconds);
+	}
+
+	[Fact]
+	public void Create_IsNsfwTrue_Persists()
+	{
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: "enfers", topic: null, type: ChannelType.Text,
+			position: 0, now: Now, isNsfw: true);
+
+		Assert.True(result.Succeeded);
+		Assert.True(result.Value.IsNsfw);
+	}
+
+	[Fact]
 	public void Create_NameAtMaxLength_Succeeds()
 	{
 		var name = new string('x', Channel.MaxNameLen);

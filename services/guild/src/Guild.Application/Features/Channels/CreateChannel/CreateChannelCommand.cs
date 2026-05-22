@@ -10,4 +10,6 @@ public sealed record CreateChannelCommand(
 	string? Type,
 	long? CategoryId,
 	string? Topic,
-	int? Position) : ICommand<Result<ChannelResponse>>;
+	int? Position,
+	bool? IsNsfw = null,
+	int? SlowmodeSeconds = null) : ICommand<Result<ChannelResponse>>;

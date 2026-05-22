@@ -14,7 +14,9 @@ public sealed record ChannelResponse(
 	string Name,
 	string? Topic,
 	string Type,
-	int Position)
+	int Position,
+	bool IsNsfw,
+	int SlowmodeSeconds)
 {
 	public static ChannelResponse From(Channel c) => new(
 		Id: c.Id.ToString(),
@@ -23,5 +25,7 @@ public sealed record ChannelResponse(
 		Name: c.Name,
 		Topic: c.Topic,
 		Type: c.Type.ToString().ToLowerInvariant(),
-		Position: c.Position);
+		Position: c.Position,
+		IsNsfw: c.IsNsfw,
+		SlowmodeSeconds: c.SlowmodeSeconds);
 }

@@ -123,6 +123,21 @@ public sealed class RoleTests
 	}
 
 	[Fact]
+	public void Create_ValidHexColor_AtBoundaryChars_Succeeds()
+	{
+		// pins the inclusive hex boundaries 0, 9, f, and F. without these in any
+		// valid-color test, a mutation flipping `>= '0'` to `> '0'` would silently
+		// reject them; same for 9 against `<= '9'`, f against `<= 'f'`, F against
+		// `<= 'F'`. one char is enough per boundary, packed into a single string
+		var result = Role.Create(
+			id: 1, guildId: 10, name: "R", color: "#0F90fF",
+			permissions: 0L, position: 0,
+			isDefault: false, isHoisted: false, isMentionable: false, now: Now);
+
+		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
 	public void Create_NullColor_Succeeds()
 	{
 		var result = Role.Create(
