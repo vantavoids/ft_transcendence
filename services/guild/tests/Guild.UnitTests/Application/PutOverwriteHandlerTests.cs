@@ -27,11 +27,15 @@ public sealed class PutOverwriteHandlerTests
 	[Fact]
 	public async Task InvalidTargetType_Returns400()
 	{
-		var (handler, _, channels, _) = MakeHandler(currentUser: 1);
+		// uses a valid role id so the failure can only come from the type parser
+		// (otherwise the test passes even if TryParseType incorrectly accepts "weird"
+		// because the downstream target-existence check would reject the id anyway)
+		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+		var roleId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
 
 		var result = await handler.HandleAsync(
-			new PutOverwriteCommand(5, 50, "weird", 1L, 0L));
+			new PutOverwriteCommand(5, roleId, "weird", 1L, 0L));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.OverwriteInvalidTarget", result.Error.Code);

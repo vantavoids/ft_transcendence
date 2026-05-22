@@ -22,6 +22,8 @@ public sealed class Channel
 		string? topic,
 		ChannelType type,
 		int position,
+		bool isNsfw,
+		int slowmodeSeconds,
 		DateTimeOffset createdAt,
 		DateTimeOffset updatedAt)
 	{
@@ -32,6 +34,8 @@ public sealed class Channel
 		Topic = topic;
 		Type = type;
 		Position = position;
+		IsNsfw = isNsfw;
+		SlowmodeSeconds = slowmodeSeconds;
 		CreatedAt = createdAt;
 		UpdatedAt = updatedAt;
 	}
@@ -43,6 +47,8 @@ public sealed class Channel
 	public string? Topic { get; private set; }
 	public ChannelType Type { get; private set; }
 	public int Position { get; private set; }
+	public bool IsNsfw { get; private set; }
+	public int SlowmodeSeconds { get; private set; }
 	public DateTimeOffset CreatedAt { get; private set; }
 	public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -54,7 +60,9 @@ public sealed class Channel
 		string? topic,
 		ChannelType type,
 		int position,
-		DateTimeOffset now)
+		DateTimeOffset now,
+		bool isNsfw = false,
+		int slowmodeSeconds = 0)
 	{
 		var nameValidation = ValidateName(name);
 		if (nameValidation.IsFailure)
@@ -70,6 +78,9 @@ public sealed class Channel
 		if (position < 0)
 			position = 0;
 
+		if (slowmodeSeconds < 0)
+			slowmodeSeconds = 0;
+
 		return new Channel(
 			id: id,
 			guildId: guildId,
@@ -78,6 +89,8 @@ public sealed class Channel
 			topic: topic,
 			type: type,
 			position: position,
+			isNsfw: isNsfw,
+			slowmodeSeconds: slowmodeSeconds,
 			createdAt: now,
 			updatedAt: now);
 	}

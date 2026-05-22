@@ -41,6 +41,14 @@ internal sealed class ChannelConfig : IEntityTypeConfiguration<Channel>
 			.HasColumnName("position")
 			.HasDefaultValue(0);
 
+		builder.Property(c => c.IsNsfw)
+			.HasColumnName("is_nsfw")
+			.HasDefaultValue(false);
+
+		builder.Property(c => c.SlowmodeSeconds)
+			.HasColumnName("slowmode_seconds")
+			.HasDefaultValue(0);
+
 		builder.Property(c => c.CreatedAt)
 			.HasColumnName("created_at")
 			.HasDefaultValueSql("NOW()");

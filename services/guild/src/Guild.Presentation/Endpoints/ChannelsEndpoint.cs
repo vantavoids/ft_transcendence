@@ -63,7 +63,9 @@ public sealed class ChannelsEndpoint : ICarterModule
 				Type: request.Type,
 				CategoryId: categoryId,
 				Topic: request.Topic,
-				Position: request.Position),
+				Position: request.Position,
+				IsNsfw: request.IsNsfw,
+				SlowmodeSeconds: request.SlowmodeSeconds),
 			cancellationToken);
 
 		return result.Succeeded
@@ -177,7 +179,9 @@ public sealed class ChannelsEndpoint : ICarterModule
 		string? Type,
 		string? CategoryId,
 		string? Topic,
-		int? Position);
+		int? Position,
+		bool? IsNsfw,
+		int? SlowmodeSeconds);
 
 	private sealed record UpdateChannelRequest(
 		string? Name,

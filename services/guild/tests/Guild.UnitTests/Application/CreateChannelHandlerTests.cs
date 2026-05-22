@@ -122,6 +122,80 @@ public sealed class CreateChannelHandlerTests
 	}
 
 	[Fact]
+	public async Task AutoPosition_FirstChannelInCategory_IsZero()
+	{
+		// contract default: first channel in an empty bucket lands at position 0
+		// (kills the (max ?? -1) + 1 mutation that would otherwise produce a non-zero start)
+		var handler = MakeHandler(out _, out var channels, out _, ownerSeed: 1, currentUser: 1);
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "first", Type: "text",
+				CategoryId: null, Topic: null, Position: null));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(0, result.Value.Position);
+		Assert.Single(channels.Store);
+	}
+
+	[Fact]
+	public async Task IsNsfwTrue_PersistsAndIsEchoedInResponse()
+	{
+		// contract: is_nsfw is part of the channel object and must round-trip
+		var handler = MakeHandler(out _, out var channels, out _, ownerSeed: 1, currentUser: 1);
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "after-dark", Type: "text",
+				CategoryId: null, Topic: null, Position: 0, IsNsfw: true));
+
+		Assert.True(result.Succeeded);
+		Assert.True(result.Value.IsNsfw);
+		Assert.True(channels.Store.Values.Single().IsNsfw);
+	}
+
+	[Fact]
+	public async Task SlowmodeSecondsValue_PersistsAndIsEchoedInResponse()
+	{
+		// contract: slowmode_seconds is part of the channel object and must round-trip
+		var handler = MakeHandler(out _, out var channels, out _, ownerSeed: 1, currentUser: 1);
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "throttled", Type: "text",
+				CategoryId: null, Topic: null, Position: 0, SlowmodeSeconds: 30));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(30, result.Value.SlowmodeSeconds);
+		Assert.Equal(30, channels.Store.Values.Single().SlowmodeSeconds);
+	}
+
+	[Fact]
+	public async Task VoiceType_ParsesAndPersists()
+	{
+		// contract: "voice" is a valid channel type alongside "text" and "announcement"
+		var handler = MakeHandler(out _, out _, out _, ownerSeed: 1, currentUser: 1);
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "general", Type: "voice",
+				CategoryId: null, Topic: null, Position: 0));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("voice", result.Value.Type);
+	}
+
+	[Fact]
+	public async Task AnnouncementType_ParsesAndPersists()
+	{
+		// contract: "announcement" is a valid channel type alongside "text" and "voice"
+		var handler = MakeHandler(out _, out _, out _, ownerSeed: 1, currentUser: 1);
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "news", Type: "announcement",
+				CategoryId: null, Topic: null, Position: 0));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("announcement", result.Value.Type);
+	}
+
+	[Fact]
 	public async Task MemberCheck_UsesAllNotAny_InMultiMemberGuild()
 	{
 		// All(m => m.UserId != cuid) = false when cuid IS a member -> correct, proceeds.

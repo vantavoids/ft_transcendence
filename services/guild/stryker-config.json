@@ -1,0 +1,14 @@
+{
+	"stryker-config": {
+		"solution": "Guild.slnx",
+		"test-projects": [
+			"tests/Guild.UnitTests/Guild.UnitTests.csproj",
+			"tests/Guild.FunctionalTests/Guild.FunctionalTests.csproj"
+		],
+		"reporters": ["progress", "html", "json"],
+		"mutate": [
+			"**/*.cs",
+			"!**/Results/*.cs"
+		]
+	}
+}

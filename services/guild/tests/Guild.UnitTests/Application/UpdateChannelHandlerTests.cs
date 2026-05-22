@@ -113,6 +113,53 @@ public sealed class UpdateChannelHandlerTests
 	}
 
 	[Fact]
+	public async Task TopicAbsent_LeavesExistingTopicUnchanged()
+	{
+		// PATCH semantics: TopicProvided=false means "absent field" -> do not touch.
+		// kills mutation that drops the TopicProvided guard
+		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", topic: "original", ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: "renamed", Topic: "should-be-ignored",
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: false));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("original", result.Value.Topic);
+	}
+
+	[Fact]
+	public async Task TopicEmptyString_ClearsTopic()
+	{
+		// PATCH semantics: TopicProvided=true with empty string means "clear it".
+		// covers the topicResult success branch (kills the !IsFailure inversion)
+		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", topic: "original", ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: null, Topic: "",
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: true));
+
+		Assert.True(result.Succeeded);
+		Assert.Null(result.Value.Topic);
+	}
+
+	[Fact]
+	public async Task TopicProvided_NewValue_PersistsOnChannel()
+	{
+		// successful topic update must surface as the new value on the response
+		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 1);
+		channels.Seed(Channel.Create(5, 100, null, "g", topic: null, ChannelType.Text, 0, Now).Value);
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: null, Topic: "freshly-set",
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: true));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("freshly-set", result.Value.Topic);
+	}
+
+	[Fact]
 	public async Task DetachFromCategory_NullCategoryId_IsAllowed()
 	{
 		var (handler, _, channels) = MakeHandler(ownerSeed: 1, currentUser: 1);
