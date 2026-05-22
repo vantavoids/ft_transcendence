@@ -66,8 +66,11 @@ v1.MapCarter();
 
 // internal endpoints. the API Gateway only forwards /api/{service}/vN/...
 // so /internal/... is unreachable from outside the docker network. callers
-// (e.g. Chat Service) reach this directly via the compose service hostname
-var internalRoutes = app.MapGroup("/internal");
+// (e.g. Chat Service) reach this directly via the compose service hostname.
+// ExcludeFromDescription keeps these out of the OpenAPI doc + Scalar UI:
+// Scalar is scoped to the gateway-facing server URL, where /internal/... is a
+// 404. documenting them there would be misleading
+var internalRoutes = app.MapGroup("/internal").ExcludeFromDescription();
 ChannelMembershipEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();
