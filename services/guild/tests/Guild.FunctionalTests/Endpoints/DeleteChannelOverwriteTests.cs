@@ -7,7 +7,6 @@ namespace Guild.FunctionalTests.Endpoints;
 
 public sealed class DeleteChannelOverwriteTests(GuildApiFactory factory) : IClassFixture<GuildApiFactory>
 {
-	// BUG: handler checks ManageRoles instead of ManageChannels -- should return 204, currently 403
 	[Fact]
 	public async Task MemberWithManageChannels_CanDeleteOverwrite()
 	{
@@ -25,7 +24,6 @@ public sealed class DeleteChannelOverwriteTests(GuildApiFactory factory) : IClas
 		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 	}
 
-	// BUG: handler checks ManageRoles instead of ManageChannels -- ManageRoles should NOT suffice
 	[Fact]
 	public async Task MemberWithOnlyManageRoles_CannotDeleteOverwrite()
 	{
