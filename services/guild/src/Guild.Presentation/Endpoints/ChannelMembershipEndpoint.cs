@@ -1,5 +1,3 @@
-// TODO: gate this behind an internal service token (shared secret header)?
-using Carter;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Channels.Membership;
 using Guild.Domain.Results;
@@ -8,14 +6,18 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Guild.Presentation.Endpoints;
 
-public sealed class ChannelMembershipEndpoint : ICarterModule
+/// <summary>
+/// internal channel-membership lookup used by the Chat Service.
+/// not a Carter module so it stays out of the public <c>/v1</c> group;
+/// mounted under <c>/internal</c> by <c>Program.cs</c>. the API Gateway only
+/// forwards <c>/api/{service}/vN/...</c>, so <c>/internal/...</c> is
+/// unreachable from outside the docker network
+/// </summary>
+public static class ChannelMembershipEndpoint
 {
-	public void AddRoutes(IEndpointRouteBuilder endpoints)
+	public static void MapInternalRoutes(IEndpointRouteBuilder endpoints)
 	{
-		// the parent group at /v1 has .RequireAuthorization() applied; override
-		// here so the Chat Service can call this without a user JWT
-		endpoints.MapGet("/channels/{channelId:long}/membership", GetAsync)
-			.AllowAnonymous();
+		endpoints.MapGet("/channels/{channelId:long}/membership", GetAsync);
 	}
 
 	private static async Task<Results<
