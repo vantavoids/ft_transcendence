@@ -116,9 +116,8 @@ public sealed class PutOverwriteHandlerTests
 	[Fact]
 	public async Task MemberTarget_AcceptsUserKeyword()
 	{
-		// contract uses "user" for member-targeted overwrites, not "member";
-		// parser currently only recognises "member", so this should fail and pass
-		// once the alias is added
+		// contract wire type for member-targeted overwrites is "user"; the parser
+		// accepts both "user" and "member" and maps either to OverwriteTargetType.Member
 		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 
