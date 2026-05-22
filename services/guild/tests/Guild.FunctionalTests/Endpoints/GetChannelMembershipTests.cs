@@ -8,7 +8,7 @@ namespace Guild.FunctionalTests.Endpoints;
 public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassFixture<GuildApiFactory>
 {
 	[Fact]
-	public async Task NoToken_StillOk_BecauseEndpointAllowsAnonymous()
+	public async Task NoToken_StillOk_BecauseEndpointIsOnInternalGroup()
 	{
 		// owner creates a guild + channel
 		var owner = factory.CreateAuthenticatedClient(userId: 5601);
@@ -16,17 +16,34 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		var guildId = long.Parse(created.GetProperty("id").GetString()!);
 		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
 
-		// anonymous client - the Chat Service mimics this with internal traffic
+		// anonymous client - the Chat Service mimics this with internal docker
+		// traffic. /internal/... bypasses RequireAuthorization on the /v1 group
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5601");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=5601");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+	}
+
+	[Fact]
+	public async Task NotReachableUnder_V1_PathPrefix()
+	{
+		// gateway only forwards /api/{service}/vN/...; the upstream must NOT mount
+		// the membership endpoint under /v1 (it would otherwise be reachable from
+		// outside the docker network via /api/guild/v1/channels/.../membership)
+		var owner = factory.CreateAuthenticatedClient(userId: 5610);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
+
+		var anon = factory.CreateClient();
+		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5610");
+		Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
 	}
 
 	[Fact]
 	public async Task Unknown_Channel_Returns_404()
 	{
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync("/v1/channels/999999/membership?user_id=1");
+		var resp = await anon.GetAsync("/internal/channels/999999/membership?user_id=1");
 		Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
 	}
 
@@ -39,7 +56,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership");
 		Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
 	}
 
@@ -52,7 +69,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=99999");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=99999");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 		var body = await resp.ReadJsonAsync();
 		Assert.False(body.GetProperty("is_member").GetBoolean());
@@ -69,7 +86,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5604");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=5604");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 		var body = await resp.ReadJsonAsync();
 		Assert.True(body.GetProperty("is_member").GetBoolean());
@@ -87,7 +104,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		await factory.AddBareMemberAsync(guildId, userId: 5606);
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5606");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=5606");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 		var body = await resp.ReadJsonAsync();
 		Assert.True(body.GetProperty("is_member").GetBoolean());
@@ -110,7 +127,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 			allow: 0L, deny: (long)Permission.ReadMessages);
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5608");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=5608");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 		var body = await resp.ReadJsonAsync();
 		var perms = body.GetProperty("permissions").GetInt64();
@@ -126,7 +143,7 @@ public sealed class GetChannelMembershipTests(GuildApiFactory factory) : IClassF
 		var channelId = await factory.AddChannelAsync(guildId, categoryId: null, name: "g");
 
 		var anon = factory.CreateClient();
-		var resp = await anon.GetAsync($"/v1/channels/{channelId}/membership?user_id=5609");
+		var resp = await anon.GetAsync($"/internal/channels/{channelId}/membership?user_id=5609");
 		Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 		var body = await resp.ReadJsonAsync();
 		var keys = new HashSet<string>();

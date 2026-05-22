@@ -4,6 +4,7 @@ using Carter;
 using Guild.Application;
 using Guild.Infrastructure;
 using Guild.Persistence;
+using Guild.Presentation.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -62,6 +63,12 @@ app.MapHealthChecks("/healthz");
 
 var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
+
+// internal endpoints. the API Gateway only forwards /api/{service}/vN/...
+// so /internal/... is unreachable from outside the docker network. callers
+// (e.g. Chat Service) reach this directly via the compose service hostname
+var internalRoutes = app.MapGroup("/internal");
+ChannelMembershipEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();
 
