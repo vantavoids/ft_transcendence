@@ -1,7 +1,7 @@
 using Carter;
 using Guild.Application.Abstractions.Messaging;
-using Guild.Application.Features.Channels.Permissions.Common;
 using Guild.Application.Features.Channels.Permissions.DeleteOverwrite;
+using Guild.Application.Features.Channels.Permissions.GetOverwrites;
 using Guild.Application.Features.Channels.Permissions.PutOverwrite;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
@@ -14,12 +14,28 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/channels/{channelId:long}/permissions");
+		group.MapGet("/", ListAsync);
 		group.MapPut("/{targetId:long}", PutAsync);
 		group.MapDelete("/{targetId:long}", DeleteAsync);
 	}
 
 	private static async Task<Results<
-		Ok<OverwriteResponse>,
+		Ok<IReadOnlyList<OverwriteItem>>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	ListAsync(
+		long channelId,
+		IQueryHandler<GetOverwritesQuery, Result<OverwritesResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new GetOverwritesQuery(channelId), cancellationToken);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value.Items)
+			: MapErrorList(result.Error);
+	}
+
+	private static async Task<Results<
+		NoContent,
 		BadRequest<ErrorBody>,
 		NotFound<ErrorBody>,
 		JsonHttpResult<ErrorBody>>>
@@ -27,7 +43,7 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 		long channelId,
 		long targetId,
 		PutOverwriteRequest request,
-		ICommandHandler<PutOverwriteCommand, Result<OverwriteResponse>> handler,
+		ICommandHandler<PutOverwriteCommand, Result> handler,
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(
@@ -40,7 +56,7 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 			cancellationToken);
 
 		return result.Succeeded
-			? TypedResults.Ok(result.Value)
+			? TypedResults.NoContent()
 			: MapErrorPut(result.Error);
 	}
 
@@ -63,7 +79,17 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 
 	// ---- error mapping ----
 
-	private static Results<Ok<OverwriteResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
+	private static Results<Ok<IReadOnlyList<OverwriteItem>>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
+		MapErrorList(Failure failure) => failure.Code switch
+		{
+			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+		};
+
+	private static Results<NoContent, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
 		MapErrorPut(Failure failure) => failure.Code switch
 		{
 			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),

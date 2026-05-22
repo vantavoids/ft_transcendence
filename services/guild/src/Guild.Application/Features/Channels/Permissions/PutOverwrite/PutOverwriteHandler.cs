@@ -2,7 +2,6 @@ using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
-using Guild.Application.Features.Channels.Permissions.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
@@ -15,9 +14,9 @@ internal sealed class PutOverwriteHandler(
 	IIdGenerator ids,
 	IClock clock,
 	ICurrentUser currentUser)
-	: ICommandHandler<PutOverwriteCommand, Result<OverwriteResponse>>
+	: ICommandHandler<PutOverwriteCommand, Result>
 {
-	public async Task<Result<OverwriteResponse>> HandleAsync(
+	public async Task<Result> HandleAsync(
 		PutOverwriteCommand command,
 		CancellationToken cancellationToken = default)
 	{
@@ -65,7 +64,7 @@ internal sealed class PutOverwriteHandler(
 
 			overwrites.Update(existing);
 			await overwrites.SaveChangesAsync(cancellationToken);
-			return OverwriteResponse.From(existing);
+			return Result.Ok();
 		}
 
 		var createResult = ChannelPermissionOverwrite.Create(
@@ -83,7 +82,7 @@ internal sealed class PutOverwriteHandler(
 		await overwrites.AddAsync(createResult.Value, cancellationToken);
 		await overwrites.SaveChangesAsync(cancellationToken);
 
-		return OverwriteResponse.From(createResult.Value);
+		return Result.Ok();
 	}
 
 	private static bool TryParseTargetType(string? raw, out OverwriteTargetType type)

@@ -1,4 +1,3 @@
-using Guild.Application.Features.Channels.Permissions.Common;
 using Guild.Application.Features.Channels.Permissions.PutOverwrite;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -76,8 +75,8 @@ public sealed class PutOverwriteHandlerTests
 				Allow: (long)Permission.SendMessages, Deny: 0L));
 
 		Assert.True(result.Succeeded);
-		Assert.Equal("role", result.Value.TargetType);
 		Assert.Single(overwrites.Store);
+		Assert.Equal(OverwriteTargetType.Role, overwrites.Store.Values.Single().TargetType);
 	}
 
 	[Fact]
@@ -124,20 +123,6 @@ public sealed class PutOverwriteHandlerTests
 			new PutOverwriteCommand(5, 1, "user", (long)Permission.SendMessages, 0L));
 
 		Assert.True(result.Succeeded);
-	}
-
-	[Fact]
-	public async Task MemberTarget_ResponseTargetTypeIsUser()
-	{
-		// response should serialise member-targeted overwrites as "user", not "member"
-		var (handler, guilds, channels, _) = MakeHandler(currentUser: 1);
-		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
-
-		var result = await handler.HandleAsync(
-			new PutOverwriteCommand(5, 1, "member", (long)Permission.SendMessages, 0L));
-
-		Assert.True(result.Succeeded);
-		Assert.Equal("user", result.Value.TargetType);
 	}
 
 	[Fact]
@@ -223,7 +208,7 @@ public sealed class PutOverwriteHandlerTests
 	}
 
 	private static (
-		Guild.Application.Abstractions.Messaging.ICommandHandler<PutOverwriteCommand, Result<OverwriteResponse>> Handler,
+		Guild.Application.Abstractions.Messaging.ICommandHandler<PutOverwriteCommand, Result> Handler,
 		FakeGuildRepository Guilds,
 		FakeChannelRepository Channels,
 		FakeChannelPermissionOverwriteRepository Overwrites)
@@ -237,7 +222,7 @@ public sealed class PutOverwriteHandlerTests
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		guilds.AddAsync(guild).GetAwaiter().GetResult();
 
-		var handler = HandlerFactory.CreateCommand<PutOverwriteCommand, Result<OverwriteResponse>>(
+		var handler = HandlerFactory.CreateCommand<PutOverwriteCommand, Result>(
 			guilds, channels, overwrites,
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds, channels, overwrites);
