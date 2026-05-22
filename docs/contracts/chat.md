@@ -377,7 +377,7 @@ Send a message to a channel.
 `attachment_ids` is optional - an array of draft attachment IDs returned by `POST /attachments` (max 10). The server validates that each attachment was uploaded by the caller, has not yet been attached to another message, and has not expired.
 
 Server actions:
-1. HTTP GET to Guild Service `/channels/{channel_id}/membership?user_id=...` - validates membership + `SEND_MESSAGES` permission
+1. HTTP GET to Guild Service `/internal/channels/{channel_id}/membership?user_id=...` over the docker network - validates membership + `SEND_MESSAGES` permission
 2. Persists message in DB
 3. Broadcasts `ReceiveMessage` to the channel group
 4. Publishes `chat.message_sent` to RabbitMQ

@@ -803,11 +803,11 @@ Delete a permission overwrite. Requires `MANAGE_CHANNELS`.
 
 ## Internal Endpoint (used by Chat Service)
 
-### GET /channels/{channel_id}/membership
+### GET /internal/channels/{channel_id}/membership
 
 Check if a user is a member of the guild that owns this channel, and get their effective permissions. Called by Chat Service over internal HTTP before allowing a message to be sent.
 
-**Auth required:** Internal service token (not user JWT)
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://guild:8080/internal/channels/{channel_id}/membership`).
 
 **Query params:**
 | Param | Type | Description |
