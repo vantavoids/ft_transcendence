@@ -30,6 +30,17 @@ internal sealed class ChannelPermissionOverwriteRepository(GuildDbContext contex
 				cancellationToken);
 	}
 
+	public Task<ChannelPermissionOverwrite?> GetForChannelByTargetIdAsync(
+		long channelId,
+		long targetId,
+		CancellationToken cancellationToken = default)
+	{
+		return context.ChannelPermissionOverwrites
+			.FirstOrDefaultAsync(
+				o => o.ChannelId == channelId && o.TargetId == targetId,
+				cancellationToken);
+	}
+
 	public async Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default)
 	{
 		await context.ChannelPermissionOverwrites.AddAsync(overwrite, cancellationToken);

@@ -34,10 +34,10 @@ internal sealed class DeleteOverwriteHandler(
 			return GuildFailures.MissingPermission;
 
 		// the URL carries only (channel_id, target_id); since snowflake ids are
-		// unique across roles and members, scan both buckets and remove the one
-		// that exists. if none exists, surface a 404
-		var all = await overwrites.GetForChannelAsync(channel.Id, cancellationToken);
-		var match = all.FirstOrDefault(o => o.TargetId == command.TargetId);
+		// unique across roles and members, a single server-side probe by
+		// (channel_id, target_id) finds the row regardless of target_type
+		var match = await overwrites.GetForChannelByTargetIdAsync(
+			channel.Id, command.TargetId, cancellationToken);
 		if (match is null)
 			return GuildFailures.OverwriteNotFound;
 
