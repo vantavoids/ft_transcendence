@@ -46,7 +46,6 @@ public static class PermissionResolver
 	public static long Resolve(
 		Guild guild,
 		long userId,
-		Channel channel,
 		IReadOnlyList<ChannelPermissionOverwrite> overwrites)
 	{
 		if (userId == guild.OwnerId)
@@ -112,7 +111,6 @@ public static class PermissionResolver
 		if (memberOw is not null)
 			perms = (perms & ~memberOw.Deny) | memberOw.Allow;
 
-		_ = channel; // channel is part of the signature for clarity; identity already used via the overwrites list scope
 		return perms;
 	}
 
