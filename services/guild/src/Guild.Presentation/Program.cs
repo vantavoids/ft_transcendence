@@ -56,6 +56,28 @@ if (app.Environment.IsDevelopment())
 	});
 }
 
+app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
+{
+	var feature = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+	var err = feature?.Error;
+
+	if (err is BadHttpRequestException bad)
+	{
+		ctx.Response.StatusCode = bad.StatusCode;
+		var jsonEx = bad.InnerException as System.Text.Json.JsonException;
+		var path = jsonEx?.Path?.TrimStart('$', '.');
+		var message = path is not null
+			? $"invalid value for field '{path}'"
+			: "bad request";
+		await ctx.Response.WriteAsJsonAsync(new ErrorBody(message));
+	}
+	else
+	{
+		ctx.Response.StatusCode = 500;
+		await ctx.Response.WriteAsJsonAsync(new ErrorBody("internal_server_error"));
+	}
+}));
+
 app.UseAuthentication();
 app.UseAuthorization();
 
