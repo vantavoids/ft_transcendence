@@ -61,7 +61,7 @@ public sealed class GetChannelMembershipHandlerTests
 
 		// member overwrite denies ReadMessages bit (2)
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Member,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Member,
 			targetId: 2, allow: 0L, deny: (long)Permission.ReadMessages, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetChannelMembershipQuery(5, 2));

@@ -14,6 +14,7 @@ public sealed class ChannelPermissionOverwrite
 
 	private ChannelPermissionOverwrite(
 		long id,
+		long guildId,
 		long channelId,
 		OverwriteTargetType targetType,
 		long targetId,
@@ -23,6 +24,7 @@ public sealed class ChannelPermissionOverwrite
 		DateTimeOffset updatedAt)
 	{
 		Id = id;
+		GuildId = guildId;
 		ChannelId = channelId;
 		TargetType = targetType;
 		TargetId = targetId;
@@ -33,6 +35,7 @@ public sealed class ChannelPermissionOverwrite
 	}
 
 	public long Id { get; private set; }
+	public long GuildId { get; private set; }
 	public long ChannelId { get; private set; }
 	public OverwriteTargetType TargetType { get; private set; }
 	public long TargetId { get; private set; }
@@ -43,6 +46,7 @@ public sealed class ChannelPermissionOverwrite
 
 	public static Result<ChannelPermissionOverwrite> Create(
 		long id,
+		long guildId,
 		long channelId,
 		OverwriteTargetType targetType,
 		long targetId,
@@ -58,6 +62,7 @@ public sealed class ChannelPermissionOverwrite
 
 		return new ChannelPermissionOverwrite(
 			id: id,
+			guildId: guildId,
 			channelId: channelId,
 			targetType: targetType,
 			targetId: targetId,

@@ -15,13 +15,19 @@ internal sealed class ChannelPermissionOverwriteConfig : IEntityTypeConfiguratio
 			.HasColumnName("id")
 			.ValueGeneratedNever();
 
+		builder.Property(o => o.GuildId)
+			.HasColumnName("guild_id")
+			.IsRequired();
+
 		builder.Property(o => o.ChannelId)
 			.HasColumnName("channel_id")
 			.IsRequired();
 
 		builder.Property(o => o.TargetType)
 			.HasColumnName("target_type")
-			.HasConversion<int>()
+			.HasConversion(
+				v => v == OverwriteTargetType.Role ? "role" : "user",
+				v => v == "role" ? OverwriteTargetType.Role : OverwriteTargetType.Member)
 			.IsRequired();
 
 		builder.Property(o => o.TargetId)
@@ -56,5 +62,8 @@ internal sealed class ChannelPermissionOverwriteConfig : IEntityTypeConfiguratio
 
 		builder.HasIndex(o => o.ChannelId)
 			.HasDatabaseName("idx_overwrites_channel");
+
+		builder.HasIndex(o => o.GuildId)
+			.HasDatabaseName("idx_overwrites_guild");
 	}
 }

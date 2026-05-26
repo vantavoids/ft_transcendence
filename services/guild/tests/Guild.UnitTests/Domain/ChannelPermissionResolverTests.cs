@@ -63,7 +63,7 @@ public sealed class ChannelPermissionResolverTests
 		// even with deny-all overwrites, Administrator short-circuits before
 		// overwrites are applied
 		var denyAll = ChannelPermissionOverwrite.Create(
-			id: 9001, channelId: channel.Id,
+			id: 9001, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Member, targetId: 2,
 			allow: 0, deny: 0xFFFF, now: Now).Value;
 
@@ -85,7 +85,7 @@ public sealed class ChannelPermissionResolverTests
 		// @everyone base perms = 515 (SendMessages|ReadMessages|CreateInvite)
 		// deny SendMessages (1), allow ManageMessages (4)
 		var ow = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: everyone.Id,
 			allow: (long)Permission.ManageMessages,
 			deny: (long)Permission.SendMessages,
@@ -116,11 +116,11 @@ public sealed class ChannelPermissionResolverTests
 
 		// role1 allows ManageMessages(4); role2 denies ReadMessages(2) and allows BanMembers(32)
 		var ow1 = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role1.Id,
 			allow: (long)Permission.ManageMessages, deny: 0L, now: Now).Value;
 		var ow2 = ChannelPermissionOverwrite.Create(
-			id: 2, channelId: channel.Id,
+			id: 2, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role2.Id,
 			allow: (long)Permission.BanMembers,
 			deny: (long)Permission.ReadMessages, now: Now).Value;
@@ -148,12 +148,12 @@ public sealed class ChannelPermissionResolverTests
 
 		// role overwrite denies SendMessages
 		var roleOw = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role.Id,
 			allow: 0L, deny: (long)Permission.SendMessages, now: Now).Value;
 		// member overwrite re-allows SendMessages (winning)
 		var memberOw = ChannelPermissionOverwrite.Create(
-			id: 2, channelId: channel.Id,
+			id: 2, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Member, targetId: 2,
 			allow: (long)Permission.SendMessages, deny: 0L, now: Now).Value;
 
@@ -174,7 +174,7 @@ public sealed class ChannelPermissionResolverTests
 
 		// member overwrite denies a bit @everyone normally grants
 		var memberOw = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Member, targetId: 2,
 			allow: 0L, deny: (long)Permission.ReadMessages, now: Now).Value;
 
@@ -222,11 +222,11 @@ public sealed class ChannelPermissionResolverTests
 		long sharedBit = (long)Permission.ManageMessages;
 
 		var ow1 = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role1.Id,
 			allow: sharedBit, deny: 0L, now: Now).Value;
 		var ow2 = ChannelPermissionOverwrite.Create(
-			id: 2, channelId: channel.Id,
+			id: 2, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role2.Id,
 			allow: sharedBit, deny: 0L, now: Now).Value;
 
@@ -254,11 +254,11 @@ public sealed class ChannelPermissionResolverTests
 		long sharedBit = (long)Permission.ReadMessages; // @everyone grants this
 
 		var ow1 = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role1.Id,
 			allow: 0L, deny: sharedBit, now: Now).Value;
 		var ow2 = ChannelPermissionOverwrite.Create(
-			id: 2, channelId: channel.Id,
+			id: 2, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role2.Id,
 			allow: 0L, deny: sharedBit, now: Now).Value;
 
@@ -280,7 +280,7 @@ public sealed class ChannelPermissionResolverTests
 
 		var channel = MakeChannel(guild.Id);
 		var ow = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role.Id,
 			allow: 0L, deny: (long)Permission.ReadMessages, now: Now).Value;
 
@@ -328,7 +328,7 @@ public sealed class ChannelPermissionResolverTests
 
 		// role overwrite for roleId=2 denies ReadMessages
 		var roleOw = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: channel.Id,
+			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: 2,
 			allow: 0L, deny: (long)Permission.ReadMessages, now: Now).Value;
 
