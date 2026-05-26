@@ -28,7 +28,7 @@ internal sealed class GetChannelMembershipHandler(
 			return new MembershipResponse(IsMember: false, GuildId: channel.GuildId.ToString(), Permissions: 0L);
 
 		var channelOverwrites = await overwrites.GetForChannelAsync(channel.Id, cancellationToken);
-		var permissions = PermissionResolver.Resolve(guild, query.UserId, channel, channelOverwrites);
+		var permissions = PermissionResolver.Resolve(guild, query.UserId, channelOverwrites);
 
 		return new MembershipResponse(
 			IsMember: true,
