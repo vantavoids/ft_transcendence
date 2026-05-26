@@ -78,6 +78,21 @@ public sealed class ChannelTests
 		Assert.Equal(GuildFailures.ChannelNameTooLong, result.Error);
 	}
 
+	[Theory]
+	[InlineData("Bad Name")]   // space not allowed
+	[InlineData("BadName")]    // uppercase not allowed
+	[InlineData("bad!name")]   // special char not allowed
+	[InlineData("bad\tname")]  // control char not allowed
+	public void Create_NameWithInvalidChars_Fails(string name)
+	{
+		var result = Channel.Create(
+			id: 1, guildId: 10, categoryId: null,
+			name: name, topic: null, type: ChannelType.Text, position: 0, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.ChannelNameInvalid, result.Error);
+	}
+
 	[Fact]
 	public void Create_TopicTooLong_Fails()
 	{

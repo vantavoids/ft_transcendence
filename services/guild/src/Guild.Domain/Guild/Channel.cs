@@ -140,7 +140,13 @@ public sealed class Channel
 		if (string.IsNullOrWhiteSpace(name))
 			return GuildFailures.ChannelNameRequired;
 
-		return name.Length > MaxNameLen ? GuildFailures.ChannelNameTooLong : Result.Ok();
+		if (name.Length > MaxNameLen)
+			return GuildFailures.ChannelNameTooLong;
+
+		if (!name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-' || c == '_'))
+			return GuildFailures.ChannelNameInvalid;
+
+		return Result.Ok();
 	}
 
 	private static Result ValidateTopic(string? topic)

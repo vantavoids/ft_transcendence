@@ -71,6 +71,17 @@ public sealed class GuildTests
 	}
 
 	[Fact]
+	public void Create_NameWithControlChar_Fails()
+	{
+		var result = GuildEntity.Create(
+			id: 1, name: "bad\nname", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 42, everyoneRoleId: 2, adminRoleId: 3, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.GuildNameInvalid, result.Error);
+	}
+
+	[Fact]
 	public void Create_IconUrlTooLong_Fails()
 	{
 		var iconUrl = new string('a', 513);

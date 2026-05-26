@@ -60,7 +60,7 @@ public sealed class Role
 		bool isMentionable,
 		DateTimeOffset now)
 	{
-		if (string.IsNullOrWhiteSpace(name) || name.Length > MaxNameLen)
+		if (string.IsNullOrWhiteSpace(name) || name.Length > MaxNameLen || name.Any(char.IsControl))
 			return GuildFailures.InvalidRoleName;
 
 		if (color is not null && !IsValidHexColor(color))
