@@ -58,8 +58,7 @@ CREATE TABLE channels (
     updated_at       TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_channels_guild    ON channels (guild_id, position);
-CREATE INDEX idx_channels_category ON channels (category_id, position);
+CREATE INDEX idx_channels_guild_category_position ON channels (guild_id, category_id, position);
 
 -- -----------------------------------------------------------------------
 -- Guild membership
@@ -195,6 +194,8 @@ CREATE TABLE channel_permission_overwrites (
     target_type VARCHAR(8)  NOT NULL CHECK (target_type IN ('role', 'user')),
     allow       BIGINT      NOT NULL DEFAULT 0,
     deny        BIGINT      NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT unique_overwrite UNIQUE (channel_id, target_id, target_type)
 );
