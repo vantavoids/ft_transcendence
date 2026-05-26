@@ -68,6 +68,16 @@ public sealed class ChannelCategoryTests
 	}
 
 	[Fact]
+	public void Create_NameWithControlChar_Fails()
+	{
+		var result = ChannelCategory.Create(
+			id: 1, guildId: 10, name: "bad\rname", position: 0, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.CategoryNameInvalid, result.Error);
+	}
+
+	[Fact]
 	public void Rename_HappyPath_UpdatesNameAndTimestamp()
 	{
 		var category = CreateValid();

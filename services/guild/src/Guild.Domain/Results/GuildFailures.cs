@@ -11,6 +11,9 @@ public static class GuildFailures
 	public static readonly Failure GuildNameTooLong =
 		new("Guild.GuildNameTooLong", "Guild name must be 100 characters or fewer.");
 
+	public static readonly Failure GuildNameInvalid =
+		new("Guild.GuildNameInvalid", "Guild name must not contain control characters.");
+
 	public static readonly Failure GuildDescriptionTooLong =
 		new("Guild.GuildDescriptionTooLong", "Guild description is too long.");
 
@@ -44,6 +47,9 @@ public static class GuildFailures
 	public static readonly Failure CategoryNameTooLong =
 		new("Guild.CategoryNameTooLong", "Category name must be 100 characters or fewer.");
 
+	public static readonly Failure CategoryNameInvalid =
+		new("Guild.CategoryNameInvalid", "Category name must not contain control characters.");
+
 	public static readonly Failure CategoryNotFound =
 		new("Guild.CategoryNotFound", "Channel category not found.");
 
@@ -55,6 +61,9 @@ public static class GuildFailures
 
 	public static readonly Failure ChannelNameTooLong =
 		new("Guild.ChannelNameTooLong", "Channel name must be 100 characters or fewer.");
+
+	public static readonly Failure ChannelNameInvalid =
+		new("Guild.ChannelNameInvalid", "Channel name may only contain lowercase letters, digits, hyphens and underscores.");
 
 	public static readonly Failure ChannelTopicTooLong =
 		new("Guild.ChannelTopicTooLong", "Channel topic must be 1024 characters or fewer.");

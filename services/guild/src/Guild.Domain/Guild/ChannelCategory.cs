@@ -78,6 +78,9 @@ public sealed class ChannelCategory
 		if (name.Length > MaxNameLen)
 			return GuildFailures.CategoryNameTooLong;
 
+		if (name.Any(char.IsControl))
+			return GuildFailures.CategoryNameInvalid;
+
 		return Result.Ok();
 	}
 }

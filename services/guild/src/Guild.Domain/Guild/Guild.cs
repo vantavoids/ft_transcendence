@@ -135,6 +135,9 @@ public sealed class Guild
 		if (name.Length > MaxNameLen)
 			return GuildFailures.GuildNameTooLong;
 
+		if (name.Any(char.IsControl))
+			return GuildFailures.GuildNameInvalid;
+
 		if (iconUrl is not null && iconUrl.Length > MaxUrlLen)
 			return GuildFailures.GuildIconUrlTooLong;
 

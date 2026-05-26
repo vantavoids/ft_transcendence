@@ -74,6 +74,18 @@ public sealed class RoleTests
 	}
 
 	[Fact]
+	public void Create_NameWithControlChar_Fails()
+	{
+		var result = Role.Create(
+			id: 1, guildId: 10, name: "bad\nname", color: null,
+			permissions: 0L, position: 0,
+			isDefault: false, isHoisted: false, isMentionable: false, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.InvalidRoleName, result.Error);
+	}
+
+	[Fact]
 	public void Create_NameAtMaxLength_Succeeds()
 	{
 		var name = new string('a', Role.MaxNameLen);
