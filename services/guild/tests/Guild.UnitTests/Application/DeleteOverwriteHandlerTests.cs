@@ -41,7 +41,7 @@ public sealed class DeleteOverwriteHandlerTests
 		var (handler, _, channels, overwrites) = MakeHandler(currentUser: 1);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			1, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
+			1, 100, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
 
 		var result = await handler.HandleAsync(new DeleteOverwriteCommand(5, 50));
 
@@ -55,7 +55,7 @@ public sealed class DeleteOverwriteHandlerTests
 		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			1, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
+			1, 100, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
 
 		var guild = guilds.Store[100];
 		var manageChannelsRole = DomainSeed.AddCustomRole(
@@ -78,7 +78,7 @@ public sealed class DeleteOverwriteHandlerTests
 		var (handler, guilds, channels, overwrites) = MakeHandler(currentUser: 2);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			1, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
+			1, 100, 5, OverwriteTargetType.Role, 50, 1L, 0L, Now).Value);
 
 		var guild = guilds.Store[100];
 		var manageRolesRole = DomainSeed.AddCustomRole(

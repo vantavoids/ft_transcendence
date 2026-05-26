@@ -13,13 +13,14 @@ public sealed class ChannelPermissionOverwriteTests
 	public void Create_HappyPath()
 	{
 		var result = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 10,
+			id: 1, guildId: 99, channelId: 10,
 			targetType: OverwriteTargetType.Role, targetId: 50,
 			allow: (long)Permission.SendMessages,
 			deny: (long)Permission.ManageMessages,
 			now: Now);
 
 		Assert.True(result.Succeeded);
+		Assert.Equal(99L, result.Value.GuildId);
 		Assert.Equal(10L, result.Value.ChannelId);
 		Assert.Equal(OverwriteTargetType.Role, result.Value.TargetType);
 		Assert.Equal(50L, result.Value.TargetId);
@@ -31,7 +32,7 @@ public sealed class ChannelPermissionOverwriteTests
 	public void Create_TargetIdNonPositive_Fails()
 	{
 		var result = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 10,
+			id: 1, guildId: 99, channelId: 10,
 			targetType: OverwriteTargetType.Role, targetId: 0,
 			allow: 0, deny: 0, now: Now);
 
@@ -44,7 +45,7 @@ public sealed class ChannelPermissionOverwriteTests
 	{
 		long bit = (long)Permission.SendMessages;
 		var result = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 10,
+			id: 1, guildId: 99, channelId: 10,
 			targetType: OverwriteTargetType.Member, targetId: 42,
 			allow: bit, deny: bit, now: Now);
 
@@ -56,7 +57,7 @@ public sealed class ChannelPermissionOverwriteTests
 	public void UpdatePermissions_HappyPath()
 	{
 		var overwrite = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 10,
+			id: 1, guildId: 99, channelId: 10,
 			targetType: OverwriteTargetType.Member, targetId: 42,
 			allow: 0, deny: 0, now: Now).Value;
 
@@ -73,7 +74,7 @@ public sealed class ChannelPermissionOverwriteTests
 	public void UpdatePermissions_OverlapRejected()
 	{
 		var overwrite = ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 10,
+			id: 1, guildId: 99, channelId: 10,
 			targetType: OverwriteTargetType.Role, targetId: 50,
 			allow: 0, deny: 0, now: Now).Value;
 

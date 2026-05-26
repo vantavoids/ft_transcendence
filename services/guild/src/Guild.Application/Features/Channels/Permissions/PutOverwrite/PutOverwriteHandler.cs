@@ -69,6 +69,7 @@ internal sealed class PutOverwriteHandler(
 
 		var createResult = ChannelPermissionOverwrite.Create(
 			id: ids.NextId(),
+			guildId: channel.GuildId,
 			channelId: channel.Id,
 			targetType: targetType,
 			targetId: command.TargetId,

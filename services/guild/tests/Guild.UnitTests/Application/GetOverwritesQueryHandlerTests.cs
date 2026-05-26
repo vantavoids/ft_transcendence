@@ -72,10 +72,10 @@ public sealed class GetOverwritesQueryHandlerTests
 		var everyoneId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
 
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Role,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Role,
 			targetId: everyoneId, allow: 2L, deny: 0L, now: Now).Value);
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 2, channelId: 5, targetType: OverwriteTargetType.Member,
+			id: 2, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Member,
 			targetId: 1, allow: 0L, deny: 4L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
@@ -92,7 +92,7 @@ public sealed class GetOverwritesQueryHandlerTests
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		var everyoneId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Role,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Role,
 			targetId: everyoneId, allow: 2L, deny: 0L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
@@ -108,7 +108,7 @@ public sealed class GetOverwritesQueryHandlerTests
 		var (handler, _, channels, overwrites) = MakeHandler(currentUser: 1);
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Member,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Member,
 			targetId: 1, allow: 0L, deny: 4L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
@@ -125,7 +125,7 @@ public sealed class GetOverwritesQueryHandlerTests
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		var everyoneId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Role,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Role,
 			targetId: everyoneId, allow: 2L, deny: 0L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
@@ -141,7 +141,7 @@ public sealed class GetOverwritesQueryHandlerTests
 		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
 		var everyoneId = guilds.Store[100].Roles.First(r => r.IsDefault).Id;
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Role,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Role,
 			targetId: everyoneId, allow: 7L, deny: 8L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
@@ -169,7 +169,7 @@ public sealed class GetOverwritesQueryHandlerTests
 
 		var everyoneId = guild.Roles.First(r => r.IsDefault).Id;
 		overwrites.Seed(ChannelPermissionOverwrite.Create(
-			id: 1, channelId: 5, targetType: OverwriteTargetType.Role,
+			id: 1, guildId: 100, channelId: 5, targetType: OverwriteTargetType.Role,
 			targetId: everyoneId, allow: 2L, deny: 0L, now: Now).Value);
 
 		var result = await handler.HandleAsync(new GetOverwritesQuery(5));
