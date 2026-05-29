@@ -16,9 +16,10 @@ public sealed record MessageResponse(
 	DateTimeOffset? EditedAt,
 	DateTimeOffset CreatedAt,
 	object[] Attachments,
-	object[] Reactions)
+	object[] Reactions,
+	string? Nonce)
 {
-	public static MessageResponse From(Message m) => new(
+	public static MessageResponse From(Message m, string? nonce) => new(
 		Id: m.Id.ToString(),
 		ChannelId: m.ChannelId.ToString(),
 		AuthorId: m.AuthorId.ToString(),
@@ -27,5 +28,6 @@ public sealed record MessageResponse(
 		EditedAt: m.EditedAt,
 		CreatedAt: m.CreatedAt,
 		Attachments: [],
-		Reactions: []);
+		Reactions: [],
+		Nonce: nonce);
 }

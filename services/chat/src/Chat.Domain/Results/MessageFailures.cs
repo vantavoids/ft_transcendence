@@ -28,4 +28,7 @@ public static class MessageFailures
 
 	public static readonly Failure MissingSendPermission =
 		new("Message.MissingSendPermission", "Caller lacks SEND_MESSAGES permission on this channel.");
+
+	public static readonly Failure NonceTooLong =
+		new("Message.NonceTooLong", "Nonce must be 64 characters or fewer.");
 }

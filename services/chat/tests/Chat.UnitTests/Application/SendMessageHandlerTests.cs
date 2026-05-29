@@ -47,7 +47,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = null;
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.ChannelNotFound, result.Error);
@@ -62,7 +62,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: false, GuildId: 5, Permissions: 0);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.NotAMember, result.Error);
@@ -75,7 +75,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: 0);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.MissingSendPermission, result.Error);
@@ -91,7 +91,7 @@ public sealed class SendMessageHandlerTests
 		// admin bit set, SEND_MESSAGES clear: should still go through
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: AdministratorPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
 
 		Assert.True(result.Succeeded);
 		Assert.Single(h.Repository.Saved);
@@ -105,7 +105,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: 7));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: 7, Nonce: null));
 
 		Assert.True(result.Succeeded);
 		var response = result.Value;
@@ -141,12 +141,40 @@ public sealed class SendMessageHandlerTests
 	}
 
 	[Fact]
+	public async Task Nonce64Chars_MaxAllowed_Succeeds()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+		var nonce = new string('x', 64);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: nonce));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(nonce, result.Value.Nonce);
+	}
+
+	[Fact]
+	public async Task Nonce65Chars_OneTooLong_ReturnsNonceTooLong_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: new string('x', 65)));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NonceTooLong, result.Error);
+		Assert.Empty(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	[Fact]
 	public async Task ContentRequired_DomainFailureBubblesUp_NoSideEffects()
 	{
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "   ", ReplyToId: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "   ", ReplyToId: null, Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.ContentRequired, result.Error);
