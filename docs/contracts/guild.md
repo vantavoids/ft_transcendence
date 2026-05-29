@@ -452,7 +452,9 @@ Create a channel. Requires `MANAGE_CHANNELS` permission.
 }
 ```
 
-`name` must follow channel naming rules (see above). `type` must be `text`, `announcement`, or `voice`. `category_id` is optional (null = uncategorised).
+`name` must follow channel naming rules (see above). `type` must be `text` or `announcement`. `category_id` is optional (null = uncategorised).
+
+> Voice channels are intentionally not supported. The voice/video bonus module is 1-on-1 peer-to-peer WebRTC, initiated between two users via the Chat Service signaling hub (see `chat.md`). A Discord-style N-way voice channel would require an SFU which is WAY beyond the scope, please have some consideration for your infra cats (me)
 
 **Response `201`:** Channel object.
 
@@ -539,7 +541,7 @@ Update a category name or position. Requires `MANAGE_CHANNELS` permission.
 **Request body** (all optional):
 ```json
 {
-  "name": "Voice Channels",
+  "name": "Announcements",
   "position": 1
 }
 ```

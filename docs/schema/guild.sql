@@ -40,7 +40,10 @@ CREATE INDEX idx_categories_guild ON channel_categories (guild_id, position);
 -- Channels
 -- -----------------------------------------------------------------------
 
-CREATE TYPE channel_type AS ENUM ('text', 'announcement', 'voice');
+-- Voice channels are not supported: the bonus module is 1-on-1 WebRTC, which is
+-- initiated peer-to-peer between two users via the Chat Service signaling hub.
+-- A Discord-style N-way voice channel would require an SFU we are NOT gonna do
+CREATE TYPE channel_type AS ENUM ('text', 'announcement');
 
 CREATE TABLE channels (
     id               BIGINT          PRIMARY KEY,
