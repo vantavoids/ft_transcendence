@@ -6,14 +6,33 @@ namespace Chat.UnitTests.Fakes;
 public sealed class FakeMessageRepository : IMessageRepository
 {
 	private readonly List<Message> _saved = [];
+	private readonly Dictionary<(long AuthorId, long ChannelId, string Nonce), long> _nonces = [];
 
 	public IReadOnlyList<Message> Saved => _saved;
 
-	public void Reset() => _saved.Clear();
+	public void Reset()
+	{
+		_saved.Clear();
+		_nonces.Clear();
+	}
 
-	public Task AddAsync(Message message, CancellationToken ct)
+	public Task AddAsync(Message message, string? nonce, CancellationToken ct)
 	{
 		_saved.Add(message);
+		if (nonce is not null)
+			_nonces[(message.AuthorId, message.ChannelId, nonce)] = message.Id;
 		return Task.CompletedTask;
+	}
+
+	public Task<long?> FindNonceAsync(long authorId, long channelId, string nonce, CancellationToken ct)
+	{
+		_nonces.TryGetValue((authorId, channelId, nonce), out var messageId);
+		return Task.FromResult(messageId == 0 ? null : (long?)messageId);
+	}
+
+	public Task<Message?> GetByIdAsync(long messageId, CancellationToken ct)
+	{
+		var message = _saved.FirstOrDefault(m => m.Id == messageId);
+		return Task.FromResult(message);
 	}
 }

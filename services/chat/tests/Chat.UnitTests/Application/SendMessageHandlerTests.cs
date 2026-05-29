@@ -169,6 +169,50 @@ public sealed class SendMessageHandlerTests
 	}
 
 	[Fact]
+	public async Task NonceDedupHit_ReturnsSameMessage_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+
+		// first call — persists the message
+		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "my-nonce"));
+		Assert.True(first.Succeeded);
+
+		h.EventBus.Reset();
+		h.Broadcaster.Reset();
+
+		// second call with the same nonce — must return the original message
+		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "my-nonce"));
+
+		Assert.True(second.Succeeded);
+		Assert.Equal(first.Value.Id, second.Value.Id);
+		Assert.Equal(first.Value.CreatedAt, second.Value.CreatedAt);
+		Assert.Equal("my-nonce", second.Value.Nonce);
+
+		// no new persist, event, or broadcast on the retry
+		Assert.Single(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	[Fact]
+	public async Task NonceDedupMiss_DifferentNonce_CreatesTwoMessages()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+
+		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "nonce-a"));
+		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "nonce-b"));
+
+		Assert.True(first.Succeeded);
+		Assert.True(second.Succeeded);
+		Assert.NotEqual(first.Value.Id, second.Value.Id);
+		Assert.Equal(2, h.Repository.Saved.Count);
+		Assert.Equal(2, h.EventBus.Published.Count);
+		Assert.Equal(2, h.Broadcaster.Broadcasts.Count);
+	}
+
+	[Fact]
 	public async Task ContentRequired_DomainFailureBubblesUp_NoSideEffects()
 	{
 		var (h, handler) = BuildHandler();

@@ -141,6 +141,27 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 		Assert.Null(body!.Nonce);
 	}
 
+	[Fact]
+	public async Task Post_SameNonce_Returns201WithOriginalMessage()
+	{
+		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
+		var client = BuildClient(userId: 42);
+
+		var first = await client.PostAsJsonAsync("/v1/channels/100/messages",
+			new { content = "hello", nonce = "dedup-nonce" });
+		var firstBody = await first.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+
+		var second = await client.PostAsJsonAsync("/v1/channels/100/messages",
+			new { content = "hello", nonce = "dedup-nonce" });
+		var secondBody = await second.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+
+		Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+		Assert.Equal(firstBody!.Id, secondBody!.Id);
+		Assert.Equal(firstBody.CreatedAt, secondBody.CreatedAt);
+		Assert.Equal("dedup-nonce", secondBody.Nonce);
+		Assert.Single(factory.SavedMessages);
+	}
+
 	private sealed record MessageBody(
 		string Id,
 		string ChannelId,

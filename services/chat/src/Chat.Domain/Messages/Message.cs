@@ -38,6 +38,17 @@ public sealed class Message
 	public bool IsDeleted { get; private set; }
 	public DateTimeOffset CreatedAt { get; private set; }
 
+	public static Message Reconstitute(
+		long id,
+		long channelId,
+		long authorId,
+		string? content,
+		long? replyToId,
+		DateTimeOffset? editedAt,
+		bool isDeleted,
+		DateTimeOffset createdAt)
+		=> new(id, channelId, authorId, content, replyToId, editedAt, isDeleted, createdAt);
+
 	public static Result<Message> Create(
 		long id,
 		long channelId,
