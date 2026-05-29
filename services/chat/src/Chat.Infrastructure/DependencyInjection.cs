@@ -73,7 +73,7 @@ public static class DependencyInjection
 		services.AddHttpClient<IGuildClient, GuildClient>((sp, c) =>
 		{
 			var opts = sp.GetRequiredService<IOptions<ServicesOptions>>().Value;
-			c.BaseAddress = new Uri(opts.GuildService.TrimEnd('/') + "/");
+			c.BaseAddress = new Uri(opts.GuildService.TrimEnd('/') + "/internal/");
 		});
 
 		return services;
