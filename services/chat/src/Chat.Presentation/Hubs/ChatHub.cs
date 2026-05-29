@@ -1,30 +1,32 @@
-using Chat.Application.Abstractions.Messaging;
-using Chat.Application.Features.Messages.Common;
-using Chat.Application.Features.Messages.SendMessage;
-using Chat.Domain.Results;
+using Chat.Application.Abstractions;
+using Chat.Application.Abstractions.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;
 
 [Authorize]
-public sealed class ChatHub(
-	ICommandHandler<SendMessageCommand, Result<MessageResponse>> sendHandler)
-	: Hub<IChatClient>
+public sealed class ChatHub(IGuildClient guildClient, ICurrentUser currentUser) : Hub<IChatClient>
 {
-	public async Task SendMessage(SendMessagePayload payload)
-	{
-		var result = await sendHandler.HandleAsync(
-			new SendMessageCommand(payload.ChannelId, payload.Content, payload.ReplyToId),
-			Context.ConnectionAborted);
+	private const long ReadMessages = 1L << 1;
+	private const long Administrator = 1L << 8;
 
-		if (result.IsFailure)
+	public async Task JoinChannel(long channelId)
+	{
+		var membership = await guildClient.GetMembershipAsync(channelId, currentUser.UserId, Context.ConnectionAborted);
+
+		if (membership is null || !membership.IsMember)
 		{
-			// success path is fanned-out by IChannelBroadcaster inside the
-			// handler; the caller learns about it through ReceiveMessage like
-			// every other subscriber, so the hub method itself only surfaces
-			// failures
-			await Clients.Caller.Error(result.Error.Code, result.Error.Message);
+			await Clients.Caller.Error("Channel.NotFound", "Channel not found.");
+			return;
 		}
+
+		if ((membership.Permissions & (ReadMessages | Administrator)) == 0)
+		{
+			await Clients.Caller.Error("Channel.MissingReadPermission", "Caller lacks READ_MESSAGES permission on this channel.");
+			return;
+		}
+
+		await Groups.AddToGroupAsync(Context.ConnectionId, $"channel:{channelId}", Context.ConnectionAborted);
 	}
 }

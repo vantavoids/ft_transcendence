@@ -53,7 +53,7 @@ builder.Services
 			{
 				var accessToken = ctx.Request.Query["access_token"];
 				var path = ctx.HttpContext.Request.Path;
-				if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+				if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/v1/hubs"))
 					ctx.Token = accessToken;
 				return Task.CompletedTask;
 			},
@@ -89,9 +89,10 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
 		}));
 	},
 });
-app.MapCarter();
-app.MapHub<ChatHub>("/hubs/chat");
-app.MapHub<SignalingHub>("/hubs/signaling");
+var v1 = app.MapGroup("/v1").RequireAuthorization();
+v1.MapCarter();
+app.MapHub<ChatHub>("/v1/hubs/chat");
+app.MapHub<SignalingHub>("/v1/hubs/signaling");
 
 app.Run();
 

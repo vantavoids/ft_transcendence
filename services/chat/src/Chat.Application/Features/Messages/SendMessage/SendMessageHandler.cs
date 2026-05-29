@@ -24,11 +24,15 @@ internal sealed class SendMessageHandler(
 	// for the source of truth on permission numbering
 	private const long SendMessages = 1L << 0;
 	private const long Administrator = 1L << 8;
+	private const int MaxNonceLen = 64;
 
 	public async Task<Result<MessageResponse>> HandleAsync(
 		SendMessageCommand command,
 		CancellationToken cancellationToken = default)
 	{
+		if (command.Nonce is { Length: > MaxNonceLen })
+			return MessageFailures.NonceTooLong;
+
 		var userId = currentUser.UserId;
 
 		var membership = await guildClient.GetMembershipAsync(command.ChannelId, userId, cancellationToken);
@@ -56,7 +60,7 @@ internal sealed class SendMessageHandler(
 		var message = messageResult.Value;
 		await repository.AddAsync(message, cancellationToken);
 
-		var response = MessageResponse.From(message);
+		var response = MessageResponse.From(message, command.Nonce);
 
 		await eventBus.PublishAsync(
 			new ChatMessageSent(
@@ -64,7 +68,7 @@ internal sealed class SendMessageHandler(
 				GuildId: membership.GuildId,
 				AuthorId: userId,
 				MessageId: messageId,
-				Content: message.Content ?? string.Empty,
+				Content: message.Content!,
 				Mentions: []),
 			cancellationToken);
 
