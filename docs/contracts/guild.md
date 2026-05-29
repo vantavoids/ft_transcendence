@@ -165,7 +165,7 @@ Join a guild via invite code.
 | 409 | Already a member |
 
 **Side effects:**
-- Validates user exists via HTTP GET to User Service
+- Validates user exists via `GET /internal/users/{user_id}` to User Service over the docker network
 - Publishes `guild.member_joined { guild_id, guild_name, user_id }` to RabbitMQ
 
 ---
@@ -401,7 +401,7 @@ Accept an invite by its code, without needing to know the guild ID upfront. The 
 | 409 | Already a member of the target guild |
 
 **Side effects:**
-- Validates user exists via HTTP GET to User Service
+- Validates user exists via `GET /internal/users/{user_id}` to User Service over the docker network
 - Publishes `guild.member_joined { guild_id, guild_name, user_id }` to RabbitMQ
 
 This endpoint and `POST /guilds/{id}/join` are functionally equivalent; this one is preferred for invite-link flows where the client only knows the code, the other for flows where the client already knows the guild ID.
@@ -807,7 +807,24 @@ Delete a permission overwrite. Requires `MANAGE_CHANNELS`.
 
 ---
 
-## Internal Endpoint (used by Chat Service)
+## Internal Endpoints
+
+### GET /internal/users/{user_id}/owned-guilds-count
+
+Count the guilds owned by a given user. Called by Auth Service before processing `DELETE /auth/me` to enforce the rule that account deletion requires ownership transfer or guild deletion first.
+
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://guild:8080/internal/users/{user_id}/owned-guilds-count`).
+
+**Response `200`:**
+```json
+{
+  "count": 2
+}
+```
+
+Returns `{ "count": 0 }` (not 404) when the user owns no guilds, so callers don't need to disambiguate "no guilds" from "user unknown". Guild Service doesn't track user existence (that lives in User Service), so a missing user simply resolves to a count of zero.
+
+---
 
 ### GET /internal/channels/{channel_id}/membership
 

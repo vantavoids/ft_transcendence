@@ -75,12 +75,14 @@ Update own profile. Can only update your own profile (`{id}` must match JWT `sub
 
 `status` must be one of: `online`, `idle`, `dnd`, `offline`
 
+`avatar_url` and `banner_url` are **not accepted** here. All image changes go through the dedicated upload endpoints (`POST /users/{id}/avatar`, `POST /users/{id}/banner`) so the service owns storage end-to-end and clients cannot point the profile at arbitrary URLs.
+
 **Response `200`:** Updated profile object (same shape as GET).
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 400 | Invalid field values |
+| 400 | Invalid field values, or `avatar_url` / `banner_url` present in request body |
 | 403 | Trying to update another user's profile |
 | 404 | User not found |
 
@@ -88,7 +90,7 @@ Update own profile. Can only update your own profile (`{id}` must match JWT `sub
 
 ### POST /users/{id}/avatar
 
-Upload a new avatar image. Multipart form data.
+Upload a new avatar image. Multipart form data. Replaces the existing avatar if one is set.
 
 **Request:** `Content-Type: multipart/form-data`
 - Field `avatar`: image file (JPEG/PNG/WebP, max 5MB)
@@ -105,6 +107,91 @@ Upload a new avatar image. Multipart form data.
 |--------|--------|
 | 400 | Invalid file type or size exceeded |
 | 403 | Not your profile |
+
+---
+
+### DELETE /users/{id}/avatar
+
+Remove the current avatar, reverting the profile to the service's default avatar. `{id}` must match the caller.
+
+**Response `204`:** No content. Subsequent `GET /users/{id}` responses return `avatar_url: null`; the frontend renders the default placeholder.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Not your profile |
+| 404 | No avatar currently set |
+
+---
+
+### POST /users/{id}/banner
+
+Upload a new profile banner image. Multipart form data. Replaces the existing banner if one is set.
+
+**Request:** `Content-Type: multipart/form-data`
+- Field `banner`: image file (JPEG/PNG/WebP, max 8MB)
+
+The size cap is higher than for avatars because banners are wider (typically 600x240 or larger) and benefit from a less aggressive quality floor.
+
+**Response `200`:**
+```json
+{
+  "banner_url": "https://..."
+}
+```
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid file type or size exceeded |
+| 403 | Not your profile |
+
+---
+
+### DELETE /users/{id}/banner
+
+Remove the current banner. `{id}` must match the caller.
+
+**Response `204`:** No content. Subsequent `GET /users/{id}` responses return `banner_url: null`.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Not your profile |
+| 404 | No banner currently set |
+
+---
+
+### GET /users
+
+Batch user lookup. Resolves a list of user IDs to minimal profile summaries in a single round-trip. Used by anything that holds a set of IDs and needs to render usernames/avatars: the channel member list, message author resolution in chat history, friend lists, mention rendering.
+
+Exactly one of `ids` or `q` (see `GET /users/search`) must be set. The two query modes are mutually exclusive, even though they share the `/users` path.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `ids` | string | Comma-separated user snowflakes. Min 1, max 100. |
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<snowflake>",
+    "username": "skaf_angel",
+    "display_name": "Skaf",
+    "avatar_url": "https://...",
+    "status": "online"
+  }
+]
+```
+
+Response order matches the order of IDs in the request, so the caller does not need to re-sort. IDs that do not resolve (deleted users, users who have blocked the caller, users the caller has blocked) are silently omitted from the response. The frontend can render any missing ID as "Deleted User" without a second probe.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Neither `ids` nor `q` provided, both provided, more than 100 IDs, or malformed snowflake |
 
 ---
 
@@ -159,6 +246,74 @@ List a user's friends.
   }
 ]
 ```
+
+---
+
+### GET /users/me/friend-requests
+
+List pending friend requests involving the caller, in both directions. Backs the friends panel's "Pending" tab, where users accept/reject incoming requests and cancel outgoing ones. Accepted friendships are not returned (use `GET /users/{id}/friends` for those).
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `direction` | string | `incoming` (others sent to caller), `outgoing` (caller sent), or `all` (default). |
+
+**Response `200`:**
+```json
+[
+  {
+    "friendship_id": "<snowflake>",
+    "direction": "incoming",
+    "user": {
+      "id": "<snowflake>",
+      "username": "tstephan",
+      "display_name": "SkyDogzz",
+      "avatar_url": "https://...",
+      "status": "online"
+    },
+    "created_at": "2026-03-09T00:00:00Z"
+  }
+]
+```
+
+`friendship_id` is the snowflake of the `friendships` row, so the UI can call `PATCH /friends/{id}` (accept) or `DELETE /friends/{id}` (reject/cancel) directly without a separate lookup. `direction` is `incoming` when the row's `addressee_id` is the caller, `outgoing` when the `requester_id` is the caller. `user` is the other participant's profile summary.
+
+Results are ordered by `created_at` descending. Pending requests involving users the caller has blocked (or who have blocked the caller) are filtered out.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid `direction` value |
+
+---
+
+### GET /users/me/friendship/{user_id}
+
+Spot-check the caller's relationship with another user. O(1) lookup (the friendships row is keyed on the ordered `(user_a, user_b)` pair), intended for any UI that needs to render a single button state without paging through the full friend list: profile pages, the "Add Friend" / "Cancel Request" / "Unblock" CTA, and Chat's "can A DM B" check.
+
+**Response `200`:**
+```json
+{
+  "status": "accepted",
+  "since": "2026-02-14T10:00:00Z"
+}
+```
+
+`status` is one of:
+| Value | Meaning |
+|-------|---------|
+| `accepted` | Friends. `since` is the timestamp the request was accepted. |
+| `pending_outgoing` | Caller sent a request that `{user_id}` has not yet acted on. `since` is the request timestamp. |
+| `pending_incoming` | `{user_id}` sent a request the caller has not yet acted on. `since` is the request timestamp. |
+| `blocked_by_me` | Caller has blocked `{user_id}`. `since` is the block timestamp. |
+| `blocked_by_them` | `{user_id}` has blocked the caller. `since` is `null` (the caller is not allowed to see when). |
+| `none` | No relationship row exists. `since` is `null`. |
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `{user_id}` is the caller |
+| 404 | User not found |
 
 ---
 
@@ -279,6 +434,47 @@ List all users the authenticated user has blocked.
   }
 ]
 ```
+
+---
+
+## Internal Endpoints
+
+Reachable only over the docker network. The API Gateway forwards `/api/{service}/vN/...`; `/internal/...` has no version segment and is not routed. No `Authorization` header required.
+
+### GET /internal/users/{user_id}
+
+Fetch a user's profile by ID without an access token. Used by other services to verify a user exists before referencing them (Guild Service on join, Chat Service on DM send).
+
+**Response `200`:** Same shape as public `GET /users/{id}`.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | User not found |
+
+---
+
+### GET /internal/users/{user_id}/relationship-with/{other_user_id}
+
+Resolve the relationship between two users, from `{user_id}`'s perspective. Same shape as the public `GET /users/me/friendship/{user_id}` but the perspective is the path's `{user_id}` rather than the JWT-authenticated caller. Used by:
+- Chat Service on `POST /dms/{user_id}/messages` (called twice, one direction each way, to enforce mutual-block rejection).
+- Notification Service on `chat.message_sent` fanout (called once per mentioned user to skip notifications where the mentioned user has blocked the message author).
+
+**Response `200`:**
+```json
+{
+  "status": "accepted",
+  "since": "2026-02-14T10:00:00Z"
+}
+```
+
+`status` values are identical to the public spot-check endpoint: `accepted`, `pending_outgoing`, `pending_incoming`, `blocked_by_me`, `blocked_by_them`, `none`. Here, "me" means `{user_id}` and "them" means `{other_user_id}`.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `{user_id}` equals `{other_user_id}` |
+| 404 | Either user not found |
 
 ---
 
