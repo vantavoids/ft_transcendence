@@ -87,7 +87,8 @@ export function ChatMessage({
 
     editTextareaRef.current?.focus();
     editTextareaRef.current?.setSelectionRange(editingDraft.length, editingDraft.length);
-  }, [editingDraft.length, isEditing]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
 
   useEffect(() => {
     if (!isEditing) {
