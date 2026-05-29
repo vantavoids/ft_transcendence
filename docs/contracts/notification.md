@@ -53,7 +53,7 @@ Fetch notifications for the authenticated user. Dismissed notifications are excl
 `dismissed_at` is `null` for active notifications and an ISO 8601 timestamp once the user dismisses them (see `DELETE /notifications/{id}`).
 
 `actor_id` and `source_id` are top-level fields backed by dedicated columns (see `docs/schema/notification.sql`):
-- `actor_id`: the user who caused this notification (used for blocked-user suppression). NULL for system events.
+- `actor_id`: the user who caused this notification. Used for blocked-user suppression: before inserting a notification with a non-NULL `actor_id`, the service calls User Service `GET /internal/users/{target_user_id}/relationship-with/{actor_id}` and drops the notification if the relationship is `blocked_by_me` (i.e. the recipient has blocked the actor). NULL for system events, where no suppression is applied.
 - `source_id`: the entity this notification deep-links to (a message, friendship, guild, etc.). NULL when there is no persistent target.
 
 **Notification types - what each field carries:**

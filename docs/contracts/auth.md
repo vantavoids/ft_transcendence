@@ -201,7 +201,7 @@ The service:
 | 401 | Invalid or missing access token |
 | 409 | Caller owns one or more guilds. Transfer ownership or delete those guilds first. |
 
-The 409 check is enforced by a synchronous HTTP call from Auth to Guild (`GET /guilds?owner_id=...`) so that ownership transfers stay an explicit user action rather than an automatic cascade.
+The 409 check is enforced by a synchronous HTTP call from Auth to Guild (`GET /internal/users/{user_id}/owned-guilds-count` over the docker network) so that ownership transfers stay an explicit user action rather than an automatic cascade.
 
 ---
 
