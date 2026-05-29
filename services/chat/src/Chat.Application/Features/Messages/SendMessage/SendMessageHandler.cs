@@ -45,6 +45,17 @@ internal sealed class SendMessageHandler(
 		if ((membership.Permissions & (SendMessages | Administrator)) == 0)
 			return MessageFailures.MissingSendPermission;
 
+		if (command.Nonce is not null)
+		{
+			var existingId = await repository.FindNonceAsync(userId, command.ChannelId, command.Nonce, cancellationToken);
+			if (existingId is not null)
+			{
+				var existing = await repository.GetByIdAsync(existingId.Value, cancellationToken);
+				if (existing is not null)
+					return MessageResponse.From(existing, command.Nonce);
+			}
+		}
+
 		var messageId = ids.NextId();
 
 		var messageResult = Message.Create(
@@ -58,7 +69,7 @@ internal sealed class SendMessageHandler(
 			return messageResult.Error;
 
 		var message = messageResult.Value;
-		await repository.AddAsync(message, cancellationToken);
+		await repository.AddAsync(message, command.Nonce, cancellationToken);
 
 		var response = MessageResponse.From(message, command.Nonce);
 
