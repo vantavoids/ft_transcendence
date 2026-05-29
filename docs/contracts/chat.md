@@ -1,8 +1,8 @@
 # API Contract - Chat Service
 
 The Chat Service has two interfaces:
-1. **REST** - message history, edit/delete
-2. **SignalR WebSocket hub** - real-time send/receive, presence
+1. **REST** - send/edit/delete/history, attachments, read state, reactions
+2. **SignalR WebSocket hub** - real-time fanout, presence, WebRTC signaling
 
 Base path: `/chat` (REST), `/hubs/chat` (SignalR)
 
@@ -24,6 +24,69 @@ All endpoints require `Authorization: Bearer <access_token>`.
 ---
 
 ## REST Endpoints
+
+### POST /channels/{channel_id}/messages
+
+Send a message to a channel. Returns the canonical persisted message synchronously.
+
+**Request body:**
+```json
+{
+  "content": "toi multithreading",
+  "reply_to_id": null,
+  "attachment_ids": [],
+  "nonce": "8f3c2-optimistic-bubble-key"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `content` | conditional | Message text. Required unless `attachment_ids` is non-empty. |
+| `reply_to_id` | no | `id` of an existing non-deleted message in the same channel. `null` for a top-level message. |
+| `attachment_ids` | no | Array of draft attachment IDs returned by `POST /attachments` (max 10). Each must belong to the caller, be unattached, and not expired. |
+| `nonce` | no | Client-generated dedup/correlation token. Free-form string, max 64 chars. See [Nonce semantics](#nonce-semantics). |
+
+**Response `201`:**
+```json
+{
+  "id": "<snowflake>",
+  "channel_id": "<snowflake>",
+  "author_id": "<snowflake>",
+  "content": "toi multithreading",
+  "reply_to_id": null,
+  "edited_at": null,
+  "created_at": "2026-03-09T12:00:00Z",
+  "attachments": [],
+  "reactions": [],
+  "nonce": "8f3c2-optimistic-bubble-key"
+}
+```
+
+`nonce` is echoed in the response (and in the corresponding `ReceiveMessage` broadcast) exactly as the client sent it, or `null` if no nonce was supplied.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Both `content` and `attachment_ids` empty; nonce too long; reply target deleted or in another channel |
+| 403 | User is not a member / lacks `SEND_MESSAGES` permission |
+| 404 | Channel not found, or referenced attachment not owned by caller |
+
+**Side effects:**
+1. Persists the message in DB.
+2. Broadcasts `ReceiveMessage` to the channel group (including the sender's own connections, carrying `nonce`).
+3. Publishes `chat.message_sent` to RabbitMQ.
+
+#### Nonce semantics
+
+The nonce is a client-supplied string that the server treats as opaque. Its purpose is threefold:
+
+1. **Optimistic UI reconciliation.** The sender places a local message bubble keyed by nonce, then replaces it when either the `201` response or the `ReceiveMessage` broadcast arrives (whichever wins the race).
+2. **Idempotency.** If the same `(author_id, channel_id, nonce)` triple is seen again within **10 minutes**, the server returns the originally persisted message (same `id`, `created_at`) instead of writing a new row. Lets clients safely retry on network failure. Outside that window the nonce is forgotten and a repeat call would create a new message.
+3. **Send-status feedback.** The sender can show "failed, retry" if neither the `201` nor a matching `ReceiveMessage` arrives within a UI timeout.
+
+Omitting `nonce` opts out of all three: the response and broadcast carry `"nonce": null`, and retries will create duplicate messages.
+
+---
 
 ### GET /channels/{channel_id}/messages
 
@@ -124,7 +187,12 @@ Delete a message. Author or member with `MANAGE_MESSAGES` permission.
 
 ### GET /dms
 
-List all DM conversations for the authenticated user.
+List the caller's DM conversations. Conversations the caller has archived via `DELETE /dms/{user_id}` are excluded by default; pass `include_archived=true` to surface them (for a "show closed DMs" UI screen).
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `include_archived` | bool | If `true`, also return conversations the caller has archived. Default `false`. Archived rows carry `"is_archived": true` in the response so the UI can render them distinctly. |
 
 **Response `200`:**
 ```json
@@ -133,12 +201,61 @@ List all DM conversations for the authenticated user.
     "partner_id": "<snowflake>",
     "last_preview": "mec ta partie elle leak de fou",
     "last_message_at": "2026-03-09T11:00:00Z",
-    "unread_count": 3
+    "unread_count": 3,
+    "is_archived": false
   }
 ]
 ```
 
-`last_preview` is the first ~100 characters of the most recent message in the conversation (sidebar preview); not the full message body. Mirrors `user_conversations.last_preview` in the schema.
+`last_preview` is the first ~100 characters of the most recent message in the conversation (sidebar preview), not the full message body. Mirrors `user_conversations.last_preview` in the schema. `is_archived` mirrors `user_conversations.is_archived` for the caller's row; the partner's row is independent.
+
+---
+
+### POST /dms/{user_id}/messages
+
+Send a DM to another user. Creates the conversation row on first message. Returns the canonical persisted DM synchronously.
+
+**Request body:**
+```json
+{
+  "content": "devine qui c'est qui tourne :)",
+  "reply_to_id": null,
+  "attachment_ids": [],
+  "nonce": "1a4b9-optimistic-bubble-key"
+}
+```
+
+Field semantics match `POST /channels/{channel_id}/messages`. `reply_to_id` must reference a non-deleted DM in the **same conversation**.
+
+**Response `201`:**
+```json
+{
+  "id": "<snowflake>",
+  "conversation_id": "<snowflake>",
+  "sender_id": "<snowflake>",
+  "recipient_id": "<snowflake>",
+  "content": "devine qui c'est qui tourne :)",
+  "reply_to_id": null,
+  "created_at": "2026-03-09T12:00:00Z",
+  "attachments": [],
+  "nonce": "1a4b9-optimistic-bubble-key"
+}
+```
+
+Nonce semantics are identical to `POST /channels/{channel_id}/messages`, but the idempotency key is `(sender_id, recipient_id, nonce)`.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Both `content` and `attachment_ids` empty; nonce too long; reply target deleted or in another conversation |
+| 403 | Recipient has blocked the sender (or vice versa). Enforced by two calls to User Service `GET /internal/users/{user_id}/relationship-with/{other_user_id}` (one in each direction), checking for `blocked_by_me` or `blocked_by_them`. |
+| 404 | Recipient user not found (User Service `GET /internal/users/{user_id}` returned 404), or referenced attachment not owned by caller |
+
+**Side effects:**
+1. Persists the DM in DB. Creates a conversation row for both participants if this is their first message.
+2. If either participant has archived their `user_conversations` row (`is_archived = true`), flips it back to `false` so the conversation reappears in their sidebar.
+3. Broadcasts `ReceiveDirectMessage` to the recipient's personal group **and** the sender's personal group (so the sender's other devices stay in sync), each carrying `nonce`.
+4. Publishes `chat.dm_sent` to RabbitMQ.
 
 ---
 
@@ -178,11 +295,28 @@ Deleted DMs are filtered out (same rule as channel messages).
 
 ---
 
+### DELETE /dms/{user_id}
+
+Archive ("close") the caller's side of the DM conversation with `{user_id}`. Hides the conversation from the caller's `GET /dms` sidebar without affecting the other participant: the partner's row, the message history, and the caller's `last_read_message_id` are all untouched.
+
+Flips `user_conversations.is_archived = true` for the caller's row only. The conversation auto-unarchives (flips back to `false`) the next time either side sends a message in it, so there is no explicit unarchive endpoint. To resurface an archived conversation without sending, list it via `GET /dms?include_archived=true`.
+
+Idempotent: archiving an already-archived conversation returns `204`.
+
+**Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | No DM conversation with `{user_id}` exists |
+
+---
+
 ## Attachment Endpoints
 
 Two-step upload flow:
 1. `POST /attachments` to upload the file - returns a draft attachment record with an `id`.
-2. Reference one or more attachment IDs in `SendMessage` / `SendDirectMessage`. The server attaches them to the message at persist time.
+2. Reference one or more attachment IDs via `attachment_ids` in `POST /channels/{channel_id}/messages` or `POST /dms/{user_id}/messages`. The server attaches them to the message at persist time.
 
 Draft attachments are owned by the uploader and live for 1 hour. After that they are eligible for cleanup. Once attached to a message they are permanent (subject to message deletion).
 
@@ -193,7 +327,7 @@ Limits:
 
 ### POST /attachments
 
-Upload a file. Returns the metadata the client needs to reference the attachment in a `SendMessage` / `SendDirectMessage` call.
+Upload a file. Returns the metadata the client needs to reference the attachment in a `POST /channels/{channel_id}/messages` or `POST /dms/{user_id}/messages` call.
 
 **Request:** `Content-Type: multipart/form-data`
 - Field `file`: the file blob (binary).
@@ -269,6 +403,38 @@ Advance the caller's read cursor for a channel to a specific message. Idempotent
 | 404 | Channel or message not found |
 
 **Side effects:** Sends `ReadStateUpdated` to the caller's personal SignalR group so other devices sync.
+
+---
+
+### PUT /dms/{user_id}/read
+
+Mark a DM conversation as read up to a specific message. Mirrors `PUT /channels/{id}/read` for channels; the implicit alternative (auto-reset on `GET /dms/{user_id}/messages`) is rejected because infinite-scroll into older history shouldn't reset unread, and other devices need an explicit signal to update their badge.
+
+**Request body:**
+```json
+{
+  "message_id": "<snowflake>"
+}
+```
+
+`message_id` must be a non-deleted DM in the conversation with `{user_id}`. Idempotent and monotonic: passing a message older than the current cursor is a no-op.
+
+**Response `200`:**
+```json
+{
+  "partner_id": "<snowflake>",
+  "last_read_message_id": "<snowflake>",
+  "unread_count": 0
+}
+```
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Caller is not a participant of the conversation |
+| 404 | No conversation with `{user_id}`, or message not found in that conversation |
+
+**Side effects:** Resets `dm_unread_counts` for the caller. Sends `DmReadStateUpdated` to the caller's personal SignalR group so other devices sync the badge.
 
 ---
 
@@ -356,60 +522,27 @@ On connect, the server:
 
 ### Client → Server (Invocations)
 
-#### SendMessage
+Sending messages is REST-only (`POST /channels/{channel_id}/messages`, `POST /dms/{user_id}/messages`). The hub carries one chat invocation (`Typing`, below) plus the WebRTC signaling methods documented further down.
 
-Send a message to a channel.
+#### Typing
+
+Announce that the caller is currently typing in a channel or DM. Pure ephemeral signal: no DB write, no RabbitMQ publish.
 
 ```json
 {
-  "target": "SendMessage",
+  "target": "Typing",
   "arguments": [{
-    "channel_id": "<snowflake>",
-    "content": "toi multithreading",
-    "reply_to_id": null,
-    "attachment_ids": []
+    "scope": "channel",
+    "id": "<snowflake>"
   }]
 }
 ```
 
-`reply_to_id` is optional - set it to the `id` of an existing message in the same channel to thread a reply. Omit or pass `null` for a top-level message. The server validates that the referenced message exists in the same channel and is not deleted.
+`scope` is `"channel"` or `"dm"`. For `"channel"`, `id` is the channel snowflake; the server checks that the caller is a member with `SEND_MESSAGES` (same check as `POST /channels/{channel_id}/messages`) and broadcasts `TypingStarted` to the channel group, excluding the caller's own connections. For `"dm"`, `id` is the partner's user snowflake; the server checks that neither side has blocked the other and sends `TypingStarted` to the partner's personal group only (the caller's own devices do not need to see themselves typing).
 
-`attachment_ids` is optional - an array of draft attachment IDs returned by `POST /attachments` (max 10). The server validates that each attachment was uploaded by the caller, has not yet been attached to another message, and has not expired.
+Rate limiting: the server discards invocations more frequent than once per 3 seconds per `(user_id, scope, id)` triple. Clients should throttle to roughly one invocation every 3 seconds while the user is actively typing, and stop calling it the moment they pause. No `TypingStopped` event exists; clients clear the indicator client-side when `expires_at` passes without a refresh.
 
-Server actions:
-1. HTTP GET to Guild Service `/internal/channels/{channel_id}/membership?user_id=...` over the docker network - validates membership + `SEND_MESSAGES` permission
-2. Persists message in DB
-3. Broadcasts `ReceiveMessage` to the channel group
-4. Publishes `chat.message_sent` to RabbitMQ
-
-**Error:** Hub sends `Error` event back to the caller if validation fails.
-
----
-
-#### SendDirectMessage
-
-Send a DM to another user.
-
-```json
-{
-  "target": "SendDirectMessage",
-  "arguments": [{
-    "recipient_id": "<snowflake>",
-    "content": "devine qui c'est qui tourne :)",
-    "reply_to_id": null,
-    "attachment_ids": []
-  }]
-}
-```
-
-`reply_to_id` is optional - set it to the `id` of an existing DM in the same conversation to thread a reply. The server validates that the referenced message belongs to the same conversation and is not deleted.
-
-`attachment_ids` follows the same rules as `SendMessage` (max 10, ownership checked).
-
-Server actions:
-1. Persists the message in DB (creates the conversation if it does not exist yet).
-2. Broadcasts `ReceiveDirectMessage` to the recipient's personal group.
-3. Publishes `chat.dm_sent` to RabbitMQ so Notification Service can create a `dm` notification.
+**Error:** Hub sends `Error` event back to the caller if validation fails (not a member, blocked, etc.). Throttle drops are silent.
 
 ---
 
@@ -417,7 +550,7 @@ Server actions:
 
 #### ReceiveMessage
 
-Broadcast to all members of a channel when a new message arrives.
+Broadcast to all members of a channel when a new message arrives. The sender's own connections receive this too, so clients reconcile their optimistic bubble by matching on `nonce` (or fall back to `id` if no nonce was supplied).
 
 ```json
 {
@@ -430,32 +563,58 @@ Broadcast to all members of a channel when a new message arrives.
     "reply_to_id": null,
     "created_at": "2026-03-09T12:00:00Z",
     "attachments": [],
-    "reactions": []
+    "reactions": [],
+    "nonce": "8f3c2-optimistic-bubble-key"
   }]
 }
 ```
 
-`attachments` and `reactions` carry the same shape as in the REST `GET /channels/{channel_id}/messages` response. `reactions` is always `[]` on a newly-sent message (counts grow via `ReactionAdded`).
+`attachments` and `reactions` carry the same shape as in the REST `GET /channels/{channel_id}/messages` response. `reactions` is always `[]` on a newly-sent message (counts grow via `ReactionAdded`). `nonce` is the value the sender passed to `POST /channels/{channel_id}/messages`, or `null` if none was supplied.
 
 ---
 
 #### ReceiveDirectMessage
 
-Sent to the recipient's personal group when a DM arrives.
+Sent to the recipient's personal group when a DM arrives, **and** to the sender's personal group so their other connected devices stay in sync. Sender clients reconcile their optimistic bubble via `nonce`.
 
 ```json
 {
   "target": "ReceiveDirectMessage",
   "arguments": [{
     "id": "<snowflake>",
+    "conversation_id": "<snowflake>",
     "sender_id": "<snowflake>",
+    "recipient_id": "<snowflake>",
     "content": "y a des merge conflicts d'ailleurs",
     "reply_to_id": null,
     "created_at": "2026-03-09T12:00:00Z",
-    "attachments": []
+    "attachments": [],
+    "nonce": "1a4b9-optimistic-bubble-key"
   }]
 }
 ```
+
+`nonce` is the value the sender passed to `POST /dms/{user_id}/messages`, or `null` if none was supplied.
+
+---
+
+#### TypingStarted
+
+Broadcast (for channels) or sent (for DMs) when another user calls `Typing`. The recipient renders "X is typing..." and auto-clears when `expires_at` passes without a refresh.
+
+```json
+{
+  "target": "TypingStarted",
+  "arguments": [{
+    "user_id": "<snowflake>",
+    "scope": "channel",
+    "id": "<snowflake>",
+    "expires_at": "2026-03-09T12:00:08Z"
+  }]
+}
+```
+
+`expires_at` is set to roughly 8 seconds after the broadcast time. There is no `TypingStopped` event: clients clear the indicator locally when the timeout elapses or when a `ReceiveMessage` / `ReceiveDirectMessage` from the same `user_id` in the same `scope`+`id` arrives (the message effectively replaces the typing signal).
 
 ---
 
@@ -544,9 +703,30 @@ Sent to the caller's personal SignalR group after `PUT /channels/{id}/read` so o
 
 ---
 
+#### DmReadStateUpdated
+
+Sent to the caller's personal SignalR group after `PUT /dms/{user_id}/read` so other devices the user is connected on update their DM unread badges.
+
+```json
+{
+  "target": "DmReadStateUpdated",
+  "arguments": [{
+    "partner_id": "<snowflake>",
+    "last_read_message_id": "<snowflake>",
+    "unread_count": 0
+  }]
+}
+```
+
+---
+
 #### UserPresence
 
-Broadcast to all shared guild members when a user connects or disconnects.
+Broadcast when a user's presence changes (connect, disconnect, or `PATCH /users/me` status update). Fanned out to every connection that could see the user in a sidebar:
+
+- members of any guild the user is in
+- the other participant of any DM conversation the user has
+- the user's friends (per User Service's friend list)
 
 ```json
 {
@@ -558,7 +738,7 @@ Broadcast to all shared guild members when a user connects or disconnects.
 }
 ```
 
-`status` is `online` or `offline`.
+`status` is `online`, `idle`, `dnd`, or `offline`, matching the values of `users_profile.status` in the User Service. `idle` and `dnd` only ever arrive via an explicit `PATCH /users/me` from the user; connect/disconnect transitions only produce `online` / `offline`.
 
 ---
 
