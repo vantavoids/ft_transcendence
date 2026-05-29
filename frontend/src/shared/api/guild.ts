@@ -34,7 +34,7 @@ export type GuildRoleDto = {
   guild_id: string;
   name: string;
   color: string;
-  permissions: number;
+  permissions: string;
   position: number;
   is_hoisted: boolean;
   is_mentionable: boolean;
