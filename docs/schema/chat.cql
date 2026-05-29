@@ -200,6 +200,22 @@ CREATE TABLE IF NOT EXISTS dm_unread_counts (
 ) WITH comment = 'Unread DM message count per conversation; reset on read';
 
 -- ---------------------------------------------------------------------------
+-- DM read states
+-- Tracks how far each user has read in each DM conversation.
+-- Mirrors channel_read_states for the DM side; kept separate from
+-- user_conversations so the sidebar projection (the conversation index)
+-- stays unaware of read state and PUT /dms/{user_id}/read writes a single
+-- focused row instead of touching the index.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dm_read_states (
+    user_id              BIGINT,
+    partner_id           BIGINT,
+    last_read_message_id BIGINT,
+    last_read_at         TIMESTAMP,
+    PRIMARY KEY ((user_id), partner_id)
+) WITH comment = 'Per-user last-read position per DM partner';
+
+-- ---------------------------------------------------------------------------
 -- Message lookup
 -- Supports PATCH /messages/{id} and DELETE /messages/{id}.
 -- The REST surface takes only a message ID; mutating a ScyllaDB row requires
@@ -221,3 +237,37 @@ CREATE TABLE IF NOT EXISTS message_lookup (
     created_at       TIMESTAMP,
     author_id        BIGINT
 ) WITH comment = 'Auxiliary lookup: message_id → full PK + author_id for REST mutations';
+
+-- ---------------------------------------------------------------------------
+-- Nonce dedup (channel messages)
+-- Backs the 10-minute idempotency window on POST /channels/{id}/messages.
+-- On send, the handler first reads from this table by (author_id, channel_id,
+-- nonce). A hit means the client is retrying; return the stored message_id
+-- and skip the insert. A miss means proceed normally and write a fresh row
+-- here in the same logged batch as the message insert.
+-- default_time_to_live = 600 lets Scylla expire entries after the window
+-- without a cleanup job. Rows for sends without a client-supplied nonce are
+-- simply not written.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS message_nonce_dedup (
+    author_id   BIGINT,
+    channel_id  BIGINT,
+    nonce       TEXT,
+    message_id  BIGINT,
+    PRIMARY KEY ((author_id, channel_id), nonce)
+) WITH default_time_to_live = 600
+   AND comment = 'Idempotency dedup for POST /channels/{id}/messages; auto-expires after the 10-minute window';
+
+-- ---------------------------------------------------------------------------
+-- Nonce dedup (DMs)
+-- Same shape as message_nonce_dedup, keyed on (sender_id, recipient_id, nonce)
+-- since DM sends do not carry a channel_id.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dm_nonce_dedup (
+    sender_id     BIGINT,
+    recipient_id  BIGINT,
+    nonce         TEXT,
+    message_id    BIGINT,
+    PRIMARY KEY ((sender_id, recipient_id), nonce)
+) WITH default_time_to_live = 600
+   AND comment = 'Idempotency dedup for POST /dms/{user_id}/messages; auto-expires after the 10-minute window';
