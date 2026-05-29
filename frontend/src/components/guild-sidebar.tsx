@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
 
@@ -105,7 +106,13 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
             }`}
             aria-label={guild.name}
           >
-            <img src={guild.iconUrl} alt="" className="h-full w-full object-cover" />
+            <Image
+              src={guild.iconUrl}
+              alt=""
+              width={160}
+              height={160}
+              className="h-full w-full object-cover"
+            />
           </button>
         ))}
         <button
