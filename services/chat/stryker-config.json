@@ -1,0 +1,14 @@
+{
+	"stryker-config": {
+		"solution": "Chat.Mutation.slnx",
+		"test-projects": [
+			"tests/Chat.UnitTests/Chat.UnitTests.csproj",
+			"tests/Chat.FunctionalTests/Chat.FunctionalTests.csproj"
+		],
+		"reporters": ["progress", "html", "json"],
+		"mutate": [
+			"**/*.cs",
+			"!**/Results/*.cs"
+		]
+	}
+}
