@@ -18,7 +18,7 @@ func checkIntegrity(filepath string, checksum string) error {
 		return fmt.Errorf("failed checksum for: %s", filepath)
 	}
 
-	fmt.Println("🟢 File integrity checked.")
+	fmt.Println("✅ File integrity checked.")
 	return nil
 }
 
