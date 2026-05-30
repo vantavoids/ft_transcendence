@@ -9,6 +9,8 @@ public sealed class GuildDbContextDesignTimeFactory : IDesignTimeDbContextFactor
 	public GuildDbContext CreateDbContext(string[] args)
 	{
 		var configuration = new ConfigurationBuilder()
+			.SetBasePath(Directory.GetCurrentDirectory())
+			.AddJsonFile("appsettings.local.json", optional: true)
 			.AddEnvironmentVariables()
 			.Build();
 

@@ -108,8 +108,7 @@ public sealed class CreateChannelTests(GuildApiFactory factory) : IClassFixture<
 	[Fact]
 	public async Task AnnouncementType_Returns_201()
 	{
-		// contract: type must accept "text", "announcement", and "voice"
-		// currently only "text" and "voice" are in the ChannelType enum
+		// contract: type accepts "text" and "announcement"
 		var client = factory.CreateAuthenticatedClient(userId: 5110);
 		var created = await client.CreateGuildAsync("guild");
 		var id = created.GetProperty("id").GetString()!;

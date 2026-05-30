@@ -34,7 +34,7 @@ internal sealed class ChannelConfig : IEntityTypeConfiguration<Channel>
 
 		builder.Property(c => c.Type)
 			.HasColumnName("type")
-			.HasConversion<int>()
+			.HasColumnType("channel_type")
 			.IsRequired();
 
 		builder.Property(c => c.Position)

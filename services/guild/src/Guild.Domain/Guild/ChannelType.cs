@@ -7,6 +7,5 @@ namespace Guild.Domain.Guild;
 public enum ChannelType
 {
 	Text = 0,
-	Voice = 1,
-	Announcement = 2
+	Announcement = 1
 }
