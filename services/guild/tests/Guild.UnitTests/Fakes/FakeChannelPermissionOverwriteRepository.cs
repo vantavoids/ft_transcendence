@@ -9,6 +9,11 @@ internal sealed class FakeChannelPermissionOverwriteRepository : IChannelPermiss
 
 	public IReadOnlyDictionary<long, ChannelPermissionOverwrite> Store => _store;
 
+	public int AddCount { get; private set; }
+	public int UpdateCount { get; private set; }
+	public int RemoveCount { get; private set; }
+	public int SaveChangesCount { get; private set; }
+
 	public Task<IReadOnlyList<ChannelPermissionOverwrite>> GetForChannelAsync(
 		long channelId,
 		CancellationToken cancellationToken = default)
@@ -45,21 +50,25 @@ internal sealed class FakeChannelPermissionOverwriteRepository : IChannelPermiss
 	public Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default)
 	{
 		_store[overwrite.Id] = overwrite;
+		AddCount++;
 		return Task.CompletedTask;
 	}
 
 	public void Update(ChannelPermissionOverwrite overwrite)
 	{
 		_store[overwrite.Id] = overwrite;
+		UpdateCount++;
 	}
 
 	public void Remove(ChannelPermissionOverwrite overwrite)
 	{
 		_store.Remove(overwrite.Id);
+		RemoveCount++;
 	}
 
 	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
+		SaveChangesCount++;
 		return Task.CompletedTask;
 	}
 

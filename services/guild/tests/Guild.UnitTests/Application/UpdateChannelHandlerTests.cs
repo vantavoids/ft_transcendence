@@ -67,6 +67,8 @@ public sealed class UpdateChannelHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Equal("new", result.Value.Name);
 		Assert.Equal(4, result.Value.Position);
+		Assert.Equal(1, channels.UpdateCount);
+		Assert.Equal(1, channels.SaveChangesCount);
 	}
 
 	[Fact]
