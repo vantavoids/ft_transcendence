@@ -17,7 +17,7 @@ public sealed class GuildDbContext(DbContextOptions<GuildDbContext> options) : D
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		base.OnModelCreating(modelBuilder);
-		modelBuilder.HasPostgresEnum<ChannelType>();
+		modelBuilder.RegisterPostgresEnums();
 		modelBuilder.ApplyConfigurationsFromAssembly(typeof(GuildDbContext).Assembly);
 	}
 }

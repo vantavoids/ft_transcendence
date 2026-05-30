@@ -32,9 +32,10 @@ internal sealed class ChannelConfig : IEntityTypeConfiguration<Channel>
 			.HasColumnName("topic")
 			.HasColumnType("text");
 
+		// no HasColumnType: it suppresses the enum value converter and parameters
+		// would be sent as int (PG 42804). column type is inferred from HasPostgresEnum<T>
 		builder.Property(c => c.Type)
 			.HasColumnName("type")
-			.HasColumnType("channel_type")
 			.IsRequired();
 
 		builder.Property(c => c.Position)

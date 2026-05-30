@@ -21,7 +21,7 @@ public static class DependencyInjection
 		services.AddDbContext<GuildDbContext>((ctx, config) =>
 		{
 			var options = ctx.GetRequiredService<IOptions<DbOptions>>().Value;
-			config.UseNpgsql(options.ToConnectionString());
+			config.UseNpgsql(options.ToConnectionString(), o => o.MapPostgresEnums());
 		});
 
 		services.AddScoped<IGuildRepository, GuildRepository>();
