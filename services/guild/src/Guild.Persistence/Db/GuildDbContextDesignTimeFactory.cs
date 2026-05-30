@@ -20,7 +20,7 @@ public sealed class GuildDbContextDesignTimeFactory : IDesignTimeDbContextFactor
 				"Set Database__Host / Database__Port / Database__Name / Database__User / Database__Password.");
 
 		var dbContextOptions = new DbContextOptionsBuilder<GuildDbContext>()
-			.UseNpgsql(options.ToConnectionString())
+			.UseNpgsql(options.ToConnectionString(), o => o.MapPostgresEnums())
 			.Options;
 
 		return new GuildDbContext(dbContextOptions);
