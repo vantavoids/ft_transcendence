@@ -1,0 +1,142 @@
+name: guild ci
+
+# fires only on guild-touching changes (and on edits to this workflow itself, so
+# a misconfigured file gets caught on its own PR). other services will get their
+# own per-path workflow files as their owners land them
+on:
+  pull_request:
+    paths:
+      - 'services/guild/**'
+      - '.github/workflows/guild-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/guild/**'
+      - '.github/workflows/guild-ci.yml'
+    # release tags trigger the workflow regardless of path filters so the publish
+    # job can attach a :v1.2.3 tag to the image. naming uses guild-vX.Y.Z so
+    # per-service tags don't collide once other services publish on tag too
+    tags:
+      - 'guild-v*'
+
+# cancel an in-flight run when a newer push lands on the same PR/branch; saves
+# minutes on rapid-fire pushes (especially since we run those on github's doodoo workers)
+concurrency:
+  group: guild-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: services/guild
+
+jobs:
+  test:
+    name: build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup .net 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # restore lands in ~/.nuget/packages by default. key on every csproj so a
+      # dep bump invalidates cleanly; restore-keys lets unrelated changes still
+      # hit the previous cache
+      - name: cache nuget
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-guild-${{ hashFiles('services/guild/**/*.csproj') }}
+          restore-keys: nuget-guild-
+
+      - run: dotnet restore Guild.slnx
+      - run: dotnet build Guild.slnx --no-restore --configuration Release
+      - run: dotnet test Guild.slnx --no-build --configuration Release --logger 'console;verbosity=normal'
+
+  docker:
+    name: docker (${{ matrix.dockerfile }})
+    runs-on: ubuntu-latest
+    strategy:
+      # don't abort the matrix on one failing dockerfile! we want to see every
+      # broken file in a single run, not play whack-a-mole (je vais pas tanker)
+      fail-fast: false
+      matrix:
+        dockerfile: [Dockerfile, Dockerfile.dev, Dockerfile.test, Dockerfile.migrate]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      # build-only; nothing is pushed, no registry login needed. confirms the
+      # dockerfile is syntactically valid and the COPY/RUN graph completes.
+      # publish job below reuses the same cache scope so a main-branch run
+      # doesn't rebuild from scratch
+      - name: build ${{ matrix.dockerfile }}
+        uses: docker/build-push-action@v6
+        with:
+          context: services/guild
+          file: services/guild/${{ matrix.dockerfile }}
+          push: false
+          cache-from: type=gha,scope=guild-${{ matrix.dockerfile }}
+          cache-to: type=gha,scope=guild-${{ matrix.dockerfile }},mode=max
+
+  publish:
+    name: publish guild → ghcr
+    runs-on: ubuntu-latest
+    # ship from main pushes (rolling :latest, :sha-<short>) and from guild-v*
+    # tag pushes (semver tags). PRs never publish: no secret leakage, no clutter
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/guild-v'))
+    needs: [test, docker]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      # GITHUB_TOKEN is auto-issued per run and scoped to this repo only; no
+      # PAT or secret management required for publishing to ghcr
+      - name: login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # tag matrix:
+      #   main pushes      -> :latest (moving) + :sha-<short> (immutable per commit)
+      #   guild-vX.Y.Z tag -> :vX.Y.Z + :X + :X.Y (so deploys can pin to 1, 1.2, or 1.2.3)
+      # Dockerfile.migrate is intentionally NOT published: it's an SDK-fat image
+      # tied to a specific migration strategy. when deployment lands, prefer
+      # `dotnet ef migrations bundle` + a slim runtime image instead
+      - name: image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/guild
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=sha-,enable={{is_default_branch}}
+            type=match,pattern=guild-v(\d+\.\d+\.\d+),group=1
+            type=match,pattern=guild-v(\d+\.\d+)\.\d+,group=1
+            type=match,pattern=guild-v(\d+)\.\d+\.\d+,group=1
+
+      - name: build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: services/guild
+          file: services/guild/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # share cache scope with the docker validation job above so a main-
+          # branch run picks up warm layers from the matrix run that just ran
+          cache-from: type=gha,scope=guild-Dockerfile
+          cache-to: type=gha,scope=guild-Dockerfile,mode=max
