@@ -6,8 +6,13 @@ import (
 
 func main() {
 
-	err := run()
+	err := bootstrap()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// err = run()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 }
