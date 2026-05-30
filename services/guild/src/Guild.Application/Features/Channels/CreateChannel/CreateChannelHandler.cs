@@ -89,9 +89,6 @@ internal sealed class CreateChannelHandler(
 			case "announcement":
 				type = ChannelType.Announcement;
 				return true;
-			case "voice":
-				type = ChannelType.Voice;
-				return true;
 			default:
 				type = default;
 				return false;

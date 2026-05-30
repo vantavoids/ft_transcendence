@@ -168,23 +168,9 @@ public sealed class CreateChannelHandlerTests
 	}
 
 	[Fact]
-	public async Task VoiceType_ParsesAndPersists()
-	{
-		// contract: "voice" is a valid channel type alongside "text" and "announcement"
-		var handler = MakeHandler(out _, out _, out _, ownerSeed: 1, currentUser: 1);
-
-		var result = await handler.HandleAsync(
-			new CreateChannelCommand(GuildId: 100, Name: "general", Type: "voice",
-				CategoryId: null, Topic: null, Position: 0));
-
-		Assert.True(result.Succeeded);
-		Assert.Equal("voice", result.Value.Type);
-	}
-
-	[Fact]
 	public async Task AnnouncementType_ParsesAndPersists()
 	{
-		// contract: "announcement" is a valid channel type alongside "text" and "voice"
+		// contract: "announcement" is a valid channel type alongside "text"
 		var handler = MakeHandler(out _, out _, out _, ownerSeed: 1, currentUser: 1);
 
 		var result = await handler.HandleAsync(

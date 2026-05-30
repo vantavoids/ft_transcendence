@@ -3,8 +3,8 @@ using Guild.Domain.Results;
 namespace Guild.Domain.Guild;
 
 /// <summary>
-/// a chat or voice channel inside a guild. lives under an optional category.
-/// per-channel permission tweaks are represented by <see cref="ChannelPermissionOverwrite"/>
+/// a channel inside a guild. lives under an optional category. per-channel permission
+/// tweaks are represented by <see cref="ChannelPermissionOverwrite"/>
 /// </summary>
 public sealed class Channel
 {
