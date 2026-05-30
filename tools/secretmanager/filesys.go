@@ -19,10 +19,10 @@ func changePerm(path string, perm os.FileMode) error {
 
 	err := os.Chmod(path, perm)
 	if err != nil {
-		fmt.Println("🔴 File permissions update failed.")
+		fmt.Println("❌ File permissions update failed.")
 		return err
 	}
 
-	fmt.Println("🟢 File permissions updated.")
+	fmt.Println("✅ File permissions updated.")
 	return nil
 }

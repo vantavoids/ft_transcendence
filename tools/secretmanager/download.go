@@ -58,7 +58,7 @@ func downloadFile(url string, filepath string, checksum string) error {
 	}
 
 	fmt.Printf("\r%s", strings.Repeat(" ", 50)) // clear line
-	fmt.Printf("\r🟢 Downloaded %s, all done.\n", humanize.Bytes(counter.Total))
+	fmt.Printf("\r✅ Downloaded %s, all done.\n", humanize.Bytes(counter.Total))
 	out.Close()
 
 	err = checkIntegrity(filepath+".tmp", checksum)
