@@ -106,7 +106,6 @@ func ensureAGESecret() error {
 		fmt.Printf("\n⚠️ Open a PR containing only the updated .sops.yaml file.\n\n")
 		fmt.Println("A trusted developer must then refresh the encrypted env files with your public key.")
 		fmt.Println("You will not be able to decrypt env files until that PR is merged and secrets are updated.")
-		os.Exit(0)
 	}
 
 	return nil
