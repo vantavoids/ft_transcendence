@@ -25,66 +25,55 @@ concurrency:
   group: guild-ci-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: services/guild
-
 jobs:
   test:
-    name: build + test
+    name: test
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: setup .net 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      # restore lands in ~/.nuget/packages by default. key on every csproj so a
-      # dep bump invalidates cleanly; restore-keys lets unrelated changes still
-      # hit the previous cache
-      - name: cache nuget
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-guild-${{ hashFiles('services/guild/**/*.csproj') }}
-          restore-keys: nuget-guild-
-
-      - run: dotnet restore Guild.slnx
-      - run: dotnet build Guild.slnx --no-restore --configuration Release
-      - run: dotnet test Guild.slnx --no-build --configuration Release --logger 'console;verbosity=normal'
-
-  docker:
-    name: docker (${{ matrix.dockerfile }})
-    runs-on: ubuntu-latest
-    strategy:
-      # don't abort the matrix on one failing dockerfile! we want to see every
-      # broken file in a single run, not play whack-a-mole (je vais pas tanker)
-      fail-fast: false
-      matrix:
-        dockerfile: [Dockerfile, Dockerfile.dev, Dockerfile.test, Dockerfile.migrate]
     steps:
       - uses: actions/checkout@v4
 
       - name: setup buildx
         uses: docker/setup-buildx-action@v3
 
-      # build-only; nothing is pushed, no registry login needed. confirms the
-      # dockerfile is syntactically valid and the COPY/RUN graph completes.
-      # publish job below reuses the same cache scope so a main-branch run
-      # doesn't rebuild from scratch
-      - name: build ${{ matrix.dockerfile }}
+      # build the test image dev uses locally, then run it. keeps CI and local
+      # dotnet test invocation identical (same SDK pin, same restore graph, same
+      # entrypoint) so a passing local run is a passing CI run
+      - name: build test image
         uses: docker/build-push-action@v6
         with:
           context: services/guild
-          file: services/guild/${{ matrix.dockerfile }}
+          file: services/guild/Dockerfile.test
+          load: true
+          tags: guild-test-runner
+          cache-from: type=gha,scope=guild-Dockerfile.test
+          cache-to: type=gha,scope=guild-Dockerfile.test,mode=max
+
+      - name: run tests
+        run: docker run --rm guild-test-runner
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      # only the production image is gated. Dockerfile.dev / .migrate are dev-loop
+      # only; breakage there doesn't block a deploy and isn't worth CI time. cache
+      # scope matches the publish job below so main reuses warm layers
+      - name: build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/guild
+          file: services/guild/Dockerfile
           push: false
-          cache-from: type=gha,scope=guild-${{ matrix.dockerfile }}
-          cache-to: type=gha,scope=guild-${{ matrix.dockerfile }},mode=max
+          cache-from: type=gha,scope=guild-Dockerfile
+          cache-to: type=gha,scope=guild-Dockerfile,mode=max
 
   publish:
-    name: publish guild → ghcr
+    name: publish guild -> ghcr
     runs-on: ubuntu-latest
     # ship from main pushes (rolling :latest, :sha-<short>) and from guild-v*
     # tag pushes (semver tags). PRs never publish: no secret leakage, no clutter
