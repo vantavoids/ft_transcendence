@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"runtime"
 )
 
@@ -30,14 +31,13 @@ func bootstrap() error {
 	}
 
 	// check for AGE secrets else generate one
-	// add the new public key to .sops.yaml
-	// and display a warning message
-
 	if err := ensureAGESecret(); err != nil {
 		return err
 	}
 
 	// check for git-hooks and install if missing
+
+	fmt.Printf("\n✅ Secretman setup finished successfully.\n")
 
 	return nil
 }
