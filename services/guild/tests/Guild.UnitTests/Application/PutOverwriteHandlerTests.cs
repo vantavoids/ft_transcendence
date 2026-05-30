@@ -81,6 +81,8 @@ public sealed class PutOverwriteHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Single(overwrites.Store);
 		Assert.Equal(OverwriteTargetType.Role, overwrites.Store.Values.Single().TargetType);
+		Assert.Equal(1, overwrites.AddCount);
+		Assert.Equal(1, overwrites.SaveChangesCount);
 	}
 
 	[Fact]
@@ -97,6 +99,9 @@ public sealed class PutOverwriteHandlerTests
 		var only = overwrites.Store.Values.Single();
 		Assert.Equal(4L, only.Allow);
 		Assert.Equal(8L, only.Deny);
+		Assert.Equal(1, overwrites.AddCount);
+		Assert.Equal(1, overwrites.UpdateCount);
+		Assert.Equal(2, overwrites.SaveChangesCount);
 	}
 
 	[Fact]

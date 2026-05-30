@@ -9,6 +9,11 @@ internal sealed class FakeGuildRepository : IGuildRepository
 
 	public IReadOnlyDictionary<long, GuildEntity> Store => _store;
 
+	public int AddCount { get; private set; }
+	public int UpdateCount { get; private set; }
+	public int RemoveCount { get; private set; }
+	public int SaveChangesCount { get; private set; }
+
 	public Task<GuildEntity?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
 	{
 		_store.TryGetValue(id, out var guild);
@@ -37,21 +42,25 @@ internal sealed class FakeGuildRepository : IGuildRepository
 	public Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default)
 	{
 		_store[guild.Id] = guild;
+		AddCount++;
 		return Task.CompletedTask;
 	}
 
 	public void Update(GuildEntity guild)
 	{
 		_store[guild.Id] = guild;
+		UpdateCount++;
 	}
 
 	public void Remove(GuildEntity guild)
 	{
 		_store.Remove(guild.Id);
+		RemoveCount++;
 	}
 
 	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
+		SaveChangesCount++;
 		return Task.CompletedTask;
 	}
 }

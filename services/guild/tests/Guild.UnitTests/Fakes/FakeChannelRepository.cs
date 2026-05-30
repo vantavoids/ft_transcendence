@@ -9,6 +9,11 @@ internal sealed class FakeChannelRepository : IChannelRepository
 
 	public IReadOnlyDictionary<long, Channel> Store => _store;
 
+	public int AddCount { get; private set; }
+	public int UpdateCount { get; private set; }
+	public int RemoveCount { get; private set; }
+	public int SaveChangesCount { get; private set; }
+
 	public Task<Channel?> GetByIdAsync(long channelId, CancellationToken cancellationToken = default)
 	{
 		_store.TryGetValue(channelId, out var channel);
@@ -40,21 +45,25 @@ internal sealed class FakeChannelRepository : IChannelRepository
 	public Task AddAsync(Channel channel, CancellationToken cancellationToken = default)
 	{
 		_store[channel.Id] = channel;
+		AddCount++;
 		return Task.CompletedTask;
 	}
 
 	public void Update(Channel channel)
 	{
 		_store[channel.Id] = channel;
+		UpdateCount++;
 	}
 
 	public void Remove(Channel channel)
 	{
 		_store.Remove(channel.Id);
+		RemoveCount++;
 	}
 
 	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
+		SaveChangesCount++;
 		return Task.CompletedTask;
 	}
 

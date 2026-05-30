@@ -154,6 +154,8 @@ public sealed class UpdateCategoryHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Equal("New", result.Value.Name);
 		Assert.Equal(12, result.Value.Position);
+		Assert.Equal(1, catRepo.UpdateCount);
+		Assert.Equal(1, catRepo.SaveChangesCount);
 	}
 
 	[Fact]
