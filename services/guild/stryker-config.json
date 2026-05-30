@@ -1,6 +1,6 @@
 {
 	"stryker-config": {
-		"solution": "Guild.slnx",
+		"solution": "Guild.Mutation.slnx",
 		"test-projects": [
 			"tests/Guild.UnitTests/Guild.UnitTests.csproj",
 			"tests/Guild.FunctionalTests/Guild.FunctionalTests.csproj"
