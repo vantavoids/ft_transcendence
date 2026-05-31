@@ -9,8 +9,11 @@ const toolsDir = ".tools/"
 
 func bootstrap() error {
 
+	userOS := runtime.GOOS
+	userArch := runtime.GOARCH
+
 	// check OS
-	if err := checkOs(); err != nil {
+	if err := checkOs(userOS, userArch); err != nil {
 		return err
 	}
 
@@ -20,13 +23,12 @@ func bootstrap() error {
 	}
 
 	// check for SOPS and install if missing
-	userArch := runtime.GOARCH
-	if err := ensureSOPS(userArch, toolsDir+"sops"); err != nil {
+	if err := ensureSOPS(userOS, userArch, toolsDir+"sops"); err != nil {
 		return err
 	}
 
 	// check for AGE and install if missing
-	if err := ensureAGE(userArch, toolsDir+"age.tar.gz"); err != nil {
+	if err := ensureAGE(userOS, userArch, toolsDir+"age.tar.gz"); err != nil {
 		return err
 	}
 

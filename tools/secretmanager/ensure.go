@@ -5,20 +5,25 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 )
 
-func checkOs() error {
+func checkOs(userOS string, userArch string) error {
 
-	userOs := runtime.GOOS
-
-	if userOs != "linux" {
-		fmt.Printf("❌ Operating system: %v.\n", userOs)
-		return fmt.Errorf("you need to be on Linux in order to use secretman, exiting.")
+	if userOS != "linux" && userOS != "darwin" {
+		fmt.Printf("❌ Operating system: %v\n", userOS)
+		return fmt.Errorf("your system must be Linux or Darwin (MacOS) in order to use secretman, exiting")
 	} else {
-		fmt.Printf("✅ Operating system: %v.\n", userOs)
+		fmt.Printf("✅ Operating system: %v\n", userOS)
 	}
+
+	if userArch != "amd64" && userArch != "arm64" {
+		fmt.Printf("❌ System architecture: %v\n", userArch)
+		return fmt.Errorf("your system must be amd64 or arm64 in order to use secretman, exiting")
+	} else {
+		fmt.Printf("✅ System architecture: %v\n", userArch)
+	}
+
 	return nil
 }
 
@@ -36,20 +41,20 @@ func ensureToolsCache() error {
 	return nil
 }
 
-func ensureSOPS(userArch string, path string) error {
+func ensureSOPS(userOS string, userArch string, path string) error {
 
 	fmt.Println()
 	download := true
 
 	if fileExists(path) {
 		fmt.Println("✅ SOPS binary found.")
-		download = askForConfirmation("➡️ Do you want to overwrite SOPS")
+		download = askForConfirmation("➡️ Overwrite SOPS binary")
 	} else {
 		fmt.Println("⚠️ SOPS binary not found, downloading it.")
 	}
 
 	if download {
-		if err := installSOPS(userArch, path); err != nil {
+		if err := installSOPS(userOS, userArch, path); err != nil {
 			return err
 		}
 	}
@@ -57,20 +62,20 @@ func ensureSOPS(userArch string, path string) error {
 	return nil
 }
 
-func ensureAGE(userArch string, path string) error {
+func ensureAGE(userOS string, userArch string, path string) error {
 
 	fmt.Println()
 	download := true
 
 	if fileExists(toolsDir + "age-keygen") {
 		fmt.Println("✅ AGE binary found.")
-		download = askForConfirmation("➡️ Do you want to overwrite AGE")
+		download = askForConfirmation("➡️ Overwrite AGE binary")
 	} else {
 		fmt.Println("⚠️ AGE binary not found, downloading it.")
 	}
 
 	if download {
-		if err := installAGE(userArch, path); err != nil {
+		if err := installAGE(userOS, userArch, path); err != nil {
 			return err
 		}
 	}
