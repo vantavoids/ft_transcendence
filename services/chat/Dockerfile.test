@@ -8,6 +8,8 @@ COPY src/Chat.Infrastructure/Chat.Infrastructure.csproj src/Chat.Infrastructure/
 COPY src/Chat.Persistence/Chat.Persistence.csproj src/Chat.Persistence/
 COPY src/Chat.Presentation/Chat.Presentation.csproj src/Chat.Presentation/
 COPY tests/Chat.ArchitectureTests/Chat.ArchitectureTests.csproj tests/Chat.ArchitectureTests/
+COPY tests/Chat.UnitTests/Chat.UnitTests.csproj tests/Chat.UnitTests/
+COPY tests/Chat.FunctionalTests/Chat.FunctionalTests.csproj tests/Chat.FunctionalTests/
 
 RUN dotnet restore
 
