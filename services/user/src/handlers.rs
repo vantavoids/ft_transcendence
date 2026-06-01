@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use aide::openapi::OpenApi;
-use axum::{extract::Query, http::StatusCode, Extension, Json};
+use axum::{
+    extract::{rejection::QueryRejection, Query},
+    http::StatusCode,
+    Extension, Json,
+};
 
 use crate::{
     auth::caller_id_from_headers,
@@ -21,19 +25,20 @@ pub async fn serve_openapi(Extension(api): Extension<Arc<OpenApi>>) -> Json<Open
 pub async fn get_users(
     Extension(state): Extension<Arc<AppState>>,
     headers: axum::http::HeaderMap,
-    Query(query): Query<UsersQuery>,
+    query: Result<Query<UsersQuery>, QueryRejection>,
 ) -> Result<Json<Vec<UserSummary>>, (StatusCode, Json<ErrorResponse>)> {
-    let Some(ids_value) = query.ids.as_deref() else {
-        return Err(bad_request(
-            "ids query parameter is required and cannot be combined with q.",
-        ));
+    let Query(query) = match query {
+        Ok(query) => query,
+        Err(_) => {
+            return Err(bad_request(
+                "ids query parameter is required and no other query parameters are allowed.",
+            ));
+        }
     };
 
-    if query.q.is_some() {
-        return Err(bad_request(
-            "ids query parameter is required and cannot be combined with q.",
-        ));
-    }
+    let Some(ids_value) = query.ids.as_deref() else {
+        return Err(bad_request("ids query parameter is required."));
+    };
 
     let caller_id = match caller_id_from_headers(&headers) {
         Ok(id) => id,

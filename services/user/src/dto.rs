@@ -12,9 +12,9 @@ pub struct UserSummary {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct UsersQuery {
     pub ids: Option<String>,
-    pub q: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize, JsonSchema)]
