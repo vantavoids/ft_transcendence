@@ -8,14 +8,19 @@ import (
 func main() {
 
 	var setup bool
+	var refresh bool
 	var decryptAll bool
 	var encryptAll bool
 
-	flagSetup(&setup, &decryptAll, &encryptAll)
+	flagSetup(&setup, &refresh, &decryptAll, &encryptAll)
 
 	if setup {
 		err := bootstrap()
 		if err != nil {
+			log.Fatal(err)
+		}
+	} else if refresh {
+		if err := refreshAllSecrets(); err != nil {
 			log.Fatal(err)
 		}
 	} else if decryptAll {

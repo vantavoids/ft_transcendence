@@ -18,6 +18,10 @@ var secretFiles = []SecretFile{
 		Plaintext: "../../.env",
 	},
 	{
+		Encrypted: "secrets/front.env.crypt",
+		Plaintext: "../../frontend/.env",
+	},
+	{
 		Encrypted: "secrets/auth.env.crypt",
 		Plaintext: "../../services/auth/.env",
 	},
@@ -49,7 +53,7 @@ func encryptAllSecrets() error {
 		return err
 	}
 
-	overwrite := askForConfirmation("➡️ Overwrite existing .env.crypt files")
+	overwrite := askForConfirmation("⚠️ Overwrite existing .env.crypt files")
 
 	for _, secret := range secretFiles {
 		if fileExists(secret.Encrypted) && !overwrite {
@@ -85,7 +89,7 @@ func encryptAllSecrets() error {
 
 func decryptAllSecrets() error {
 
-	overwrite := askForConfirmation("➡️ Overwrite existing .env files")
+	overwrite := askForConfirmation("⚠️ Overwrite existing .env files")
 
 	for _, secret := range secretFiles {
 		if fileExists(secret.Plaintext) && !overwrite {
@@ -126,5 +130,32 @@ func decryptAllSecrets() error {
 		fmt.Println("✅ Decrypted", secret.Plaintext)
 	}
 
+	return nil
+}
+
+func refreshAllSecrets() error {
+
+	for _, secret := range secretFiles {
+		if !fileExists(secret.Encrypted) {
+			fmt.Println("⚠️ Skipping missing encrypted file:", secret.Encrypted)
+			continue
+		}
+
+		fmt.Println("➡️ Refreshing", secret.Encrypted)
+
+		cmd := exec.Command(
+			toolsDir+"sops",
+			"updatekeys",
+			"--input-type", "dotenv",
+			secret.Encrypted,
+		)
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("SOPS refresh failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+		}
+
+		fmt.Println("✅ Refreshed", secret.Encrypted)
+	}
 	return nil
 }
