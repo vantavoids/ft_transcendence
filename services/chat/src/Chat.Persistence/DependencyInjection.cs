@@ -30,6 +30,7 @@ public static class DependencyInjection
 					return builder.Build().Connect(opts.Keyspace);
 				});
 
+		services.AddSingleton<MessageStatements>();
 		services.AddScoped<IMessageRepository, MessageRepository>();
 		return services;
 	}
