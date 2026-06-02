@@ -83,27 +83,27 @@ func ensureAGE(userOS string, userArch string, path string) error {
 	return nil
 }
 
-const secretDirPath = "../../secrets/"
-const secretFilePath = "../../secrets/age.key"
+const keysDirPath = "../../.keys/"
+const keysFilePath = "../../.keys/age.key"
 
 func ensureAGESecret() error {
 
 	fmt.Println()
 
 	// check if the secrets dir is present else make it
-	err := os.Mkdir(secretDirPath, 0755)
+	err := os.Mkdir(keysDirPath, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 
 	// check if age.key is inside it else generate it
 	// and display a warning
-	if fileExists(secretFilePath) {
+	if fileExists(keysFilePath) {
 		fmt.Println("✅ AGE key found.")
 		return nil
 	} else {
 		fmt.Println("⚠️ AGE key not found, generating a new one inside the secrets directory.")
-		if err := generateAGEKey(secretDirPath); err != nil {
+		if err := generateAGEKey(); err != nil {
 			return err
 		}
 
@@ -116,15 +116,15 @@ func ensureAGESecret() error {
 	return nil
 }
 
-func generateAGEKey(secretDirPath string) error {
+func generateAGEKey() error {
 
-	cmd := exec.Command(toolsDir+"age-keygen", "-o", secretFilePath)
+	cmd := exec.Command(toolsDir+"age-keygen", "-o", keysFilePath)
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	publicKey, err := fetchPublicKey(secretFilePath)
+	publicKey, err := fetchPublicKey()
 	if err != nil {
 		return err
 	}
@@ -138,9 +138,9 @@ func generateAGEKey(secretDirPath string) error {
 	return nil
 }
 
-func fetchPublicKey(secretFilePath string) (string, error) {
+func fetchPublicKey() (string, error) {
 
-	file, err := os.Open(secretFilePath)
+	file, err := os.Open(keysFilePath)
 	if err != nil {
 		return "", err
 	}

@@ -43,13 +43,3 @@ func bootstrap() error {
 
 	return nil
 }
-
-// func encryptRoot() error {
-//
-// 	cmd := exec.Command(".tools/secretman/sops", "--encrypt", "../../.env", ">", "../../secrets/root.env.crypt")
-// 	err := cmd.Run()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	return nil
-// }

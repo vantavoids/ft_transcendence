@@ -18,12 +18,15 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if decryptAll { // TODO decrypt all secrets
-		os.Exit(0)
-	} else if encryptAll { // TODO encrypt all secrets
-		os.Exit(0)
+	} else if decryptAll {
+		if err := decryptAllSecrets(); err != nil {
+			log.Fatal(err)
+		}
+	} else if encryptAll {
+		if err := encryptAllSecrets(); err != nil {
+			log.Fatal(err)
+		}
 	} else { // TODO setup followed by prompt
 		os.Exit(0)
 	}
-
 }
