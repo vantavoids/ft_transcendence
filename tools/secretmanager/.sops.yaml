@@ -2,3 +2,4 @@ creation_rules:
   - path_regex: '^secrets/.*\.env\.crypt$'
     key_groups:
       - age:
+          - age177x42mdywc7trn68g0nk35wy2306qstzsu2elgzp36f68cf5qe6s3jl7gu

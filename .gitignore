@@ -3,4 +3,4 @@
 .vscode
 .mkcert/
 certs/
-secrets/*
+.keys/
