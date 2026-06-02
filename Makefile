@@ -20,10 +20,12 @@ ENV_FILES := .env \
              services/notification/.env \
              services/user/.env
 
+SECRETMANAGER_DIR := tools/secretmanager
+
 get_color = $(if $(filter Purple,$(1)),$(shell tput setaf 5),$(if $(filter Red,$(1)),$(shell tput setaf 1),$(if $(filter Cyan,$(1)),$(shell tput setaf 6),$(if $(filter Blue,$(1)),$(shell tput setaf 4),$(if $(filter Yellow,$(1)),$(shell tput setaf 3),$(if $(filter Green,$(1)),$(shell tput setaf 2),$(shell tput sgr0)))))))
 ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$(1))]$(call get_color,Off)
 
-.PHONY: all build up down re clean fclean logs ps login dev check-env _build _up
+.PHONY: all build up down re clean fclean logs ps login dev check-env _build _up secrets-setup secrets-decrypt secrets-encrypt secrets-refresh
 
 all: check-env _build _up
 
@@ -68,6 +70,18 @@ login:
 	@echo "$(call ann,Cyan) Exchanging dignity for pull access"
 	@$(DOCKER) login docker.io
 	@echo "$(call ann,Green) You're in. The rate limiter is watching"
+
+secrets-setup:
+	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) setup
+
+secrets-decrypt:
+	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) decrypt
+
+secrets-encrypt:
+	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) encrypt
+
+secrets-refresh:
+	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) refresh
 
 dev: check-env
 	@echo "$(call ann,Cyan) Go do wonders. We believe in you (we don't have a choice)"

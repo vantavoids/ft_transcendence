@@ -6,12 +6,15 @@ import (
 	"os"
 )
 
-func flagSetup(setup *bool, decryptAll *bool, encryptAll *bool) {
+func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) {
 
 	flagUsage()
 
 	flag.BoolVar(setup, "setup", false, "run setup")
 	flag.BoolVar(setup, "s", false, "")
+
+	flag.BoolVar(refresh, "refresh", false, "refresh all secret files")
+	flag.BoolVar(refresh, "r", false, "")
 
 	flag.BoolVar(decryptAll, "decrypt-all", false, "decrypt all env files")
 	flag.BoolVar(decryptAll, "d", false, "")
@@ -22,7 +25,7 @@ func flagSetup(setup *bool, decryptAll *bool, encryptAll *bool) {
 	flag.Parse()
 
 	count := 0
-	for _, enabled := range []bool{*setup, *decryptAll, *encryptAll} {
+	for _, enabled := range []bool{*setup, *refresh, *decryptAll, *encryptAll} {
 		if enabled {
 			count++
 		}
@@ -40,10 +43,11 @@ func flagUsage() {
   secretman [flags]
 
 Flags:
-  -s, --setup         run setup
-  -d, --decrypt-all   decrypt all env files
-  -e, --encrypt-all   encrypt all env files
-  -h, --help          show help
+  -s, --setup		run setup
+  -r, --refresh		refresh all secret files
+  -d, --decrypt-all	decrypt all env files
+  -e, --encrypt-all	encrypt all env files
+  -h, --help		show help
 `)
 	}
 }
