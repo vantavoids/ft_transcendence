@@ -53,11 +53,15 @@ func encryptAllSecrets() error {
 		return err
 	}
 
-	overwrite := askForConfirmation("⚠️ Overwrite existing .env.crypt files")
+	targets, err := askForTargets()
+	if err != nil {
+		return err
+	}
+	fmt.Println()
 
-	for _, secret := range secretFiles {
-		if fileExists(secret.Encrypted) && !overwrite {
-			fmt.Println("➡️ Skipping existing .env.crypt file:", secret.Encrypted)
+	for index, secret := range secretFiles {
+
+		if !targets[index] {
 			continue
 		}
 
@@ -81,7 +85,7 @@ func encryptAllSecrets() error {
 			return fmt.Errorf("failed to write encrypted file %s: %w", secret.Encrypted, err)
 		}
 
-		fmt.Println("✅ Encrypted", secret.Encrypted)
+		fmt.Println("✅ Encrypted in", secret.Encrypted)
 	}
 
 	return nil
@@ -89,7 +93,11 @@ func encryptAllSecrets() error {
 
 func decryptAllSecrets() error {
 
-	overwrite := askForConfirmation("⚠️ Overwrite existing .env files")
+	overwrite, err := askForConfirmation("⚠️ Overwrite existing .env files")
+	if err != nil {
+		return err
+	}
+	fmt.Println()
 
 	for _, secret := range secretFiles {
 		if fileExists(secret.Plaintext) && !overwrite {
@@ -127,7 +135,7 @@ func decryptAllSecrets() error {
 			return fmt.Errorf("failed to write plaintext file %s: %w", secret.Plaintext, err)
 		}
 
-		fmt.Println("✅ Decrypted", secret.Plaintext)
+		fmt.Println("✅ Decrypted in", secret.Plaintext)
 	}
 
 	return nil
