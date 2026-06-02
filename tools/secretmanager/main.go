@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 )
 
@@ -12,26 +12,32 @@ func main() {
 	var decryptAll bool
 	var encryptAll bool
 
-	flagSetup(&setup, &refresh, &decryptAll, &encryptAll)
+	err := flagSetup(&setup, &refresh, &decryptAll, &encryptAll)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	if setup {
 		err := bootstrap()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 	} else if refresh {
 		if err := refreshAllSecrets(); err != nil {
-			log.Fatal(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 	} else if decryptAll {
 		if err := decryptAllSecrets(); err != nil {
-			log.Fatal(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 	} else if encryptAll {
 		if err := encryptAllSecrets(); err != nil {
-			log.Fatal(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
-	} else { // TODO setup followed by prompt
-		os.Exit(0)
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) {
+func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) error {
 
 	flagUsage()
 
@@ -32,9 +32,9 @@ func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) {
 	}
 
 	if count > 1 {
-		fmt.Fprintln(os.Stderr, "❌ Error: use only one action flag at a time")
-		os.Exit(1)
+		return fmt.Errorf("❌ Error: use only one action flag at a time")
 	}
+	return nil
 }
 
 func flagUsage() {

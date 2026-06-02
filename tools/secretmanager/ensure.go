@@ -45,10 +45,13 @@ func ensureSOPS(userOS string, userArch string, path string) error {
 
 	fmt.Println()
 	download := true
+	var err error
 
 	if fileExists(path) {
 		fmt.Println("✅ SOPS binary found.")
-		download = askForConfirmation("➡️ Overwrite SOPS binary")
+		if download, err = askForConfirmation("➡️ Overwrite SOPS binary"); err != nil {
+			return err
+		}
 	} else {
 		fmt.Println("⚠️ SOPS binary not found, downloading it.")
 	}
@@ -66,10 +69,13 @@ func ensureAGE(userOS string, userArch string, path string) error {
 
 	fmt.Println()
 	download := true
+	var err error
 
 	if fileExists(toolsDir + "age-keygen") {
 		fmt.Println("✅ AGE binary found.")
-		download = askForConfirmation("➡️ Overwrite AGE binary")
+		if download, err = askForConfirmation("➡️ Overwrite AGE binary"); err != nil {
+			return err
+		}
 	} else {
 		fmt.Println("⚠️ AGE binary not found, downloading it.")
 	}
@@ -90,7 +96,7 @@ func ensureAGESecret() error {
 
 	fmt.Println()
 
-	// check if the secrets dir is present else make it
+	// check if the keys dir is present else make it
 	err := os.Mkdir(keysDirPath, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
