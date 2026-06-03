@@ -37,3 +37,23 @@ pub async fn fetch_user_summaries(
 
     Ok(rows)
 }
+
+pub async fn create_default_profile(
+    db: &PgPool,
+    user_id: i64,
+    username: &str,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query(
+        r#"
+        INSERT INTO users_profile (id, username, status)
+        VALUES ($1, $2, 'offline'::user_status)
+        ON CONFLICT (id) DO NOTHING
+        "#,
+    )
+    .bind(user_id)
+    .bind(username)
+    .execute(db)
+    .await?;
+
+    Ok(result.rows_affected() > 0)
+}

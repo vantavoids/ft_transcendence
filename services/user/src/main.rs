@@ -12,6 +12,7 @@ use sqlx::{postgres::PgPoolOptions, PgPool};
 
 mod auth;
 mod dto;
+mod consumer;
 mod handlers;
 mod repository;
 
@@ -31,6 +32,8 @@ async fn main() {
 
     let state = Arc::new(AppState { db });
     let is_dev = std::env::var("APP_ENV").as_deref() == Ok("development");
+
+    consumer::spawn_user_registered_consumer(state.db.clone());
 
     let mut api = OpenApi {
         info: Info {
