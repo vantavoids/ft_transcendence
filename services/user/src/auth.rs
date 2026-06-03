@@ -52,3 +52,22 @@ fn unauthorized() -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::http::{header::AUTHORIZATION, HeaderMap, HeaderValue};
+
+    use super::caller_id_from_headers;
+    use user_test_support::bearer_authorization;
+
+    #[test]
+    fn parses_bearer_jwt_subject_as_user_id() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&bearer_authorization(42)).expect("valid header"),
+        );
+
+        assert_eq!(caller_id_from_headers(&headers).unwrap(), 42);
+    }
+}
