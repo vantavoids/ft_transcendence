@@ -4,6 +4,7 @@ WORKDIR /app
 RUN cargo install cargo-watch --locked
 
 COPY Cargo.toml Cargo.lock ./
+COPY test-support/ test-support/
 RUN mkdir src && echo 'fn main() {}' > src/main.rs && \
     cargo build && \
     rm -f target/debug/deps/user_service*
