@@ -32,7 +32,7 @@ if [[ "$http_code" != "201" ]]; then
 fi
 
 user_id="$(
-  python3 -c 'import json,sys; print(json.load(sys.stdin)["user_id"])' < "$tmp_response"
+  python3 -c 'import json,sys; print(json.load(sys.stdin)["user_id"])' <"$tmp_response"
 )"
 
 if [[ ! "$user_id" =~ ^[0-9]+$ ]]; then
@@ -45,15 +45,15 @@ echo "Waiting for user profile creation..."
 
 for attempt in $(seq 1 "$RETRIES"); do
   profile_exists="$(
-    docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
+    podman exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
       "select count(*) from users_profile where id = $user_id;"
   )"
 
-  profile_exists="${profile_exists//[$'\t\r\n ']}"
+  profile_exists="${profile_exists//[$'\t\r\n ']/}"
 
   if [[ "$profile_exists" == "1" ]]; then
     echo "Profile found in users_profile"
-    docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c \
+    podman exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c \
       "select id, username, status, created_at from users_profile where id = $user_id;"
     exit 0
   fi
