@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aide::{
     axum::{
-        routing::{get, get_with},
+        routing::{get, get_with, patch_with},
         ApiRouter,
     },
     openapi::{Info, OpenApi},
@@ -46,7 +46,10 @@ async fn main() {
 
     let mut router = ApiRouter::new()
         .api_route("/v1/hello-world", get(handlers::hello))
-        .api_route("/v1/users", get_with(handlers::get_users, |t| t));
+        .api_route("/v1/users", get_with(handlers::get_users, |t| t))
+        .api_route("/v1/users/me", get_with(handlers::get_me, |t| t))
+        .api_route("/v1/users/{id}", get_with(handlers::get_user, |t| t))
+        .api_route("/v1/users/{id}", patch_with(handlers::patch_user, |t| t));
 
     if is_dev {
         router = router.route(

@@ -2,15 +2,18 @@ use std::sync::Arc;
 
 use aide::openapi::OpenApi;
 use axum::{
-    extract::{rejection::QueryRejection, Query},
+    extract::{
+        rejection::{JsonRejection, QueryRejection},
+        Json, Path, Query,
+    },
     http::StatusCode,
-    Extension, Json,
+    Extension,
 };
 
 use crate::{
     auth::caller_id_from_headers,
-    dto::{ErrorResponse, UserSummary, UsersQuery},
-    repository::fetch_user_summaries,
+    dto::{ErrorResponse, UpdateUserRequest, UserProfile, UserSummary, UsersQuery},
+    repository::{fetch_user_profile, fetch_user_summaries, update_user_profile},
     AppState,
 };
 
@@ -58,9 +61,115 @@ pub async fn get_users(
     Ok(Json(rows))
 }
 
+pub async fn get_me(
+    Extension(state): Extension<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<UserProfile>, (StatusCode, Json<ErrorResponse>)> {
+    let caller_id = match caller_id_from_headers(&headers) {
+        Ok(id) => id,
+        Err(response) => return Err(response),
+    };
+
+    let profile = match fetch_user_profile(&state.db, caller_id).await {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(not_found("user not found.")),
+        Err(_) => return Err(internal_error()),
+    };
+
+    Ok(Json(profile))
+}
+
+pub async fn get_user(
+    Extension(state): Extension<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<i64>,
+) -> Result<Json<UserProfile>, (StatusCode, Json<ErrorResponse>)> {
+    if id <= 0 {
+        return Err(bad_request("id must be a positive snowflake."));
+    }
+
+    let _caller_id = match caller_id_from_headers(&headers) {
+        Ok(id) => id,
+        Err(response) => return Err(response),
+    };
+
+    let profile = match fetch_user_profile(&state.db, id).await {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(not_found("user not found.")),
+        Err(_) => return Err(internal_error()),
+    };
+
+    Ok(Json(profile))
+}
+
+pub async fn patch_user(
+    Extension(state): Extension<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<i64>,
+    body: Result<Json<UpdateUserRequest>, JsonRejection>,
+) -> Result<Json<UserProfile>, (StatusCode, Json<ErrorResponse>)> {
+    if id <= 0 {
+        return Err(bad_request("id must be a positive snowflake."));
+    }
+
+    let caller_id = match caller_id_from_headers(&headers) {
+        Ok(id) => id,
+        Err(response) => return Err(response),
+    };
+
+    if caller_id != id {
+        return Err(forbidden("cannot update another user's profile."));
+    }
+
+    let Json(body) = match body {
+        Ok(body) => body,
+        Err(_) => return Err(bad_request("invalid request body.")),
+    };
+
+    if let Some(display_name) = body.display_name.as_ref() {
+        if display_name.chars().count() > 64 {
+            return Err(bad_request("display_name is too long."));
+        }
+    }
+
+    let profile = match update_user_profile(
+        &state.db,
+        id,
+        body.display_name.as_deref(),
+        body.bio.as_deref(),
+        body.status,
+    )
+    .await
+    {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(not_found("user not found.")),
+        Err(_) => return Err(internal_error()),
+    };
+
+    Ok(Json(profile))
+}
+
 fn bad_request(message: &str) -> (StatusCode, Json<ErrorResponse>) {
     (
         StatusCode::BAD_REQUEST,
+        Json(ErrorResponse {
+            error: message.to_string(),
+        }),
+    )
+}
+
+fn forbidden(message: &str) -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::FORBIDDEN,
+        Json(ErrorResponse {
+            error: message.to_string(),
+        }),
+    )
+}
+
+fn not_found(message: &str) -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::NOT_FOUND,
         Json(ErrorResponse {
             error: message.to_string(),
         }),
