@@ -1,7 +1,10 @@
-load('../../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
+root_env = read_dotenv('../../.env')
 DOCKER = detect_engine()
 FLAGS  = run_flags(DOCKER)
+MQ_USER = root_env.get('RABBITMQ_USER', 'guest')
+MQ_PASS = root_env.get('RABBITMQ_PASS', 'guest')
 
 local_resource(
     'user-db',
@@ -22,6 +25,11 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +
+        '-e RABBITMQ_HOST=rabbitmq ' +
+        '-e RABBITMQ_PORT=5672 ' +
+        '-e RABBITMQ_USERNAME=' + MQ_USER + ' ' +
+        '-e RABBITMQ_PASSWORD=' + MQ_PASS + ' ' +
+        '-e RABBITMQ_VHOST=/ ' +
         '-v $(pwd)/src:/app/src ' +
         'user-service cargo watch --poll -x run'
     ),

@@ -20,6 +20,12 @@ services:
       dockerfile: Dockerfile
     env_file: ${PWD}/services/user/.env
     restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASS}
+      RABBITMQ_VHOST: /
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
       interval: 10s
