@@ -40,16 +40,16 @@ clean:
 
 fclean: clean
 
-setup:
+setup: all
 	@./secretman -s
 
-decrypt:
+decrypt: all
 	@./secretman -d
 
-encrypt:
+encrypt: all
 	@./secretman -e
 
-refresh:
+refresh: all
 	@./secretman -r
 
 .PHONY: all build run re clean fclean setup decrypt encrypt refresh
