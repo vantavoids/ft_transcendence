@@ -1,0 +1,7 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+create-dummy-user:
+  ./tools/create_dummy_user.sh
+
+list-users:
+  ./tools/list_users.sh
