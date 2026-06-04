@@ -62,11 +62,7 @@ public sealed class GuildInvite
 	/// </summary>
 	public Result Consume(DateTimeOffset now)
 	{
-		if (IsRevoked)
-			return GuildFailures.InviteUnusable;
-		if (ExpiresAt is { } exp && exp <= now)
-			return GuildFailures.InviteUnusable;
-		if (MaxUses is { } cap && Uses >= cap)
+		if (!IsActive(now))
 			return GuildFailures.InviteUnusable;
 
 		Uses += 1;
