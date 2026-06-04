@@ -73,6 +73,11 @@ internal static class DomainSeed
 		return role;
 	}
 
+	internal static void SetRolePermissions(Role role, long permissions)
+	{
+		typeof(Role).GetProperty(nameof(Role.Permissions), AnyInstance)!.SetValue(role, permissions);
+	}
+
 	internal static MemberRole AssignRole(GuildEntity guild, long userId, long roleId, DateTimeOffset now)
 	{
 		var memberRole = (MemberRole)Activator.CreateInstance(
