@@ -27,6 +27,7 @@ builder.Services.AddApplication()
 	.AddInfrastructure()
 	.AddPersistence();
 builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
+builder.Services.AddScoped<IUserBroadcaster, SignalRUserBroadcaster>();
 builder.Services.AddCarter();
 
 var jwtSecret = builder.Configuration["Jwt:SecretKey"]
