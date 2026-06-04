@@ -52,9 +52,6 @@ internal sealed class CreateInviteHandler(
 		await invites.AddAsync(inviteResult.Value, cancellationToken);
 		await invites.SaveChangesAsync(cancellationToken);
 
-		// open-link invites have no specific target user, so InvitedUserId is null;
-		// targeted invites (a future endpoint) will set it so the consumer publishes
-		// a `guild_invite` notification only when there's a specific user to notify
 		await eventBus.PublishAsync(
 			new GuildInviteCreated(guild.Id, guild.Name, currentUser.Id, InvitedUserId: null),
 			cancellationToken);

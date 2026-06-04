@@ -60,7 +60,6 @@ public sealed class LeaveGuildTests(GuildApiFactory factory) : IClassFixture<Gui
 
 		Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
 
-		// confirm idempotence: a second leave fails with 403 (not a member)
 		var resp2 = await member.PostAsync($"/v1/guilds/{id}/leave", content: null);
 		Assert.Equal(HttpStatusCode.Forbidden, resp2.StatusCode);
 	}
