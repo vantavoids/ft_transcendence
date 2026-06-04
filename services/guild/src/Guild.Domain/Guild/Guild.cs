@@ -123,6 +123,35 @@ public sealed class Guild
 		return Result.Ok();
 	}
 
+	public Result<GuildMember> AddMember(long userId, DateTimeOffset now)
+	{
+		if (_members.Any(m => m.UserId == userId))
+			return GuildFailures.AlreadyMember;
+
+		var memberResult = GuildMember.Create(Id, userId, now);
+		if (memberResult.IsFailure)
+			return memberResult.Error;
+
+		_members.Add(memberResult.Value);
+		UpdatedAt = now;
+		return memberResult.Value;
+	}
+
+	public Result RemoveMember(long userId, DateTimeOffset now)
+	{
+		if (userId == OwnerId)
+			return GuildFailures.OwnerCannotLeave;
+
+		var member = _members.FirstOrDefault(m => m.UserId == userId);
+		if (member is null)
+			return GuildFailures.NotAMember;
+
+		_members.Remove(member);
+		_memberRoles.RemoveAll(mr => mr.UserId == userId);
+		UpdatedAt = now;
+		return Result.Ok();
+	}
+
 	private static Result ValidateSettings(
 		string? name,
 		string? description,

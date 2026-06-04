@@ -4,6 +4,7 @@ using Guild.Domain.Guild;
 using Guild.Persistence.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guild.Persistence.Migrations
 {
     [DbContext(typeof(GuildDbContext))]
-    partial class GuildDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604133333_AddGuildInvites")]
+    partial class AddGuildInvites
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

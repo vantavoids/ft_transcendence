@@ -82,4 +82,34 @@ public static class GuildFailures
 
 	public static readonly Failure OverwriteNotFound =
 		new("Guild.OverwriteNotFound", "Channel permission overwrite not found.");
+
+	public static readonly Failure AlreadyMember =
+		new("Guild.AlreadyMember", "User is already a member of this guild.");
+
+	public static readonly Failure OwnerCannotLeave =
+		new("Guild.OwnerCannotLeave", "Owner cannot leave. Transfer ownership or delete the guild first.");
+
+	public static readonly Failure InviteCodeRequired =
+		new("Guild.InviteCodeRequired", "Invite code is required.");
+
+	public static readonly Failure InviteCodeInvalid =
+		new("Guild.InviteCodeInvalid", "Invite code is invalid.");
+
+	public static readonly Failure InviteMaxUsesInvalid =
+		new("Guild.InviteMaxUsesInvalid", "Invite max_uses must be a positive integer.");
+
+	public static readonly Failure InviteExpiresInPast =
+		new("Guild.InviteExpiresInPast", "Invite expires_at must be in the future.");
+
+	public static readonly Failure InviteNotFound =
+		new("Guild.InviteNotFound", "Invite not found.");
+
+	public static readonly Failure InviteUnusable =
+		new("Guild.InviteUnusable", "Invite is revoked, expired, or has reached its max uses.");
+
+	public static readonly Failure InviteAlreadyRevoked =
+		new("Guild.InviteAlreadyRevoked", "Invite is already revoked.");
+
+	public static readonly Failure InviteGuildMismatch =
+		new("Guild.InviteGuildMismatch", "Invite code does not belong to this guild.");
 }
