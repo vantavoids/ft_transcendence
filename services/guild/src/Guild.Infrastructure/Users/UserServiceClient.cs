@@ -28,14 +28,9 @@ internal sealed class UserServiceClient(HttpClient http, ILogger<UserServiceClie
 			response.EnsureSuccessStatusCode();
 			return true;
 		}
-		catch (HttpRequestException ex)
+		catch (Exception ex) when (ShouldSwallow(ex, cancellationToken))
 		{
-			logger.LogWarning(ex, "user service unreachable for ExistsAsync({UserId}); treating as best-effort", userId);
-			return true;
-		}
-		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-		{
-			logger.LogWarning(ex, "user service timed out for ExistsAsync({UserId}); treating as best-effort", userId);
+			logger.LogWarning(ex, "user service ExistsAsync({UserId}) failed; treating as best-effort", userId);
 			return true;
 		}
 	}
@@ -57,17 +52,19 @@ internal sealed class UserServiceClient(HttpClient http, ILogger<UserServiceClie
 				return null;
 			return new UserSummary(id, payload.Username ?? string.Empty);
 		}
-		catch (HttpRequestException ex)
+		catch (Exception ex) when (ShouldSwallow(ex, cancellationToken))
 		{
-			logger.LogWarning(ex, "user service unreachable for GetSummaryAsync({UserId})", userId);
-			return null;
-		}
-		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-		{
-			logger.LogWarning(ex, "user service timed out for GetSummaryAsync({UserId})", userId);
+			logger.LogWarning(ex, "user service GetSummaryAsync({UserId}) failed", userId);
 			return null;
 		}
 	}
+
+	// swallow anything except a real caller-initiated cancellation, which must
+	// propagate so the outer handler observes the cancellation contract. covers
+	// HttpRequestException (connect / DNS), TaskCanceledException (timeout),
+	// JsonException (malformed body), and any other transport / parsing fault
+	private static bool ShouldSwallow(Exception ex, CancellationToken ct) =>
+		ex is not OperationCanceledException || !ct.IsCancellationRequested;
 
 	private sealed record InternalUserPayload(string Id, string? Username);
 }
