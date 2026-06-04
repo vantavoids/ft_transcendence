@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
@@ -5,6 +6,7 @@ using Chat.Infrastructure.Authentication;
 using Chat.Infrastructure.Http;
 using Chat.Infrastructure.Messaging;
 using Chat.Infrastructure.Messaging.Consumers;
+using Chat.Infrastructure.Messaging.Contracts;
 using Chat.Infrastructure.Options;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +51,15 @@ public static class DependencyInjection
 				{
 					h.Username(options.Username);
 					h.Password(options.Password);
+				});
+
+				// docs/contracts are the source of truth and document snake_case
+				// payloads. MassTransit defaults to camelCase via System.Text.Json,
+				// so override the property naming policy to match
+				cfg.ConfigureJsonSerializerOptions(opts =>
+				{
+					opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+					return opts;
 				});
 
 				cfg.Message<ChatMessageSent>(m => m.SetEntityName("chat.message_sent"));

@@ -1,4 +1,4 @@
-using Chat.Application.Contracts;
+using Chat.Infrastructure.Messaging.Contracts;
 using MassTransit;
 
 namespace Chat.Infrastructure.Messaging.Consumers;
