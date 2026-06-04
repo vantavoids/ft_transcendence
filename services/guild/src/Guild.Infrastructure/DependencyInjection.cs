@@ -1,10 +1,12 @@
 using System.Reflection;
 using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Abstractions.Users;
 using Guild.Application.Contracts;
 using Guild.Infrastructure.Messaging;
 using Guild.Infrastructure.Options;
 using Guild.Infrastructure.Security;
+using Guild.Infrastructure.Users;
 using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +55,15 @@ public static class DependencyInjection
 		services.AddScoped<IEventBus, EventBus>();
 		services.AddSingleton<IClock, SystemClock>();
 		services.AddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+		services.AddSingleton<IInviteCodeGenerator, InviteCodeGenerator>();
 		services.AddScoped<ICurrentUser, CurrentUser>();
+
+		services.AddHttpClient<IUserService, UserServiceClient>((sp, client) =>
+		{
+			var opts = sp.GetRequiredService<IOptions<UserServiceOptions>>().Value;
+			client.BaseAddress = new Uri(opts.BaseUrl);
+			client.Timeout = TimeSpan.FromSeconds(2);
+		});
 
 		return services;
 	}
