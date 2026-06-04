@@ -14,12 +14,12 @@ use sqlx::PgPool;
 
 use crate::repository::create_default_profile;
 
-const EVENT_EXCHANGE: &str = "user.registered";
+const EVENT_EXCHANGE: &str = "Auth.Application.Events:UserRegisteredEvent";
 const QUEUE_NAME: &str = "user-service.user-registered";
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct UserRegisteredEvent {
+    #[serde(alias = "userId")]
     user_id: i64,
     email: String,
 }
@@ -52,7 +52,13 @@ async fn run_user_registered_consumer(
         .exchange_declare(
             EVENT_EXCHANGE,
             ExchangeKind::Fanout,
-            ExchangeDeclareOptions::default(),
+            ExchangeDeclareOptions {
+                passive: true,
+                durable: false,
+                auto_delete: false,
+                internal: false,
+                nowait: false,
+            },
             FieldTable::default(),
         )
         .await?;
@@ -99,7 +105,7 @@ async fn run_user_registered_consumer(
             }
         };
 
-        let payload = match serde_json::from_slice::<UserRegisteredEvent>(&delivery.data) {
+        let payload = match decode_user_registered_event(&delivery.data) {
             Ok(payload) => payload,
             Err(err) => {
                 eprintln!("user.registered consumer received invalid payload: {err}");
@@ -217,4 +223,67 @@ fn is_unique_violation(err: &sqlx::Error) -> bool {
         err,
         sqlx::Error::Database(db_err) if db_err.code().as_deref() == Some("23505")
     )
+}
+
+fn decode_user_registered_event(
+    data: &[u8],
+) -> Result<UserRegisteredEvent, serde_json::Error> {
+    let value: serde_json::Value = serde_json::from_slice(data)?;
+
+    if let Some(message) = value.get("message") {
+        return serde_json::from_value(message.clone());
+    }
+
+    serde_json::from_value(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode_user_registered_event;
+
+    #[test]
+    fn decodes_mass_transit_envelope_payload() {
+        let payload = br#"
+        {
+            "messageId": "0c010000-d240-3f2d-2c64-08dec241d564",
+            "sentTime": "2026-06-04T14:01:53.000Z",
+            "messageType": ["urn:message:Auth.Application.Events:UserRegisteredEvent"],
+            "message": {
+                "user_id": 123,
+                "email": "basic-user@example.com"
+            }
+        }
+        "#;
+
+        let event = decode_user_registered_event(payload).expect("expected envelope to decode");
+
+        assert_eq!(event.user_id, 123);
+        assert_eq!(event.email, "basic-user@example.com");
+    }
+
+    #[test]
+    fn decodes_raw_payload() {
+        let payload = br#"{ "user_id": 123, "email": "basic-user@example.com" }"#;
+
+        let event = decode_user_registered_event(payload).expect("expected raw payload to decode");
+
+        assert_eq!(event.user_id, 123);
+        assert_eq!(event.email, "basic-user@example.com");
+    }
+
+    #[test]
+    fn decodes_camel_case_payload_with_event_type() {
+        let payload = br#"
+        {
+            "eventType": "user.registered",
+            "userId": 123,
+            "email": "basic-user@example.com"
+        }
+        "#;
+
+        let event = decode_user_registered_event(payload).expect("expected camelCase payload to decode");
+
+        assert_eq!(event.user_id, 123);
+        assert_eq!(event.email, "basic-user@example.com");
+    }
 }
