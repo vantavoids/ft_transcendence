@@ -98,6 +98,39 @@ public sealed class JoinByInviteCodeHandlerTests
 	}
 
 	[Fact]
+	public async Task ExpiredInvite_ReturnsInviteUnusable_DoesNotLoadGuild()
+	{
+		var (g, i, b, u) = NewFakes();
+		var invite = GuildInvite.Create("abc123", guildId: 100, createdBy: 1,
+			maxUses: null, expiresAt: Now.AddHours(1), now: Now).Value;
+		i.Seed(invite);
+		// guild is intentionally not seeded; the fail-fast must reject the invite
+		// without ever reaching the guild repository
+		var handler = HandlerFactory.CreateCommand<JoinByInviteCodeCommand, Result<GuildDto>>(
+			g, i, b, u, new FakeClock(Now.AddHours(2)), new FakeCurrentUser { Id = 99 });
+
+		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.InviteUnusable", result.Error.Code);
+	}
+
+	[Fact]
+	public async Task ExhaustedInvite_ReturnsInviteUnusable()
+	{
+		var (g, i, b, u) = NewFakes();
+		var guild = SeedGuild(g, ownerId: 1);
+		var invite = SeedInvite(i, guildId: guild.Id, creator: 1, maxUses: 1);
+		invite.Consume(Now);
+		var handler = NewHandler(g, i, b, u, callerId: 99);
+
+		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.InviteUnusable", result.Error.Code);
+	}
+
+	[Fact]
 	public async Task HappyPath_AddsMember_ConsumesInvite_PublishesEvent_HitsUserService()
 	{
 		var (g, i, b, u) = NewFakes();

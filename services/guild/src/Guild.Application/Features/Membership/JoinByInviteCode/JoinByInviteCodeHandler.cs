@@ -32,6 +32,15 @@ internal sealed class JoinByInviteCodeHandler(
 		if (command.ExpectedGuildId is { } expected && invite.GuildId != expected)
 			return GuildFailures.InviteGuildMismatch;
 
+		var now = clock.UtcNow;
+
+		// fail fast before loading the guild aggregate: revoked / expired /
+		// exhausted invites get rejected without a second DB roundtrip, and the
+		// error ordering matches how a user thinks ("the code itself is bad",
+		// not "you're already a member of the guild this dead code points to")
+		if (!invite.IsActive(now))
+			return GuildFailures.InviteUnusable;
+
 		var guild = await guilds.GetByIdWithMembershipAsync(invite.GuildId, cancellationToken);
 		if (guild is null)
 			return GuildFailures.GuildNotFound;
@@ -39,7 +48,6 @@ internal sealed class JoinByInviteCodeHandler(
 		if (guild.Members.Any(m => m.UserId == currentUser.Id))
 			return GuildFailures.AlreadyMember;
 
-		var now = clock.UtcNow;
 		var consumeResult = invite.Consume(now);
 		if (consumeResult.IsFailure)
 			return consumeResult.Error;
