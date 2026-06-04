@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Reflection;
 using Guild.Application.Abstractions;
+using Guild.Application.Abstractions.Users;
 using Guild.Persistence.Db;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -67,6 +68,8 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 
 				["BackendConfiguration:BaseUrl"] = "http://localhost",
 				["BackendConfiguration:BaseApiUrl"] = "http://localhost/api",
+
+				["UserService:BaseUrl"] = "http://user.test",
 			});
 		});
 
@@ -75,10 +78,16 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 			ReplaceDbContext(services);
 			StripMassTransit(services);
 
-			// re-register IEventBus with a no-op - none of the #54 endpoints
-			// publish, but handlers receive it via DI so the binding must exist
+			// re-register IEventBus with a no-op - handlers receive it via DI so
+			// the binding must exist even when nothing observes the published events
 			services.RemoveAll<IEventBus>();
 			services.AddSingleton<IEventBus, NoopEventBus>();
+
+			// User Service is mocked: the real client would try to dial over the
+			// docker network. NoopUserService treats every user as existing and
+			// returns a deterministic summary, matching graceful-degrade behaviour
+			services.RemoveAll<IUserService>();
+			services.AddSingleton<IUserService, NoopUserService>();
 		});
 	}
 
@@ -271,9 +280,39 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 		await db.SaveChangesAsync();
 	}
 
+	/// <summary>
+	/// seeds an active <c>GuildInvite</c> with no expiry directly through the scoped
+	/// DbContext. used by join / invite tests that need an exact code to hit
+	/// </summary>
+	public async Task AddInviteAsync(long guildId, string code, long createdBy, int? maxUses = null)
+	{
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+		var inviteResult = Guild.Domain.Guild.GuildInvite.Create(
+			code: code,
+			guildId: guildId,
+			createdBy: createdBy,
+			maxUses: maxUses,
+			expiresAt: null,
+			now: DateTimeOffset.UtcNow);
+		if (inviteResult.IsFailure)
+			throw new InvalidOperationException(inviteResult.Error.Message);
+		db.GuildInvites.Add(inviteResult.Value);
+		await db.SaveChangesAsync();
+	}
+
 	private sealed class NoopEventBus : IEventBus
 	{
 		public Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
 			where T : class => Task.CompletedTask;
+	}
+
+	private sealed class NoopUserService : IUserService
+	{
+		public Task<bool> ExistsAsync(long userId, CancellationToken cancellationToken = default)
+			=> Task.FromResult(true);
+
+		public Task<UserSummary?> GetSummaryAsync(long userId, CancellationToken cancellationToken = default)
+			=> Task.FromResult<UserSummary?>(new UserSummary(userId, $"user{userId}"));
 	}
 }

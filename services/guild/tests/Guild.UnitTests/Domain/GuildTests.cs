@@ -340,6 +340,82 @@ public sealed class GuildTests
 		Assert.Equal(later, guild.UpdatedAt);
 	}
 
+	[Fact]
+	public void AddMember_HappyPath_AppendsAndAdvancesUpdatedAt()
+	{
+		var guild = CreateValid();
+		var later = Now.AddMinutes(10);
+		var before = guild.Members.Count;
+
+		var result = guild.AddMember(userId: 99, now: later);
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(before + 1, guild.Members.Count);
+		Assert.Contains(guild.Members, m => m.UserId == 99);
+		Assert.Equal(later, guild.UpdatedAt);
+	}
+
+	[Fact]
+	public void AddMember_AlreadyMember_Fails()
+	{
+		var guild = CreateValid();
+
+		var result = guild.AddMember(userId: guild.OwnerId, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.AlreadyMember, result.Error);
+	}
+
+	[Fact]
+	public void AddMember_PropagatesGuildMemberCreateFailure()
+	{
+		var guild = CreateValid();
+
+		var result = guild.AddMember(userId: 0, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.TargetNotAMember, result.Error);
+	}
+
+	[Fact]
+	public void RemoveMember_HappyPath_RemovesMemberAndRoles()
+	{
+		var guild = CreateValid();
+		guild.AddMember(userId: 99, now: Now);
+		Guild.UnitTests.Fakes.DomainSeed.AssignRole(
+			guild, userId: 99, roleId: guild.Roles.First(r => r.IsDefault).Id, now: Now);
+
+		var later = Now.AddMinutes(5);
+		var result = guild.RemoveMember(userId: 99, now: later);
+
+		Assert.True(result.Succeeded);
+		Assert.DoesNotContain(guild.Members, m => m.UserId == 99);
+		Assert.DoesNotContain(guild.MemberRoles, mr => mr.UserId == 99);
+		Assert.Equal(later, guild.UpdatedAt);
+	}
+
+	[Fact]
+	public void RemoveMember_Owner_Fails()
+	{
+		var guild = CreateValid();
+
+		var result = guild.RemoveMember(userId: guild.OwnerId, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.OwnerCannotLeave, result.Error);
+	}
+
+	[Fact]
+	public void RemoveMember_NotAMember_Fails()
+	{
+		var guild = CreateValid();
+
+		var result = guild.RemoveMember(userId: 9999, now: Now);
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(GuildFailures.NotAMember, result.Error);
+	}
+
 	private static GuildEntity CreateValid(
 		string? description = null,
 		string? iconUrl = null,
