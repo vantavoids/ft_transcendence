@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Abstractions.Users;
@@ -40,6 +41,17 @@ public static class DependencyInjection
 				{
 					h.Username(options.Username);
 					h.Password(options.Password);
+				});
+
+				// the docs/contracts source of truth specify snake_case payloads.
+				// MassTransit defaults to camelCase via System.Text.Json, so override
+				// the property naming policy so the wire format matches the docs.
+				// every other service that publishes or consumes these events must
+				// apply the same policy or deserialisation will fail
+				cfg.ConfigureJsonSerializerOptions(opts =>
+				{
+					opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+					return opts;
 				});
 
 				cfg.Message<GuildMemberJoined>(m => m.SetEntityName("guild.member_joined"));
