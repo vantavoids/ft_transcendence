@@ -38,7 +38,7 @@ internal abstract class OAuthProviderBase(HttpClient http) : IOAuthProviderClien
     protected async Task<Result<T>> Send<T>(HttpRequestMessage request, CancellationToken ct)
     {
         // ? Intentionnaly let the exception throw => 500
-        var response = await http.SendAsync(request, ct); 
+        using var response = await http.SendAsync(request, ct); 
 
         if (!response.IsSuccessStatusCode)
             return (int)response.StatusCode >= 500
