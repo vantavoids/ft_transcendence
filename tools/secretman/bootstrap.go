@@ -9,6 +9,8 @@ const toolsDir = ".tools/"
 
 func bootstrap() error {
 
+	fmt.Printf("➡️ Starting %s:\n\n", greenStr("setup"))
+
 	userOS := runtime.GOOS
 	userArch := runtime.GOARCH
 

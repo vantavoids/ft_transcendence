@@ -30,11 +30,11 @@ func askForConfirmation(question string) (bool, error) {
 	}
 }
 
-func askForTargets() (map[int]bool, error) {
+func askForTargets(action string) (map[int]bool, error) {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Printf("➡️ Which .env file do you want to encrypt:\n")
+	fmt.Printf("➡️ Which .env file do you want to %s:\n", action)
 	fmt.Printf("a. all\n1. root\n2. frontend\n3. auth\n")
 	fmt.Printf("4. chat\n5. gateway\n6. guild\n")
 	fmt.Printf("7. notification\n8. user\n")

@@ -51,13 +51,13 @@ var secretFiles = []SecretFile{
 	},
 }
 
-func encryptAllSecrets() error {
+func encryptSecrets() error {
 
 	if err := os.MkdirAll(secretsDirPath, 0755); err != nil {
 		return err
 	}
 
-	targets, err := askForTargets()
+	targets, err := askForTargets(blueStr("encrypt"))
 	if err != nil {
 		return err
 	}
@@ -66,6 +66,11 @@ func encryptAllSecrets() error {
 	for index, secret := range secretFiles {
 
 		if !targets[index] {
+			continue
+		}
+
+		if !fileExists(secret.Plaintext) {
+			fmt.Println("⚠️ Skipping missing env file:", secret.Plaintext[4:])
 			continue
 		}
 
@@ -79,6 +84,8 @@ func encryptAllSecrets() error {
 			"--output-type", "json",
 			secret.Plaintext,
 		)
+
+		cmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -95,7 +102,13 @@ func encryptAllSecrets() error {
 	return nil
 }
 
-func decryptAllSecrets() error {
+func decryptSecrets() error {
+
+	targets, err := askForTargets(redStr("decrypt"))
+	if err != nil {
+		return err
+	}
+	fmt.Println()
 
 	overwrite, err := askForConfirmation("⚠️ Overwrite existing .env files")
 	if err != nil {
@@ -103,14 +116,19 @@ func decryptAllSecrets() error {
 	}
 	fmt.Println()
 
-	for _, secret := range secretFiles {
-		if fileExists(secret.Plaintext) && !overwrite {
-			fmt.Println("➡️ Skipping existing .env file:", secret.Plaintext)
+	for index, secret := range secretFiles {
+
+		if !targets[index] {
 			continue
 		}
 
 		if !fileExists(secret.Encrypted) {
 			fmt.Println("⚠️ Skipping missing encrypted file:", secret.Encrypted)
+			continue
+		}
+
+		if fileExists(secret.Plaintext) && !overwrite {
+			fmt.Println("➡️ Skipping existing .env file:", secret.Plaintext[4:])
 			continue
 		}
 
@@ -145,7 +163,9 @@ func decryptAllSecrets() error {
 	return nil
 }
 
-func refreshAllSecrets() error {
+func refreshSecrets() error {
+
+	fmt.Printf("➡️ Starting secrets %s\n\n", purpleStr("refresh"))
 
 	for _, secret := range secretFiles {
 		if !fileExists(secret.Encrypted) {
@@ -158,9 +178,12 @@ func refreshAllSecrets() error {
 		cmd := exec.Command(
 			toolsDir+"sops",
 			"updatekeys",
-			"--input-type", "dotenv",
+			"-y",
+			"--input-type", "json",
 			secret.Encrypted,
 		)
+
+		cmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {

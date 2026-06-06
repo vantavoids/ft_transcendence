@@ -9,10 +9,10 @@ func main() {
 
 	var setup bool
 	var refresh bool
-	var decryptAll bool
-	var encryptAll bool
+	var decrypt bool
+	var encrypt bool
 
-	err := flagSetup(&setup, &refresh, &decryptAll, &encryptAll)
+	err := flagSetup(&setup, &refresh, &decrypt, &encrypt)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -25,17 +25,17 @@ func main() {
 			os.Exit(1)
 		}
 	} else if refresh {
-		if err := refreshAllSecrets(); err != nil {
+		if err := refreshSecrets(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-	} else if decryptAll {
-		if err := decryptAllSecrets(); err != nil {
+	} else if decrypt {
+		if err := decryptSecrets(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-	} else if encryptAll {
-		if err := encryptAllSecrets(); err != nil {
+	} else if encrypt {
+		if err := encryptSecrets(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
