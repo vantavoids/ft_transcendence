@@ -12,44 +12,47 @@ type SecretFile struct {
 	Plaintext string
 }
 
+const rootPath = "../../"
+const secretsDirPath = rootPath + "infra/secretman/secrets/"
+
 var secretFiles = []SecretFile{
 	{
-		Encrypted: "secrets/root.env.crypt",
-		Plaintext: "../../.env",
+		Encrypted: secretsDirPath + "root.env.crypt",
+		Plaintext: rootPath + ".env",
 	},
 	{
-		Encrypted: "secrets/front.env.crypt",
-		Plaintext: "../../frontend/.env",
+		Encrypted: secretsDirPath + "front.env.crypt",
+		Plaintext: rootPath + "frontend/.env",
 	},
 	{
-		Encrypted: "secrets/auth.env.crypt",
-		Plaintext: "../../services/auth/.env",
+		Encrypted: secretsDirPath + "auth.env.crypt",
+		Plaintext: rootPath + "services/auth/.env",
 	},
 	{
-		Encrypted: "secrets/chat.env.crypt",
-		Plaintext: "../../services/chat/.env",
+		Encrypted: secretsDirPath + "chat.env.crypt",
+		Plaintext: rootPath + "services/chat/.env",
 	},
 	{
-		Encrypted: "secrets/gateway.env.crypt",
-		Plaintext: "../../services/gateway/.env",
+		Encrypted: secretsDirPath + "gateway.env.crypt",
+		Plaintext: rootPath + "services/gateway/.env",
 	},
 	{
-		Encrypted: "secrets/guild.env.crypt",
-		Plaintext: "../../services/guild/.env",
+		Encrypted: secretsDirPath + "guild.env.crypt",
+		Plaintext: rootPath + "services/guild/.env",
 	},
 	{
-		Encrypted: "secrets/notification.env.crypt",
-		Plaintext: "../../services/notification/.env",
+		Encrypted: secretsDirPath + "notification.env.crypt",
+		Plaintext: rootPath + "services/notification/.env",
 	},
 	{
-		Encrypted: "secrets/user.env.crypt",
-		Plaintext: "../../services/user/.env",
+		Encrypted: secretsDirPath + "user.env.crypt",
+		Plaintext: rootPath + "services/user/.env",
 	},
 }
 
 func encryptAllSecrets() error {
 
-	if err := os.MkdirAll("secrets", 0755); err != nil {
+	if err := os.MkdirAll(secretsDirPath, 0755); err != nil {
 		return err
 	}
 
@@ -65,14 +68,14 @@ func encryptAllSecrets() error {
 			continue
 		}
 
-		fmt.Println("➡️ Encrypting", secret.Plaintext)
+		fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
 
 		cmd := exec.Command(
 			toolsDir+"sops",
 			"encrypt",
 			"--filename-override", secret.Encrypted,
 			"--input-type", "dotenv",
-			"--output-type", "dotenv",
+			"--output-type", "json",
 			secret.Plaintext,
 		)
 
@@ -85,7 +88,7 @@ func encryptAllSecrets() error {
 			return fmt.Errorf("failed to write encrypted file %s: %w", secret.Encrypted, err)
 		}
 
-		fmt.Println("✅ Encrypted in", secret.Encrypted)
+		fmt.Println("✅ Encrypted in", secret.Encrypted[4:])
 	}
 
 	return nil
@@ -110,12 +113,12 @@ func decryptAllSecrets() error {
 			continue
 		}
 
-		fmt.Println("➡️ Decrypting", secret.Encrypted)
+		fmt.Println("➡️ Decrypting", secret.Encrypted[4:])
 
 		cmd := exec.Command(
 			toolsDir+"sops",
 			"decrypt",
-			"--input-type", "dotenv",
+			"--input-type", "json",
 			"--output-type", "dotenv",
 			secret.Encrypted,
 		)
@@ -135,7 +138,7 @@ func decryptAllSecrets() error {
 			return fmt.Errorf("failed to write plaintext file %s: %w", secret.Plaintext, err)
 		}
 
-		fmt.Println("✅ Decrypted in", secret.Plaintext)
+		fmt.Println("✅ Decrypted in", secret.Plaintext[4:])
 	}
 
 	return nil

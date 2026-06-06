@@ -35,7 +35,7 @@ func askForTargets() (map[int]bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Printf("➡️ Which .env file do you want to encrypt:\n")
-	fmt.Printf("1. root\n2. frontend\n3. auth\n")
+	fmt.Printf("a. all\n1. root\n2. frontend\n3. auth\n")
 	fmt.Printf("4. chat\n5. gateway\n6. guild\n")
 	fmt.Printf("7. notification\n8. user\n")
 	fmt.Printf("\n➡️ Type index numbers separated by space: ")
@@ -46,26 +46,31 @@ func askForTargets() (map[int]bool, error) {
 	}
 
 	list := strings.Fields(response)
-	if len(list) == 0 {
+	listLen := len(list)
+	if listLen == 0 {
 		return nil, fmt.Errorf("❌ No index picked")
 	}
 
-	indexMap, err := makeValidMapFromSlice(list, len(secretFiles))
-	if err != nil {
-		return nil, err
+	var indexMap map[int]bool
+	if pickedAll(list, listLen) {
+		indexMap = makeMapWithAllTrue(len(secretFiles))
+	} else {
+		indexMap, err = makeMapFromListSlice(list, len(secretFiles))
+		if err != nil {
+			return nil, err
+		}
 	}
-
 	return indexMap, nil
 }
 
-func makeValidMapFromSlice(indexSlice []string, maxIndex int) (map[int]bool, error) {
+func makeMapFromListSlice(indexSlice []string, maxIndex int) (map[int]bool, error) {
 
 	indexMap := make(map[int]bool)
 
 	for _, val := range indexSlice {
 		index, err := strconv.Atoi(val)
 		if err != nil {
-			return nil, fmt.Errorf("❌ Invalid index: %v", err)
+			return nil, fmt.Errorf("❌ Invalid index: %v", val)
 		}
 		if index < 1 || index > maxIndex {
 			return nil, fmt.Errorf("❌ Invalid index: %v", val)
@@ -73,4 +78,27 @@ func makeValidMapFromSlice(indexSlice []string, maxIndex int) (map[int]bool, err
 		indexMap[index-1] = true
 	}
 	return indexMap, nil
+}
+
+func pickedAll(list []string, listLen int) bool {
+
+	if listLen > 1 {
+		return false
+	}
+
+	if list[0] == "a" {
+		return true
+	}
+
+	return false
+}
+
+func makeMapWithAllTrue(maxIndex int) map[int]bool {
+	retMap := make(map[int]bool)
+
+	for index := range maxIndex {
+		retMap[index] = true
+	}
+
+	return retMap
 }
