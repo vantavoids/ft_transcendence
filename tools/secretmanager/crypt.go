@@ -13,7 +13,8 @@ type SecretFile struct {
 }
 
 const rootPath = "../../"
-const secretsDirPath = rootPath + "infra/secretman/secrets/"
+const secretmanDirPath = rootPath + "infra/secretman/"
+const secretsDirPath = secretmanDirPath + "secrets/"
 
 var secretFiles = []SecretFile{
 	{
@@ -123,7 +124,7 @@ func decryptAllSecrets() error {
 			secret.Encrypted,
 		)
 
-		cmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keysFilePath)
+		cmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
