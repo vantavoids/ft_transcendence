@@ -89,8 +89,8 @@ func ensureAGE(userOS string, userArch string, path string) error {
 	return nil
 }
 
-const keysDirPath = "../../infra/.keys/"
-const keysFilePath = "../../infra/.keys/age.key"
+const keysDirPath = secretmanDirPath + ".keys/"
+const keyFilePath = secretmanDirPath + ".keys/age.key"
 
 func ensureAGESecret() error {
 
@@ -104,27 +104,73 @@ func ensureAGESecret() error {
 
 	// check if age.key is inside it else generate it
 	// and display a warning
-	if fileExists(keysFilePath) {
+	if fileExists(keyFilePath) {
 		fmt.Println("✅ AGE key found.")
-		return nil
+		publicKey, err := isInSopsYaml()
+		if err != nil {
+			return err
+		}
+		if publicKey != "" {
+			fmt.Println("⚠️ AGE key not found in .sops.yaml, adding it.")
+
+			if err := addKeyToSopsYaml(publicKey); err != nil {
+				return err
+			}
+			displayKeyWarning()
+		}
 	} else {
-		fmt.Println("⚠️ AGE key not found, generating a new one inside the secrets directory.")
+		fmt.Println("⚠️ AGE key not found, generating a new one inside the keys directory.")
 		if err := generateAGEKey(); err != nil {
 			return err
 		}
 
 		fmt.Println("✅ The new public key has been added to the list of trusted keys inside .sops.yaml.")
-		fmt.Printf("\n⚠️ Open a PR containing only the updated .sops.yaml file.\n\n")
-		fmt.Println("A trusted developer must then refresh the encrypted env files with your public key.")
-		fmt.Println("You will not be able to decrypt env files until that PR is merged and secrets are updated.")
+		displayKeyWarning()
 	}
 
 	return nil
 }
 
+func displayKeyWarning() {
+
+	fmt.Printf("\n⚠️ Open a PR containing only the updated .sops.yaml file.\n\n")
+	fmt.Println("A trusted developer must then refresh the encrypted env files with your public key.")
+	fmt.Println("You will not be able to decrypt env files until that PR is merged and secrets are updated.")
+}
+
+const sopsYamlPath = ".sops.yaml"
+
+func isInSopsYaml() (string, error) {
+
+	publicKey, err := fetchPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	file, err := os.Open(sopsYamlPath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), publicKey) {
+			return "", nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return publicKey, nil
+}
+
 func generateAGEKey() error {
 
-	cmd := exec.Command(toolsDir+"age-keygen", "-o", keysFilePath)
+	cmd := exec.Command(toolsDir+"age-keygen", "-o", keyFilePath)
 	err := cmd.Run()
 	if err != nil {
 		return err
@@ -137,8 +183,8 @@ func generateAGEKey() error {
 
 	fmt.Printf("\nNew public key: %s\n\n", publicKey)
 
-	if err := addKeyToYaml(publicKey); err != nil {
-		return nil
+	if err := addKeyToSopsYaml(publicKey); err != nil {
+		return err
 	}
 
 	return nil
@@ -146,7 +192,7 @@ func generateAGEKey() error {
 
 func fetchPublicKey() (string, error) {
 
-	file, err := os.Open(keysFilePath)
+	file, err := os.Open(keyFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -178,9 +224,7 @@ func fetchPublicKey() (string, error) {
 	return "", fmt.Errorf("second line not found")
 }
 
-const sopsYamlPath = "../../infra/.sops.yaml"
-
-func addKeyToYaml(publicKey string) error {
+func addKeyToSopsYaml(publicKey string) error {
 
 	line := "          - " + publicKey + "\n"
 
