@@ -31,13 +31,15 @@ func (wc WriteCounter) PrintProgress() {
 
 func downloadFile(url string, filepath string, checksum string) error {
 
+	tmpPath := filepath + ".tmp"
+
 	fileSize, err := getRemoteFileSize(url)
 	if err != nil {
 		return err
 	}
 
 	// create a tmp file
-	out, err := os.Create(filepath + ".tmp")
+	out, err := os.Create(tmpPath)
 	if err != nil {
 		return err
 	}
@@ -45,6 +47,8 @@ func downloadFile(url string, filepath string, checksum string) error {
 	// get the data
 	resp, err := http.Get(url)
 	if err != nil {
+		out.Close()
+		os.Remove(tmpPath)
 		return err
 	}
 	defer resp.Body.Close()
@@ -52,17 +56,25 @@ func downloadFile(url string, filepath string, checksum string) error {
 	// create our bytes counter and pass it to be used alongside our writer
 	counter := &WriteCounter{0, fileSize}
 	reader := io.TeeReader(resp.Body, counter)
-	_, err = io.Copy(out, reader)
-	if err != nil {
-		return err
+
+	_, copyErr := io.Copy(out, reader)
+	closeErr := out.Close()
+
+	if copyErr != nil {
+		os.Remove(tmpPath)
+		return copyErr
+	}
+	if closeErr != nil {
+		os.Remove(tmpPath)
+		return closeErr
 	}
 
 	fmt.Printf("\r%s", strings.Repeat(" ", 50)) // clear line
 	fmt.Printf("\r✅ Downloaded %s, all done.\n", humanize.Bytes(counter.Total))
-	out.Close()
 
-	err = checkIntegrity(filepath+".tmp", checksum)
+	err = checkIntegrity(tmpPath, checksum)
 	if err != nil {
+		os.Remove(tmpPath)
 		return err
 	}
 
@@ -70,6 +82,7 @@ func downloadFile(url string, filepath string, checksum string) error {
 	// after checking integrity
 	err = os.Rename(filepath+".tmp", filepath)
 	if err != nil {
+		os.Remove(tmpPath)
 		return err
 	}
 
