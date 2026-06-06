@@ -110,11 +110,18 @@ func decryptSecrets() error {
 	}
 	fmt.Println()
 
-	overwrite, err := askForConfirmation("⚠️ Overwrite existing .env files")
-	if err != nil {
-		return err
+	overwrite := false
+
+	for index, secret := range secretFiles {
+		if targets[index] && fileExists(secret.Plaintext) {
+			overwrite, err = askForConfirmation("⚠️ Overwrite existing .env files")
+			if err != nil {
+				return err
+			}
+			fmt.Println()
+			break
+		}
 	}
-	fmt.Println()
 
 	for index, secret := range secretFiles {
 
