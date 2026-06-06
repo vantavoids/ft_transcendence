@@ -29,9 +29,9 @@ func (wc WriteCounter) PrintProgress() {
 	fmt.Printf("\r   Downloading... %s / %s", humanize.Bytes(wc.Total), humanize.Bytes(wc.FileSize))
 }
 
-func downloadFile(url string, filepath string, checksum string) error {
+func downloadFile(url string, filePath string, checksum string) error {
 
-	tmpPath := filepath + ".tmp"
+	tmpPath := filePath + ".tmp"
 
 	fileSize, err := getRemoteFileSize(url)
 	if err != nil {
@@ -80,7 +80,7 @@ func downloadFile(url string, filepath string, checksum string) error {
 
 	// rename the tmp file back to the original file
 	// after checking integrity
-	err = os.Rename(filepath+".tmp", filepath)
+	err = os.Rename(tmpPath, filePath)
 	if err != nil {
 		os.Remove(tmpPath)
 		return err

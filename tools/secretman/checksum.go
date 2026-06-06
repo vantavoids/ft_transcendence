@@ -7,25 +7,25 @@ import (
 	"os"
 )
 
-func checkIntegrity(filepath string, checksum string) error {
+func checkIntegrity(filePath string, checksum string) error {
 
-	expected, err := hashFileSHA256(filepath)
+	expected, err := hashFileSHA256(filePath)
 	if err != nil {
 		return err
 	}
 
 	if expected != checksum {
-		return fmt.Errorf("failed checksum for: %s", filepath)
+		return fmt.Errorf("failed checksum for: %s", filePath)
 	}
 
 	fmt.Println("✅ File integrity checked.")
 	return nil
 }
 
-func hashFileSHA256(filepath string) (string, error) {
+func hashFileSHA256(filePath string) (string, error) {
 
 	// use os.Open for read-only access
-	file, err := os.Open(filepath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}

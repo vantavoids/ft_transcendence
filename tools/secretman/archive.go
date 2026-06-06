@@ -23,15 +23,15 @@ func extractTarGz(tarGzPath string) error {
 	return nil
 }
 
-func decompressGz(filepath string) (string, error) {
+func decompressGz(filePath string) (string, error) {
 
-	file, err := os.Open(filepath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
-	newPath := filepath[:len(filepath)-3]
+	newPath := filePath[:len(filePath)-3]
 	tmpPath := newPath + ".tmp"
 	out, err := os.Create(tmpPath)
 	if err != nil {
@@ -63,7 +63,7 @@ func decompressGz(filepath string) (string, error) {
 		return "", err
 	}
 
-	err = os.Remove(filepath)
+	err = os.Remove(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -71,9 +71,9 @@ func decompressGz(filepath string) (string, error) {
 	return newPath, nil
 }
 
-func extractTar(filepath string) error {
+func extractTar(filePath string) error {
 
-	file, err := os.Open(filepath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,7 @@ func extractTar(filepath string) error {
 	ageDir := "age/"
 	ageBin := "age-keygen"
 	binPath := toolsDir + ageBin
+	tmpPath := binPath + ".tmp"
 
 	// Open and iterate through the files in the archive.
 	tr := tar.NewReader(file)
@@ -95,7 +96,7 @@ func extractTar(filepath string) error {
 		}
 
 		if hdr.Name == ageDir+ageBin {
-			out, err := os.Create(binPath + ".tmp")
+			out, err := os.Create(tmpPath)
 			if err != nil {
 				return err
 			}
@@ -104,20 +105,20 @@ func extractTar(filepath string) error {
 			closeErr := out.Close()
 
 			if copyErr != nil {
-				os.Remove(binPath + ".tmp")
+				os.Remove(tmpPath)
 				return copyErr
 			}
 			if closeErr != nil {
-				os.Remove(binPath + ".tmp")
+				os.Remove(tmpPath)
 				return closeErr
 			}
 
-			err = os.Rename(binPath+".tmp", binPath)
+			err = os.Rename(tmpPath, binPath)
 			if err != nil {
 				return err
 			}
 
-			err = os.Remove(filepath)
+			err = os.Remove(filePath)
 			if err != nil {
 				return err
 			}
