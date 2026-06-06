@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) error {
+func flagSetup(setup *bool, refresh *bool, decrypt *bool, encrypt *bool) error {
 
 	flagUsage()
 
@@ -16,16 +16,16 @@ func flagSetup(setup *bool, refresh *bool, decryptAll *bool, encryptAll *bool) e
 	flag.BoolVar(refresh, "refresh", false, "refresh all secret files")
 	flag.BoolVar(refresh, "r", false, "")
 
-	flag.BoolVar(decryptAll, "decrypt-all", false, "decrypt all env files")
-	flag.BoolVar(decryptAll, "d", false, "")
+	flag.BoolVar(decrypt, "decrypt-all", false, "decrypt all env files")
+	flag.BoolVar(decrypt, "d", false, "")
 
-	flag.BoolVar(encryptAll, "encrypt-all", false, "encrypt all env files")
-	flag.BoolVar(encryptAll, "e", false, "")
+	flag.BoolVar(encrypt, "encrypt-all", false, "encrypt all env files")
+	flag.BoolVar(encrypt, "e", false, "")
 
 	flag.Parse()
 
 	count := 0
-	for _, enabled := range []bool{*setup, *refresh, *decryptAll, *encryptAll} {
+	for _, enabled := range []bool{*setup, *refresh, *decrypt, *encrypt} {
 		if enabled {
 			count++
 		}
@@ -45,8 +45,8 @@ func flagUsage() {
 Flags:
   -s, --setup		run setup
   -r, --refresh		refresh all secret files
-  -d, --decrypt-all	decrypt all env files
-  -e, --encrypt-all	encrypt all env files
+  -d, --decrypt		decrypt env files
+  -e, --encrypt		encrypt env files
   -h, --help		show help
 `)
 	}

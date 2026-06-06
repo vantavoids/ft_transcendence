@@ -111,7 +111,7 @@ func ensureAGESecret() error {
 			return err
 		}
 		if publicKey != "" {
-			fmt.Println("⚠️ AGE key not found in .sops.yaml, adding it.")
+			fmt.Println("\n⚠️ AGE key not found in .sops.yaml, adding it.")
 
 			if err := addKeyToSopsYaml(publicKey); err != nil {
 				return err
