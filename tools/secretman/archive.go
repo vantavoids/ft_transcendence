@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 )
@@ -39,12 +40,22 @@ func decompressGz(filepath string) (string, error) {
 
 	zr, err := gzip.NewReader(file)
 	if err != nil {
+		out.Close()
 		return "", err
 	}
 
-	_, err = io.Copy(out, zr)
-	if err != nil {
-		return "", err
+	_, copyErr := io.Copy(out, zr)
+	outCloseErr := out.Close()
+	zrCloseErr := zr.Close()
+
+	if copyErr != nil {
+		return "", copyErr
+	}
+	if outCloseErr != nil {
+		return "", outCloseErr
+	}
+	if zrCloseErr != nil {
+		return "", zrCloseErr
 	}
 
 	err = os.Rename(tmpPath, newPath)
@@ -71,10 +82,6 @@ func extractTar(filepath string) error {
 	ageDir := "age/"
 	ageBin := "age-keygen"
 	binPath := toolsDir + ageBin
-	out, err := os.Create(binPath + ".tmp")
-	if err != nil {
-		return err
-	}
 
 	// Open and iterate through the files in the archive.
 	tr := tar.NewReader(file)
@@ -88,9 +95,21 @@ func extractTar(filepath string) error {
 		}
 
 		if hdr.Name == ageDir+ageBin {
-
-			if _, err := io.Copy(out, tr); err != nil {
+			out, err := os.Create(binPath + ".tmp")
+			if err != nil {
 				return err
+			}
+
+			_, copyErr := io.Copy(out, tr)
+			closeErr := out.Close()
+
+			if copyErr != nil {
+				os.Remove(binPath + ".tmp")
+				return copyErr
+			}
+			if closeErr != nil {
+				os.Remove(binPath + ".tmp")
+				return closeErr
 			}
 
 			err = os.Rename(binPath+".tmp", binPath)
@@ -103,9 +122,9 @@ func extractTar(filepath string) error {
 				return err
 			}
 
-			break
+			return nil
 		}
 	}
 
-	return nil
+	return fmt.Errorf("❌ AGE binary age-keygen not found in archive")
 }
