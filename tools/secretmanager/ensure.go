@@ -89,8 +89,8 @@ func ensureAGE(userOS string, userArch string, path string) error {
 	return nil
 }
 
-const keysDirPath = "../../.keys/"
-const keysFilePath = "../../.keys/age.key"
+const keysDirPath = "../../infra/.keys/"
+const keysFilePath = "../../infra/.keys/age.key"
 
 func ensureAGESecret() error {
 
@@ -178,11 +178,13 @@ func fetchPublicKey() (string, error) {
 	return "", fmt.Errorf("second line not found")
 }
 
+const sopsYamlPath = "../../infra/.sops.yaml"
+
 func addKeyToYaml(publicKey string) error {
 
 	line := "          - " + publicKey + "\n"
 
-	out, err := os.OpenFile(".sops.yaml", os.O_APPEND|os.O_WRONLY, 0644)
+	out, err := os.OpenFile(sopsYamlPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
