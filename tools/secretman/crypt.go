@@ -68,7 +68,7 @@ func encryptSecrets() error {
 	}
 
 	fmt.Println()
-	paths, err := ensureToolsPaths()
+	paths, err := ensureToolsPaths(false)
 	if err != nil {
 		return err
 	}
@@ -109,12 +109,12 @@ func encryptSecrets() error {
 				removeCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
 				out, err := removeCmd.CombinedOutput()
 				if err != nil {
-					return fmt.Errorf("SOPS unset failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+					return fmt.Errorf("❌ SOPS unset failed for %s: %w\n%s", secret.Encrypted, err, string(out))
 				}
 			} else {
 				encodedValue, err := json.Marshal(value)
 				if err != nil {
-					return fmt.Errorf("failed to encode value for key %s: %w", key, err)
+					return fmt.Errorf("❌ failed to encode value for key %s: %w", key, err)
 				}
 
 				updateCmd := exec.Command(
@@ -129,7 +129,7 @@ func encryptSecrets() error {
 				updateCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
 				out, err := updateCmd.CombinedOutput()
 				if err != nil {
-					return fmt.Errorf("SOPS set failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+					return fmt.Errorf("❌ SOPS set failed for %s: %w\n%s", secret.Encrypted, err, string(out))
 				}
 			}
 		}
@@ -154,7 +154,7 @@ func checkEncryptedFileForDiff(secret secretFile, paths *toolPaths) (map[string]
 
 	oldEnv, err := decryptCmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("SOPS decrypt failed for %s: %w\n%s", secret.Encrypted, err, string(oldEnv))
+		return nil, fmt.Errorf("❌ SOPS decrypt failed for %s: %w\n%s", secret.Encrypted, err, string(oldEnv))
 	}
 
 	newEnv, err := os.ReadFile(secret.Plaintext)
@@ -248,7 +248,7 @@ func decryptSecrets() error {
 		}
 	}
 
-	paths, err := ensureToolsPaths()
+	paths, err := ensureToolsPaths(false)
 	if err != nil {
 		return err
 	}
@@ -284,15 +284,15 @@ func decryptSecrets() error {
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("SOPS decrypt failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+			return fmt.Errorf("❌ SOPS decrypt failed for %s: %w\n%s", secret.Encrypted, err, string(out))
 		}
 
 		if err := os.MkdirAll(filepath.Dir(secret.Plaintext), 0755); err != nil {
-			return fmt.Errorf("failed to create directory for %s: %w", secret.Plaintext, err)
+			return fmt.Errorf("❌ failed to create directory for %s: %w", secret.Plaintext, err)
 		}
 
 		if err := os.WriteFile(secret.Plaintext, out, 0600); err != nil {
-			return fmt.Errorf("failed to write plaintext file %s: %w", secret.Plaintext, err)
+			return fmt.Errorf("❌ failed to write plaintext file %s: %w", secret.Plaintext, err)
 		}
 
 		fmt.Println("✅ Decrypted in", secret.Plaintext[4:])
@@ -305,7 +305,7 @@ func refreshSecrets() error {
 
 	fmt.Printf("➡️ Starting secrets %s\n\n", purpleStr("refresh"))
 
-	paths, err := ensureToolsPaths()
+	paths, err := ensureToolsPaths(false)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func refreshSecrets() error {
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("SOPS refresh failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+			return fmt.Errorf("❌ SOPS refresh failed for %s: %w\n%s", secret.Encrypted, err, string(out))
 		}
 
 		fmt.Println("✅ Refreshed", secret.Encrypted)
