@@ -109,7 +109,7 @@ func isInSopsYaml() (string, error) {
 
 func generateAGEKey() error {
 
-	paths, err := ensureToolsPaths()
+	paths, err := ensureToolsPaths(true)
 	if err != nil {
 		return err
 	}

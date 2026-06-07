@@ -12,15 +12,6 @@ const userArch = runtime.GOARCH
 
 const toolsDir = ".tools/"
 
-func ensureToolsDir() error {
-
-	err := os.MkdirAll(toolsDir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return nil
-}
-
 type toolPaths struct {
 	SOPS string
 	AGE  string
@@ -28,13 +19,19 @@ type toolPaths struct {
 
 var cachedToolPaths *toolPaths
 
-func ensureToolsPaths() (*toolPaths, error) {
+func ensureToolsPaths(setup bool) (*toolPaths, error) {
+
+	// create a cache dir .tools for secretman if missing
+	err := os.MkdirAll(toolsDir, 0755)
+	if err != nil && !os.IsExist(err) {
+		return nil, err
+	}
 
 	if cachedToolPaths != nil {
 		return cachedToolPaths, nil
 	}
 
-	paths, err := resolveToolPaths()
+	paths, err := resolveToolPaths(setup)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +40,7 @@ func ensureToolsPaths() (*toolPaths, error) {
 	return cachedToolPaths, nil
 }
 
-func resolveToolPaths() (toolPaths, error) {
+func resolveToolPaths(setup bool) (toolPaths, error) {
 
 	var paths toolPaths
 
@@ -51,13 +48,15 @@ func resolveToolPaths() (toolPaths, error) {
 	if err != nil {
 		return paths, err
 	}
-	AGEPath, err := resolveAGEPath()
-	if err != nil {
-		return paths, err
+	if setup {
+		AGEPath, err := resolveAGEPath()
+		if err != nil {
+			return paths, err
+		}
+		paths.AGE = AGEPath
 	}
 
 	paths.SOPS = SOPSPath
-	paths.AGE = AGEPath
 
 	return paths, nil
 }
@@ -136,10 +135,10 @@ func installSOPS(userOS string, userArch string, path string) error {
 		},
 	}
 
-	currentKey := userOS + "-" + userArch
+	key := userOS + "-" + userArch
 
-	url := sopsAssets[currentKey].URL
-	checksum := sopsAssets[currentKey].SHA256
+	url := sopsAssets[key].URL
+	checksum := sopsAssets[key].SHA256
 
 	err := downloadFile(url, path, checksum)
 	if err != nil {
@@ -175,10 +174,10 @@ func installAGE(userOS string, userArch string, archive string) error {
 		},
 	}
 
-	currentKey := userOS + "-" + userArch
+	key := userOS + "-" + userArch
 
-	url := ageAssets[currentKey].URL
-	checksum := ageAssets[currentKey].SHA256
+	url := ageAssets[key].URL
+	checksum := ageAssets[key].SHA256
 
 	err := downloadFile(url, archive, checksum)
 	if err != nil {

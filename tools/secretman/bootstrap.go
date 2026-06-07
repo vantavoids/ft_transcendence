@@ -13,13 +13,8 @@ func bootstrap() error {
 		return err
 	}
 
-	// create a cache dir .tools for secretman if missing
-	if err := ensureToolsDir(); err != nil {
-		return err
-	}
-
 	// check for SOPS and AGE, otherwise install
-	if _, err := ensureToolsPaths(); err != nil {
+	if _, err := ensureToolsPaths(true); err != nil {
 		return err
 	}
 
