@@ -85,52 +85,74 @@ func encryptSecrets() error {
 			continue
 		}
 
-		diffMap, err := checkEncryptedFileForDiff(secret, paths)
-		if err != nil {
-			return err
-		}
-		if len(diffMap) == 0 {
-			fmt.Println("➡️ No diff, skipping env file:", secret.Plaintext[4:])
-			continue
-		}
+		if fileExists(secret.Encrypted) {
+			diffMap, err := checkEncryptedFileForDiff(secret, paths)
+			if err != nil {
+				return err
+			}
+			if len(diffMap) == 0 {
+				fmt.Println("➡️ No diff, skipping env file:", secret.Plaintext[4:])
+				continue
+			}
 
-		fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
+			fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
 
-		for key, value := range diffMap {
-			if value == "" {
-				removeCmd := exec.Command(
-					paths.SOPS,
-					"unset",
-					"--input-type", "json",
-					"--output-type", "json",
-					secret.Encrypted,
-					fmt.Sprintf(`["%s"]`, key),
-				)
-				removeCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
-				out, err := removeCmd.CombinedOutput()
-				if err != nil {
-					return fmt.Errorf("❌ SOPS unset failed for %s: %w\n%s", secret.Encrypted, err, string(out))
-				}
-			} else {
-				encodedValue, err := json.Marshal(value)
-				if err != nil {
-					return fmt.Errorf("❌ failed to encode value for key %s: %w", key, err)
-				}
+			for key, value := range diffMap {
+				if value == "" {
+					removeCmd := exec.Command(
+						paths.SOPS,
+						"unset",
+						"--input-type", "json",
+						"--output-type", "json",
+						secret.Encrypted,
+						fmt.Sprintf(`["%s"]`, key),
+					)
+					removeCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
+					out, err := removeCmd.CombinedOutput()
+					if err != nil {
+						return fmt.Errorf("❌ SOPS unset failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+					}
+				} else {
+					encodedValue, err := json.Marshal(value)
+					if err != nil {
+						return fmt.Errorf("❌ failed to encode value for key %s: %w", key, err)
+					}
 
-				updateCmd := exec.Command(
-					paths.SOPS,
-					"set",
-					"--input-type", "json",
-					"--output-type", "json",
-					secret.Encrypted,
-					fmt.Sprintf(`["%s"]`, key),
-					string(encodedValue),
-				)
-				updateCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
-				out, err := updateCmd.CombinedOutput()
-				if err != nil {
-					return fmt.Errorf("❌ SOPS set failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+					updateCmd := exec.Command(
+						paths.SOPS,
+						"set",
+						"--input-type", "json",
+						"--output-type", "json",
+						secret.Encrypted,
+						fmt.Sprintf(`["%s"]`, key),
+						string(encodedValue),
+					)
+					updateCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
+					out, err := updateCmd.CombinedOutput()
+					if err != nil {
+						return fmt.Errorf("❌ SOPS set failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+					}
 				}
+			}
+		} else {
+			fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
+
+			cmd := exec.Command(
+				paths.SOPS,
+				"encrypt",
+				"--filename-override", secret.Encrypted,
+				"--input-type", "dotenv",
+				"--output-type", "json",
+				secret.Plaintext,
+			)
+
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("SOPS encrypt failed for %s: %w\n%s", secret.Plaintext, err, string(out))
+			}
+
+			if err := os.WriteFile(secret.Encrypted, out, 0644); err != nil {
+				return fmt.Errorf("failed to write encrypted file %s: %w", secret.Encrypted, err)
 			}
 		}
 
