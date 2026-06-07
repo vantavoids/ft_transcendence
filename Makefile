@@ -20,7 +20,7 @@ ENV_FILES := .env \
              services/notification/.env \
              services/user/.env
 
-SECRETMANAGER_DIR := tools/secretmanager
+SECRETMANAGER_DIR := tools/secretman
 
 get_color = $(if $(filter Purple,$(1)),$(shell tput setaf 5),$(if $(filter Red,$(1)),$(shell tput setaf 1),$(if $(filter Cyan,$(1)),$(shell tput setaf 6),$(if $(filter Blue,$(1)),$(shell tput setaf 4),$(if $(filter Yellow,$(1)),$(shell tput setaf 3),$(if $(filter Green,$(1)),$(shell tput setaf 2),$(shell tput sgr0)))))))
 ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$(1))]$(call get_color,Off)
