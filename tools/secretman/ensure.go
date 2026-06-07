@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func checkOs(userOS string, userArch string) error {
+func checkOS(userOS string, userArch string) error {
 
 	if userOS != "linux" && userOS != "darwin" {
 		fmt.Printf("❌ Operating system: %v\n", userOS)
@@ -23,68 +23,7 @@ func checkOs(userOS string, userArch string) error {
 	} else {
 		fmt.Printf("✅ System architecture: %v\n", userArch)
 	}
-
-	return nil
-}
-
-func ensureToolsCache() error {
-
 	fmt.Println()
-	err := os.MkdirAll(toolsDir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	} else if os.IsExist(err) {
-		fmt.Println("✅ Tools cache directory found.")
-	} else {
-		fmt.Println("✅ Created tools cache directory.")
-	}
-	return nil
-}
-
-func ensureSOPS(userOS string, userArch string, path string) error {
-
-	fmt.Println()
-	download := true
-	var err error
-
-	if fileExists(path) {
-		fmt.Println("✅ SOPS binary found.")
-		if download, err = askForConfirmation("➡️ Overwrite SOPS binary"); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("⚠️ SOPS binary not found, downloading it.")
-	}
-
-	if download {
-		if err := installSOPS(userOS, userArch, path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func ensureAGE(userOS string, userArch string, path string) error {
-
-	fmt.Println()
-	download := true
-	var err error
-
-	if fileExists(toolsDir + "age-keygen") {
-		fmt.Println("✅ AGE binary found.")
-		if download, err = askForConfirmation("➡️ Overwrite AGE binary"); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("⚠️ AGE binary not found, downloading it.")
-	}
-
-	if download {
-		if err := installAGE(userOS, userArch, path); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -170,8 +109,13 @@ func isInSopsYaml() (string, error) {
 
 func generateAGEKey() error {
 
-	cmd := exec.Command(toolsDir+"age-keygen", "-o", keyFilePath)
-	err := cmd.Run()
+	paths, err := ensureToolsPaths()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(paths.AGE, "-o", keyFilePath)
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}

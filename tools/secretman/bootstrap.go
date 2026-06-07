@@ -2,35 +2,24 @@ package main
 
 import (
 	"fmt"
-	"runtime"
 )
-
-const toolsDir = ".tools/"
 
 func bootstrap() error {
 
 	fmt.Printf("➡️ Starting %s:\n\n", greenStr("setup"))
 
-	userOS := runtime.GOOS
-	userArch := runtime.GOARCH
-
 	// check OS
-	if err := checkOs(userOS, userArch); err != nil {
+	if err := checkOS(userOS, userArch); err != nil {
 		return err
 	}
 
 	// create a cache dir .tools for secretman if missing
-	if err := ensureToolsCache(); err != nil {
+	if err := ensureToolsDir(); err != nil {
 		return err
 	}
 
-	// check for SOPS and install if missing
-	if err := ensureSOPS(userOS, userArch, toolsDir+"sops"); err != nil {
-		return err
-	}
-
-	// check for AGE and install if missing
-	if err := ensureAGE(userOS, userArch, toolsDir+"age.tar.gz"); err != nil {
+	// check for SOPS and AGE, otherwise install
+	if _, err := ensureToolsPaths(); err != nil {
 		return err
 	}
 
