@@ -66,6 +66,12 @@ func encryptSecrets() error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println()
+	paths, err := ensureToolsPaths()
+	if err != nil {
+		return err
+	}
 	fmt.Println()
 
 	for index, secret := range secretFiles {
@@ -79,7 +85,7 @@ func encryptSecrets() error {
 			continue
 		}
 
-		diffMap, err := checkEncryptedFileForDiff(secret)
+		diffMap, err := checkEncryptedFileForDiff(secret, paths)
 		if err != nil {
 			return err
 		}
@@ -93,7 +99,7 @@ func encryptSecrets() error {
 		for key, value := range diffMap {
 			if value == "" {
 				removeCmd := exec.Command(
-					toolsDir+"sops",
+					paths.SOPS,
 					"unset",
 					"--input-type", "json",
 					"--output-type", "json",
@@ -112,7 +118,7 @@ func encryptSecrets() error {
 				}
 
 				updateCmd := exec.Command(
-					toolsDir+"sops",
+					paths.SOPS,
 					"set",
 					"--input-type", "json",
 					"--output-type", "json",
@@ -134,10 +140,10 @@ func encryptSecrets() error {
 	return nil
 }
 
-func checkEncryptedFileForDiff(secret secretFile) (map[string]string, error) {
+func checkEncryptedFileForDiff(secret secretFile, paths *toolPaths) (map[string]string, error) {
 
 	decryptCmd := exec.Command(
-		toolsDir+"sops",
+		paths.SOPS,
 		"decrypt",
 		"--input-type", "json",
 		"--output-type", "dotenv",
@@ -242,6 +248,12 @@ func decryptSecrets() error {
 		}
 	}
 
+	paths, err := ensureToolsPaths()
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+
 	for index, secret := range secretFiles {
 
 		if !targets[index] {
@@ -261,7 +273,7 @@ func decryptSecrets() error {
 		fmt.Println("➡️ Decrypting", secret.Encrypted[4:])
 
 		cmd := exec.Command(
-			toolsDir+"sops",
+			paths.SOPS,
 			"decrypt",
 			"--input-type", "json",
 			"--output-type", "dotenv",
@@ -293,6 +305,13 @@ func refreshSecrets() error {
 
 	fmt.Printf("➡️ Starting secrets %s\n\n", purpleStr("refresh"))
 
+	paths, err := ensureToolsPaths()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+
 	for _, secret := range secretFiles {
 		if !fileExists(secret.Encrypted) {
 			fmt.Println("⚠️ Skipping missing encrypted file:", secret.Encrypted)
@@ -302,7 +321,7 @@ func refreshSecrets() error {
 		fmt.Println("➡️ Refreshing", secret.Encrypted)
 
 		cmd := exec.Command(
-			toolsDir+"sops",
+			paths.SOPS,
 			"updatekeys",
 			"-y",
 			"--input-type", "json",

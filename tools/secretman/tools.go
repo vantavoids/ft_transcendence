@@ -1,5 +1,115 @@
 package main
 
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+)
+
+const userOS = runtime.GOOS
+const userArch = runtime.GOARCH
+
+const toolsDir = ".tools/"
+
+func ensureToolsDir() error {
+
+	err := os.MkdirAll(toolsDir, 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	return nil
+}
+
+type toolPaths struct {
+	SOPS string
+	AGE  string
+}
+
+var cachedToolPaths *toolPaths
+
+func ensureToolsPaths() (*toolPaths, error) {
+
+	if cachedToolPaths != nil {
+		return cachedToolPaths, nil
+	}
+
+	paths, err := resolveToolPaths()
+	if err != nil {
+		return nil, err
+	}
+
+	cachedToolPaths = &paths
+	return cachedToolPaths, nil
+}
+
+func resolveToolPaths() (toolPaths, error) {
+
+	var paths toolPaths
+
+	SOPSPath, err := resolveSOPSPath()
+	if err != nil {
+		return paths, err
+	}
+	AGEPath, err := resolveAGEPath()
+	if err != nil {
+		return paths, err
+	}
+
+	paths.SOPS = SOPSPath
+	paths.AGE = AGEPath
+
+	return paths, nil
+}
+
+func resolveSOPSPath() (string, error) {
+
+	globalPath, err := exec.LookPath("sops")
+	if err == nil {
+		fmt.Println("✅ SOPS binary found in global PATH.")
+		return globalPath, nil
+	}
+
+	projectPath := toolsDir + "sops"
+
+	if fileExists(projectPath) {
+		fmt.Println("✅ SOPS binary found in secretman tools.")
+		return projectPath, nil
+	}
+
+	fmt.Println("⚠️ SOPS binary not found, downloading it.")
+	if err := installSOPS(userOS, userArch, projectPath); err != nil {
+		return "", err
+	}
+
+	return projectPath, nil
+}
+
+func resolveAGEPath() (string, error) {
+
+	fmt.Println()
+
+	globalPath, err := exec.LookPath("age-keygen")
+	if err == nil {
+		fmt.Println("✅ AGE binary found in global PATH.")
+		return globalPath, nil
+	}
+
+	projectPath := toolsDir + "age-keygen"
+
+	if fileExists(projectPath) {
+		fmt.Println("✅ AGE binary found in secretman tools.")
+		return projectPath, nil
+	}
+
+	fmt.Println("⚠️ AGE binary not found, downloading it.")
+	if err := installAGE(userOS, userArch, toolsDir+"age.tar.gz"); err != nil {
+		return "", err
+	}
+
+	return projectPath, nil
+}
+
 type toolAsset struct {
 	URL    string
 	SHA256 string
@@ -44,7 +154,7 @@ func installSOPS(userOS string, userArch string, path string) error {
 	return nil
 }
 
-func installAGE(userOS string, userArch string, path string) error {
+func installAGE(userOS string, userArch string, archive string) error {
 
 	ageAssets := map[string]toolAsset{
 		"linux-arm64": {
@@ -70,12 +180,12 @@ func installAGE(userOS string, userArch string, path string) error {
 	url := ageAssets[currentKey].URL
 	checksum := ageAssets[currentKey].SHA256
 
-	err := downloadFile(url, path, checksum)
+	err := downloadFile(url, archive, checksum)
 	if err != nil {
 		return err
 	}
 
-	err = extractTarGz(path)
+	err = extractTarGz(archive)
 	if err != nil {
 		return err
 	}
