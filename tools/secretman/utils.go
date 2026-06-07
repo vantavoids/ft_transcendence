@@ -102,3 +102,7 @@ func makeMapWithAllTrue(maxIndex int) map[int]bool {
 
 	return retMap
 }
+
+func displayPath(path string) string {
+	return strings.TrimPrefix(path, rootPath)
+}

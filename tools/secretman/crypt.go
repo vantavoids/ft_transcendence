@@ -81,7 +81,7 @@ func encryptSecrets() error {
 		}
 
 		if !fileExists(secret.Plaintext) {
-			fmt.Println("⚠️ Skipping missing env file:", secret.Plaintext[4:])
+			fmt.Println("⚠️ Skipping missing env file:", displayPath(secret.Plaintext))
 			continue
 		}
 
@@ -91,11 +91,11 @@ func encryptSecrets() error {
 				return err
 			}
 			if len(diffMap) == 0 {
-				fmt.Println("➡️ No diff, skipping env file:", secret.Plaintext[4:])
+				fmt.Println("➡️ No diff, skipping env file:", displayPath(secret.Plaintext))
 				continue
 			}
 
-			fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
+			fmt.Println("➡️ Encrypting", displayPath(secret.Plaintext))
 
 			for key, value := range diffMap {
 				if value == "" {
@@ -135,7 +135,7 @@ func encryptSecrets() error {
 				}
 			}
 		} else {
-			fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
+			fmt.Println("➡️ Encrypting", displayPath(secret.Plaintext))
 
 			cmd := exec.Command(
 				paths.SOPS,
@@ -156,7 +156,7 @@ func encryptSecrets() error {
 			}
 		}
 
-		fmt.Println("✅ Encrypted in", secret.Encrypted[4:])
+		fmt.Println("✅ Encrypted in", displayPath(secret.Encrypted))
 	}
 
 	return nil
@@ -288,11 +288,11 @@ func decryptSecrets() error {
 		}
 
 		if fileExists(secret.Plaintext) && !overwrite {
-			fmt.Println("➡️ Skipping existing .env file:", secret.Plaintext[4:])
+			fmt.Println("➡️ Skipping existing .env file:", displayPath(secret.Plaintext))
 			continue
 		}
 
-		fmt.Println("➡️ Decrypting", secret.Encrypted[4:])
+		fmt.Println("➡️ Decrypting", displayPath(secret.Encrypted))
 
 		cmd := exec.Command(
 			paths.SOPS,
@@ -317,7 +317,7 @@ func decryptSecrets() error {
 			return fmt.Errorf("❌ failed to write plaintext file %s: %w", secret.Plaintext, err)
 		}
 
-		fmt.Println("✅ Decrypted in", secret.Plaintext[4:])
+		fmt.Println("✅ Decrypted in", displayPath(secret.Plaintext))
 	}
 
 	return nil
