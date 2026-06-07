@@ -32,30 +32,30 @@ func checkEncryptedFileForDiff(secret secretFile, paths *toolPaths) (map[string]
 		return nil, err
 	}
 
-	diffMap := sliceDiffToMap(oldEnv, newEnv)
+	diffMap := envDiffToMap(oldEnv, newEnv)
 
 	return diffMap, nil
 }
 
-func sliceDiffToMap(oldEnv []byte, newEnv []byte) map[string]string {
+func envDiffToMap(oldEnv []byte, newEnv []byte) map[string]string {
 
-	oldMap := sliceToMap(oldEnv)
-	newMap := sliceToMap(newEnv)
+	oldMap := envBytesToMap(oldEnv)
+	newMap := envBytesToMap(newEnv)
 
 	if maps.Equal(oldMap, newMap) {
 		return nil
 	}
 
-	diffMap := makeMapFromDiff(oldMap, newMap)
+	diffMap := makeEnvDiffMap(oldMap, newMap)
 
 	return diffMap
 }
 
-func sliceToMap(envSlice []byte) map[string]string {
+func envBytesToMap(envBytes []byte) map[string]string {
 
 	retMap := make(map[string]string)
 
-	scanner := bufio.NewScanner(bytes.NewReader(envSlice))
+	scanner := bufio.NewScanner(bytes.NewReader(envBytes))
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -73,7 +73,7 @@ func sliceToMap(envSlice []byte) map[string]string {
 	return retMap
 }
 
-func makeMapFromDiff(oldMap map[string]string, newMap map[string]string) map[string]string {
+func makeEnvDiffMap(oldMap map[string]string, newMap map[string]string) map[string]string {
 
 	diffMap := maps.Clone(newMap)
 
