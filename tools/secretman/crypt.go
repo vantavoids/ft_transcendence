@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-type SecretFile struct {
+type secretFile struct {
 	Encrypted string
 	Plaintext string
 }
@@ -16,7 +21,7 @@ const rootPath = "../../"
 const secretmanDirPath = rootPath + "infra/secretman/"
 const secretsDirPath = secretmanDirPath + "secrets/"
 
-var secretFiles = []SecretFile{
+var secretFiles = []secretFile{
 	{
 		Encrypted: secretsDirPath + "root.env.crypt",
 		Plaintext: rootPath + ".env",
@@ -74,32 +79,146 @@ func encryptSecrets() error {
 			continue
 		}
 
-		fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
-
-		cmd := exec.Command(
-			toolsDir+"sops",
-			"encrypt",
-			"--filename-override", secret.Encrypted,
-			"--input-type", "dotenv",
-			"--output-type", "json",
-			secret.Plaintext,
-		)
-
-		cmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
-
-		out, err := cmd.CombinedOutput()
+		diffMap, err := checkEncryptedFileForDiff(secret)
 		if err != nil {
-			return fmt.Errorf("SOPS encrypt failed for %s: %w\n%s", secret.Plaintext, err, string(out))
+			return err
+		}
+		if len(diffMap) == 0 {
+			fmt.Println("➡️ No diff, skipping env file:", secret.Plaintext[4:])
+			continue
 		}
 
-		if err := os.WriteFile(secret.Encrypted, out, 0644); err != nil {
-			return fmt.Errorf("failed to write encrypted file %s: %w", secret.Encrypted, err)
+		fmt.Println("➡️ Encrypting", secret.Plaintext[4:])
+
+		for key, value := range diffMap {
+			if value == "" {
+				removeCmd := exec.Command(
+					toolsDir+"sops",
+					"unset",
+					"--input-type", "json",
+					"--output-type", "json",
+					secret.Encrypted,
+					fmt.Sprintf(`["%s"]`, key),
+				)
+				removeCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
+				out, err := removeCmd.CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("SOPS unset failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+				}
+			} else {
+				encodedValue, err := json.Marshal(value)
+				if err != nil {
+					return fmt.Errorf("failed to encode value for key %s: %w", key, err)
+				}
+
+				updateCmd := exec.Command(
+					toolsDir+"sops",
+					"set",
+					"--input-type", "json",
+					"--output-type", "json",
+					secret.Encrypted,
+					fmt.Sprintf(`["%s"]`, key),
+					string(encodedValue),
+				)
+				updateCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
+				out, err := updateCmd.CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("SOPS set failed for %s: %w\n%s", secret.Encrypted, err, string(out))
+				}
+			}
 		}
 
 		fmt.Println("✅ Encrypted in", secret.Encrypted[4:])
 	}
 
 	return nil
+}
+
+func checkEncryptedFileForDiff(secret secretFile) (map[string]string, error) {
+
+	decryptCmd := exec.Command(
+		toolsDir+"sops",
+		"decrypt",
+		"--input-type", "json",
+		"--output-type", "dotenv",
+		secret.Encrypted,
+	)
+
+	decryptCmd.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+keyFilePath)
+
+	oldEnv, err := decryptCmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("SOPS decrypt failed for %s: %w\n%s", secret.Encrypted, err, string(oldEnv))
+	}
+
+	newEnv, err := os.ReadFile(secret.Plaintext)
+	if err != nil {
+		return nil, err
+	}
+
+	diffMap := sliceDiffToMap(oldEnv, newEnv)
+
+	return diffMap, nil
+}
+
+func sliceDiffToMap(oldEnv []byte, newEnv []byte) map[string]string {
+
+	oldMap := sliceToMap(oldEnv)
+	newMap := sliceToMap(newEnv)
+
+	if maps.Equal(oldMap, newMap) {
+		return nil
+	}
+
+	diffMap := makeMapFromDiff(oldMap, newMap)
+
+	return diffMap
+}
+
+func sliceToMap(envSlice []byte) map[string]string {
+
+	retMap := make(map[string]string)
+
+	scanner := bufio.NewScanner(bytes.NewReader(envSlice))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		var key, value string
+		if i := strings.Index(line, "="); i > 0 {
+			key, value = line[:i], line[i+1:]
+		} else {
+			continue
+		}
+
+		retMap[key] = value
+	}
+
+	return retMap
+}
+
+func makeMapFromDiff(oldMap map[string]string,
+	newMap map[string]string) map[string]string {
+
+	diffMap := maps.Clone(newMap)
+
+	for oldKey, oldValue := range oldMap {
+		newValue := newMap[oldKey]
+
+		if newValue == oldValue {
+			// unchanged value
+			delete(diffMap, oldKey)
+		} else {
+			// changed value
+			if newValue == "" && oldValue != "" {
+				// removed value
+				diffMap[oldKey] = ""
+			}
+			continue
+		}
+	}
+
+	return diffMap
 }
 
 func decryptSecrets() error {
