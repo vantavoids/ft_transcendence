@@ -31,4 +31,16 @@ public static class MessageFailures
 
 	public static readonly Failure NonceTooLong =
 		new("Message.NonceTooLong", "Nonce must be 64 characters or fewer.");
+
+	public static readonly Failure NotFound =
+		new("Message.NotFound", "Message not found.");
+
+	public static readonly Failure NotAuthor =
+		new("Message.NotAuthor", "Caller is not the author of this message.");
+
+	public static readonly Failure AlreadyDeleted =
+		new("Message.AlreadyDeleted", "Message has already been deleted.");
+
+	public static readonly Failure MissingManagePermission =
+		new("Message.MissingManagePermission", "Caller lacks MANAGE_MESSAGES permission on this channel.");
 }
