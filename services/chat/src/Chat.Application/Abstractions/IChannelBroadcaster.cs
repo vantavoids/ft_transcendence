@@ -5,4 +5,5 @@ namespace Chat.Application.Abstractions;
 public interface IChannelBroadcaster
 {
 	Task BroadcastMessageAsync(long channelId, MessageResponse message, CancellationToken ct);
+	Task BroadcastMessageEditedAsync(long channelId, MessageEditedEvent evt, CancellationToken ct);
 }
