@@ -12,4 +12,9 @@ internal sealed class SignalRChannelBroadcaster(IHubContext<ChatHub, IChatClient
 
 	public Task BroadcastMessageEditedAsync(long channelId, MessageEditedEvent evt, CancellationToken ct) =>
 		hub.Clients.Group($"channel:{channelId}").MessageEdited(evt);
+
+	public Task BroadcastMessageDeletedAsync(long channelId, long messageId, CancellationToken ct) =>
+		hub.Clients.Group($"channel:{channelId}").MessageDeleted(new MessageDeletedEvent(
+			MessageId: messageId.ToString(),
+			ChannelId: channelId.ToString()));
 }

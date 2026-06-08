@@ -6,6 +6,7 @@ public interface IChatClient
 {
 	Task ReceiveMessage(MessageResponse message);
 	Task MessageEdited(MessageEditedEvent evt);
+	Task MessageDeleted(MessageDeletedEvent evt);
 	Task GuildJoined(string guildId, string guildName);
 	Task Error(string code, string message);
 }
