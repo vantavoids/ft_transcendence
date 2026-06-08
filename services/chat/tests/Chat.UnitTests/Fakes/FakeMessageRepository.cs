@@ -35,4 +35,21 @@ public sealed class FakeMessageRepository : IMessageRepository
 		var message = _saved.FirstOrDefault(m => m.Id == messageId);
 		return Task.FromResult(message);
 	}
+
+	public Task UpdateContentAsync(Message message, CancellationToken ct)
+	{
+		Updated.Add(message);
+		return Task.CompletedTask;
+	}
+
+	public Task SoftDeleteAsync(Message message, CancellationToken ct)
+	{
+		SoftDeleted.Add(message);
+		return Task.CompletedTask;
+	}
+
+	public void Seed(Message message) => _saved.Add(message);
+
+	public List<Message> Updated { get; } = [];
+	public List<Message> SoftDeleted { get; } = [];
 }
