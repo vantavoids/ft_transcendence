@@ -1,9 +1,10 @@
 using Carter;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Messages.DeleteMessage;
+using Chat.Application.Features.Messages.EditMessage;
 using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Results;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Chat.Presentation.Endpoints;
@@ -12,8 +13,12 @@ public sealed class MessagesEndpoint : ICarterModule
 {
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
-		var group = endpoints.MapGroup("/channels/{channelId:long}/messages");
-		group.MapPost("/", SendAsync);
+		var channelGroup = endpoints.MapGroup("/channels/{channelId:long}/messages");
+		channelGroup.MapPost("/", SendAsync);
+
+		var messageGroup = endpoints.MapGroup("/messages");
+		messageGroup.MapPatch("/{messageId:long}", EditAsync);
+		messageGroup.MapDelete("/{messageId:long}", DeleteAsync);
 	}
 
 	private static async Task<Results<
@@ -33,11 +38,49 @@ public sealed class MessagesEndpoint : ICarterModule
 
 		return result.Succeeded
 			? TypedResults.Created($"/channels/{channelId}/messages/{result.Value.Id}", result.Value)
-			: MapError(result.Error);
+			: MapSendError(result.Error);
+	}
+
+	private static async Task<Results<
+		Ok<EditMessageResponse>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	EditAsync(
+		long messageId,
+		EditMessageRequest request,
+		ICommandHandler<EditMessageCommand, Result<EditMessageResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new EditMessageCommand(messageId, request.Content),
+			cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapEditError(result.Error);
+	}
+
+	private static async Task<Results<
+		NoContent,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	DeleteAsync(
+		long messageId,
+		ICommandHandler<DeleteMessageCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new DeleteMessageCommand(messageId),
+			cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.NoContent()
+			: MapDeleteError(result.Error);
 	}
 
 	private static Results<Created<MessageResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
-		MapError(Failure failure) => failure.Code switch
+		MapSendError(Failure failure) => failure.Code switch
 		{
 			"Message.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
 			"Message.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
@@ -45,8 +88,22 @@ public sealed class MessagesEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
-	private sealed record SendMessageRequest(
-		string? Content,
-		long? ReplyToId,
-		string? Nonce);
+	private static Results<Ok<EditMessageResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+		MapEditError(Failure failure) => failure.Code switch
+		{
+			"Message.NotFound" or "Message.AlreadyDeleted" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Message.NotAuthor" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
+		};
+
+	private static Results<NoContent, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+		MapDeleteError(Failure failure) => failure.Code switch
+		{
+			"Message.NotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Message.MissingManagePermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.NotFound(new ErrorBody(failure.Message)),
+		};
+
+	private sealed record SendMessageRequest(string? Content, long? ReplyToId, string? Nonce);
+	private sealed record EditMessageRequest(string? Content);
 }
