@@ -3,6 +3,7 @@ using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.DeleteMessage;
 using Chat.Application.Features.Messages.EditMessage;
+using Chat.Application.Features.Messages.GetChannelMessages;
 using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -14,11 +15,33 @@ public sealed class MessagesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var channelGroup = endpoints.MapGroup("/channels/{channelId:long}/messages");
+		channelGroup.MapGet("/", GetChannelHistoryAsync);
 		channelGroup.MapPost("/", SendAsync);
 
 		var messageGroup = endpoints.MapGroup("/messages");
 		messageGroup.MapPatch("/{messageId:long}", EditAsync);
 		messageGroup.MapDelete("/{messageId:long}", DeleteAsync);
+	}
+
+	private static async Task<Results<
+		Ok<IReadOnlyList<MessageResponse>>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	GetChannelHistoryAsync(
+		long channelId,
+		DateTimeOffset? before_time,
+		int? limit,
+		IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>> handler,
+		CancellationToken cancellationToken)
+	{
+		var clampedLimit = Math.Clamp(limit ?? 50, 1, 100);
+		var result = await handler.HandleAsync(
+			new GetChannelMessagesQuery(channelId, before_time, clampedLimit),
+			cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapGetChannelHistoryError(result.Error);
 	}
 
 	private static async Task<Results<
@@ -94,6 +117,13 @@ public sealed class MessagesEndpoint : ICarterModule
 			"Message.NotFound" or "Message.AlreadyDeleted" => TypedResults.NotFound(new ErrorBody(failure.Message)),
 			"Message.NotAuthor" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
+		};
+
+	private static Results<Ok<IReadOnlyList<MessageResponse>>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+		MapGetChannelHistoryError(Failure failure) => failure.Code switch
+		{
+			"Message.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 		};
 
 	private static Results<NoContent, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
