@@ -49,6 +49,26 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 		return first?.GetValue<long>("message_id");
 	}
 
+	public async Task UpdateContentAsync(Message message, CancellationToken ct)
+	{
+		var stmt = await statements.UpdateContent.Value;
+		await session.ExecuteAsync(stmt.Bind(
+			message.Content,
+			message.EditedAt!.Value.UtcDateTime,
+			message.ChannelId,
+			message.CreatedAt.UtcDateTime,
+			message.Id));
+	}
+
+	public async Task SoftDeleteAsync(Message message, CancellationToken ct)
+	{
+		var stmt = await statements.SoftDeleteMessage.Value;
+		await session.ExecuteAsync(stmt.Bind(
+			message.ChannelId,
+			message.CreatedAt.UtcDateTime,
+			message.Id));
+	}
+
 	public async Task<Message?> GetByIdAsync(long messageId, CancellationToken ct)
 	{
 		var selectLookup = await statements.SelectLookup.Value;

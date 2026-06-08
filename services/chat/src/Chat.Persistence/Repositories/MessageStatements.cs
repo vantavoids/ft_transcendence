@@ -26,4 +26,12 @@ internal sealed class MessageStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectMessage { get; } = new(() => session.PrepareAsync(
 		"SELECT channel_id, created_at, id, author_id, content, edited_at, is_deleted, reply_to_id " +
 		"FROM messages WHERE channel_id = ? AND created_at = ? AND id = ?"));
+
+	public Lazy<Task<PreparedStatement>> UpdateContent { get; } = new(() => session.PrepareAsync(
+		"UPDATE messages SET content = ?, edited_at = ? " +
+		"WHERE channel_id = ? AND created_at = ? AND id = ?"));
+
+	public Lazy<Task<PreparedStatement>> SoftDeleteMessage { get; } = new(() => session.PrepareAsync(
+		"UPDATE messages SET is_deleted = true " +
+		"WHERE channel_id = ? AND created_at = ? AND id = ?"));
 }
