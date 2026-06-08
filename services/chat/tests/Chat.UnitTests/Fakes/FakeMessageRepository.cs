@@ -48,6 +48,16 @@ public sealed class FakeMessageRepository : IMessageRepository
 		return Task.CompletedTask;
 	}
 
+	public Task<IReadOnlyList<Message>> GetChannelMessagesAsync(long channelId, DateTimeOffset beforeTime, int limit, CancellationToken ct)
+	{
+		var result = _saved
+			.Where(m => m.ChannelId == channelId && m.CreatedAt < beforeTime && !m.IsDeleted)
+			.OrderByDescending(m => m.CreatedAt)
+			.Take(limit)
+			.ToList();
+		return Task.FromResult<IReadOnlyList<Message>>(result);
+	}
+
 	public void Seed(Message message) => _saved.Add(message);
 
 	public List<Message> Updated { get; } = [];
