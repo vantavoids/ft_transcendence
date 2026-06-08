@@ -43,4 +43,7 @@ public static class MessageFailures
 
 	public static readonly Failure MissingManagePermission =
 		new("Message.MissingManagePermission", "Caller lacks MANAGE_MESSAGES permission on this channel.");
+
+	public static readonly Failure MissingReadPermission =
+		new("Message.MissingReadPermission", "Caller lacks READ_MESSAGES permission on this channel.");
 }
