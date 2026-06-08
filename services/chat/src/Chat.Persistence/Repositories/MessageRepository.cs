@@ -69,6 +69,31 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 			message.Id));
 	}
 
+	public async Task<IReadOnlyList<Message>> GetChannelMessagesAsync(long channelId, DateTimeOffset beforeTime, int limit, CancellationToken ct)
+	{
+		var stmt = await statements.SelectChannelMessages.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(channelId, beforeTime.UtcDateTime, limit));
+
+		var messages = new List<Message>();
+		foreach (var row in rows)
+		{
+			var msg = Message.Reconstitute(
+				id: row.GetValue<long>("id"),
+				channelId: row.GetValue<long>("channel_id"),
+				authorId: row.GetValue<long>("author_id"),
+				content: row.GetValue<string>("content"),
+				replyToId: row.GetValue<long?>("reply_to_id"),
+				editedAt: row.GetValue<DateTime?>("edited_at"),
+				isDeleted: row.GetValue<bool>("is_deleted"),
+				createdAt: new DateTimeOffset(row.GetValue<DateTime>("created_at"), TimeSpan.Zero));
+
+			if (!msg.IsDeleted)
+				messages.Add(msg);
+		}
+
+		return messages;
+	}
+
 	public async Task<Message?> GetByIdAsync(long messageId, CancellationToken ct)
 	{
 		var selectLookup = await statements.SelectLookup.Value;

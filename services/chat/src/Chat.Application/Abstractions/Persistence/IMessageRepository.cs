@@ -9,4 +9,5 @@ public interface IMessageRepository
 	Task<Message?> GetByIdAsync(long messageId, CancellationToken ct);
 	Task UpdateContentAsync(Message message, CancellationToken ct);
 	Task SoftDeleteAsync(Message message, CancellationToken ct);
+	Task<IReadOnlyList<Message>> GetChannelMessagesAsync(long channelId, DateTimeOffset beforeTime, int limit, CancellationToken ct);
 }
