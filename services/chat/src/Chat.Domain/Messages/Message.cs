@@ -49,6 +49,31 @@ public sealed class Message
 		DateTimeOffset createdAt)
 		=> new(id, channelId, authorId, content, replyToId, editedAt, isDeleted, createdAt);
 
+	public Result<Message> Edit(string? content, DateTimeOffset now)
+	{
+		if (IsDeleted)
+			return MessageFailures.AlreadyDeleted;
+
+		if (string.IsNullOrWhiteSpace(content))
+			return MessageFailures.ContentRequired;
+
+		if (content.Length > MaxContentLen)
+			return MessageFailures.ContentTooLong;
+
+		Content = content;
+		EditedAt = now;
+		return this;
+	}
+
+	public Result<Message> Delete()
+	{
+		if (IsDeleted)
+			return MessageFailures.AlreadyDeleted;
+
+		IsDeleted = true;
+		return this;
+	}
+
 	public static Result<Message> Create(
 		long id,
 		long channelId,
