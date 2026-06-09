@@ -48,4 +48,7 @@ public sealed class ChatHub(IGuildClient guildClient, ICurrentUser currentUser, 
 
 		await Groups.AddToGroupAsync(Context.ConnectionId, $"channel:{channelId}", Context.ConnectionAborted);
 	}
+
+	public Task LeaveChannel(long channelId) =>
+		Groups.RemoveFromGroupAsync(Context.ConnectionId, $"channel:{channelId}");
 }
