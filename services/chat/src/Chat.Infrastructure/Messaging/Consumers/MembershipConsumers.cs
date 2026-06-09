@@ -26,16 +26,23 @@ public sealed class GuildMemberJoinedConsumer(
 	}
 }
 
-public sealed class GuildMemberLeftConsumer(ILogger<GuildMemberLeftConsumer> logger)
+public sealed class GuildMemberLeftConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildMemberLeftConsumer> logger)
 	: IConsumer<GuildMemberLeft>
 {
-	public Task Consume(ConsumeContext<GuildMemberLeft> context)
+	public async Task Consume(ConsumeContext<GuildMemberLeft> context)
 	{
 		var msg = context.Message;
+
+		await broadcaster.BroadcastGuildLeftAsync(
+			userId: msg.UserId,
+			guildId: msg.GuildId,
+			ct: context.CancellationToken);
+
 		logger.LogDebug(
 			"guild.member_left consumed: guild_id={GuildId} user_id={UserId}",
 			msg.GuildId, msg.UserId);
-		return Task.CompletedTask;
 	}
 }
 
