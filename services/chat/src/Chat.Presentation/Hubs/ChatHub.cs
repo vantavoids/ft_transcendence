@@ -1,15 +1,34 @@
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
+using Chat.Application.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;
 
 [Authorize]
-public sealed class ChatHub(IGuildClient guildClient, ICurrentUser currentUser) : Hub<IChatClient>
+public sealed class ChatHub(IGuildClient guildClient, ICurrentUser currentUser, IEventBus eventBus) : Hub<IChatClient>
 {
 	private const long ReadMessages = 1L << 1;
 	private const long Administrator = 1L << 8;
+
+	public override async Task OnConnectedAsync()
+	{
+		if (Context.UserIdentifier is not null)
+			await eventBus.PublishAsync(
+				new UserOnline(long.Parse(Context.UserIdentifier)),
+				Context.ConnectionAborted);
+		await base.OnConnectedAsync();
+	}
+
+	public override async Task OnDisconnectedAsync(Exception? exception)
+	{
+		if (Context.UserIdentifier is not null)
+			await eventBus.PublishAsync(new UserOffline(
+				long.Parse(Context.UserIdentifier)),
+				Context.ConnectionAborted);
+		await base.OnDisconnectedAsync(exception);
+	}
 
 	public async Task JoinChannel(long channelId)
 	{
