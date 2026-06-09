@@ -15,4 +15,7 @@ internal sealed class SignalRUserBroadcaster(IHubContext<ChatHub, IChatClient> h
 {
 	public Task BroadcastGuildJoinedAsync(long userId, long guildId, string guildName, CancellationToken ct) =>
 		hub.Clients.User(userId.ToString()).GuildJoined(guildId.ToString(), guildName);
+
+	public Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct) =>
+		hub.Clients.User(userId.ToString()).GuildLeft(guildId.ToString());
 }
