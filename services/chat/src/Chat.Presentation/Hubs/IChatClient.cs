@@ -8,5 +8,6 @@ public interface IChatClient
 	Task MessageEdited(MessageEditedEvent evt);
 	Task MessageDeleted(MessageDeletedEvent evt);
 	Task GuildJoined(string guildId, string guildName);
+	Task GuildLeft(string guildId);
 	Task Error(string code, string message);
 }

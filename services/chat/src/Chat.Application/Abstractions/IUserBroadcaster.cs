@@ -8,4 +8,5 @@ namespace Chat.Application.Abstractions;
 public interface IUserBroadcaster
 {
 	Task BroadcastGuildJoinedAsync(long userId, long guildId, string guildName, CancellationToken ct);
+	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
 }
