@@ -511,18 +511,55 @@ Remove the caller's own reaction. Removing a reaction the caller did not place i
 
 Connect with the access token:
 ```
-wss://<host>/hubs/chat?access_token=<jwt>
+wss://<host>/api/chat/v1/hubs/chat?access_token=<jwt>
 ```
 
 On connect, the server:
-1. Adds the client to all SignalR groups for their guild channels, plus a personal group for DMs.
+1. Publishes `user.online` to RabbitMQ. No SignalR groups are joined automatically — the client subscribes to channels on demand via `JoinChannel` (see below).
 2. Checks for a pending incoming call (caller sent `CallOffer` while this user was offline) - if one exists, immediately relays `IncomingCall` to the client so they can answer.
 
 ---
 
 ### Client → Server (Invocations)
 
-Sending messages is REST-only (`POST /channels/{channel_id}/messages`, `POST /dms/{user_id}/messages`). The hub carries one chat invocation (`Typing`, below) plus the WebRTC signaling methods documented further down.
+Sending messages is REST-only (`POST /channels/{channel_id}/messages`, `POST /dms/{user_id}/messages`). The hub carries three chat invocations (`JoinChannel`, `LeaveChannel`, `Typing`) plus the WebRTC signaling methods documented further down.
+
+#### JoinChannel
+
+Subscribe the current connection to a channel's real-time message stream. Must be called before `ReceiveMessage` broadcasts for that channel reach the client. Clients call this when the user navigates to a channel.
+
+```json
+{
+  "target": "JoinChannel",
+  "arguments": ["<snowflake>"]
+}
+```
+
+The single argument is the channel ID. Server actions:
+1. Calls Guild Service `GET /internal/channels/{channel_id}/membership?user_id={caller}` to verify membership and permissions.
+2. On success: adds the connection to the `channel:{id}` SignalR group.
+3. On failure: sends `Error` to the caller.
+
+**Errors** (via `Error` event):
+| Code | Reason |
+|------|--------|
+| `Channel.NotFound` | Channel not found or caller is not a member |
+| `Channel.MissingReadPermission` | Caller lacks `READ_MESSAGES` permission |
+
+---
+
+#### LeaveChannel
+
+Unsubscribe the current connection from a channel's real-time stream. Clients call this when navigating away from a channel. No permission check — a connection can always leave a group.
+
+```json
+{
+  "target": "LeaveChannel",
+  "arguments": ["<snowflake>"]
+}
+```
+
+---
 
 #### Typing
 
@@ -720,6 +757,53 @@ Sent to the caller's personal SignalR group after `PUT /dms/{user_id}/read` so o
 
 ---
 
+#### GuildJoined
+
+Sent to all connections of a user when they join a guild (triggered by consuming `guild.member_joined` from RabbitMQ). The client should update its guild list in the sidebar. If the user navigates to a channel in the new guild, it then calls `JoinChannel`.
+
+```json
+{
+  "target": "GuildJoined",
+  "arguments": [{
+    "guild_id": "<snowflake>",
+    "guild_name": "ft_transcendence"
+  }]
+}
+```
+
+---
+
+#### GuildLeft
+
+Sent to all connections of a user when they leave a guild (triggered by consuming `guild.member_left` from RabbitMQ). The client should remove the guild from its sidebar and call `LeaveChannel` for any channel of that guild it is currently subscribed to.
+
+```json
+{
+  "target": "GuildLeft",
+  "arguments": [{
+    "guild_id": "<snowflake>"
+  }]
+}
+```
+
+---
+
+#### Error
+
+Sent to the caller when a hub invocation fails validation.
+
+```json
+{
+  "target": "Error",
+  "arguments": [{
+    "code": "<error_code>",
+    "message": "<human_readable_description>"
+  }]
+}
+```
+
+---
+
 #### UserPresence
 
 Broadcast when a user's presence changes (connect, disconnect, or `PATCH /users/me` status update). Fanned out to every connection that could see the user in a sidebar:
@@ -741,7 +825,6 @@ Broadcast when a user's presence changes (connect, disconnect, or `PATCH /users/
 `status` is `online`, `idle`, `dnd`, or `offline`, matching the values of `users_profile.status` in the User Service. `idle` and `dnd` only ever arrive via an explicit `PATCH /users/me` from the user; connect/disconnect transitions only produce `online` / `offline`.
 
 ---
-
 ## WebRTC Signaling (via SignalR Hub)
 
 Voice and video calls are **1-on-1, peer-to-peer via WebRTC**. The Chat Service hub acts as the signaling server - it relays SDP offers/answers and ICE candidates between the two peers. No media ever touches the server.
@@ -1001,7 +1084,7 @@ Relayed verbatim from the remote peer.
 
 | Event | Action |
 |-------|--------|
-| `guild.member_joined` | Add user to SignalR groups for all channels in that guild |
-| `guild.member_left` | Remove user from SignalR groups for that guild |
+| `guild.member_joined` | Broadcast `GuildJoined` to all connections of the user; clients call `JoinChannel` themselves when navigating to a channel in that guild |
+| `guild.member_left` | Broadcast `GuildLeft` to all connections of the user; clients call `LeaveChannel` for any open subscription in that guild |
 | `user.logged_out` | Force-disconnect any active WebSocket for that user |
 | `user.deleted` | Force-disconnect any active WebSocket; delete the user's `user_conversations`, `channel_read_states`, and `dm_unread_counts` rows. Messages stay - the user's profile becomes unresolvable in User Service, so the frontend renders them as "Deleted User". |
