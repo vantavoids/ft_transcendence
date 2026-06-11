@@ -1,0 +1,8 @@
+FROM golang:1.26.1-alpine
+WORKDIR /app
+
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+COPY db/migrations/ ./db/migrations/
+
+CMD ["goose", "up"]
