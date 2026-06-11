@@ -26,6 +26,9 @@ public static class DirectMessageFailures
 	public static readonly Failure InvalidRecipientId =
 		new("DirectMessage.InvalidRecipientId", "Recipient id must be a positive snowflake.");
 
+	public static readonly Failure CannotMessageSelf =
+		new("DirectMessage.CannotMessageSelf", "Sender and Recipient can't be the same id.");
+
 	public static readonly Failure NotAFriend =
 		new("DirectMessage.NotAFriend", "Sender is not a friend of the Recipient.");
 

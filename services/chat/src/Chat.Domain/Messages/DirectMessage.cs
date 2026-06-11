@@ -73,6 +73,9 @@ public sealed class DirectMessage
 		if (recipientId <= 0)
 			return DirectMessageFailures.InvalidRecipientId;
 
+		if (senderId == recipientId)
+			return DirectMessageFailures.CannotMessageSelf;
+
 		if (string.IsNullOrWhiteSpace(content))
 			return DirectMessageFailures.ContentRequired;
 
