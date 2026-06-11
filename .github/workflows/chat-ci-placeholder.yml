@@ -1,0 +1,20 @@
+name: chat ci
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'services/chat/**'
+      - '.github/workflows/chat-ci.yml'
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "nothing to do here, zzz..."
+  
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "nothing to do here, zzz..."
