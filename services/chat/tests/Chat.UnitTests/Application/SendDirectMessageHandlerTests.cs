@@ -46,18 +46,15 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.True(result.Succeeded);
 		var response = result.Value;
 
-		// message persisté
 		var saved = Assert.Single(h.Repository.Saved);
 		Assert.Equal(42L, saved.SenderId);
 		Assert.Equal(100L, saved.RecipientId);
 		Assert.Equal("hello", saved.Content);
-		Assert.True(saved.ConversationId > 0);            // conversation neuve → id généré
+		Assert.True(saved.ConversationId > 0);
 
-		// la réponse enveloppe bien le message sauvegardé
 		Assert.True(long.TryParse(response.Id, out var responseId));
 		Assert.Equal(responseId, saved.Id);
 
-		// event publié
 		var evt = Assert.Single(h.EventBus.PublishedOf<ChatDmSent>());
 		Assert.Equal(42L, evt.SenderId);
 		Assert.Equal(100L, evt.RecipientId);
@@ -65,7 +62,6 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.Equal(saved.ConversationId, evt.ConversationId);
 		Assert.Equal("hello", evt.Content);
 
-		// livré au destinataire, une fois, avec l'objet réponse
 		var (recipientId, unicastMessage) = Assert.Single(h.Unicaster.Unicasts);
 		Assert.Equal(100L, recipientId);
 		Assert.Same(response, unicastMessage);
@@ -131,9 +127,9 @@ public sealed class SendDirectMessageHandlerTests
 
 		Assert.True(second.Succeeded);
 		Assert.Equal(first.Value.Id, second.Value.Id);
-		Assert.Single(h.Repository.Saved);          // pas de nouvelle écriture
-		Assert.Empty(h.EventBus.Published);          // pas de nouvel event
-		Assert.Empty(h.Unicaster.Unicasts);          // pas de nouvelle livraison
+		Assert.Single(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Unicaster.Unicasts);
 	}
 
 	[Fact]
