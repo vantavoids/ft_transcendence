@@ -29,4 +29,19 @@ public sealed class GuildMember
 
 		return new GuildMember(guildId, userId, nickname: null, joinedAt: now);
 	}
+
+	public Result UpdateNickname(string? nickname)
+	{
+		if (nickname is not null)
+		{
+			if (nickname.Length > MaxNicknameLen)
+				return GuildFailures.NicknameTooLong;
+
+			if (nickname.Length == 0 || nickname.Any(char.IsControl))
+				return GuildFailures.NicknameInvalid;
+		}
+
+		Nickname = nickname;
+		return Result.Ok();
+	}
 }

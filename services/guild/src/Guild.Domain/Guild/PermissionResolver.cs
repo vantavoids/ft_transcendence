@@ -124,4 +124,47 @@ public static class PermissionResolver
 			return true;
 		return (effectiveMask & (long)required) == (long)required;
 	}
+
+	/// <summary>
+	/// rank used by the role hierarchy guard (kick, ban, role assignment,
+	/// nickname-edit on another member). owner outranks everyone; otherwise
+	/// take the highest <c>Position</c> across the user's explicit role
+	/// assignments. the default <c>@everyone</c> role does not count, so a
+	/// member with no explicit roles ranks below any member with at least
+	/// one. <c>int.MaxValue</c> / <c>int.MinValue</c> are sentinels chosen so
+	/// <see cref="OutRanks"/>'s strictly-greater-than comparison naturally
+	/// makes the owner unreachable and unassigned members at the bottom
+	/// </summary>
+	public static int Rank(Guild guild, long userId)
+	{
+		if (userId == guild.OwnerId)
+			return int.MaxValue;
+
+		var rank = int.MinValue;
+		foreach (var assignment in guild.MemberRoles)
+		{
+			if (assignment.UserId != userId)
+				continue;
+
+			foreach (var role in guild.Roles)
+			{
+				if (role.Id != assignment.RoleId || role.IsDefault)
+					continue;
+				if (role.Position > rank)
+					rank = role.Position;
+			}
+		}
+		return rank;
+	}
+
+	/// <summary>
+	/// returns true when <paramref name="callerUserId"/> strictly out-ranks
+	/// <paramref name="targetUserId"/>. self-comparison and same-rank
+	/// comparisons return false; the owner-as-target case always returns
+	/// false because the owner's rank is unreachable
+	/// </summary>
+	public static bool OutRanks(Guild guild, long callerUserId, long targetUserId)
+	{
+		return Rank(guild, callerUserId) > Rank(guild, targetUserId);
+	}
 }

@@ -5,6 +5,7 @@ using Guild.Application.Features.Membership.Common;
 using Guild.Application.Features.Membership.JoinByInviteCode;
 using Guild.Application.Features.Membership.LeaveGuild;
 using Guild.Application.Features.Membership.ListMembers;
+using Guild.Application.Features.Membership.UpdateNickname;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -22,6 +23,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		group.MapPost("/join", JoinAsync);
 		group.MapPost("/leave", LeaveAsync);
 		group.MapGet("/members", ListMembersAsync);
+		group.MapPatch("/members/{userId:long}", UpdateNicknameAsync);
 	}
 
 	private static async Task<Results<
@@ -114,5 +116,38 @@ public sealed class MembershipEndpoint : ICarterModule
 		};
 	}
 
+	private static async Task<Results<
+		Ok<MemberResponse>,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	UpdateNicknameAsync(
+		long id,
+		long userId,
+		UpdateNicknameRequest request,
+		ICommandHandler<UpdateNicknameCommand, Result<MemberResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new UpdateNicknameCommand(id, userId, request.Nickname),
+			cancellationToken);
+
+		if (result.Succeeded)
+			return TypedResults.Ok(result.Value);
+
+		return result.Error.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.NicknameTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+			"Guild.NicknameInvalid" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+		};
+	}
+
 	private sealed record JoinByPathRequest(string? InviteCode);
+	private sealed record UpdateNicknameRequest(string? Nickname);
 }
