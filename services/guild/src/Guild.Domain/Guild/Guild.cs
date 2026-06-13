@@ -152,6 +152,19 @@ public sealed class Guild
 		return Result.Ok();
 	}
 
+	public Result<GuildMember> UpdateMemberNickname(long userId, string? nickname)
+	{
+		var member = _members.FirstOrDefault(m => m.UserId == userId);
+		if (member is null)
+			return GuildFailures.TargetNotAMember;
+
+		var updateResult = member.UpdateNickname(nickname);
+		if (updateResult.IsFailure)
+			return updateResult.Error;
+
+		return member;
+	}
+
 	private static Result ValidateSettings(
 		string? name,
 		string? description,
