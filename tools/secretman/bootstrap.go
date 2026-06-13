@@ -24,6 +24,9 @@ func bootstrap() error {
 	}
 
 	// check for git-hooks and install if missing
+	if err := ensureBetterLeaks(); err != nil {
+		return err
+	}
 
 	fmt.Printf("\n✅ Secretman setup finished successfully.\n")
 

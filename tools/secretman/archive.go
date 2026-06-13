@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
-func extractTarGz(tarGzPath string) error {
+func extractTarGz(tarGzPath string, target string) error {
 
 	tarPath, err := decompressGz(tarGzPath)
 	if err != nil {
 		return err
 	}
 
-	err = extractTar(tarPath)
+	err = extractTar(tarPath, target)
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func decompressGz(filePath string) (string, error) {
 	return newPath, nil
 }
 
-func extractTar(filePath string) error {
+func extractTar(filePath string, target string) error {
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -79,9 +80,7 @@ func extractTar(filePath string) error {
 	}
 	defer file.Close()
 
-	ageDir := "age/"
-	ageBin := "age-keygen"
-	binPath := toolsDir + ageBin
+	binPath := toolsDir + filepath.Base(target)
 	tmpPath := binPath + ".tmp"
 
 	// Open and iterate through the files in the archive.
@@ -95,7 +94,7 @@ func extractTar(filePath string) error {
 			return err
 		}
 
-		if hdr.Name == ageDir+ageBin {
+		if hdr.Name == target {
 			out, err := os.Create(tmpPath)
 			if err != nil {
 				return err
@@ -127,5 +126,5 @@ func extractTar(filePath string) error {
 		}
 	}
 
-	return fmt.Errorf("❌ AGE binary age-keygen not found in archive")
+	return fmt.Errorf("❌ %s binary not found in archive", target)
 }
