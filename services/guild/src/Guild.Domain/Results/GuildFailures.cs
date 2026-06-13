@@ -89,6 +89,9 @@ public static class GuildFailures
 	public static readonly Failure OwnerCannotLeave =
 		new("Guild.OwnerCannotLeave", "Owner cannot leave. Transfer ownership or delete the guild first.");
 
+	public static readonly Failure CannotKickOwner =
+		new("Guild.CannotKickOwner", "The owner cannot be kicked.");
+
 	public static readonly Failure RoleHierarchyBlocked =
 		new("Guild.RoleHierarchyBlocked", "Caller does not out-rank target in the role hierarchy.");
 

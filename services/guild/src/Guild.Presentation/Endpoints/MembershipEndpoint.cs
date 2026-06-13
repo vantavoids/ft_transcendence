@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Guilds.Common;
 using Guild.Application.Features.Membership.Common;
 using Guild.Application.Features.Membership.JoinByInviteCode;
+using Guild.Application.Features.Membership.KickMember;
 using Guild.Application.Features.Membership.LeaveGuild;
 using Guild.Application.Features.Membership.ListMembers;
 using Guild.Application.Features.Membership.UpdateNickname;
@@ -24,6 +25,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		group.MapPost("/leave", LeaveAsync);
 		group.MapGet("/members", ListMembersAsync);
 		group.MapPatch("/members/{userId:long}", UpdateNicknameAsync);
+		group.MapDelete("/members/{userId:long}", KickAsync);
 	}
 
 	private static async Task<Results<
@@ -144,6 +146,34 @@ public sealed class MembershipEndpoint : ICarterModule
 			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
 			"Guild.NicknameTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 			"Guild.NicknameInvalid" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+		};
+	}
+
+	private static async Task<Results<
+		NoContent,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	KickAsync(
+		long id,
+		long userId,
+		ICommandHandler<KickMemberCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new KickMemberCommand(id, userId), cancellationToken);
+
+		if (result.Succeeded)
+			return TypedResults.NoContent();
+
+		return result.Error.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.CannotKickOwner" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 		};
 	}
