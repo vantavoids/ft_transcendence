@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 )
 
@@ -170,6 +171,15 @@ func fetchPublicKey() (string, error) {
 
 func addKeyToSopsYaml(publicKey string) error {
 
+	user, err := user.Current()
+	if err != nil {
+		return err
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	author := "          # " + user.Name + "@" + hostname + "\n"
 	line := "          - " + publicKey + "\n"
 
 	out, err := os.OpenFile(sopsYamlPath, os.O_APPEND|os.O_WRONLY, 0644)
@@ -178,6 +188,10 @@ func addKeyToSopsYaml(publicKey string) error {
 	}
 	defer out.Close()
 
+	_, err = out.WriteString(author)
+	if err != nil {
+		return err
+	}
 	_, err = out.WriteString(line)
 	if err != nil {
 		return err
