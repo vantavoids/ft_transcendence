@@ -16,10 +16,10 @@ func flagSetup(setup *bool, refresh *bool, decrypt *bool, encrypt *bool) error {
 	flag.BoolVar(refresh, "refresh", false, "refresh all secret files")
 	flag.BoolVar(refresh, "r", false, "")
 
-	flag.BoolVar(decrypt, "decrypt-all", false, "decrypt all env files")
+	flag.BoolVar(decrypt, "decrypt", false, "decrypt env files")
 	flag.BoolVar(decrypt, "d", false, "")
 
-	flag.BoolVar(encrypt, "encrypt-all", false, "encrypt all env files")
+	flag.BoolVar(encrypt, "encrypt", false, "encrypt env files")
 	flag.BoolVar(encrypt, "e", false, "")
 
 	flag.Parse()
@@ -32,7 +32,7 @@ func flagSetup(setup *bool, refresh *bool, decrypt *bool, encrypt *bool) error {
 	}
 
 	if count > 1 {
-		return fmt.Errorf("❌ Error: use only one action flag at a time")
+		return fmt.Errorf("❌ Use only one action flag at a time")
 	}
 	return nil
 }
