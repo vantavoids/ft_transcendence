@@ -195,7 +195,7 @@ List guild members. Caller must be a member.
 | Param | Type | Description |
 |-------|------|-------------|
 | `limit` | int | Max results (default 50, max 100) |
-| `after` | snowflake | Cursor for pagination |
+| `after` | snowflake | Cursor for pagination. Rows are returned ordered by `user_id` ascending and only members with `user_id > after` are included. Omit for the first page. |
 
 **Response `200`:**
 ```json
@@ -209,18 +209,64 @@ List guild members. Caller must be a member.
 ]
 ```
 
+`nickname` is `null` when the member has not set one (default avatar/display falls back to User Service profile). `roles` is the list of explicit role assignments for that member from `member_roles`; it does not include the implicit `@everyone` role.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Not a member |
+| 404 | Guild not found |
+
+---
+
+### PATCH /guilds/{id}/members/{user_id}
+
+Update a member's nickname.
+
+**Request body:**
+```json
+{
+  "nickname": "Vanta"
+}
+```
+
+`nickname` is `null` to clear the nickname or a 1-64 character string. Control characters (`\n`, `\r`, `\t`, ...) are rejected, matching the naming rules for guilds, categories, and roles.
+
+**Auth:**
+- `{user_id}` equal to the caller's JWT `sub`: always allowed (self-edit).
+- `{user_id}` not the caller: requires `MANAGE_NICKNAMES` permission AND the caller must out-rank the target (see [Role hierarchy](#role-hierarchy) below).
+
+**Response `200`:**
+```json
+{
+  "user_id": "<snowflake>",
+  "guild_id": "<snowflake>",
+  "nickname": "Vanta"
+}
+```
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Nickname longer than 64 characters, or contains control characters |
+| 403 | Editing another member's nickname without `MANAGE_NICKNAMES`, or target has equal/higher role |
+| 404 | Guild or target member not found |
+
+No side effects on RabbitMQ; nickname changes do not fan out to other services (each consumer can fetch the latest via `GET /guilds/{id}/members` on demand).
+
 ---
 
 ### DELETE /guilds/{id}/members/{user_id}
 
-Kick a member. Requires `KICK_MEMBERS` permission. Cannot kick the owner or someone with equal/higher role.
+Kick a member. Requires `KICK_MEMBERS` permission. The owner cannot be kicked. The caller must out-rank the target (see [Role hierarchy](#role-hierarchy) below); self-kick is rejected for the same reason (caller never out-ranks themselves). For self-departure, use `POST /guilds/{id}/leave` instead.
 
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Missing permission or target has higher/equal role |
+| 400 | Target is the owner |
+| 403 | Missing `KICK_MEMBERS` permission or target has higher/equal role |
 | 404 | Guild or member not found |
 
 **Side effects:** Publishes `guild.member_left { guild_id, user_id }` to RabbitMQ.
@@ -601,6 +647,19 @@ Each role has a `permissions` field - a `BIGINT` bitmask. Bit positions (mirrors
 | `MANAGE_NICKNAMES` | 11 | `2048` |
 
 `ADMINISTRATOR` grants all permissions regardless of other bits. The guild owner always has `ADMINISTRATOR`.
+
+---
+
+## Role hierarchy
+
+Some endpoints (member kick, ban, nickname-edit on another member, role assignment) require the caller to **out-rank** the target. A user's rank in a guild is defined as:
+
+| User | Rank |
+|------|------|
+| The guild owner | Top (out-ranks everyone, including other ADMINISTRATOR holders) |
+| Any other member | The highest `position` among their explicitly assigned roles. The default `@everyone` role does not count, so a member with no explicit role assignments ranks **below** any member who has at least one explicit role. |
+
+"Caller out-ranks target" means the caller's rank is strictly greater than the target's rank. The owner is unreachable by this comparison (no one out-ranks the owner). A caller never out-ranks themselves, which is why self-kick is rejected and self-edits that go through hierarchy-checked endpoints fall back to the self-edit shortcut documented per endpoint.
 
 ---
 
