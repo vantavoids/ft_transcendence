@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 const userOS = runtime.GOOS
@@ -69,19 +73,19 @@ func resolveSOPSPath() (string, error) {
 		return globalPath, nil
 	}
 
-	projectPath := toolsDir + "sops"
+	localPath := toolsDir + "sops"
 
-	if fileExists(projectPath) {
+	if fileExists(localPath) {
 		fmt.Println("✅ SOPS binary found in secretman tools.")
-		return projectPath, nil
+		return localPath, nil
 	}
 
 	fmt.Println("⚠️ SOPS binary not found, downloading it.")
-	if err := installSOPS(userOS, userArch, projectPath); err != nil {
+	if err := installSOPS(userOS, userArch, localPath); err != nil {
 		return "", err
 	}
 
-	return projectPath, nil
+	return localPath, nil
 }
 
 func resolveAGEPath() (string, error) {
@@ -94,11 +98,11 @@ func resolveAGEPath() (string, error) {
 		return globalPath, nil
 	}
 
-	projectPath := toolsDir + "age-keygen"
+	localPath := toolsDir + "age-keygen"
 
-	if fileExists(projectPath) {
+	if fileExists(localPath) {
 		fmt.Println("✅ AGE binary found in secretman tools.")
-		return projectPath, nil
+		return localPath, nil
 	}
 
 	fmt.Println("⚠️ AGE binary not found, downloading it.")
@@ -106,7 +110,7 @@ func resolveAGEPath() (string, error) {
 		return "", err
 	}
 
-	return projectPath, nil
+	return localPath, nil
 }
 
 type toolAsset struct {
@@ -184,13 +188,188 @@ func installAGE(userOS string, userArch string, archive string) error {
 		return err
 	}
 
-	err = extractTarGz(archive)
+	err = extractTarGz(archive, "age/age-keygen")
 	if err != nil {
 		return err
 	}
 
 	err = changePerm(toolsDir+"age-keygen", 0755)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const gitPath string = rootPath + ".git/"
+
+func ensureBetterLeaks() error {
+
+	// check that .git/ exists
+	if !fileExists(gitPath) {
+		err := fmt.Errorf("❌ Missing .git in root directory, cannot add BetterLeaks hook")
+		return err
+	}
+
+	// check that betterleaks is installed or install it
+	binPath, err := resolveBetterLeaksToolPath()
+	if err != nil {
+		return err
+	}
+
+	// create .git/hooks/betterleaks & .git/hooks/pre-commit if missing
+	hooksDirPath := gitPath + "hooks/"
+	if err := ensureBetterLeaksHook(hooksDirPath, binPath); err != nil {
+		return err
+	}
+	if err := ensurePreCommitHook(hooksDirPath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func resolveBetterLeaksToolPath() (string, error) {
+
+	fmt.Println()
+
+	globalPath, err := exec.LookPath("betterleaks")
+	if err == nil {
+		fmt.Println("✅ BetterLeaks binary found in global PATH.")
+		return globalPath, nil
+	}
+
+	localPath := toolsDir + "betterleaks"
+	if fileExists(localPath) {
+		fmt.Println("✅ BetterLeaks binary found in secretman tools.")
+		return localPath, nil
+	}
+
+	fmt.Println("⚠️ BetterLeaks binary not found, downloading it.")
+	if err := installBetterLeaks(userOS, userArch, toolsDir+"betterleaks.tar.gz"); err != nil {
+		return "", err
+	}
+
+	return localPath, nil
+}
+
+func installBetterLeaks(userOS string, userArch string, archive string) error {
+
+	ageAssets := map[string]toolAsset{
+		"linux-arm64": {
+			URL:    "https://github.com/betterleaks/betterleaks/releases/download/v1.5.0/betterleaks_1.5.0_linux_arm64.tar.gz",
+			SHA256: "f4e89eccde1cdf0cf048748876757e56705d21f122fa4284a4b84803da288608",
+		},
+		"linux-amd64": {
+			URL:    "https://github.com/betterleaks/betterleaks/releases/download/v1.5.0/betterleaks_1.5.0_linux_x64.tar.gz",
+			SHA256: "b883e8c61a3a14c90ff46a08c203cf88fe340ed88251d4c049db5530ec0ac54b",
+		},
+		"darwin-arm64": {
+			URL:    "https://github.com/betterleaks/betterleaks/releases/download/v1.5.0/betterleaks_1.5.0_darwin_arm64.tar.gz",
+			SHA256: "a341e534f152bd10fa8309d74e2ab7eadb634f16ddeb7c3f43ca54f8a016905b",
+		},
+		"darwin-amd64": {
+			URL:    "https://github.com/betterleaks/betterleaks/releases/download/v1.5.0/betterleaks_1.5.0_darwin_x64.tar.gz",
+			SHA256: "bbbbf362ddd0a0c5d37633707206be92501ba5f3291ea45af0c6ab3980ec693d",
+		},
+	}
+
+	key := userOS + "-" + userArch
+
+	url := ageAssets[key].URL
+	checksum := ageAssets[key].SHA256
+
+	err := downloadFile(url, archive, checksum)
+	if err != nil {
+		return err
+	}
+
+	target := "betterleaks"
+
+	err = extractTarGz(archive, target)
+	if err != nil {
+		return err
+	}
+
+	err = changePerm(toolsDir+target, 0755)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensureBetterLeaksHook(hooksDirPath string, binPath string) error {
+
+	if err := os.MkdirAll(hooksDirPath, 0755); err != nil {
+		return err
+	}
+
+	betterHookPath := hooksDirPath + "betterleaks"
+
+	betterHookFile, err := os.OpenFile(betterHookPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0755)
+	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			fmt.Println("✅ BetterLeaks hook found in .git directory.")
+			return nil
+		}
+		return err
+	}
+	defer betterHookFile.Close()
+
+	fmt.Println("⚠️ BetterLeaks hook not found in .git directory, adding it.")
+
+	hookContent := "#!/bin/sh\n\n" + binPath + " git . --pre-commit --staged -v"
+
+	if _, err := io.Copy(betterHookFile, strings.NewReader(hookContent)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensurePreCommitHook(hooksDirPath string) error {
+
+	preCommitHookPath := hooksDirPath + "pre-commit"
+
+	if !fileExists(preCommitHookPath) {
+		shebang := []byte("#!/bin/sh\n")
+		if err := os.WriteFile(preCommitHookPath, shebang, 0755); err != nil {
+			return err
+		}
+	}
+
+	preCommitHookFile, err := os.OpenFile(preCommitHookPath, os.O_CREATE|os.O_RDWR, 0755)
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(preCommitHookFile)
+
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "# secretman betterleaks hook") {
+			fmt.Println("✅ BetterLeaks found in pre-commit hook.")
+			return nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	fmt.Println("⚠️ BetterLeaks not found in pre-commit hook, adding it.")
+
+	hookContent := `
+# secretman betterleaks hook
+
+repo_root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$repo_root" || exit 1
+
+if [ -x ".git/hooks/betterleaks" ]; then
+	.git/hooks/betterleaks || exit $?
+fi
+`
+
+	if _, err := io.Copy(preCommitHookFile, strings.NewReader(hookContent)); err != nil {
 		return err
 	}
 
