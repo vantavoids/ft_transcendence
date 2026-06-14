@@ -319,7 +319,7 @@ func ensureBetterLeaksHook(hooksDirPath string, binPath string) error {
 
 	fmt.Println("⚠️ BetterLeaks hook not found in .git directory, adding it.")
 
-	hookContent := "#!/bin/sh\n\n" + binPath + " git . --pre-commit --staged -v"
+	hookContent := "#!/bin/sh\n\nexec \"" + binPath + "\" git . --pre-commit --staged -v\n"
 
 	if _, err := io.Copy(betterHookFile, strings.NewReader(hookContent)); err != nil {
 		return err
@@ -343,11 +343,13 @@ func ensurePreCommitHook(hooksDirPath string) error {
 	if err != nil {
 		return err
 	}
+	defer preCommitHookFile.Close()
 
 	scanner := bufio.NewScanner(preCommitHookFile)
 
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "# secretman betterleaks hook") {
+		line := scanner.Text()
+		if strings.Contains(line, "# secretman betterleaks hook") || strings.Contains(line, ".git/hooks/betterleaks") {
 			fmt.Println("✅ BetterLeaks found in pre-commit hook.")
 			return nil
 		}
