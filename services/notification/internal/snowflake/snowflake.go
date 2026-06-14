@@ -1,4 +1,4 @@
-package main
+package snowflake
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ const maxSequence = (1 << sequenceBits) - 1
 
 const epoch = 1704067200000 // 1st January 2024
 
-type Generator struct {
+type SnowflakeGenerator struct {
 	workerID  int64
 	processID int64
 
@@ -23,17 +23,17 @@ type Generator struct {
 	lastTimestamp int64
 }
 
-func NewGenerator(workerID, processID int64) (*Generator, error) {
+func NewGenerator(workerID, processID int64) (*SnowflakeGenerator, error) {
 	if workerID < 0 || maxWorkerId < workerID {
 		return nil, fmt.Errorf("WorkerID must be between 0 and %d, but got %d", maxWorkerId, workerID)
 	}
 	if processID < 0 || 31 < processID {
 		return nil, fmt.Errorf("ProcessID must be between 0 and 31, but got %d", processID)
 	}
-	return &Generator{workerID: workerID, processID: processID}, nil
+	return &SnowflakeGenerator{workerID: workerID, processID: processID}, nil
 }
 
-func (g *Generator) Generate() (int64, error) {
+func (g *SnowflakeGenerator) Generate() (int64, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -64,9 +64,4 @@ func waitUntilNextMillisec(lastTimestamp int64) int64 {
 		now = time.Now().UnixMilli()
 	}
 	return now
-}
-
-func main() {
-	var gen, _ = NewGenerator(1, 1)
-	fmt.Println(gen.Generate())
 }
