@@ -116,6 +116,60 @@ public sealed class Role
 			updatedAt: now);
 	}
 
+	/// <summary>
+	/// applies a PATCH-style diff. each parameter is "no change" when null
+	/// (except color where empty string means "clear", matching the project's
+	/// nullable-field PATCH convention used by UpdateGuild). default roles
+	/// reject name/position/is_default edits but accept the rest (permissions,
+	/// color, hoist, mentionability) so @everyone's baseline can still be tuned
+	/// </summary>
+	public Result UpdateSettings(
+		string? name,
+		string? color,
+		long? permissions,
+		int? position,
+		bool? isHoisted,
+		bool? isMentionable,
+		DateTimeOffset now)
+	{
+		if (IsDefault && (name is not null || position is not null))
+			return GuildFailures.CannotEditDefaultRole;
+
+		if (name is not null)
+		{
+			if (string.IsNullOrWhiteSpace(name) || name.Length > MaxNameLen || name.Any(char.IsControl))
+				return GuildFailures.InvalidRoleName;
+			Name = name;
+		}
+
+		if (color is not null)
+		{
+			if (color.Length > 0 && !IsValidHexColor(color))
+				return GuildFailures.InvalidColor;
+			Color = color.Length == 0 ? null : color;
+		}
+
+		if (permissions is long newPerms)
+		{
+			if (newPerms < 0)
+				return GuildFailures.RolePermissionsInvalid;
+			Permissions = newPerms;
+		}
+
+		if (position is int newPos)
+		{
+			if (newPos < 0)
+				return GuildFailures.RolePositionInvalid;
+			Position = newPos;
+		}
+
+		if (isHoisted is bool h) IsHoisted = h;
+		if (isMentionable is bool m) IsMentionable = m;
+
+		UpdatedAt = now;
+		return Result.Ok();
+	}
+
 	private static bool IsValidHexColor(string color)
 	{
 		if (color is not ['#', _, _, _, _, _, _])

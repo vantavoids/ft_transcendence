@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Roles.Common;
 using Guild.Application.Features.Roles.CreateRole;
 using Guild.Application.Features.Roles.ListRoles;
+using Guild.Application.Features.Roles.UpdateRole;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -16,6 +17,7 @@ public sealed class RolesEndpoint : ICarterModule
 		var group = endpoints.MapGroup("/guilds/{id:long}/roles");
 		group.MapGet("/", ListAsync);
 		group.MapPost("/", CreateAsync);
+		group.MapPatch("/{roleId:long}", UpdateAsync);
 	}
 
 	private static async Task<Results<
@@ -59,6 +61,35 @@ public sealed class RolesEndpoint : ICarterModule
 			: MapErrorCreate(result.Error);
 	}
 
+	private static async Task<Results<
+		Ok<RoleResponse>,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	UpdateAsync(
+		long id,
+		long roleId,
+		UpdateRoleRequest request,
+		ICommandHandler<UpdateRoleCommand, Result<RoleResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new UpdateRoleCommand(
+				GuildId: id,
+				RoleId: roleId,
+				Name: request.Name,
+				Color: request.Color,
+				Permissions: request.Permissions,
+				Position: request.Position,
+				IsHoisted: request.IsHoisted,
+				IsMentionable: request.IsMentionable),
+			cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapErrorUpdate(result.Error);
+	}
+
 	// ---- error mapping ----
 
 	private static Results<Ok<IReadOnlyList<RoleResponse>>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
@@ -78,12 +109,32 @@ public sealed class RolesEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
+	private static Results<Ok<RoleResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
+		MapErrorUpdate(Failure failure) => failure.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.RoleNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.CannotGrantPermissionsYouLack" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
+		};
+
 	// ---- request shapes ----
 
 	private sealed record CreateRoleRequest(
 		string? Name,
 		string? Color,
 		long? Permissions,
+		bool? IsHoisted,
+		bool? IsMentionable);
+
+	private sealed record UpdateRoleRequest(
+		string? Name,
+		string? Color,
+		long? Permissions,
+		int? Position,
 		bool? IsHoisted,
 		bool? IsMentionable);
 }

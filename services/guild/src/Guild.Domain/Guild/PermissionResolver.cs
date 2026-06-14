@@ -126,14 +126,15 @@ public static class PermissionResolver
 	}
 
 	/// <summary>
-	/// rank used by the role hierarchy guard (kick, ban, role assignment,
+	/// rank used by hierarchy guards (role CRUD, kick, ban, role assignment,
 	/// nickname-edit on another member). owner outranks everyone; otherwise
 	/// take the highest <c>Position</c> across the user's explicit role
 	/// assignments. the default <c>@everyone</c> role does not count, so a
 	/// member with no explicit roles ranks below any member with at least
 	/// one. <c>int.MaxValue</c> / <c>int.MinValue</c> are sentinels chosen so
-	/// <see cref="OutRanks"/>'s strictly-greater-than comparison naturally
-	/// makes the owner unreachable and unassigned members at the bottom
+	/// the strictly-greater-than comparisons in <see cref="OutRanks"/> and
+	/// <see cref="OutRanksRole"/> naturally make the owner unreachable and
+	/// unassigned members ineligible
 	/// </summary>
 	public static int Rank(Guild guild, long userId)
 	{
@@ -178,5 +179,16 @@ public static class PermissionResolver
 		if ((callerMask & (long)Permission.Administrator) != 0)
 			return true;
 		return (permsToGrant & ~callerMask) == 0;
+	}
+
+	/// <summary>
+	/// returns true when the caller strictly out-ranks the target role's
+	/// position. owner always passes; a caller whose highest explicit role
+	/// sits at the same position as the target fails (Discord-style: cannot
+	/// modify a role at or above your own highest)
+	/// </summary>
+	public static bool OutRanksRole(Guild guild, long callerUserId, Role role)
+	{
+		return Rank(guild, callerUserId) > role.Position;
 	}
 }

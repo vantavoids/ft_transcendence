@@ -205,6 +205,28 @@ public sealed class Guild
 		return roleResult.Value;
 	}
 
+	public Result<Role> UpdateRole(
+		long roleId,
+		string? name,
+		string? color,
+		long? permissions,
+		int? position,
+		bool? isHoisted,
+		bool? isMentionable,
+		DateTimeOffset now)
+	{
+		var role = _roles.FirstOrDefault(r => r.Id == roleId);
+		if (role is null)
+			return GuildFailures.RoleNotFound;
+
+		var updateResult = role.UpdateSettings(name, color, permissions, position, isHoisted, isMentionable, now);
+		if (updateResult.IsFailure)
+			return updateResult.Error;
+
+		UpdatedAt = now;
+		return role;
+	}
+
 	private static Result ValidateSettings(
 		string? name,
 		string? description,
