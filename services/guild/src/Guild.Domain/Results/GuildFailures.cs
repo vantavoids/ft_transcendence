@@ -92,6 +92,12 @@ public static class GuildFailures
 	public static readonly Failure CannotKickOwner =
 		new("Guild.CannotKickOwner", "The owner cannot be kicked.");
 
+	public static readonly Failure RoleNotFound =
+		new("Guild.RoleNotFound", "Role not found.");
+
+	public static readonly Failure CannotEditDefaultRole =
+		new("Guild.CannotEditDefaultRole", "The default role's name, position and is_default flag cannot be changed.");
+
 	public static readonly Failure RoleHierarchyBlocked =
 		new("Guild.RoleHierarchyBlocked", "Caller does not out-rank target in the role hierarchy.");
 
@@ -106,6 +112,9 @@ public static class GuildFailures
 
 	public static readonly Failure RolePermissionsInvalid =
 		new("Guild.RolePermissionsInvalid", "Role permissions bitmask must be non-negative.");
+
+	public static readonly Failure RolePositionInvalid =
+		new("Guild.RolePositionInvalid", "Role position must be non-negative.");
 
 	public static readonly Failure InviteCodeRequired =
 		new("Guild.InviteCodeRequired", "Invite code is required.");
