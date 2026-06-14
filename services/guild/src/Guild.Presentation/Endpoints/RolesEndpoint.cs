@@ -2,6 +2,7 @@ using Carter;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Roles.Common;
 using Guild.Application.Features.Roles.CreateRole;
+using Guild.Application.Features.Roles.DeleteRole;
 using Guild.Application.Features.Roles.ListRoles;
 using Guild.Application.Features.Roles.UpdateRole;
 using Guild.Domain.Results;
@@ -18,6 +19,7 @@ public sealed class RolesEndpoint : ICarterModule
 		group.MapGet("/", ListAsync);
 		group.MapPost("/", CreateAsync);
 		group.MapPatch("/{roleId:long}", UpdateAsync);
+		group.MapDelete("/{roleId:long}", DeleteAsync);
 	}
 
 	private static async Task<Results<
@@ -90,6 +92,23 @@ public sealed class RolesEndpoint : ICarterModule
 			: MapErrorUpdate(result.Error);
 	}
 
+	private static async Task<Results<
+		NoContent,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	DeleteAsync(
+		long id,
+		long roleId,
+		ICommandHandler<DeleteRoleCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new DeleteRoleCommand(id, roleId), cancellationToken);
+		return result.Succeeded
+			? TypedResults.NoContent()
+			: MapErrorDelete(result.Error);
+	}
+
 	// ---- error mapping ----
 
 	private static Results<Ok<IReadOnlyList<RoleResponse>>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
@@ -118,6 +137,18 @@ public sealed class RolesEndpoint : ICarterModule
 			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			"Guild.CannotGrantPermissionsYouLack" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
+		};
+
+	private static Results<NoContent, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
+		MapErrorDelete(Failure failure) => failure.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.RoleNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.CannotDeleteDefaultRole" => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
