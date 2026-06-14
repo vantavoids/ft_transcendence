@@ -101,6 +101,12 @@ public static class GuildFailures
 	public static readonly Failure NicknameInvalid =
 		new("Guild.NicknameInvalid", "Member nickname contains invalid characters");
 
+	public static readonly Failure CannotGrantPermissionsYouLack =
+		new("Guild.CannotGrantPermissionsYouLack", "Cannot grant permissions the caller does not have.");
+
+	public static readonly Failure RolePermissionsInvalid =
+		new("Guild.RolePermissionsInvalid", "Role permissions bitmask must be non-negative.");
+
 	public static readonly Failure InviteCodeRequired =
 		new("Guild.InviteCodeRequired", "Invite code is required.");
 
