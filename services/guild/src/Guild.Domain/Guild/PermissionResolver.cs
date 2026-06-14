@@ -167,4 +167,16 @@ public static class PermissionResolver
 	{
 		return Rank(guild, callerUserId) > Rank(guild, targetUserId);
 	}
+
+	/// <summary>
+	/// returns true when the caller's effective mask covers every bit in
+	/// <paramref name="permsToGrant"/>. ADMINISTRATOR short-circuits to true.
+	/// used by POST/PATCH role to enforce "cannot grant permissions you lack"
+	/// </summary>
+	public static bool CanGrantPermissions(long callerMask, long permsToGrant)
+	{
+		if ((callerMask & (long)Permission.Administrator) != 0)
+			return true;
+		return (permsToGrant & ~callerMask) == 0;
+	}
 }

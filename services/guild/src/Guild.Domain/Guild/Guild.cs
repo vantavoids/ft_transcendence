@@ -165,6 +165,46 @@ public sealed class Guild
 		return member;
 	}
 
+	/// <summary>
+	/// appends a new custom role at the top of the position stack
+	/// (max existing position + 1). the @everyone and Administrator roles
+	/// seeded by <see cref="Create"/> mean <c>_roles</c> is never empty here.
+	/// permission grants are not authorized here; the handler does the
+	/// "can't grant permissions you lack" check before calling this
+	/// </summary>
+	public Result<Role> AddRole(
+		long roleId,
+		string? name,
+		string? color,
+		long permissions,
+		bool isHoisted,
+		bool isMentionable,
+		DateTimeOffset now)
+	{
+		if (permissions < 0)
+			return GuildFailures.RolePermissionsInvalid;
+
+		var newPosition = _roles.Max(r => r.Position) + 1;
+
+		var roleResult = Role.Create(
+			id: roleId,
+			guildId: Id,
+			name: name ?? string.Empty,
+			color: color,
+			permissions: permissions,
+			position: newPosition,
+			isDefault: false,
+			isHoisted: isHoisted,
+			isMentionable: isMentionable,
+			now: now);
+		if (roleResult.IsFailure)
+			return roleResult.Error;
+
+		_roles.Add(roleResult.Value);
+		UpdatedAt = now;
+		return roleResult.Value;
+	}
+
 	private static Result ValidateSettings(
 		string? name,
 		string? description,
