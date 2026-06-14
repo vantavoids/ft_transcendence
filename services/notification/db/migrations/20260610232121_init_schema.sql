@@ -2,7 +2,8 @@
 
 -- +goose StatementBegin
 CREATE TYPE notification_type AS ENUM (
-    'mention', 'dm',
+    'mention',
+    'dm',
     'friend_request',
     'guild_invite',
     'guild_welcome',
