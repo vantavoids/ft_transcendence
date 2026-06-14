@@ -28,6 +28,12 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.CountAsync(m => m.GuildId == guildId, cancellationToken);
 	}
 
+	public Task<int> CountOwnedByAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		return context.Guilds
+			.CountAsync(g => g.OwnerId == userId, cancellationToken);
+	}
+
 	public Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default)
 	{
 		return context.Members

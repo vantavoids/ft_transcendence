@@ -31,6 +31,11 @@ internal sealed class FakeGuildRepository : IGuildRepository
 		return Task.FromResult(_store.TryGetValue(guildId, out var guild) ? guild.Members.Count : 0);
 	}
 
+	public Task<int> CountOwnedByAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		return Task.FromResult(_store.Values.Count(g => g.OwnerId == userId));
+	}
+
 	public Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default)
 	{
 		if (!_store.TryGetValue(guildId, out var guild))

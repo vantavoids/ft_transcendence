@@ -11,6 +11,7 @@ public interface IGuildRepository
 	Task<GuildEntity?> GetByIdWithMembershipAsync(long id, CancellationToken cancellationToken = default);
 
 	Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default);
+	Task<int> CountOwnedByAsync(long userId, CancellationToken cancellationToken = default);
 	Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default);
 
 	Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default);

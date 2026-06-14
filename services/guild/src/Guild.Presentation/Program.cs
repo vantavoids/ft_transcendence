@@ -94,6 +94,7 @@ v1.MapCarter();
 // 404. documenting them there would be misleading
 var internalRoutes = app.MapGroup("/internal").ExcludeFromDescription();
 ChannelMembershipEndpoint.MapInternalRoutes(internalRoutes);
+OwnedGuildsCountEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();
 
