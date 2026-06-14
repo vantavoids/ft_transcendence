@@ -98,6 +98,9 @@ public static class GuildFailures
 	public static readonly Failure CannotEditDefaultRole =
 		new("Guild.CannotEditDefaultRole", "The default role's name, position and is_default flag cannot be changed.");
 
+	public static readonly Failure CannotDeleteDefaultRole =
+		new("Guild.CannotDeleteDefaultRole", "The default role cannot be deleted.");
+
 	public static readonly Failure RoleHierarchyBlocked =
 		new("Guild.RoleHierarchyBlocked", "Caller does not out-rank target in the role hierarchy.");
 

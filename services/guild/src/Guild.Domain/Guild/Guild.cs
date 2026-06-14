@@ -227,6 +227,21 @@ public sealed class Guild
 		return role;
 	}
 
+	public Result RemoveRole(long roleId, DateTimeOffset now)
+	{
+		var role = _roles.FirstOrDefault(r => r.Id == roleId);
+		if (role is null)
+			return GuildFailures.RoleNotFound;
+
+		if (role.IsDefault)
+			return GuildFailures.CannotDeleteDefaultRole;
+
+		_roles.Remove(role);
+		_memberRoles.RemoveAll(mr => mr.RoleId == roleId);
+		UpdatedAt = now;
+		return Result.Ok();
+	}
+
 	private static Result ValidateSettings(
 		string? name,
 		string? description,
