@@ -142,4 +142,7 @@ public static class GuildFailures
 
 	public static readonly Failure InviteGuildMismatch =
 		new("Guild.InviteGuildMismatch", "Invite code does not belong to this guild.");
+
+	public static readonly Failure MaxRolesReached =
+		new ("Guild.MaxRolesReached", "Guild has reached the maximum number of roles");
 }
