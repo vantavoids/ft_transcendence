@@ -6,13 +6,15 @@ import (
 	"time"
 )
 
-const workerIdBits = 10
-const sequenceBits = 12
+const (
+	workerIdBits = 10
+	sequenceBits = 12
 
-const maxWorkerId = (1 << workerIdBits) - 1
-const maxSequence = (1 << sequenceBits) - 1
+	maxWorkerId = (1 << workerIdBits) - 1
+	maxSequence = (1 << sequenceBits) - 1
 
-const epoch = 1704067200000 // 1st January 2024
+	epoch = 1704067200000
+)
 
 type SnowflakeGenerator struct {
 	workerID  int64
