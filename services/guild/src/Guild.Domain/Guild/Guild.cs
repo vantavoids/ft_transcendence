@@ -167,6 +167,33 @@ public sealed class Guild
 	}
 
 	/// <summary>
+	/// idempotent: re-assigning a role the user already has is a no-op success.
+	/// rejects the default @everyone role (it is granted implicitly to every
+	/// member by <see cref="PermissionResolver"/>; an explicit row would just
+	/// be dead state). authorization (ManageRoles, hierarchy, can-grant-perms)
+	/// is enforced by the handler before this is called.
+	/// </summary>
+	public Result AssignRole(long userId, long roleId, DateTimeOffset now)
+	{
+		if (_members.All(m => m.UserId != userId))
+			return GuildFailures.TargetNotAMember;
+
+		var role = _roles.FirstOrDefault(r => r.Id == roleId);
+		if (role is null)
+			return GuildFailures.RoleNotFound;
+
+		if (role.IsDefault)
+			return GuildFailures.CannotAssignDefaultRole;
+
+		if (_memberRoles.Any(mr => mr.UserId == userId && mr.RoleId == roleId))
+			return Result.Ok();
+
+		_memberRoles.Add(MemberRole.Create(Id, userId, roleId, now));
+		UpdatedAt = now;
+		return Result.Ok();
+	}
+
+	/// <summary>
 	/// appends a new custom role at the top of the position stack
 	/// (max existing position + 1). the @everyone and Administrator roles
 	/// seeded by <see cref="Create"/> mean <c>_roles</c> is never empty here.

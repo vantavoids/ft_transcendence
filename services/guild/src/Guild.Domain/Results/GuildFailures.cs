@@ -164,6 +164,9 @@ public static class GuildFailures
 	public static readonly Failure JoinBannedFromGuild =
 		new("Guild.JoinBannedFromGuild", "You are banned from this guild.");
 
-	public static readonly Failure InvalidId = 
+	public static readonly Failure InvalidId =
 		new ("Guild.InvalidId", "ID must be a positive snowflake");
+
+	public static readonly Failure CannotAssignDefaultRole =
+		new("Guild.CannotAssignDefaultRole", "The default @everyone role cannot be assigned; it is granted implicitly.");
 }
