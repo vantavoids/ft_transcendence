@@ -169,4 +169,10 @@ public static class GuildFailures
 
 	public static readonly Failure CannotAssignDefaultRole =
 		new("Guild.CannotAssignDefaultRole", "The default @everyone role cannot be assigned; it is granted implicitly.");
+
+	public static readonly Failure RoleAssignmentNotFound =
+		new("Guild.RoleAssignmentNotFound", "Role assignment not found for this member.");
+
+	public static readonly Failure CannotUnassignDefaultRole =
+		new("Guild.CannotUnassignDefaultRole", "The default @everyone role cannot be unassigned.");
 }
