@@ -81,12 +81,19 @@ public static class DependencyInjection
 		services.AddSingleton<ISnowflakeIdGenerator, SnowflakeIdGenerator>();
 		services.AddScoped<ICurrentUser, CurrentUser>();
 
-		services.AddHttpClient<IGuildClient, GuildClient>((sp, c) =>
+		RegisterAndConfHttpClient<IGuildClient, GuildClient>(services);
+		RegisterAndConfHttpClient<IUserClient, UserClient>(services);
+		return services;
+	}
+
+	private static void RegisterAndConfHttpClient<TInterface, T>(IServiceCollection services)
+		where TInterface: class
+		where T: class, TInterface
+	{
+		services.AddHttpClient<TInterface, T>((sp, c) =>
 		{
 			var opts = sp.GetRequiredService<IOptions<ServicesOptions>>().Value;
 			c.BaseAddress = new Uri(opts.GuildService.TrimEnd('/') + "/internal/");
 		});
-
-		return services;
 	}
 }
