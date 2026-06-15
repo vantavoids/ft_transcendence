@@ -162,6 +162,7 @@ Join a guild via invite code.
 | Status | Reason |
 |--------|--------|
 | 400 | Invalid or expired invite code |
+| 403 | Caller is banned from this guild |
 | 409 | Already a member |
 
 **Side effects:**
@@ -275,7 +276,13 @@ Kick a member. Requires `KICK_MEMBERS` permission. The owner cannot be kicked. T
 
 ### GET /guilds/{id}/bans
 
-List banned users. Requires `BAN_MEMBERS` permission.
+List banned users. Caller must be a member and have `BAN_MEMBERS` permission. Bans are returned ordered by `user_id` ascending.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `limit` | int | Max results (default 50, max 100) |
+| `after` | snowflake | Cursor for pagination. Only bans with `user_id > after` are included. Omit for the first page. |
 
 **Response `200`:**
 ```json
@@ -289,11 +296,20 @@ List banned users. Requires `BAN_MEMBERS` permission.
 ]
 ```
 
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `limit` out of range, or `after` is not a positive snowflake |
+| 403 | Caller is not a member, or missing `BAN_MEMBERS` |
+| 404 | Guild not found |
+
 ---
 
 ### POST /guilds/{id}/bans/{user_id}
 
-Ban a member. Requires `BAN_MEMBERS` permission.
+Ban a user. Caller must be a member and have `BAN_MEMBERS` permission. The target need not be a current member (pre-emptive ban is allowed). If the target is a current member, they are removed from the guild as part of the ban (same effect as `DELETE /guilds/{id}/members/{user_id}` kick).
+
+The caller cannot ban themselves, cannot ban the owner, and must out-rank the target if the target is a member (see [Role hierarchy](#role-hierarchy) below).
 
 **Request body** (optional):
 ```json
@@ -302,22 +318,33 @@ Ban a member. Requires `BAN_MEMBERS` permission.
 }
 ```
 
+`reason` is at most 512 characters.
+
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Missing permission or target has higher/equal role |
-| 404 | Guild or user not found |
-| 409 | Already banned |
+| 400 | Self-ban, or `reason` longer than 512 characters |
+| 403 | Caller is not a member, missing `BAN_MEMBERS`, target is the owner, or target out-ranks caller |
+| 404 | Guild not found |
+| 409 | User is already banned |
+
+**Side effects:** If the target was a current member, publishes `guild.member_left { guild_id, user_id }` to RabbitMQ (same fanout as a kick, so Chat drops the user from SignalR groups and Notification cleans up). No event is published for pre-emptive bans against non-members.
 
 ---
 
 ### DELETE /guilds/{id}/bans/{user_id}
 
-Unban a user. Requires `BAN_MEMBERS` permission.
+Unban a user. Caller must be a member and have `BAN_MEMBERS` permission.
 
 **Response `204`:** No content.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 403 | Caller is not a member, or missing `BAN_MEMBERS` |
+| 404 | Guild not found, or user is not banned |
 
 ---
 
@@ -443,6 +470,7 @@ Accept an invite by its code, without needing to know the guild ID upfront. The 
 **Errors:**
 | Status | Reason |
 |--------|--------|
+| 403 | Caller is banned from the target guild |
 | 404 | Invite not found, expired, or revoked |
 | 409 | Already a member of the target guild |
 
