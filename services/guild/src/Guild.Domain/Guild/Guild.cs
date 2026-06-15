@@ -6,6 +6,7 @@ public sealed class Guild
 {
 	public const int MaxNameLen = 100;
 	public const int MaxUrlLen = 512;
+	public const int MaxRoles = 250;
 
 	private readonly List<Role> _roles = [];
 	private readonly List<GuildMember> _members = [];
@@ -184,7 +185,14 @@ public sealed class Guild
 		if (permissions < 0)
 			return GuildFailures.RolePermissionsInvalid;
 
-		var newPosition = _roles.Max(r => r.Position) + 1;
+		if (_roles.Count >= MaxRoles)
+			return GuildFailures.MaxRolesReached;
+
+		var maxPosition = _roles.Max(r => r.Position);
+		if (maxPosition == int.MaxValue)
+			return GuildFailures.MaxRolesReached;
+
+		var newPosition = maxPosition + 1;
 
 		var roleResult = Role.Create(
 			id: roleId,
