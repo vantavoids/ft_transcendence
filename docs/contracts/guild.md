@@ -789,7 +789,7 @@ Delete a role. Requires `MANAGE_ROLES` permission. Cannot delete the default `@e
 
 ### GET /guilds/{id}/members/{user_id}/permissions
 
-Get the effective permission bitmask for a user in a guild - resolves all their roles, channel overwrites are not applied here (use the internal endpoint for that).
+Get the effective permission bitmask for a user in a guild - resolves all their roles, channel overwrites are not applied here (use the internal endpoint for that). Caller must be a member of the guild. `roles[]` includes the implicit `@everyone` role plus any explicitly assigned roles. For the owner, `effective_permissions` is the `ADMINISTRATOR` bit only (`is_owner: true` is the canonical "wins everything" signal); the owner's `roles[]` additionally includes the seeded `Administrator` role.
 
 **Response `200`:**
 ```json
@@ -807,35 +807,38 @@ Get the effective permission bitmask for a user in a guild - resolves all their 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 404 | User is not a member of this guild |
+| 403 | Caller is not a member of this guild |
+| 404 | Guild not found, or target user is not a member |
 
 ---
 
 ### PUT /guilds/{id}/members/{user_id}/roles/{role_id}
 
-Assign a role to a guild member. Requires `MANAGE_ROLES`. Cannot assign a role with permissions the caller doesn't have.
+Assign a role to a guild member. Requires `MANAGE_ROLES`. Cannot assign a role that out-ranks the caller (Discord-style hierarchy: the role's `position` must be strictly less than the caller's highest role position; the owner bypasses this). Cannot assign a role with permissions the caller lacks. Cannot assign the default `@everyone` role (it is granted implicitly). Idempotent: re-assigning a role the user already has returns `204`.
 
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Missing `MANAGE_ROLES` or role has higher permissions than caller |
-| 404 | User not a member, or role not found in this guild |
+| 400 | Attempting to assign the default `@everyone` role |
+| 403 | Caller is not a member, missing `MANAGE_ROLES`, role out-ranks caller, or role grants permissions the caller lacks |
+| 404 | Guild, role, or target user not found |
 
 ---
 
 ### DELETE /guilds/{id}/members/{user_id}/roles/{role_id}
 
-Remove a role from a guild member. Requires `MANAGE_ROLES`. Cannot remove the default `@everyone` role.
+Remove a role from a guild member. Requires `MANAGE_ROLES`. Cannot unassign a role that out-ranks the caller. Cannot unassign the default `@everyone` role.
 
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Missing `MANAGE_ROLES` |
-| 404 | User, role, or assignment not found |
+| 400 | Attempting to unassign the default `@everyone` role |
+| 403 | Caller is not a member, missing `MANAGE_ROLES`, or role out-ranks caller |
+| 404 | Guild, role, target user, or assignment not found |
 
 ---
 
