@@ -320,7 +320,8 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	/// seeds a <c>Role</c> at an explicit <paramref name="position"/> with the given
 	/// <paramref name="permissions"/>, bypassing the AddRole aggregate which always
 	/// appends at <c>max+1</c>. used by tests that need to construct hierarchies
-	/// the API cannot natively produce. returns the new role id.
+	/// the API cannot natively produce (e.g. a role positioned above a pre-seeded
+	/// manager so the caller is out-ranked). returns the new role id.
 	/// </summary>
 	public async Task<long> SeedRoleAsync(long guildId, string name, int position, long permissions)
 	{
