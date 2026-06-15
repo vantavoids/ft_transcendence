@@ -193,6 +193,27 @@ public sealed class Guild
 		return Result.Ok();
 	}
 
+	public Result UnassignRole(long userId, long roleId, DateTimeOffset now)
+	{
+		if (_members.All(m => m.UserId != userId))
+			return GuildFailures.TargetNotAMember;
+
+		var role = _roles.FirstOrDefault(r => r.Id == roleId);
+		if (role is null)
+			return GuildFailures.RoleNotFound;
+
+		if (role.IsDefault)
+			return GuildFailures.CannotUnassignDefaultRole;
+
+		var assignment = _memberRoles.FirstOrDefault(mr => mr.UserId == userId && mr.RoleId == roleId);
+		if (assignment is null)
+			return GuildFailures.RoleAssignmentNotFound;
+
+		_memberRoles.Remove(assignment);
+		UpdatedAt = now;
+		return Result.Ok();
+	}
+
 	/// <summary>
 	/// appends a new custom role at the top of the position stack
 	/// (max existing position + 1). the @everyone and Administrator roles
