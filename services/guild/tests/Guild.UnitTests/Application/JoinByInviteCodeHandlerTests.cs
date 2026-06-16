@@ -18,8 +18,8 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task EmptyCode_ReturnsInviteCodeRequired()
 	{
-		var (g, i, b, u) = NewFakes();
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var (g, i, bans, b, u) = NewFakes();
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(Code: null, ExpectedGuildId: null));
 
@@ -30,8 +30,8 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task UnknownCode_ReturnsInviteNotFound()
 	{
-		var (g, i, b, u) = NewFakes();
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var (g, i, bans, b, u) = NewFakes();
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(Code: "ghost", ExpectedGuildId: null));
 
@@ -42,10 +42,10 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task ExpectedGuildMismatch_ReturnsInviteGuildMismatch()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1);
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(
 			new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: guild.Id + 1));
@@ -57,10 +57,10 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task GuildMissing_ReturnsGuildNotFound()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		// invite exists pointing at a guild that does not (data drift / cascade lag)
 		var invite = SeedInvite(i, guildId: 12345, creator: 1);
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -71,10 +71,10 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task AlreadyMember_ReturnsAlreadyMember()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1);
-		var handler = NewHandler(g, i, b, u, callerId: 1);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 1);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -85,11 +85,11 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task RevokedInvite_ReturnsInviteUnusable()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1);
 		invite.Revoke();
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -100,14 +100,14 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task ExpiredInvite_ReturnsInviteUnusable_DoesNotLoadGuild()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var invite = GuildInvite.Create("abc123", guildId: 100, createdBy: 1,
 			maxUses: null, expiresAt: Now.AddHours(1), now: Now).Value;
 		i.Seed(invite);
 		// guild is intentionally not seeded; the fail-fast must reject the invite
 		// without ever reaching the guild repository
 		var handler = HandlerFactory.CreateCommand<JoinByInviteCodeCommand, Result<GuildDto>>(
-			g, i, b, u, new FakeClock(Now.AddHours(2)), new FakeCurrentUser { Id = 99 });
+			g, i, bans, b, u, new FakeClock(Now.AddHours(2)), new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -118,11 +118,11 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task ExhaustedInvite_ReturnsInviteUnusable()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1, maxUses: 1);
 		invite.Consume(Now);
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -133,10 +133,10 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task HappyPath_AddsMember_ConsumesInvite_PublishesEvent_HitsUserService()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1, maxUses: 3);
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: guild.Id));
 
@@ -158,11 +158,11 @@ public sealed class JoinByInviteCodeHandlerTests
 	[Fact]
 	public async Task UserServiceUnavailable_StillJoins()
 	{
-		var (g, i, b, u) = NewFakes();
+		var (g, i, bans, b, u) = NewFakes();
 		u.Exists = false;
 		var guild = SeedGuild(g, ownerId: 1);
 		var invite = SeedInvite(i, guildId: guild.Id, creator: 1);
-		var handler = NewHandler(g, i, b, u, callerId: 99);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
 
 		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
 
@@ -171,18 +171,19 @@ public sealed class JoinByInviteCodeHandlerTests
 		Assert.True(b.Has<GuildMemberJoined>());
 	}
 
-	private static (FakeGuildRepository, FakeGuildInviteRepository, FakeEventBus, FakeUserService) NewFakes()
-		=> (new FakeGuildRepository(), new FakeGuildInviteRepository(), new FakeEventBus(), new FakeUserService());
+	private static (FakeGuildRepository, FakeGuildInviteRepository, FakeGuildBanRepository, FakeEventBus, FakeUserService) NewFakes()
+		=> (new FakeGuildRepository(), new FakeGuildInviteRepository(), new FakeGuildBanRepository(), new FakeEventBus(), new FakeUserService());
 
 	private static ICommandHandler<JoinByInviteCodeCommand, Result<GuildDto>> NewHandler(
 		FakeGuildRepository guilds,
 		FakeGuildInviteRepository invites,
+		FakeGuildBanRepository bans,
 		FakeEventBus bus,
 		FakeUserService users,
 		long callerId)
 	{
 		return HandlerFactory.CreateCommand<JoinByInviteCodeCommand, Result<GuildDto>>(
-			guilds, invites, bus, users, new FakeClock(), new FakeCurrentUser { Id = callerId });
+			guilds, invites, bans, bus, users, new FakeClock(), new FakeCurrentUser { Id = callerId });
 	}
 
 	private static GuildEntity SeedGuild(FakeGuildRepository repo, long ownerId)

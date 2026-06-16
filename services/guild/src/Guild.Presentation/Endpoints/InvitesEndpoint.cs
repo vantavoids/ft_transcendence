@@ -43,7 +43,8 @@ public sealed class InvitesEndpoint : ICarterModule
 	private static async Task<Results<
 		Ok<GuildDto>,
 		NotFound<ErrorBody>,
-		Conflict<ErrorBody>>>
+		Conflict<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
 	JoinAsync(
 		string code,
 		ICommandHandler<JoinByInviteCodeCommand, Result<GuildDto>> handler,
@@ -59,6 +60,7 @@ public sealed class InvitesEndpoint : ICarterModule
 		return result.Error.Code switch
 		{
 			"Guild.AlreadyMember" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
+			"Guild.JoinBannedFromGuild" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
 		};
 	}

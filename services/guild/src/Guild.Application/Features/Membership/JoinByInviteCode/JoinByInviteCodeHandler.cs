@@ -12,6 +12,7 @@ namespace Guild.Application.Features.Membership.JoinByInviteCode;
 internal sealed class JoinByInviteCodeHandler(
 	IGuildRepository guilds,
 	IGuildInviteRepository invites,
+	IGuildBanRepository bans,
 	IEventBus eventBus,
 	IUserService users,
 	IClock clock,
@@ -47,6 +48,13 @@ internal sealed class JoinByInviteCodeHandler(
 
 		if (guild.Members.Any(m => m.UserId == currentUser.Id))
 			return GuildFailures.AlreadyMember;
+
+		// banned users cannot join, even with a valid invite code. checked
+		// after AlreadyMember so the more natural "you are already in" wins
+		// when both apply (which they shouldn't, since the ban-on-current-member
+		// case cascades a kick; but defence-in-depth)
+		if (await bans.FindAsync(guild.Id, currentUser.Id, cancellationToken) is not null)
+			return GuildFailures.JoinBannedFromGuild;
 
 		var consumeResult = invite.Consume(now);
 		if (consumeResult.IsFailure)
