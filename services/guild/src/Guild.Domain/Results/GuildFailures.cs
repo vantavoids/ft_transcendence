@@ -148,4 +148,13 @@ public static class GuildFailures
 
 	public static readonly Failure BanReasonTooLong =
 		new("Guild.BanReasonTooLong", "Ban reason must be 512 characters or fewer.");
+
+	public static readonly Failure AlreadyBanned =
+		new("Guild.AlreadyBanned", "User is already banned from this guild.");
+
+	public static readonly Failure CannotBanOwner =
+		new("Guild.CannotBanOwner", "The owner cannot be banned.");
+
+	public static readonly Failure CannotBanSelf =
+		new("Guild.CannotBanSelf", "Cannot ban yourself.");
 }

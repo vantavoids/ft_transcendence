@@ -22,4 +22,15 @@ internal sealed class GuildBanRepository(GuildDbContext context) : IGuildBanRepo
 			.Take(limit)
 			.ToListAsync(cancellationToken);
 	}
+
+	public Task<GuildBan?> FindAsync(long guildId, long userId, CancellationToken cancellationToken = default)
+	{
+		return context.GuildBans
+			.FirstOrDefaultAsync(b => b.GuildId == guildId && b.UserId == userId, cancellationToken);
+	}
+
+	public async Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default)
+	{
+		await context.GuildBans.AddAsync(ban, cancellationToken);
+	}
 }

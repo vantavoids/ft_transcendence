@@ -15,4 +15,8 @@ public interface IGuildBanRepository
 		long? afterUserId,
 		int limit,
 		CancellationToken cancellationToken = default);
+
+	Task<GuildBan?> FindAsync(long guildId, long userId, CancellationToken cancellationToken = default);
+
+	Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default);
 }

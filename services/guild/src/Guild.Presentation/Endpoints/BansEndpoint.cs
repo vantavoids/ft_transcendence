@@ -1,5 +1,6 @@
 using Carter;
 using Guild.Application.Abstractions.Messaging;
+using Guild.Application.Features.Bans.BanMember;
 using Guild.Application.Features.Bans.Common;
 using Guild.Application.Features.Bans.ListBans;
 using Guild.Domain.Results;
@@ -17,6 +18,7 @@ public sealed class BansEndpoint : ICarterModule
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/bans");
 		group.MapGet("/", ListAsync);
+		group.MapPost("/{userId:long}", BanAsync);
 	}
 
 	private static async Task<Results<
@@ -58,4 +60,40 @@ public sealed class BansEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 		};
 	}
+
+	private static async Task<Results<
+		NoContent,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		Conflict<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	BanAsync(
+		long id,
+		long userId,
+		BanRequest? request,
+		ICommandHandler<BanMemberCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new BanMemberCommand(id, userId, request?.Reason),
+			cancellationToken);
+
+		if (result.Succeeded)
+			return TypedResults.NoContent();
+
+		return result.Error.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.CannotBanOwner" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.CannotBanSelf" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+			"Guild.BanReasonTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+			"Guild.AlreadyBanned" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
+			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+		};
+	}
+
+	private sealed record BanRequest(string? Reason);
 }
