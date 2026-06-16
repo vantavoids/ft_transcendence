@@ -49,4 +49,18 @@ public sealed class JoinByCodeTests(GuildApiFactory factory) : IClassFixture<Gui
 		var resp = await owner.PostAsync("/v1/invites/already-in/join", content: null);
 		Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
 	}
+
+	[Fact]
+	public async Task BannedUser_Returns_403()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 7705);
+		var guild = await owner.CreateGuildAsync("g");
+		var id = long.Parse(guild.GetProperty("id").GetString()!);
+		await factory.AddInviteAsync(id, "banned-cant-join", createdBy: 7705);
+		await factory.AddBanAsync(id, userId: 7706, bannedBy: 7705);
+
+		var banned = factory.CreateAuthenticatedClient(userId: 7706);
+		var resp = await banned.PostAsync("/v1/invites/banned-cant-join/join", content: null);
+		Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+	}
 }

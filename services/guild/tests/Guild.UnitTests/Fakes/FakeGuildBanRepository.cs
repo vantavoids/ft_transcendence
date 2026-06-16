@@ -1,0 +1,56 @@
+using Guild.Application.Abstractions.Persistence;
+using Guild.Domain.Guild;
+
+namespace Guild.UnitTests.Fakes;
+
+internal sealed class FakeGuildBanRepository : IGuildBanRepository
+{
+	private readonly Dictionary<(long GuildId, long UserId), GuildBan> _store = new();
+
+	public IReadOnlyDictionary<(long GuildId, long UserId), GuildBan> Store => _store;
+
+	public int AddCount { get; private set; }
+	public int RemoveCount { get; private set; }
+	public int RemoveAllForUserCount { get; private set; }
+
+	public Task<IReadOnlyList<GuildBan>> ListByGuildAsync(
+		long guildId, long? afterUserId, int limit, CancellationToken cancellationToken = default)
+	{
+		IReadOnlyList<GuildBan> rows = _store.Values
+			.Where(b => b.GuildId == guildId && (afterUserId is null || b.UserId > afterUserId))
+			.OrderBy(b => b.UserId)
+			.Take(limit)
+			.ToList();
+		return Task.FromResult(rows);
+	}
+
+	public Task<GuildBan?> FindAsync(long guildId, long userId, CancellationToken cancellationToken = default)
+	{
+		_store.TryGetValue((guildId, userId), out var ban);
+		return Task.FromResult(ban);
+	}
+
+	public Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default)
+	{
+		_store[(ban.GuildId, ban.UserId)] = ban;
+		AddCount++;
+		return Task.CompletedTask;
+	}
+
+	public void Remove(GuildBan ban)
+	{
+		_store.Remove((ban.GuildId, ban.UserId));
+		RemoveCount++;
+	}
+
+	public Task RemoveAllForUserAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		var keys = _store.Keys.Where(k => k.UserId == userId).ToList();
+		foreach (var key in keys)
+			_store.Remove(key);
+		RemoveAllForUserCount++;
+		return Task.CompletedTask;
+	}
+
+	internal void Seed(GuildBan ban) => _store[(ban.GuildId, ban.UserId)] = ban;
+}

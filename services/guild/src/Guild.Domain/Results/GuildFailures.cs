@@ -160,4 +160,7 @@ public static class GuildFailures
 
 	public static readonly Failure BanNotFound =
 		new("Guild.BanNotFound", "Ban not found.");
+
+	public static readonly Failure JoinBannedFromGuild =
+		new("Guild.JoinBannedFromGuild", "You are banned from this guild.");
 }

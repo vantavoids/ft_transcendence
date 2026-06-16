@@ -51,6 +51,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		{
 			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
 			"Guild.AlreadyMember" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
+			"Guild.JoinBannedFromGuild" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 		};
 	}
