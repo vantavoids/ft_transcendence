@@ -14,6 +14,7 @@ public sealed class GuildDbContext(DbContextOptions<GuildDbContext> options) : D
 	public DbSet<Channel> Channels => Set<Channel>();
 	public DbSet<ChannelPermissionOverwrite> ChannelPermissionOverwrites => Set<ChannelPermissionOverwrite>();
 	public DbSet<GuildInvite> GuildInvites => Set<GuildInvite>();
+	public DbSet<GuildBan> GuildBans => Set<GuildBan>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
