@@ -1,10 +1,13 @@
-package consume
+package amqp
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
 const (
@@ -15,8 +18,8 @@ const (
 )
 
 var events = []string{
-	"chat.dm_sent",
 	"chat.message_sent",
+	"chat.dm_sent",
 	"call.incoming",
 	"friend.request_sent",
 	"guild.invite_created",
@@ -25,19 +28,21 @@ var events = []string{
 }
 
 type Consumer struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-	tag     string
-	done    chan error
+	conn       *amqp.Connection
+	channel    *amqp.Channel
+	deliveries <-chan amqp.Delivery
+	tag        string
+	done       chan error
 }
 
 func NewConsumer() (*Consumer, error) {
 	var err error
 	c := &Consumer{
-		conn:    nil,
-		channel: nil,
-		tag:     "",
-		done:    make(chan error),
+		conn:       nil,
+		channel:    nil,
+		deliveries: nil,
+		tag:        "",
+		done:       make(chan error),
 	}
 
 	c.conn, err = amqp.Dial(os.Getenv("AMQP_URL"))
@@ -91,7 +96,7 @@ func NewConsumer() (*Consumer, error) {
 	}
 
 	// Ready to open these events in my letterbox
-	deliveries, err := c.channel.Consume(
+	c.deliveries, err = c.channel.Consume(
 		queue.Name, // name
 		c.tag,      // consumerTag,
 		autoAck,    // autoAck
@@ -104,26 +109,32 @@ func NewConsumer() (*Consumer, error) {
 		return nil, err
 	}
 
-	go handle(deliveries, c.done)
-
 	return c, nil
 }
 
-func handle(deliveries <-chan amqp.Delivery, done chan error) {
-	cleanup := func() {
-		fmt.Printf("Handler: deliveries channel closed")
-		done <- nil
-	}
-	defer cleanup()
+func (c *Consumer) Run(svc *notif.Service) {
+	defer func() {
+		fmt.Printf("Run: deliveries channel closed\n")
+		c.done <- nil
+	}()
 
-	for d := range deliveries {
-		// TODO: logique metier mtn
-		// if err := process(d); err != nil {
-		// 	d.Nack(false, true)
-		// 	continue
-		// }
-		if autoAck == false {
-			d.Ack(false)
-		}
+	for d := range c.deliveries {
+		handle(svc, d)
+	}
+}
+
+func handle(svc *notif.Service, d amqp.Delivery) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := Dispatch(ctx, svc, d); err != nil {
+		// TODO: If the json is corrupted this will go on an infinite retry
+		// implement a err fail check with precise err type returned in Dispatch
+		d.Nack(false, true) 
+		return
+	}
+
+	if !autoAck {
+		d.Ack(false)
 	}
 }

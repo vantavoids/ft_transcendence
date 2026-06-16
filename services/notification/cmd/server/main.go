@@ -1,26 +1,18 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
+	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
+	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
+	rabbitmq "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/amqp"
 )
-
-type helloResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-}
-
-func helloWorld(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(helloResponse{
-		Status:  "ok",
-		Service: "notification",
-	})
-}
 
 type healthCheck struct {
 	Name        string  `json:"name"`
@@ -48,21 +40,39 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// I dont have a config loader like Cartoone for the moment
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "8080"
+	ctx := context.Background()
+
+	// ─── Database ───
+	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("Unable to create a pool: %s", err)
+	}
+	defer pool.Close()
+
+	queries := db.New(pool)
+
+	// ─── Service ───
+	sflk, err := sflk.NewGenerator(1, 1)
+	if err != nil {
+		log.Fatalf("Unable to create a snowflake generator: %s", err)
 	}
 
+	svc, err := notif.NewService(queries, sflk)
+	if err != nil {
+		log.Fatalf("Unable to create a service: %s", err)
+	}
+
+	// ─── Consumer RabbitMQ ───
+	consumer, err := rabbitmq.NewConsumer()
+	if err != nil {
+		log.Fatalf("Unable to create a rabbitMQ consumer: %s", err)
+	}
+	go consumer.Run(svc)
+
+	// ─── Server HTTP ───
 	mux := http.NewServeMux()
-
-	// For the moment, the endpoint hello world is in the main,
-	// this will be fixed after the pull request
-	mux.HandleFunc("GET /v1/hello-world", helloWorld)
-	mux.HandleFunc("GET /healthz", healthz)
-
 	srv := &http.Server{
-		Addr:              ":" + port,
+		Addr:              ":" + os.Getenv("APP_PORT"),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -70,6 +80,8 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 	}
 
-	log.Printf("notification service listening on :%s", port)
+	log.Printf("notification service listening on :%s", os.Getenv("APP_PORT"))
 	log.Fatal(srv.ListenAndServe())
+
+	//TODO: en cas de deco-reco du service, il faut le rebrancher (le channel go du conn va quitter et la boucle va se terminer)
 }
