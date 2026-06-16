@@ -11,7 +11,7 @@ import (
 	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
-	rabbitmq "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/amqp"
+	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
 )
 
 type healthCheck struct {
@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// ─── Consumer RabbitMQ ───
-	consumer, err := rabbitmq.NewConsumer()
+	consumer, err := broker.NewConsumer()
 	if err != nil {
 		log.Fatalf("Unable to create a rabbitMQ consumer: %s", err)
 	}

@@ -1,4 +1,4 @@
-package amqp
+package broker
 
 type ChatMessageSentEvent struct {
 	ChannelID int64    `json:"channel_id,string"`
