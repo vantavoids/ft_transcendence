@@ -19,4 +19,16 @@ public interface IGuildBanRepository
 	Task<GuildBan?> FindAsync(long guildId, long userId, CancellationToken cancellationToken = default);
 
 	Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default);
+
+	void Remove(GuildBan ban);
+
+	/// <summary>
+	/// deletes every ban row referencing <paramref name="userId"/> across all
+	/// guilds in one SQL statement (bypasses the change tracker). pre-staged
+	/// for the upcoming <c>user.deleted</c> consumer in issue #147; no current
+	/// caller in this commit. note: <c>ExecuteDeleteAsync</c> is unsupported by
+	/// the InMemory provider, so functional tests cannot exercise this path
+	/// without a real database.
+	/// </summary>
+	Task RemoveAllForUserAsync(long userId, CancellationToken cancellationToken = default);
 }
