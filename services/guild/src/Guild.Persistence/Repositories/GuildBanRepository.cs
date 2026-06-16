@@ -33,4 +33,16 @@ internal sealed class GuildBanRepository(GuildDbContext context) : IGuildBanRepo
 	{
 		await context.GuildBans.AddAsync(ban, cancellationToken);
 	}
+
+	public void Remove(GuildBan ban)
+	{
+		context.GuildBans.Remove(ban);
+	}
+
+	public Task RemoveAllForUserAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		return context.GuildBans
+			.Where(b => b.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+	}
 }

@@ -157,4 +157,7 @@ public static class GuildFailures
 
 	public static readonly Failure CannotBanSelf =
 		new("Guild.CannotBanSelf", "Cannot ban yourself.");
+
+	public static readonly Failure BanNotFound =
+		new("Guild.BanNotFound", "Ban not found.");
 }

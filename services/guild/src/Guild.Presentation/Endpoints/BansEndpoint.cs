@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Bans.BanMember;
 using Guild.Application.Features.Bans.Common;
 using Guild.Application.Features.Bans.ListBans;
+using Guild.Application.Features.Bans.UnbanMember;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -19,6 +20,7 @@ public sealed class BansEndpoint : ICarterModule
 		var group = endpoints.MapGroup("/guilds/{id:long}/bans");
 		group.MapGet("/", ListAsync);
 		group.MapPost("/{userId:long}", BanAsync);
+		group.MapDelete("/{userId:long}", UnbanAsync);
 	}
 
 	private static async Task<Results<
@@ -91,6 +93,33 @@ public sealed class BansEndpoint : ICarterModule
 			"Guild.CannotBanSelf" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 			"Guild.BanReasonTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 			"Guild.AlreadyBanned" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
+			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
+		};
+	}
+
+	private static async Task<Results<
+		NoContent,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	UnbanAsync(
+		long id,
+		long userId,
+		ICommandHandler<UnbanMemberCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new UnbanMemberCommand(id, userId), cancellationToken);
+
+		if (result.Succeeded)
+			return TypedResults.NoContent();
+
+		return result.Error.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.BanNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
 		};
 	}
