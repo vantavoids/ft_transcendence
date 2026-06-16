@@ -163,4 +163,7 @@ public static class GuildFailures
 
 	public static readonly Failure JoinBannedFromGuild =
 		new("Guild.JoinBannedFromGuild", "You are banned from this guild.");
+
+	public static readonly Failure InvalidId = 
+		new ("Guild.InvalidId", "ID must be a positive snowflake");
 }

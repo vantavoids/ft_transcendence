@@ -38,6 +38,8 @@ public sealed class GuildBan
 		string? reason,
 		DateTimeOffset now)
 	{
+		if (guildId <= 0 || userId <= 0 || bannedBy <= 0)
+			return GuildFailures.InvalidId;
 		if (reason is not null && reason.Length > MaxReasonLen)
 			return GuildFailures.BanReasonTooLong;
 
