@@ -342,7 +342,7 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	/// <summary>
 	/// seeds a <c>GuildBan</c> directly through the scoped DbContext. used by
 	/// list-bans tests that need pre-existing rows without going through the
-	/// ban endpoint (which lives in its own commit and is not yet wired up).
+	/// ban endpoint
 	/// </summary>
 	public async Task AddBanAsync(long guildId, long userId, long bannedBy, string? reason = null)
 	{
