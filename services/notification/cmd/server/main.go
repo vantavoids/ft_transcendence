@@ -80,8 +80,6 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 	}
 
-	log.Printf("notification service listening on :%s", os.Getenv("APP_PORT"))
 	log.Fatal(srv.ListenAndServe())
-
 	//TODO: en cas de deco-reco du service, il faut le rebrancher (le channel go du conn va quitter et la boucle va se terminer)
 }
