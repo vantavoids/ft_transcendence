@@ -80,25 +80,6 @@ public sealed class UpdateRoleHandlerTests
 	}
 
 	[Fact]
-	public async Task TryingToRepositionAtOrAboveCallerHighest_Returns_RoleHierarchyBlocked()
-	{
-		// caller's highest is 3; tries to move a lower role up to position 10
-		var (handler, guilds) = MakeHandler(currentUser: 2);
-		var guild = guilds.Store[100];
-		var mod = DomainSeed.AddCustomRole(guild, roleId: 500, name: "Mod",
-			permissions: (long)Permission.ManageRoles, position: 3, now: Now);
-		var lower = DomainSeed.AddCustomRole(guild, roleId: 501, name: "Helper",
-			permissions: 0, position: 2, now: Now);
-		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
-		DomainSeed.AssignRole(guild, userId: 2, roleId: mod.Id, now: Now);
-
-		var result = await handler.HandleAsync(Patch(guildId: 100, roleId: lower.Id, position: 10));
-
-		Assert.True(result.IsFailure);
-		Assert.Equal("Guild.RoleHierarchyBlocked", result.Error.Code);
-	}
-
-	[Fact]
 	public async Task TryingToGrantPermissionsCallerLacks_Returns_CannotGrantPermissionsYouLack()
 	{
 		var (handler, guilds) = MakeHandler(currentUser: 2);
@@ -130,17 +111,6 @@ public sealed class UpdateRoleHandlerTests
 	}
 
 	[Fact]
-	public async Task DefaultRole_PositionChange_Returns_CannotEditDefaultRole()
-	{
-		var (handler, _) = MakeHandler(currentUser: 1);
-
-		var result = await handler.HandleAsync(Patch(guildId: 100, roleId: 101, position: 5));
-
-		Assert.True(result.IsFailure);
-		Assert.Equal("Guild.CannotEditDefaultRole", result.Error.Code);
-	}
-
-	[Fact]
 	public async Task DefaultRole_PermissionsChange_Succeeds()
 	{
 		var (handler, _) = MakeHandler(currentUser: 1);
@@ -161,13 +131,12 @@ public sealed class UpdateRoleHandlerTests
 
 		var result = await handler.HandleAsync(Patch(guildId: 100, roleId: 500,
 			name: "Senior Mod", color: "#123456", permissions: (long)Permission.KickMembers,
-			position: 3, isHoisted: true, isMentionable: false));
+			isHoisted: true, isMentionable: false));
 
 		Assert.True(result.Succeeded);
 		Assert.Equal("Senior Mod", result.Value.Name);
 		Assert.Equal("#123456", result.Value.Color);
 		Assert.Equal((long)Permission.KickMembers, result.Value.Permissions);
-		Assert.Equal(3, result.Value.Position);
 		Assert.True(result.Value.IsHoisted);
 	}
 
@@ -177,10 +146,9 @@ public sealed class UpdateRoleHandlerTests
 		string? name = null,
 		string? color = null,
 		long? permissions = null,
-		int? position = null,
 		bool? isHoisted = null,
 		bool? isMentionable = null)
-		=> new(guildId, roleId, name, color, permissions, position, isHoisted, isMentionable);
+		=> new(guildId, roleId, name, color, permissions, isHoisted, isMentionable);
 
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<UpdateRoleCommand, Result<RoleResponse>> Handler,

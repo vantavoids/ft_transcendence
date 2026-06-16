@@ -4,6 +4,7 @@ using Guild.Application.Features.Roles.Common;
 using Guild.Application.Features.Roles.CreateRole;
 using Guild.Application.Features.Roles.DeleteRole;
 using Guild.Application.Features.Roles.ListRoles;
+using Guild.Application.Features.Roles.ReorderRoles;
 using Guild.Application.Features.Roles.UpdateRole;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,7 @@ public sealed class RolesEndpoint : ICarterModule
 		var group = endpoints.MapGroup("/guilds/{id:long}/roles");
 		group.MapGet("/", ListAsync);
 		group.MapPost("/", CreateAsync);
+		group.MapPatch("/", ReorderAsync);
 		group.MapPatch("/{roleId:long}", UpdateAsync);
 		group.MapDelete("/{roleId:long}", DeleteAsync);
 	}
@@ -82,7 +84,6 @@ public sealed class RolesEndpoint : ICarterModule
 				Name: request.Name,
 				Color: request.Color,
 				Permissions: request.Permissions,
-				Position: request.Position,
 				IsHoisted: request.IsHoisted,
 				IsMentionable: request.IsMentionable),
 			cancellationToken);
@@ -90,6 +91,34 @@ public sealed class RolesEndpoint : ICarterModule
 		return result.Succeeded
 			? TypedResults.Ok(result.Value)
 			: MapErrorUpdate(result.Error);
+	}
+
+	private static async Task<Results<
+		Ok<IReadOnlyList<RoleResponse>>,
+		BadRequest<ErrorBody>,
+		NotFound<ErrorBody>,
+		JsonHttpResult<ErrorBody>>>
+	ReorderAsync(
+		long id,
+		IReadOnlyList<ReorderRoleEntry>? request,
+		ICommandHandler<ReorderRolesCommand, Result<RoleListResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		if (request is null)
+			return TypedResults.BadRequest(new ErrorBody("Request body must be a JSON array of { id, position }."));
+
+		var moves = new List<RolePositionEntry>(request.Count);
+		foreach (var entry in request)
+		{
+			if (!long.TryParse(entry.Id, out var roleId))
+				return TypedResults.BadRequest(new ErrorBody("Each role id must be a numeric snowflake string."));
+			moves.Add(new RolePositionEntry(roleId, entry.Position));
+		}
+
+		var result = await handler.HandleAsync(new ReorderRolesCommand(id, moves), cancellationToken);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value.Items)
+			: MapErrorReorder(result.Error);
 	}
 
 	private static async Task<Results<
@@ -140,6 +169,17 @@ public sealed class RolesEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
+	private static Results<Ok<IReadOnlyList<RoleResponse>>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
+		MapErrorReorder(Failure failure) => failure.Code switch
+		{
+			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.RoleNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
+		};
+
 	private static Results<NoContent, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
 		MapErrorDelete(Failure failure) => failure.Code switch
 		{
@@ -165,7 +205,10 @@ public sealed class RolesEndpoint : ICarterModule
 		string? Name,
 		string? Color,
 		long? Permissions,
-		int? Position,
 		bool? IsHoisted,
 		bool? IsMentionable);
+
+	// snowflake id arrives as a quoted string (JS precision); position is the
+	// requested 1..N slot. parsed/validated into RolePositionEntry by ReorderAsync
+	private sealed record ReorderRoleEntry(string Id, int Position);
 }

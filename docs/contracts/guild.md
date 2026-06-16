@@ -748,13 +748,14 @@ Create a new role. Requires `MANAGE_ROLES` permission.
 
 Update a role. Requires `MANAGE_ROLES` permission. Cannot grant permissions the caller doesn't have.
 
+`position` is **not** accepted here: role positions are unique within a guild, so a single-role edit cannot atomically swap two roles without violating the invariant. Reordering goes through the bulk `PATCH /guilds/{id}/roles` endpoint below.
+
 **Request body** (all optional):
 ```json
 {
   "name": "Senior Moderator",
   "color": "#3498DB",
   "permissions": 60,
-  "position": 2,
   "is_hoisted": true,
   "is_mentionable": true
 }
@@ -767,6 +768,33 @@ Update a role. Requires `MANAGE_ROLES` permission. Cannot grant permissions the 
 |--------|--------|
 | 403 | Missing `MANAGE_ROLES` or attempting to grant permissions caller lacks |
 | 404 | Role not found |
+
+---
+
+### PATCH /guilds/{id}/roles
+
+Reorder roles. Requires `MANAGE_ROLES` permission. Role positions are unique within a guild (`UNIQUE (guild_id, position)`); higher position = higher priority in the hierarchy.
+
+The body lists **only the roles whose position changes**, and their requested positions must be a **permutation of those same roles' current positions** — i.e. you rearrange a set of roles among the slots they already occupy. For example, to drag a role from position 2 to position 5, send the role plus every role currently at 3, 4 and 5, assigning them the rotated positions; roles outside that block are left untouched. Targets must be unique and must exactly match the occupied slots (you cannot move a role into a slot held by a role not in the body). The `@everyone` role is structurally pinned to position `0` and must **not** appear.
+
+Hierarchy: the caller must strictly out-rank every role being moved, both at its old and its new position (Discord rule: you cannot reorder anything at or above your own highest role, nor push anything up to or above it). The owner bypasses this.
+
+**Request body** (here, swapping the roles at positions 2 and 3):
+```json
+[
+  { "id": "<snowflake>", "position": 3 },
+  { "id": "<snowflake>", "position": 2 }
+]
+```
+
+**Response `200`:** The full role list, ordered by `position` descending (`@everyone` last).
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | Duplicate id in body, `@everyone` included, requested positions are not a permutation of the selected roles' current positions, or an id is not a numeric snowflake |
+| 403 | Missing `MANAGE_ROLES`, or caller does not out-rank a role being moved |
+| 404 | Guild not found, or an id does not reference a role in this guild |
 
 ---
 

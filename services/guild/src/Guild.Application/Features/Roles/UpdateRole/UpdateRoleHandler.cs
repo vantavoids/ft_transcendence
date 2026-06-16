@@ -34,15 +34,10 @@ internal sealed class UpdateRoleHandler(
 		if (role is null)
 			return GuildFailures.RoleNotFound;
 
-		// hierarchy guard: caller must out-rank the role's CURRENT position, and
-		// if the position is being changed, must also out-rank the new one (so a
-		// MANAGE_ROLES holder can't lift a role above themselves and lose control
-		// of it). owner short-circuits via Rank=int.MaxValue
+		// hierarchy guard: caller must out-rank the role's position. owner
+		// short-circuits via Rank=int.MaxValue. position itself is no longer
+		// editable here; reordering goes through PATCH /guilds/{id}/roles
 		if (!PermissionResolver.OutRanksRole(guild, currentUser.Id, role))
-			return GuildFailures.RoleHierarchyBlocked;
-
-		if (command.Position is int newPosition
-		    && newPosition >= PermissionResolver.Rank(guild, currentUser.Id))
 			return GuildFailures.RoleHierarchyBlocked;
 
 		// permission grants follow the same "can't grant what you lack" rule as
@@ -56,7 +51,6 @@ internal sealed class UpdateRoleHandler(
 			name: command.Name,
 			color: command.Color,
 			permissions: command.Permissions,
-			position: command.Position,
 			isHoisted: command.IsHoisted,
 			isMentionable: command.IsMentionable,
 			now: clock.UtcNow);

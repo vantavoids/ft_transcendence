@@ -266,7 +266,6 @@ public sealed class Guild
 		string? name,
 		string? color,
 		long? permissions,
-		int? position,
 		bool? isHoisted,
 		bool? isMentionable,
 		DateTimeOffset now)
@@ -275,12 +274,85 @@ public sealed class Guild
 		if (role is null)
 			return GuildFailures.RoleNotFound;
 
-		var updateResult = role.UpdateSettings(name, color, permissions, position, isHoisted, isMentionable, now);
+		var updateResult = role.UpdateSettings(name, color, permissions, isHoisted, isMentionable, now);
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
 		UpdatedAt = now;
 		return role;
+	}
+
+	/// <summary>
+	/// reorders a subset of the guild's non-default roles by rearranging them
+	/// among the positions they currently occupy. the body lists only the roles
+	/// whose position changes; their requested positions must be a permutation
+	/// of those same roles' current positions (a "swap" within the affected
+	/// slots), which keeps (guild_id, position) unique without renumbering any
+	/// role outside the body. @everyone stays structurally pinned at position 0
+	/// and must not appear. this is the only path that mutates
+	/// <see cref="Role.Position"/>; single-role PATCH no longer touches it
+	/// (issue #213).
+	///
+	/// the unique (guild_id, position) DB invariant is DEFERRABLE INITIALLY
+	/// DEFERRED, so a single transaction can rewrite the affected positions and
+	/// the constraint is only checked at COMMIT. validation here guarantees the
+	/// final state is collision-free, so the deferred check always passes.
+	/// authorization (MANAGE_ROLES + per-role hierarchy) is enforced by the
+	/// handler before this is called. returns the full role list ordered by
+	/// position descending
+	/// </summary>
+	public Result<IReadOnlyList<Role>> ReorderRoles(
+		IReadOnlyList<(long RoleId, int Position)> moves,
+		DateTimeOffset now)
+	{
+		// no role id may appear twice
+		var seenIds = new HashSet<long>();
+		foreach (var (roleId, _) in moves)
+		{
+			if (!seenIds.Add(roleId))
+				return GuildFailures.RoleReorderDuplicateId;
+		}
+
+		// every id must resolve to a role in this guild
+		var rolesById = _roles.ToDictionary(r => r.Id);
+		foreach (var (roleId, _) in moves)
+		{
+			if (!rolesById.ContainsKey(roleId))
+				return GuildFailures.RoleNotFound;
+		}
+
+		// the default (@everyone) role is pinned to position 0 and cannot move
+		foreach (var (roleId, _) in moves)
+		{
+			if (rolesById[roleId].IsDefault)
+				return GuildFailures.RoleReorderIncludesDefault;
+		}
+
+		// the requested positions must be a permutation of the positions the
+		// selected roles currently hold: no duplicate targets, and the target
+		// set must equal the occupied set. this rules out moving a role into a
+		// slot held by a role outside the body (which would collide) while
+		// preserving uniqueness with zero impact on untouched roles
+		var currentPositions = new HashSet<int>();
+		foreach (var (roleId, _) in moves)
+			currentPositions.Add(rolesById[roleId].Position);
+
+		var targetPositions = new HashSet<int>();
+		foreach (var (_, position) in moves)
+		{
+			if (!targetPositions.Add(position))
+				return GuildFailures.RoleReorderInvalidPositions;
+		}
+
+		if (!targetPositions.SetEquals(currentPositions))
+			return GuildFailures.RoleReorderInvalidPositions;
+
+		foreach (var (roleId, position) in moves)
+			rolesById[roleId].SetPosition(position, now);
+
+		UpdatedAt = now;
+
+		return _roles.OrderByDescending(r => r.Position).ToList();
 	}
 
 	public Result RemoveRole(long roleId, DateTimeOffset now)
