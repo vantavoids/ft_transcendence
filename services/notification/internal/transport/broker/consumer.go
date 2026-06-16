@@ -1,4 +1,4 @@
-package amqp
+package broker
 
 import (
 	"context"
@@ -130,7 +130,7 @@ func handle(svc *notif.Service, d amqp.Delivery) {
 	if err := Dispatch(ctx, svc, d); err != nil {
 		// TODO: If the json is corrupted this will go on an infinite retry
 		// implement a err fail check with precise err type returned in Dispatch
-		d.Nack(false, true) 
+		d.Nack(false, true)
 		return
 	}
 

@@ -1,4 +1,4 @@
-package amqp
+package broker
 
 type MentionPayload struct {
 	ChannelID int64  `json:"channel_id"`
