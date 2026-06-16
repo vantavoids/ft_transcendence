@@ -96,7 +96,7 @@ public static class GuildFailures
 		new("Guild.RoleNotFound", "Role not found.");
 
 	public static readonly Failure CannotEditDefaultRole =
-		new("Guild.CannotEditDefaultRole", "The default role's name, position and is_default flag cannot be changed.");
+		new("Guild.CannotEditDefaultRole", "The default role's name cannot be changed.");
 
 	public static readonly Failure CannotDeleteDefaultRole =
 		new("Guild.CannotDeleteDefaultRole", "The default role cannot be deleted.");
@@ -116,8 +116,14 @@ public static class GuildFailures
 	public static readonly Failure RolePermissionsInvalid =
 		new("Guild.RolePermissionsInvalid", "Role permissions bitmask must be non-negative.");
 
-	public static readonly Failure RolePositionInvalid =
-		new("Guild.RolePositionInvalid", "Role position must be non-negative.");
+	public static readonly Failure RoleReorderDuplicateId =
+		new("Guild.RoleReorderDuplicateId", "A role id appears more than once in the reorder request.");
+
+	public static readonly Failure RoleReorderIncludesDefault =
+		new("Guild.RoleReorderIncludesDefault", "The default (@everyone) role is pinned to position 0 and cannot be reordered.");
+
+	public static readonly Failure RoleReorderInvalidPositions =
+		new("Guild.RoleReorderInvalidPositions", "Reorder positions must be a permutation of the selected roles' current positions.");
 
 	public static readonly Failure InviteCodeRequired =
 		new("Guild.InviteCodeRequired", "Invite code is required.");

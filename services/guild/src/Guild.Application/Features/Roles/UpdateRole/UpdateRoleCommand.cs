@@ -10,6 +10,5 @@ public sealed record UpdateRoleCommand(
 	string? Name,
 	string? Color,
 	long? Permissions,
-	int? Position,
 	bool? IsHoisted,
 	bool? IsMentionable) : ICommand<Result<RoleResponse>>;

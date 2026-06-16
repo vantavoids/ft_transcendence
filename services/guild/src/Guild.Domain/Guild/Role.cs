@@ -120,19 +120,22 @@ public sealed class Role
 	/// applies a PATCH-style diff. each parameter is "no change" when null
 	/// (except color where empty string means "clear", matching the project's
 	/// nullable-field PATCH convention used by UpdateGuild). default roles
-	/// reject name/position/is_default edits but accept the rest (permissions,
-	/// color, hoist, mentionability) so @everyone's baseline can still be tuned
+	/// reject name/is_default edits but accept the rest (permissions, color,
+	/// hoist, mentionability) so @everyone's baseline can still be tuned.
+	/// position is intentionally NOT editable here: single-role position edits
+	/// cannot atomically swap two roles without violating the unique
+	/// (guild_id, position) invariant, so reordering goes through
+	/// <see cref="Guild.ReorderRoles"/> instead (issue #213)
 	/// </summary>
 	public Result UpdateSettings(
 		string? name,
 		string? color,
 		long? permissions,
-		int? position,
 		bool? isHoisted,
 		bool? isMentionable,
 		DateTimeOffset now)
 	{
-		if (IsDefault && (name is not null || position is not null))
+		if (IsDefault && name is not null)
 			return GuildFailures.CannotEditDefaultRole;
 
 		if (name is not null)
@@ -156,18 +159,23 @@ public sealed class Role
 			Permissions = newPerms;
 		}
 
-		if (position is int newPos)
-		{
-			if (newPos < 0)
-				return GuildFailures.RolePositionInvalid;
-			Position = newPos;
-		}
-
 		if (isHoisted is bool h) IsHoisted = h;
 		if (isMentionable is bool m) IsMentionable = m;
 
 		UpdatedAt = now;
 		return Result.Ok();
+	}
+
+	/// <summary>
+	/// sets the role's position. only the <see cref="Guild"/> aggregate calls
+	/// this, from <see cref="Guild.ReorderRoles"/>, after it has validated that
+	/// the full set of new positions is a collision-free permutation. kept off
+	/// the public PATCH path on purpose (issue #213)
+	/// </summary>
+	internal void SetPosition(int position, DateTimeOffset now)
+	{
+		Position = position;
+		UpdatedAt = now;
 	}
 
 	private static bool IsValidHexColor(string color)

@@ -77,8 +77,12 @@ internal sealed class RoleConfig : IEntityTypeConfiguration<Role>
 			.HasFilter("is_default = TRUE")
 			.HasDatabaseName("idx_one_default_role_per_guild");
 
-		// TODO(guild/roles-crud): when role-reordering arrives we should also
-		// add the DEFERRABLE UNIQUE (guild_id, position) constraint from
-		// docs/schema/guild.sql
+		// unique (guild_id, position) is enforced by the raw-SQL constraint
+		// `unique_role_position UNIQUE (...) DEFERRABLE INITIALLY DEFERRED`
+		// added in the AddRolePositionUniqueConstraint migration. it is
+		// intentionally NOT modeled here: EF Core cannot express DEFERRABLE, and
+		// the deferred-to-COMMIT check is what lets Guild.ReorderRoles rewrite
+		// every position in a single transaction (issue #213). leaving it out of
+		// the model keeps the snapshot from trying to own / re-create it
 	}
 }
