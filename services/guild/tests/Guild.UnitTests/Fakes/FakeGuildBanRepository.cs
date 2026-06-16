@@ -17,7 +17,7 @@ internal sealed class FakeGuildBanRepository : IGuildBanRepository
 		long guildId, long? afterUserId, int limit, CancellationToken cancellationToken = default)
 	{
 		IReadOnlyList<GuildBan> rows = _store.Values
-			.Where(b => b.GuildId == guildId && (afterUserId is null || b.UserId > afterUserId))
+			.Where(b => b.GuildId == guildId && (afterUserId is null || b.UserId > afterUserId.Value))
 			.OrderBy(b => b.UserId)
 			.Take(limit)
 			.ToList();
