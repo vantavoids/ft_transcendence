@@ -281,6 +281,27 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	}
 
 	/// <summary>
+	/// seeds a <c>GuildBan</c> directly through the scoped DbContext. used by
+	/// list-bans tests that need pre-existing rows without going through the
+	/// ban endpoint (which lives in its own commit and is not yet wired up).
+	/// </summary>
+	public async Task AddBanAsync(long guildId, long userId, long bannedBy, string? reason = null)
+	{
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+		var banResult = Guild.Domain.Guild.GuildBan.Create(
+			guildId: guildId,
+			userId: userId,
+			bannedBy: bannedBy,
+			reason: reason,
+			now: DateTimeOffset.UtcNow);
+		if (banResult.IsFailure)
+			throw new InvalidOperationException(banResult.Error.Message);
+		db.GuildBans.Add(banResult.Value);
+		await db.SaveChangesAsync();
+	}
+
+	/// <summary>
 	/// seeds an active <c>GuildInvite</c> with no expiry directly through the scoped
 	/// DbContext. used by join / invite tests that need an exact code to hit
 	/// </summary>

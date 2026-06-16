@@ -145,4 +145,7 @@ public static class GuildFailures
 
 	public static readonly Failure MaxRolesReached =
 		new ("Guild.MaxRolesReached", "Guild has reached the maximum number of roles");
+
+	public static readonly Failure BanReasonTooLong =
+		new("Guild.BanReasonTooLong", "Ban reason must be 512 characters or fewer.");
 }
