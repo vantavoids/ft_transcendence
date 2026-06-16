@@ -281,6 +281,65 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	}
 
 	/// <summary>
+	/// attaches an existing role to an existing member by inserting a
+	/// <c>MemberRole</c> row directly. used by tests that need to construct
+	/// role hierarchies the public API cannot natively produce (e.g. assigning
+	/// a high-position role to a target so the caller is out-ranked).
+	/// uses reflection because <see cref="Guild.Domain.Guild.MemberRole.Create"/>
+	/// is <c>internal</c> and the functional-tests assembly does not have
+	/// <c>InternalsVisibleTo</c> access to the Domain project.
+	/// </summary>
+	public async Task AssignRoleDirectAsync(long guildId, long userId, long roleId)
+	{
+		const BindingFlags AnyInstance =
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+
+		var memberRole = (Guild.Domain.Guild.MemberRole)Activator.CreateInstance(
+			typeof(Guild.Domain.Guild.MemberRole), AnyInstance,
+			binder: null, args: null, culture: null)!;
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.GuildId), AnyInstance)!
+			.SetValue(memberRole, guildId);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.UserId), AnyInstance)!
+			.SetValue(memberRole, userId);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.RoleId), AnyInstance)!
+			.SetValue(memberRole, roleId);
+		typeof(Guild.Domain.Guild.MemberRole)
+			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.AssignedAt), AnyInstance)!
+			.SetValue(memberRole, DateTimeOffset.UtcNow);
+		db.MemberRoles.Add(memberRole);
+		await db.SaveChangesAsync();
+	}
+
+	/// <summary>
+	/// seeds a <c>Role</c> at an explicit <paramref name="position"/> with the given
+	/// <paramref name="permissions"/>, bypassing the AddRole aggregate which always
+	/// appends at <c>max+1</c>. used by tests that need to construct hierarchies
+	/// the API cannot natively produce. returns the new role id.
+	/// </summary>
+	public async Task<long> SeedRoleAsync(long guildId, string name, int position, long permissions)
+	{
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
+		var ids = scope.ServiceProvider.GetRequiredService<IIdGenerator>();
+		var roleResult = Guild.Domain.Guild.Role.Create(
+			id: ids.NextId(), guildId: guildId, name: name, color: null,
+			permissions: permissions, position: position,
+			isDefault: false, isHoisted: false, isMentionable: false,
+			now: DateTimeOffset.UtcNow);
+		if (roleResult.IsFailure)
+			throw new InvalidOperationException(roleResult.Error.Message);
+		db.Roles.Add(roleResult.Value);
+		await db.SaveChangesAsync();
+		return roleResult.Value.Id;
+	}
+
+	/// <summary>
 	/// seeds a <c>GuildBan</c> directly through the scoped DbContext. used by
 	/// list-bans tests that need pre-existing rows without going through the
 	/// ban endpoint (which lives in its own commit and is not yet wired up).
