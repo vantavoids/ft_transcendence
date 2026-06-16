@@ -66,23 +66,22 @@ public sealed class UnbanMemberTests(GuildApiFactory factory) : IClassFixture<Gu
 		var owner = factory.CreateAuthenticatedClient(userId: 70_011);
 		var guild = await owner.CreateGuildAsync("g");
 		var id = long.Parse(guild.GetProperty("id").GetString()!);
+		await factory.AddInviteAsync(id, "rejoin-ok", createdBy: 70_011);
 
-		// pre-emptive ban, then unban
+		// ban blocks the invite join
 		var ban = await owner.PostAsJsonAsync($"/v1/guilds/{id}/bans/{70_012}", new { });
 		Assert.Equal(HttpStatusCode.NoContent, ban.StatusCode);
 
+		var banned = factory.CreateAuthenticatedClient(userId: 70_012);
+		var blocked = await banned.PostAsync("/v1/invites/rejoin-ok/join", content: null);
+		Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+
+		// unban lifts the block
 		var unban = await owner.DeleteAsync($"/v1/guilds/{id}/bans/{70_012}");
 		Assert.Equal(HttpStatusCode.NoContent, unban.StatusCode);
 
-		// list confirms the ban is gone
-		var bans = await owner.GetAsync($"/v1/guilds/{id}/bans");
-		var userIds = (await bans.ReadJsonAsync()).EnumerateArray()
-			.Select(b => b.GetProperty("user_id").GetString())
-			.ToList();
-		Assert.DoesNotContain("70012", userIds);
-
-		// second unban now 404s
-		var second = await owner.DeleteAsync($"/v1/guilds/{id}/bans/{70_012}");
-		Assert.Equal(HttpStatusCode.NotFound, second.StatusCode);
+		// user can now rejoin
+		var rejoin = await banned.PostAsync("/v1/invites/rejoin-ok/join", content: null);
+		Assert.Equal(HttpStatusCode.OK, rejoin.StatusCode);
 	}
 }
