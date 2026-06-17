@@ -36,8 +36,6 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 			if err != nil {
 				return err
 			}
-			// TODO: if Create fail at the third notification, the nack will redo the entire event
-			// and then copy of the first two notification will be present in the db
 			if err := svc.Create(ctx, notif.CreateInput{
 				UserID:   uid,
 				Type:     TypeMention,
