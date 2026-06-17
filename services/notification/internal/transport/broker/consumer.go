@@ -118,6 +118,8 @@ func (c *Consumer) Run(svc *notif.Service) {
 		c.done <- nil
 	}()
 
+	// TODO: for the moment this is a single worker working on event one by one,
+	// in the future if needed, we can readapt this to add a goroutine per worker
 	for d := range c.deliveries {
 		handle(svc, d)
 	}
@@ -129,7 +131,7 @@ func handle(svc *notif.Service, d amqp.Delivery) {
 
 	if err := Dispatch(ctx, svc, d); err != nil {
 		// TODO: If the json is corrupted this will go on an infinite retry
-		// implement a err fail check with precise err type returned in Dispatch
+		// implement a err fail check with precise err type returned in Dispatch (See service.go)
 		d.Nack(false, true)
 		return
 	}
