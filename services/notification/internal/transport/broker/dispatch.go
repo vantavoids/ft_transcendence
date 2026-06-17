@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log"
@@ -24,7 +25,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 	switch d.RoutingKey {
 
 	case "chat.message_sent":
-		ev, err := decode[ChatMessageSentEvent](d)
+		ev, err := parse[ChatMessageSentEvent](d)
 		if err != nil {
 			return err
 		}
@@ -52,7 +53,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		return nil
 
 	case "chat.dm_sent":
-		ev, err := decode[ChatDmSentEvent](d)
+		ev, err := parse[ChatDmSentEvent](d)
 		if err != nil {
 			return err
 		}
@@ -68,7 +69,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		})
 
 	case "friend.request_sent":
-		ev, err := decode[FriendRequestSentEvent](d)
+		ev, err := parse[FriendRequestSentEvent](d)
 		if err != nil {
 			return err
 		}
@@ -81,7 +82,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		})
 
 	case "guild.invite_created":
-		ev, err := decode[GuildInviteCreatedEvent](d)
+		ev, err := parse[GuildInviteCreatedEvent](d)
 		if err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		})
 
 	case "guild.member_joined":
-		ev, err := decode[GuildMemberJoinedEvent](d)
+		ev, err := parse[GuildMemberJoinedEvent](d)
 		if err != nil {
 			return err
 		}
@@ -111,7 +112,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		})
 
 	case "call.incoming":
-		ev, err := decode[CallIncomingEvent](d)
+		ev, err := parse[CallIncomingEvent](d)
 		if err != nil {
 			return err
 		}
@@ -135,10 +136,26 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 	return nil
 }
 
+// Decode a delivery into the struct [T] and return an error if a field is wrong.
 func decode[T any](d amqp.Delivery) (T, error) {
 	var ev T
-	if err := json.Unmarshal(d.Body, &ev); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(d.Body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&ev); err != nil {
 		return ev, err
 	}
 	return ev, nil
+}
+
+type Validator interface {
+	Validate() error
+}
+
+// Parse processes the decoding and return an error upon Validate().
+func parse[T Validator](d amqp.Delivery) (T, error) {
+	ev, err := decode[T](d)
+	if err != nil {
+		return ev, err
+	}
+	return ev, ev.Validate()
 }
