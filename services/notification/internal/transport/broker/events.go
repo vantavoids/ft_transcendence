@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+// TODO: instead of checking if the IDs are nil or 0, it should check if its a snowflake or not
+
 type ChatMessageSentEvent struct {
 	ChannelID int64    `json:"channel_id,string"`
 	GuildID   int64    `json:"guild_id,string"`
