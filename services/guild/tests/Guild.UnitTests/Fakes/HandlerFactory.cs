@@ -1,6 +1,8 @@
 using System.Reflection;
 using Guild.Application;
 using Guild.Application.Abstractions.Messaging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Guild.UnitTests.Fakes;
 
@@ -22,7 +24,15 @@ internal static class HandlerFactory
 		where TResult : class
 	{
 		var handlerType = FindImplementer(typeof(ICommandHandler<,>).MakeGenericType(typeof(TCommand), typeof(TResult)));
-		return (ICommandHandler<TCommand, TResult>)Activator.CreateInstance(handlerType, ctorArgs)!;
+		return (ICommandHandler<TCommand, TResult>)Instantiate(handlerType, ctorArgs);
+	}
+
+	internal static ICommandHandler<TCommand> CreateCommand<TCommand>(
+		params object[] ctorArgs)
+		where TCommand : class, ICommand
+	{
+		var handlerType = FindImplementer(typeof(ICommandHandler<>).MakeGenericType(typeof(TCommand)));
+		return (ICommandHandler<TCommand>)Instantiate(handlerType, ctorArgs);
 	}
 
 	internal static IQueryHandler<TQuery, TResult> CreateQuery<TQuery, TResult>(
@@ -31,7 +41,7 @@ internal static class HandlerFactory
 		where TResult : class
 	{
 		var handlerType = FindImplementer(typeof(IQueryHandler<,>).MakeGenericType(typeof(TQuery), typeof(TResult)));
-		return (IQueryHandler<TQuery, TResult>)Activator.CreateInstance(handlerType, ctorArgs)!;
+		return (IQueryHandler<TQuery, TResult>)Instantiate(handlerType, ctorArgs);
 	}
 
 	private static Type FindImplementer(Type closedInterface)
@@ -39,5 +49,36 @@ internal static class HandlerFactory
 		return ApplicationAssembly.GetTypes()
 			.Single(t => t is { IsAbstract: false, IsInterface: false } &&
 						 closedInterface.IsAssignableFrom(t));
+	}
+
+	/// <summary>
+	/// instantiates a handler, matching <paramref name="explicitArgs"/> to the
+	/// constructor positionally — except <c>ILogger&lt;T&gt;</c> parameters, which are
+	/// auto-filled with <c>NullLogger&lt;T&gt;.Instance</c>. handlers are internal, so a
+	/// test cannot name the closed logger type to supply one itself
+	/// </summary>
+	private static object Instantiate(Type handlerType, object[] explicitArgs)
+	{
+		var parameters = handlerType.GetConstructors().Single().GetParameters();
+		var args = new object[parameters.Length];
+		var next = 0;
+
+		for (var i = 0; i < parameters.Length; i++)
+		{
+			var type = parameters[i].ParameterType;
+			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ILogger<>))
+			{
+				// NullLogger<T>.Instance is a static field (the non-generic NullLogger
+				// exposes it as a property), so reach for the field here
+				var nullLogger = typeof(NullLogger<>).MakeGenericType(type.GetGenericArguments()[0]);
+				args[i] = nullLogger.GetField("Instance")!.GetValue(null)!;
+			}
+			else
+			{
+				args[i] = explicitArgs[next++];
+			}
+		}
+
+		return Activator.CreateInstance(handlerType, args)!;
 	}
 }
