@@ -16,25 +16,44 @@ type CreateInput struct {
 	Payload  any
 }
 
-type Service struct {
-	db   *db.Queries
-	sflk *sflk.SnowflakeGenerator
+type RelationshipChecker interface {
+	IsBlockedBy(ctx context.Context, targetID int64, senderID int64) (bool, error)
 }
 
-func NewService(db *db.Queries, sflk *sflk.SnowflakeGenerator) (*Service, error) {
-	return &Service{db: db, sflk: sflk}, nil
+type Service struct {
+	db         *db.Queries
+	snowflake  *sflk.SnowflakeGenerator
+	clientUser RelationshipChecker
+}
+
+func NewService(db *db.Queries, sflk *sflk.SnowflakeGenerator, userClient RelationshipChecker) (*Service, error) {
+	return &Service{db: db, snowflake: sflk, clientUser: userClient}, nil
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) error {
 
-	// TODO: check if the Actor is blocked by the User, in that case just return 
+	// TODO: We have to create a more specific return type for the Ack Nack in dispatch
+	// - If the user service or database is blocked (try again) Nack(false, true)
+	// - If the marshal failed (impossible to parse) Nack(false, false)
 
-	id, err := s.sflk.Generate()
+	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
+	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker 
+	if in.ActorID != nil {
+		blocked, err := s.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
+		if err != nil {
+			return err
+		}
+		if blocked {
+			return nil
+		}
+	}
+
+	raw, err := json.Marshal(in.Payload)
 	if err != nil {
 		return err
 	}
 
-	raw, err := json.Marshal(in.Payload)
+	id, err := s.snowflake.Generate()
 	if err != nil {
 		return err
 	}
