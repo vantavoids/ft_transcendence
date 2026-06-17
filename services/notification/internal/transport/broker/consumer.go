@@ -2,17 +2,18 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
 	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
 const (
-	autoAck      = false
 	queueName    = "notifications"
 	exchange     = "events"
 	exchangeType = "topic"
@@ -111,7 +112,7 @@ func NewConsumer() (*Consumer, error) {
 	c.deliveries, err = c.channel.Consume(
 		queue.Name, // name
 		c.tag,      // consumerTag,
-		autoAck,    // autoAck
+		false,      // autoAck
 		false,      // exclusive
 		false,      // noLocal
 		false,      // noWait
@@ -141,14 +142,15 @@ func handle(svc *notif.Service, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := Dispatch(ctx, svc, d); err != nil {
-		// TODO: If the json is corrupted this will go on an infinite retry
-		// implement a err fail check with precise err type returned in Dispatch (See service.go)
-		d.Nack(false, true)
-		return
-	}
-
-	if !autoAck {
+	err := Dispatch(ctx, svc, d)
+	if err == nil {
 		d.Ack(false)
 	}
+
+	if errors.Is(err, er.ErrorPermanent) {
+		log.Printf("permanent error, dropping: %v", err)
+		d.Nack(false, false)
+		return
+	}
+	d.Nack(false, true) // If there is an error but not a permanent one, just retry
 }
