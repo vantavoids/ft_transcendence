@@ -57,7 +57,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to create a snowflake generator: %s", err)
 	}
-	userClient, err := client.NewClient(
+	// userClient, err := client.NewClient(
+	// 	os.Getenv("USER_SERVICE_URL"),
+	// 	&http.Client{Timeout: 5 * time.Second},
+	// )
+	fakeUserClient, err := client.NewFakeClient(
 		os.Getenv("USER_SERVICE_URL"),
 		&http.Client{Timeout: 5 * time.Second},
 	)
@@ -65,7 +69,7 @@ func main() {
 		log.Fatalf("Unable to create an user client: %s", err)
 	}
 
-	svc, err := notif.NewService(queries, sflkGen, userClient)
+	svc, err := notif.NewService(queries, sflkGen, fakeUserClient)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
