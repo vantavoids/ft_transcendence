@@ -8,7 +8,7 @@ tmp_dir = "/tmp/air"
 [build]
   args_bin = []
   bin = "/tmp/air/main"
-  cmd = "CGO_ENABLED=0 go build -o /tmp/air/main ."
+  cmd = "CGO_ENABLED=0 go build -o /tmp/air/main ./cmd/server"
   delay = 1000
   entrypoint = ["/tmp/air/main"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
