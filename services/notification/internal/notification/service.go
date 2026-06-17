@@ -3,6 +3,7 @@ package notif
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
@@ -37,7 +38,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 	// - If the marshal failed (impossible to parse) Nack(false, false)
 
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
-	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker 
+	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
 		blocked, err := s.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
@@ -70,6 +71,6 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 	if err != nil {
 		return err
 	}
-
+	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
 	return nil
 }
