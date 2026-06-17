@@ -1,6 +1,7 @@
 using Guild.Application.Abstractions.Persistence;
 using Guild.Persistence.Db;
 using Guild.Persistence.Health;
+using Guild.Persistence.Maintenance;
 using Guild.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,12 @@ public static class DependencyInjection
 		services.AddScoped<IChannelCategoryRepository, ChannelCategoryRepository>();
 		services.AddScoped<IChannelRepository, ChannelRepository>();
 		services.AddScoped<IChannelPermissionOverwriteRepository, ChannelPermissionOverwriteRepository>();
+
+		services.AddOptions<InviteCleanupOptions>()
+			.BindConfiguration(InviteCleanupOptions.SectionName)
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+		services.AddHostedService<InviteCleanupService>();
 
 		return services;
 	}
