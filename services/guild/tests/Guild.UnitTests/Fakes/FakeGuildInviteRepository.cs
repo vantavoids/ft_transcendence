@@ -47,5 +47,14 @@ internal sealed class FakeGuildInviteRepository : IGuildInviteRepository
 		return Task.CompletedTask;
 	}
 
+	public Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default)
+	{
+		var doomed = _store.Values
+			.Where(i => i.IsRevoked || (i.ExpiresAt is { } e && e < expiredBefore))
+			.Select(i => i.Code).ToList();
+		foreach (var code in doomed) _store.Remove(code);
+		return Task.FromResult(doomed.Count);
+	}
+
 	internal void Seed(GuildInvite invite) => _store[invite.Code] = invite;
 }
