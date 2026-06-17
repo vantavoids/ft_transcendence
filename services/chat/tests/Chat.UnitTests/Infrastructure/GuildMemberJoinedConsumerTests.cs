@@ -28,7 +28,7 @@ public sealed class GuildMemberJoinedConsumerTests
 
 		Assert.True(await harness.Consumed.Any<GuildMemberJoined>());
 
-		var call = Assert.Single(broadcaster.Calls);
+		var call = Assert.Single(broadcaster.JoinCalls);
 		Assert.Equal(42L, call.UserId);
 		Assert.Equal(100L, call.GuildId);
 		Assert.Equal("skafenings", call.GuildName);
