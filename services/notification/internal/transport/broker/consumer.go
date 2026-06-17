@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -45,10 +46,21 @@ func NewConsumer() (*Consumer, error) {
 		done:       make(chan error),
 	}
 
-	c.conn, err = amqp.Dial(os.Getenv("AMQP_URL"))
-	if err != nil {
-		return nil, fmt.Errorf("Dial: %s", err)
+	// Try and retries to connect to the rabbitmq connection
+	var conn *amqp.Connection
+	for attempt := 1; attempt <= 10; attempt++ {
+		conn, err = amqp.Dial(os.Getenv("AMQP_URL"))
+		if err == nil {
+			break
+		}
+		log.Printf("rabbitmq not ready (attempt %d/10): %v", attempt, err)
+		time.Sleep(3 * time.Second)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("dial after retries: %w", err)
+	}
+	log.Printf("rabbitmq ready")
+	c.conn = conn
 
 	// Open a channel to the said connection
 	c.channel, err = c.conn.Channel()
