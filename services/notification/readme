@@ -1,0 +1,8 @@
+
+
+SQLC Setup — SQLC is a package, that takes SQL command and generate corresponding golang query functions, this framework generate three different files: db.go for all code related to database such as Query, models.go possessed all structs based on the current migration, notifications.sql.go is the file that contains all database access function.
+Function made by SQLC, like CreateNotification, needs to get a hand on an open connection.
+
+PGX Setup — SQLC can't create a connection to the database, that's what driver are for, PGX is one of them, i've configured it so it creates a pool of connection instead of one, this solves performance issue as multiple queries with one connection will soft locked every one, and new connection opened each times an query is opened is a performance and time disaster, pool allows connection to be borrowed for an use, and lend back to the pool after finishing.
+
+Consumer Setup — The rabbitMQ consumer needs a few configuration to be fully fonctional, NewConsumer attempt multiple connection to the rabbitMQ first, afterwards it creates a Channel to exist in rabbitMQ ("hey just so you know i have a company that exist "), the Channel has to then ExchangeDeclare ("oh the btw my company would like to subscribe to your news"), Channel has to also QueueDeclare ("can you put the mails in this letter box please"), Channel then need to QueueBind ("also can you just send me this, this and this type of mail only"), and finally it may Consume deliveries coming from the mail ("alright let's see what mail do we have today")
