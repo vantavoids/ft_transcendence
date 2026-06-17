@@ -10,6 +10,15 @@ import (
 	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
+const (
+	TypeMention       = "mention"
+	TypeDM            = "dm"
+	TypeFriendRequest = "friend_request"
+	TypeGuildInvite   = "guild_invite"
+	TypeGuildWelcome  = "guild_welcome"
+	TypeIncomingCall  = "incoming_call"
+)
+
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
 func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 	switch d.RoutingKey {
@@ -28,7 +37,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 			// and then copy of the first two notification will be present in the db
 			if err := svc.Create(ctx, notif.CreateInput{
 				UserID:   uid,
-				Type:     "mention",
+				Type:     TypeMention,
 				ActorID:  &ev.AuthorID,
 				SourceID: &ev.MessageID,
 				Payload: MentionPayload{
@@ -49,7 +58,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		}
 		return svc.Create(ctx, notif.CreateInput{
 			UserID:   ev.RecipientID,
-			Type:     "dm",
+			Type:     TypeDM,
 			ActorID:  &ev.SenderID,
 			SourceID: &ev.MessageID,
 			Payload: DmPayload{
@@ -65,7 +74,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		}
 		return svc.Create(ctx, notif.CreateInput{
 			UserID:   ev.AddresseeID,
-			Type:     "friend_request",
+			Type:     TypeFriendRequest,
 			ActorID:  &ev.RequesterID,
 			SourceID: &ev.FriendshipID,
 			Payload:  FriendRequestPayload{},
@@ -78,7 +87,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		}
 		return svc.Create(ctx, notif.CreateInput{
 			UserID:   ev.InvitedUserID,
-			Type:     "guild_invite",
+			Type:     TypeGuildInvite,
 			ActorID:  &ev.InvitedByUserID,
 			SourceID: &ev.GuildID,
 			Payload: GuildInvitePayload{
@@ -93,7 +102,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		}
 		return svc.Create(ctx, notif.CreateInput{
 			UserID:   ev.UserID,
-			Type:     "guild_welcome",
+			Type:     TypeGuildWelcome,
 			ActorID:  nil,
 			SourceID: &ev.GuildID,
 			Payload: GuildWelcomePayload{
@@ -108,7 +117,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		}
 		return svc.Create(ctx, notif.CreateInput{
 			UserID:   ev.CalleeID,
-			Type:     "incoming_call",
+			Type:     TypeIncomingCall,
 			ActorID:  &ev.CallerID,
 			SourceID: nil,
 			Payload: IncomingCallPayload{
