@@ -145,6 +145,7 @@ func handle(svc *notif.Service, d amqp.Delivery) {
 	err := Dispatch(ctx, svc, d)
 	if err == nil {
 		d.Ack(false)
+		return
 	}
 
 	if errors.Is(err, er.ErrorPermanent) {
