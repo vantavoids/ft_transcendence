@@ -46,4 +46,13 @@ public static class MessageFailures
 
 	public static readonly Failure MissingReadPermission =
 		new("Message.MissingReadPermission", "Caller lacks READ_MESSAGES permission on this channel.");
+
+	public static readonly Failure UserNotFound =
+		new("Message.UserNotFound", "User not found.");
+
+	public static readonly Failure RecipientNotFriend =
+		new("Messages.RecipientNotFriend", "You must be friends to send direct message");
+
+	public static readonly Failure RecipientBlocked =
+		new("Messages.RecipientBlocked", "You can't send messages to blocked user");
 }

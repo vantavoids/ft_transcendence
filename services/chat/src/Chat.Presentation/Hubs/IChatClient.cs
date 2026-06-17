@@ -7,6 +7,9 @@ public interface IChatClient
 	Task ReceiveMessage(MessageResponse message);
 	Task MessageEdited(MessageEditedEvent evt);
 	Task MessageDeleted(MessageDeletedEvent evt);
+
+	Task TypingStarted(string userId, string scope, string id, DateTimeOffset expiresAt);
+
 	Task GuildJoined(string guildId, string guildName);
 	Task GuildLeft(string guildId);
 	Task Error(string code, string message);
