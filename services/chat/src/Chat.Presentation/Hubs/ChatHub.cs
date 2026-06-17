@@ -14,19 +14,13 @@ public sealed class ChatHub(IGuildClient guildClient, ICurrentUser currentUser, 
 
 	public override async Task OnConnectedAsync()
 	{
-		if (Context.UserIdentifier is not null)
-			await eventBus.PublishAsync(
-				new UserOnline(long.Parse(Context.UserIdentifier)),
-				Context.ConnectionAborted);
+		await eventBus.PublishAsync(new UserOnline(currentUser.UserId), CancellationToken.None);
 		await base.OnConnectedAsync();
 	}
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
-		if (Context.UserIdentifier is not null)
-			await eventBus.PublishAsync(new UserOffline(
-				long.Parse(Context.UserIdentifier)),
-				Context.ConnectionAborted);
+		await eventBus.PublishAsync(new UserOffline(currentUser.UserId), CancellationToken.None);
 		await base.OnDisconnectedAsync(exception);
 	}
 
