@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
+	client "github.com/vantavoids/ft_transcendence/services/notification/internal/client"
 	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
 	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
@@ -52,12 +53,19 @@ func main() {
 	queries := db.New(pool)
 
 	// ─── Service ───
-	sflk, err := sflk.NewGenerator(1, 1)
+	sflkGen, err := sflk.NewGenerator(1, 1)
 	if err != nil {
 		log.Fatalf("Unable to create a snowflake generator: %s", err)
 	}
+	userClient, err := client.NewClient(
+		os.Getenv("USER_SERVICE_URL"),
+		&http.Client{Timeout: 5 * time.Second},
+	)
+	if err != nil {
+		log.Fatalf("Unable to create an user client: %s", err)
+	}
 
-	svc, err := notif.NewService(queries, sflk)
+	svc, err := notif.NewService(queries, sflkGen, userClient)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
