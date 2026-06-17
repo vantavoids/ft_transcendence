@@ -3,9 +3,11 @@ package notif
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
+	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
 	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
 )
 
@@ -32,34 +34,31 @@ func NewService(db *db.Queries, sflk *sflk.SnowflakeGenerator, userClient Relati
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) error {
-
-	// TODO: We have to create a more specific return type for the Ack Nack in dispatch
-	// - If the user service or database is blocked (try again) Nack(false, true)
-	// - If the marshal failed (impossible to parse) Nack(false, false)
-
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
 		blocked, err := s.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
-			return err
+			return fmt.Errorf("user client: %w: %s", er.ErrorTemporary, err)
 		}
 		if blocked {
+			log.Printf("notification canceled: %d is blocked by %d", in.UserID, *in.ActorID)
 			return nil
 		}
 	}
 
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("masharl payload: %w: %s", er.ErrorPermanent, err)
 	}
 
 	id, err := s.snowflake.Generate()
 	if err != nil {
-		return err
+		return fmt.Errorf("snowflake generate: %w: %s", er.ErrorTemporary, err)
 	}
 
 	// TODO: Push this notification into signalR when the hub is set
+	// TODO: maybe an ON CONFLICT DO NOTHING if rabbitmq send two times the same exact publish
 	_, err = s.db.CreateNotification(ctx, db.CreateNotificationParams{
 		ID:       id,
 		UserID:   in.UserID,
@@ -69,7 +68,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 		Payload:  raw,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("insert notification: %w: %s", er.ErrorTemporary, err)
 	}
 	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
 	return nil

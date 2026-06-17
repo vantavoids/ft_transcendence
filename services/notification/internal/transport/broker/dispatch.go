@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
 	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
@@ -155,7 +157,10 @@ type Validator interface {
 func parse[T Validator](d amqp.Delivery) (T, error) {
 	ev, err := decode[T](d)
 	if err != nil {
-		return ev, err
+		return ev, fmt.Errorf("parsing: %w: %s", er.ErrorPermanent, err)
 	}
-	return ev, ev.Validate()
+	if err := ev.Validate(); err != nil {
+		return ev, fmt.Errorf("parsing: %w: %s", er.ErrorPermanent, err)
+	}
+	return ev, nil
 }
