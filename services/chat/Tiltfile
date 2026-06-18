@@ -6,6 +6,9 @@ MQ_PASS     = root_env.get('RABBITMQ_PASS', 'guest')
 JWT_SECRET  = root_env.get('JWT_SECRET', '')
 BASE_URL    = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+MINIO_KEY    = root_env.get('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET = root_env.get('MINIO_BUCKET',     'chat-attachments')
 DOCKER      = detect_engine()
 FLAGS       = run_flags(DOCKER)
 
@@ -46,10 +49,14 @@ local_resource(
         '-e Services__GuildService=http://guild:8080 ' +
         '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
         '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
+        '-e Minio__Endpoint=http://minio:9000 ' +
+        '-e Minio__AccessKey=' + MINIO_KEY + ' ' +
+        '-e Minio__SecretKey=' + MINIO_SECRET + ' ' +
+        '-e Minio__Bucket=' + MINIO_BUCKET + ' ' +
         '-v $(pwd)/src:/app/src ' +
         'chat-service'
     ),
     deps=['Dockerfile.dev', 'Chat.slnx'],
-    resource_deps=['chat-db', 'chat-migrate', 'rabbitmq'],
+    resource_deps=['chat-db', 'chat-migrate', 'rabbitmq', 'minio'],
     labels=['chat'],
 )

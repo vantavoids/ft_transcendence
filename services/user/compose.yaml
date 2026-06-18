@@ -26,10 +26,17 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_USER_BUCKET}
     depends_on:
       rabbitmq:
         condition: service_healthy
       user-db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
 volumes:

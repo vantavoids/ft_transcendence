@@ -10,6 +10,9 @@ BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
 PG_USER      = guild_env.get('POSTGRES_USER', 'guild')
 PG_PASS      = guild_env.get('POSTGRES_PASSWORD', 'guild')
 PG_DB        = guild_env.get('POSTGRES_DB', 'guild')
+MINIO_KEY    = root_env.get('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET = root_env.get('MINIO_GUILD_BUCKET', 'guild-icons')
 DOCKER       = detect_engine()
 FLAGS        = run_flags(DOCKER)
 
@@ -69,10 +72,14 @@ local_resource(
         '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
         '-e Snowflake__WorkerId=2 ' +
         '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
+        '-e Minio__Endpoint=http://minio:9000 ' +
+        '-e Minio__AccessKey=' + MINIO_KEY + ' ' +
+        '-e Minio__SecretKey=' + MINIO_SECRET + ' ' +
+        '-e Minio__Bucket=' + MINIO_BUCKET + ' ' +
         '-v $(pwd)/src:/app/src ' +
         'guild-service'
     ),
     deps=['Dockerfile.dev', 'Guild.slnx'],
-    resource_deps=['guild-db', 'guild-migrate', 'rabbitmq'],
+    resource_deps=['guild-db', 'guild-migrate', 'rabbitmq', 'minio'],
     labels=['guild'],
 )
