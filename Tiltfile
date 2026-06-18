@@ -5,6 +5,11 @@ MQ_USER      = root_env.get('RABBITMQ_USER', 'guest')
 MQ_PASS      = root_env.get('RABBITMQ_PASS', 'guest')
 BASE_URL     = root_env.get('BASE_URL',     'https://localhost:1443')
 BASE_API_URL = root_env.get('BASE_API_URL', 'https://localhost:1443/api')
+MINIO_KEY    = root_env.get('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET = root_env.get('MINIO_BUCKET',       'chat-attachments')
+MINIO_USER_BUCKET  = root_env.get('MINIO_USER_BUCKET',  'user-avatars')
+MINIO_GUILD_BUCKET = root_env.get('MINIO_GUILD_BUCKET', 'guild-icons')
 DOCKER       = detect_engine()
 FLAGS        = run_flags(DOCKER)
 
@@ -28,6 +33,34 @@ local_resource(
     resource_deps=['dev-network'],
     labels=['infra'],
     links=['http://localhost:15672'],
+)
+
+local_resource(
+    'minio',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'minio',
+        '--network ft_transcendence ' +
+        '-p 9000:9000 -p 9001:9001 ' +
+        '-e MINIO_ROOT_USER=' + MINIO_KEY + ' ' +
+        '-e MINIO_ROOT_PASSWORD=' + MINIO_SECRET + ' ' +
+        '-v minio_data:/data ' +
+        'docker.io/minio/minio server /data --console-address ":9001"'
+    ),
+    resource_deps=['dev-network'],
+    labels=['infra'],
+    links=['http://localhost:9001'],
+)
+
+local_resource(
+    'minio-setup',
+    cmd=DOCKER + ' run ' + FLAGS + '--rm --network ft_transcendence ' +
+        '--entrypoint sh docker.io/minio/mc -c ' +
+        '"until mc alias set local http://minio:9000 ' + MINIO_KEY + ' ' + MINIO_SECRET + ' 2>/dev/null; ' +
+        'do sleep 1; done && mc mb -p ' +
+        'local/' + MINIO_BUCKET + ' ' +
+        'local/' + MINIO_USER_BUCKET + ' ' +
+        'local/' + MINIO_GUILD_BUCKET + '"',
+    resource_deps=['minio'],
+    labels=['infra'],
 )
 
 local_resource(
