@@ -77,6 +77,33 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			new MessageDeletedEvent(messageId.ToString(), channelId.ToString()));
 	}
 
+	// Directly calls the real SignalRUserBroadcaster (not a fake) so that
+	// connected hub clients receive GuildJoined/GuildLeft invocations.
+	// MassTransit is stripped in tests, so consumers cannot be triggered via
+	// RabbitMQ — this method simulates the consumer side effect.
+	public async Task SimulateGuildJoinedAsync(long userId, long guildId, string guildName)
+	{
+		using var scope = Server.Services.CreateScope();
+		var broadcaster = scope.ServiceProvider.GetRequiredService<IUserBroadcaster>();
+		await broadcaster.BroadcastGuildJoinedAsync(userId, guildId, guildName, CancellationToken.None);
+	}
+
+	public async Task SimulateGuildLeftAsync(long userId, long guildId)
+	{
+		using var scope = Server.Services.CreateScope();
+		var broadcaster = scope.ServiceProvider.GetRequiredService<IUserBroadcaster>();
+		await broadcaster.BroadcastGuildLeftAsync(userId, guildId, CancellationToken.None);
+	}
+
+	// Bypasses IChannelBroadcaster (replaced by a fake) and pushes a message
+	// directly into the SignalR channel group. Use to verify that a connected
+	// client receives ReceiveMessage after JoinChannel.
+	public async Task SimulateChannelMessageAsync(long channelId, MessageResponse message)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").ReceiveMessage(message);
+	}
+
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
 		builder.UseEnvironment("Testing");
