@@ -110,4 +110,34 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 		Assert.Single(factory.Broadcaster.DeletedBroadcasts);
 	}
+
+	[Fact]
+	public async Task Delete_MemberWithAdministrator_Returns204()
+	{
+		const long administratorPermission = 1L << 8;
+		SeedMessage(factory, id: 1, channelId: 100, authorId: 99);
+		factory.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: administratorPermission);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.DeleteAsync("/v1/messages/1");
+
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+		Assert.Single(factory.Broadcaster.DeletedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Delete_AlreadyDeletedMessage_Returns404()
+	{
+		var deleted = Message.Reconstitute(
+			id: 1, channelId: 100, authorId: 42,
+			content: null, replyToId: null, editedAt: null,
+			isDeleted: true, createdAt: DateTimeOffset.UtcNow);
+		factory.MessageRepository.Seed(deleted);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.DeleteAsync("/v1/messages/1");
+
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+		Assert.Empty(factory.Broadcaster.DeletedBroadcasts);
+	}
 }
