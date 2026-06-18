@@ -114,5 +114,64 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 		Assert.Empty(factory.Broadcaster.EditedBroadcasts);
 	}
 
+	[Fact]
+	public async Task Patch_Content4000Chars_Returns200()
+	{
+		SeedMessage(factory, id: 1, channelId: 100, authorId: 42);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PatchAsJsonAsync("/v1/messages/1",
+			new { content = new string('a', 4000) });
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+	}
+
+	[Fact]
+	public async Task Patch_ContentOver4000Chars_Returns400()
+	{
+		SeedMessage(factory, id: 1, channelId: 100, authorId: 42);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PatchAsJsonAsync("/v1/messages/1",
+			new { content = new string('a', 4001) });
+
+		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+		Assert.Empty(factory.Broadcaster.EditedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Patch_AlreadyDeletedMessage_Returns404()
+	{
+		var deleted = Message.Reconstitute(
+			id: 1, channelId: 100, authorId: 42,
+			content: null, replyToId: null, editedAt: null,
+			isDeleted: true, createdAt: DateTimeOffset.UtcNow);
+		factory.MessageRepository.Seed(deleted);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PatchAsJsonAsync("/v1/messages/1",
+			new { content = "new content" });
+
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+		Assert.Empty(factory.Broadcaster.EditedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Patch_EditTwice_Returns200WithUpdatedEditedAt()
+	{
+		SeedMessage(factory, id: 1, channelId: 100, authorId: 42);
+		var client = BuildClient(userId: 42);
+
+		var first  = await client.PatchAsJsonAsync("/v1/messages/1", new { content = "v1" });
+		var second = await client.PatchAsJsonAsync("/v1/messages/1", new { content = "v2" });
+
+		Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+		Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+		var body = await second.Content.ReadFromJsonAsync<EditBody>(JsonOptions);
+		Assert.Equal("v2", body!.Content);
+		Assert.Equal(2, factory.Broadcaster.EditedBroadcasts.Count);
+	}
+
 	private sealed record EditBody(string Id, string? Content, DateTimeOffset? EditedAt);
 }
