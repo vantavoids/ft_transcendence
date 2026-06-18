@@ -1,9 +1,12 @@
 using Cassandra;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Persistence;
+using Chat.Application.Features.Messages.Common;
+using Chat.Presentation.Hubs;
 using Chat.UnitTests.Fakes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +53,29 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 		GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: guildId, Permissions: permissions);
 	}
 
+	public void WithMembershipFor(long channelId, long userId, long guildId, long permissions)
+		=> GuildClient.Setup(channelId, userId, new ChannelMembership(IsMember: true, GuildId: guildId, Permissions: permissions));
+
+	public void WithoutMembershipFor(long channelId, long userId)
+		=> GuildClient.Setup(channelId, userId, null);
+
 	public void WithoutMembership() => GuildClient.Result = null;
+
+	// Bypasses FakeChannelBroadcaster (which is a no-op for SignalR) and pushes
+	// events directly into the hub group via IHubContext. Use to verify that a
+	// subscriber in the group receives the correct hub invocation.
+	public async Task SimulateMessageEditedAsync(long channelId, MessageEditedEvent evt)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").MessageEdited(evt);
+	}
+
+	public async Task SimulateMessageDeletedAsync(long channelId, long messageId)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").MessageDeleted(
+			new MessageDeletedEvent(messageId.ToString(), channelId.ToString()));
+	}
 
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
