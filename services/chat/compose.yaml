@@ -47,10 +47,16 @@ services:
       Services__GuildService: http://guild:8080
       Services__UserService: http://user:8080
       Jwt__SecretKey: ${JWT_SECRET}
+      Minio__Endpoint: http://minio:9000
+      Minio__AccessKey: ${MINIO_ACCESS_KEY}
+      Minio__SecretKey: ${MINIO_SECRET_KEY}
+      Minio__Bucket: ${MINIO_BUCKET}
     depends_on:
       rabbitmq:
         condition: service_healthy
       chat-db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
 volumes:
