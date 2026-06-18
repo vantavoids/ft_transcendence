@@ -3,6 +3,7 @@ using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Application.Features.Messages.Common;
 using Chat.Presentation.Hubs;
+using Chat.Domain.Messages;
 using Chat.UnitTests.Fakes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -35,13 +36,14 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	// fakes are shared across the factory instance so tests can both inject
 	// canned membership/permission rows and assert on what the handler did
 	public FakeGuildClient GuildClient { get; } = new();
+	public FakeUserClient UserClient { get; } = new();
 	public FakeMessageRepository MessageRepository { get; } = new();
 	public FakeEventBus EventBus { get; } = new();
 	public FakeChannelBroadcaster Broadcaster { get; } = new();
 	public FakeClock Clock { get; } = new();
 	public FakeIdGenerator IdGenerator { get; } = new();
 
-	public IReadOnlyList<Chat.Domain.Messages.Message> SavedMessages => MessageRepository.Saved;
+	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved;
 
 	public void WithMembership(long channelId, long userId, long guildId, long permissions)
 	{
@@ -147,6 +149,9 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 
 			services.RemoveAll<IGuildClient>();
 			services.AddSingleton<IGuildClient>(GuildClient);
+
+			services.RemoveAll<IUserClient>();
+			services.AddSingleton<IUserClient>(UserClient);
 
 			services.RemoveAll<IMessageRepository>();
 			services.AddSingleton<IMessageRepository>(MessageRepository);
