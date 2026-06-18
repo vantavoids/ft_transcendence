@@ -40,5 +40,43 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    container_name: minio
+    image: docker.io/minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  minio-setup:
+    container_name: minio-setup
+    image: docker.io/minio/mc
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb -p local/$$MINIO_BUCKET local/$$MINIO_USER_BUCKET local/$$MINIO_GUILD_BUCKET
+      "
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}
+      MINIO_GUILD_BUCKET: ${MINIO_GUILD_BUCKET}
+    depends_on:
+      minio:
+        condition: service_healthy
+
 volumes:
   rabbitmq_data:
+  minio_data:
