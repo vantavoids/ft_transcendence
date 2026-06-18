@@ -25,6 +25,8 @@ app.AddCommand("listen", async (string url = DefaultChatHub, string? token = nul
 	conn.On<object>("MessageEdited",        m => Console.WriteLine($"<- MessageEdited: {m}"));
 	conn.On<object>("MessageDeleted",       m => Console.WriteLine($"<- MessageDeleted: {m}"));
 	conn.On<object>("UserPresence",         m => Console.WriteLine($"<- UserPresence: {m}"));
+	conn.On<object, object>("GuildJoined",  (id, name) => Console.WriteLine($"<- GuildJoined: {id} ({name})"));
+	conn.On<object>("GuildLeft",            id => Console.WriteLine($"<- GuildLeft: {id}"));
 	conn.On<string, string>("Error",        (code, msg) => Console.WriteLine($"<- Error: {code} — {msg}"));
 
 	await conn.StartAsync();
