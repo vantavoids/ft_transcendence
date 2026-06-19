@@ -37,30 +37,23 @@ local_resource(
 
 local_resource(
     'minio',
+    # bucket creation is folded into the server container via entrypoint.sh,
+    # matching compose.yaml (avoids the podman one-shot --requires deadlock).
     serve_cmd=container_serve(DOCKER, FLAGS, 'minio',
         '--network ft_transcendence ' +
         '-p 9000:9000 -p 9001:9001 ' +
         '-e MINIO_ROOT_USER=' + MINIO_KEY + ' ' +
         '-e MINIO_ROOT_PASSWORD=' + MINIO_SECRET + ' ' +
+        '-e MINIO_BUCKET=' + MINIO_BUCKET + ' ' +
+        '-e MINIO_USER_BUCKET=' + MINIO_USER_BUCKET + ' ' +
+        '-e MINIO_GUILD_BUCKET=' + MINIO_GUILD_BUCKET + ' ' +
         '-v minio_data:/data ' +
-        'docker.io/minio/minio server /data --console-address ":9001"'
+        '-v $(pwd)/infra/minio/entrypoint.sh:/usr/local/bin/minio-entrypoint.sh:ro ' +
+        '--entrypoint sh docker.io/minio/minio /usr/local/bin/minio-entrypoint.sh'
     ),
     resource_deps=['dev-network'],
     labels=['infra'],
     links=['http://localhost:9001'],
-)
-
-local_resource(
-    'minio-setup',
-    cmd=DOCKER + ' run ' + FLAGS + '--rm --network ft_transcendence ' +
-        '--entrypoint sh docker.io/minio/mc -c ' +
-        '"until mc alias set local http://minio:9000 ' + MINIO_KEY + ' ' + MINIO_SECRET + ' 2>/dev/null; ' +
-        'do sleep 1; done && mc mb -p ' +
-        'local/' + MINIO_BUCKET + ' ' +
-        'local/' + MINIO_USER_BUCKET + ' ' +
-        'local/' + MINIO_GUILD_BUCKET + '"',
-    resource_deps=['minio'],
-    labels=['infra'],
 )
 
 local_resource(
