@@ -9,6 +9,19 @@ import (
 	"context"
 )
 
+const countUnreadNotifications = `-- name: CountUnreadNotifications :one
+SELECT COUNT(*)
+FROM notifications
+WHERE user_id = $1 AND read_at IS NULL AND dismissed_at IS NULL
+`
+
+func (q *Queries) CountUnreadNotifications(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadNotifications, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createNotification = `-- name: CreateNotification :one
 INSERT INTO notifications (id, user_id, type, actor_id, source_id, payload)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -46,4 +59,132 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const dismissNotification = `-- name: DismissNotification :execrows
+UPDATE notifications
+SET dismissed_at = NOW()
+WHERE id = $1 AND user_id = $2
+`
+
+type DismissNotificationParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) DismissNotification(ctx context.Context, arg DismissNotificationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, dismissNotification, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getNotificationByID = `-- name: GetNotificationByID :one
+SELECT id, user_id, type, actor_id, source_id, payload, read_at, dismissed_at, created_at FROM notifications
+WHERE id = $1
+`
+
+func (q *Queries) GetNotificationByID(ctx context.Context, id int64) (Notification, error) {
+	row := q.db.QueryRow(ctx, getNotificationByID, id)
+	var i Notification
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Type,
+		&i.ActorID,
+		&i.SourceID,
+		&i.Payload,
+		&i.ReadAt,
+		&i.DismissedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getNotifications = `-- name: GetNotifications :many
+SELECT id, user_id, type, actor_id, source_id, payload, read_at, dismissed_at, created_at FROM notifications
+WHERE user_id = $1
+    AND ($2::bool IS NULL OR $2::bool = (read_at IS NOT NULL))
+    AND ($3::bool OR dismissed_at IS NULL)
+    AND ($4::bigint IS NULL OR id < $4::bigint )
+ORDER BY id DESC
+LIMIT $5::int
+`
+
+type GetNotificationsParams struct {
+	UserID           int64
+	Read             *bool
+	IncludeDismissed *bool
+	Before           *int64
+	RowLimit         int32
+}
+
+func (q *Queries) GetNotifications(ctx context.Context, arg GetNotificationsParams) ([]Notification, error) {
+	rows, err := q.db.Query(ctx, getNotifications,
+		arg.UserID,
+		arg.Read,
+		arg.IncludeDismissed,
+		arg.Before,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Notification
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Type,
+			&i.ActorID,
+			&i.SourceID,
+			&i.Payload,
+			&i.ReadAt,
+			&i.DismissedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markAllNotificationsRead = `-- name: MarkAllNotificationsRead :execrows
+UPDATE notifications
+SET read_at = NOW()
+WHERE user_id = $1 AND read_at IS NULL
+`
+
+func (q *Queries) MarkAllNotificationsRead(ctx context.Context, userID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, markAllNotificationsRead, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markNotificationRead = `-- name: MarkNotificationRead :execrows
+UPDATE notifications
+SET read_at = NOW()
+WHERE id = $1 AND user_id = $2
+`
+
+type MarkNotificationReadParams struct {
+	ID     int64
+	UserID int64
+}
+
+func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markNotificationRead, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
