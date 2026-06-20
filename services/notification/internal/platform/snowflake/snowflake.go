@@ -16,7 +16,7 @@ const (
 	epoch = 1704067200000
 )
 
-type SnowflakeGenerator struct {
+type Generator struct {
 	workerID  int64
 	processID int64
 
@@ -25,17 +25,17 @@ type SnowflakeGenerator struct {
 	lastTimestamp int64
 }
 
-func NewGenerator(workerID, processID int64) (*SnowflakeGenerator, error) {
+func NewGenerator(workerID, processID int64) (*Generator, error) {
 	if workerID < 0 || maxWorkerId < workerID {
 		return nil, fmt.Errorf("WorkerID must be between 0 and %d, but got %d", maxWorkerId, workerID)
 	}
 	if processID < 0 || 31 < processID {
 		return nil, fmt.Errorf("ProcessID must be between 0 and 31, but got %d", processID)
 	}
-	return &SnowflakeGenerator{workerID: workerID, processID: processID}, nil
+	return &Generator{workerID: workerID, processID: processID}, nil
 }
 
-func (g *SnowflakeGenerator) Generate() (int64, error) {
+func (g *Generator) Generate() (int64, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
