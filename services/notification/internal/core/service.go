@@ -36,6 +36,7 @@ type RelationshipChecker interface {
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) error {
+
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
@@ -103,4 +104,14 @@ func (s *Service) MarkRead(ctx context.Context, userID int64, id int64) error {
 	}
 
 	return nil
+}
+
+func (s *Service) MarkReadAll(ctx context.Context, userID int64) (int64, error) {
+
+	rows, err := s.queries.MarkAllNotificationsRead(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return rows, nil
 }
