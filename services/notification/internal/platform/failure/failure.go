@@ -3,6 +3,11 @@ package failure
 import "errors"
 
 var (
-	ErrorPermanent = errors.New("permanent error")
-	ErrorTemporary = errors.New("temporary error")
+	FailPermanent = errors.New("permanent error")
+	FailTemporary = errors.New("temporary error")
+)
+
+var (
+	ErrNotFound  = errors.New("not found error")
+	ErrForbidden = errors.New("forbidden error")
 )
