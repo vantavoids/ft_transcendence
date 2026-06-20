@@ -154,10 +154,10 @@ type Validator interface {
 func parse[T Validator](d amqp.Delivery) (T, error) {
 	ev, err := decode[T](d)
 	if err != nil {
-		return ev, fmt.Errorf("parsing: %w: %s", failure.ErrorPermanent, err)
+		return ev, fmt.Errorf("parsing: %w: %s", failure.FailPermanent, err)
 	}
 	if err := ev.Validate(); err != nil {
-		return ev, fmt.Errorf("parsing: %w: %s", failure.ErrorPermanent, err)
+		return ev, fmt.Errorf("parsing: %w: %s", failure.FailPermanent, err)
 	}
 	return ev, nil
 }

@@ -152,7 +152,7 @@ func (c *Consumer) Run(svc *core.Service) {
 		return
 	}
 
-	if errors.Is(err, failure.ErrorPermanent) {
+	if errors.Is(err, failure.FailPermanent) {
 		log.Printf("permanent error, dropping: %v", err)
 		d.Nack(false, false)
 		return
