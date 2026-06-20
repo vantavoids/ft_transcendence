@@ -77,6 +77,18 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 	return nil
 }
 
+type ListInput struct {
+	UserID           int64
+	Read             *bool
+	IncludeDismissed *bool
+	Before           *int64
+	RowLimit         int32
+}
+
+func (s *Service) List(ctx context.Context, in ListInput) {
+
+}
+
 func (s *Service) MarkRead(ctx context.Context, userID int64, id int64) error {
 
 	notif, err := s.queries.GetNotificationByID(ctx, id)
@@ -109,6 +121,16 @@ func (s *Service) MarkRead(ctx context.Context, userID int64, id int64) error {
 func (s *Service) MarkReadAll(ctx context.Context, userID int64) (int64, error) {
 
 	rows, err := s.queries.MarkAllNotificationsRead(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return rows, nil
+}
+
+func (s *Service) UnreadCount(ctx context.Context, userID int64) (int64, error) {
+
+	rows, err := s.queries.CountUnreadNotifications(ctx, userID)
 	if err != nil {
 		return 0, err
 	}

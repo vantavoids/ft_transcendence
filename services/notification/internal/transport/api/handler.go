@@ -68,6 +68,20 @@ func (h *Handler) MarkReadHandler(w http.ResponseWriter, r *http.Request) {
 // GET /notifications/unread-count
 func (h *Handler) UnreadCountHandler(w http.ResponseWriter, r *http.Request) {
 
+	userID, ok := getUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := h.svc.UnreadCount(r.Context(), userID)
+
+	switch {
+	case err != nil:
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"count": rows})
+	}
 }
 
 // PATCH /notifications/read-all
