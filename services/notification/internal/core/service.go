@@ -3,22 +3,24 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
+	"github.com/jackc/pgx/v5"
 	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
 )
 
 type Service struct {
-	db         *database.Queries
+	queries    *database.Queries
 	snowflake  *snowflake.Generator
 	clientUser RelationshipChecker
 }
 
-func NewService(db *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Service, error) {
-	return &Service{db: db, snowflake: sflk, clientUser: userClient}, nil
+func NewService(queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Service, error) {
+	return &Service{queries: queries, snowflake: sflk, clientUser: userClient}, nil
 }
 
 type CreateInput struct {
@@ -39,7 +41,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 	if in.ActorID != nil {
 		blocked, err := n.userTunnel.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
-			return fmt.Errorf("user client: %w: %s", failure.ErrorTemporary, err)
+			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
 		}
 		if blocked {
 			log.Printf("notification canceled: %d is blocked by %d", in.UserID, *in.ActorID)
@@ -49,17 +51,17 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
-		return fmt.Errorf("masharl payload: %w: %s", failure.ErrorPermanent, err)
+		return fmt.Errorf("masharl payload: %w: %s", failure.FailPermanent, err)
 	}
 
 	id, err := n.snowflake.Generate()
 	if err != nil {
-		return fmt.Errorf("snowflake generate: %w: %s", failure.ErrorTemporary, err)
+		return fmt.Errorf("snowflake generate: %w: %s", failure.FailTemporary, err)
 	}
 
 	// TODO: Push this notification into signalR when the hub is set
 	// TODO: maybe an ON CONFLICT DO NOTHING if rabbitmq send two times the same exact publish
-	_, err = s.db.CreateNotification(ctx, database.CreateNotificationParams{
+	_, err = s.queries.CreateNotification(ctx, database.CreateNotificationParams{
 		ID:       id,
 		UserID:   in.UserID,
 		Type:     database.NotificationType(in.Type),
@@ -68,12 +70,37 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 		Payload:  raw,
 	})
 	if err != nil {
-		return fmt.Errorf("insert notification: %w: %s", failure.ErrorTemporary, err)
+		return fmt.Errorf("insert notification: %w: %s", failure.FailTemporary, err)
 	}
 	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
 	return nil
 }
 
-// func (s *Service) MarkRead(ctx context.Context) error {
+func (s *Service) MarkRead(ctx context.Context, userID int64, id int64) error {
 
-// }
+	notif, err := s.queries.GetNotificationByID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return failure.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if notif.UserID != userID {
+		return failure.ErrForbidden
+	}
+
+	rows, err := s.queries.MarkNotificationRead(ctx, database.MarkNotificationReadParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return failure.ErrNotFound
+	}
+
+	return nil
+}
