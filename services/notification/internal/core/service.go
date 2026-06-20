@@ -52,7 +52,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
-		return fmt.Errorf("masharl payload: %w: %s", failure.FailPermanent, err)
+		return fmt.Errorf("marshal payload: %w: %s", failure.FailPermanent, err)
 	}
 
 	id, err := n.snowflake.Generate()
@@ -78,15 +78,25 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 }
 
 type ListInput struct {
-	UserID           int64
 	Read             *bool
 	IncludeDismissed *bool
 	Before           *int64
 	RowLimit         int32
 }
 
-func (s *Service) List(ctx context.Context, in ListInput) {
+func (s *Service) List(ctx context.Context, userID int64, in ListInput) ([]database.Notification, error) {
+	notifs, err := s.queries.GetNotifications(ctx, database.GetNotificationsParams{
+		UserID:           userID,
+		Read:             in.Read,
+		IncludeDismissed: in.IncludeDismissed,
+		Before:           in.Before,
+		RowLimit:         in.RowLimit,
+	})
+	if err != nil {
+		return nil, err
+	}
 
+	return notifs, nil
 }
 
 func (s *Service) MarkRead(ctx context.Context, userID int64, id int64) error {

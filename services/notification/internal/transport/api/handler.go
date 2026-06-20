@@ -31,9 +31,79 @@ func (h *Handler) Routes(secret string) http.Handler {
 	return JwtMiddleware(secret)(mux)
 }
 
+// TODO: err is lost this way if we dont return a better error log
+
 // GET /notifications
 func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 
+	userID, ok := getUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	var read *bool
+	readParam := r.URL.Query().Get("read")
+	switch readParam {
+	case "false":
+		*read = false
+	case "true":
+		*read = true
+	default:
+		http.Error(w, "invalid read", http.StatusBadRequest)
+		return
+	}
+
+	var includeDismissed *bool
+	includeDismissedParam := r.URL.Query().Get("include_dismissed")
+	switch includeDismissedParam {
+	case "false":
+		*includeDismissed = false
+	case "true":
+		*includeDismissed = true
+	default:
+		http.Error(w, "invalid include dismissed", http.StatusBadRequest)
+		return
+	}
+
+	var before *int64
+	beforeParam := r.URL.Query().Get("before")
+	if beforeParam != "" {
+		parsed, err := strconv.ParseInt(beforeParam, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid before", http.StatusBadRequest)
+			return
+		}
+		before = &parsed
+	}
+
+	var limit int32 = 50
+	limitParam := r.URL.Query().Get("limit")
+	if limitParam != "" {
+		parsed, err := strconv.ParseInt(limitParam, 10, 32)
+		if err != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+			return
+		}
+		limit = int32(min(max(parsed, 0), 100)) // clamp
+	}
+
+	notifs, err := h.svc.List(r.Context(), userID, notification.ListInput{
+		Read:             read,
+		IncludeDismissed: includeDismissed,
+		Before:           before,
+		RowLimit:         limit,
+	})
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	dtos := make([]NotificationDTO, len(notifs))
+	for i, n := range notifs {
+		dtos[i] = ToDTO(n)
+	}	
+	writeJSON(w, 200, dtos)
 }
 
 // PATCH /notifications/{id}/read
@@ -52,7 +122,6 @@ func (h *Handler) MarkReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.svc.MarkRead(r.Context(), userID, id)
-
 	switch {
 	case errors.Is(err, failure.ErrNotFound):
 		http.Error(w, "not found", http.StatusNotFound)
@@ -75,7 +144,6 @@ func (h *Handler) UnreadCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.svc.UnreadCount(r.Context(), userID)
-
 	switch {
 	case err != nil:
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -94,7 +162,6 @@ func (h *Handler) MarkReadAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.svc.MarkReadAll(r.Context(), userID)
-
 	switch {
 	case err != nil:
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -118,7 +185,6 @@ func (h *Handler) DismissHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.svc.Dismiss(r.Context(), userID, id)
-
 	switch {
 	case errors.Is(err, failure.ErrNotFound):
 		http.Error(w, "not found", http.StatusNotFound)
