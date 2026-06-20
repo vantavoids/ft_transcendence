@@ -9,8 +9,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
-	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
 )
 
 const (
@@ -152,7 +152,7 @@ func (c *Consumer) Run(svc *core.Service) {
 		return
 	}
 
-	if errors.Is(err, er.ErrorPermanent) {
+	if errors.Is(err, failure.ErrorPermanent) {
 		log.Printf("permanent error, dropping: %v", err)
 		d.Nack(false, false)
 		return
