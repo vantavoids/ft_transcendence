@@ -91,7 +91,30 @@ func (h *Handler) MarkReadAllHandler(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /notifications/{id}
 func (h *Handler) DismissHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	err = h.svc.Dismiss(r.Context(), userID, id)
+
+	switch {
+	case errors.Is(err, failure.ErrNotFound):
+		http.Error(w, "not found", http.StatusNotFound)
+	case errors.Is(err, failure.ErrForbidden):
+		http.Error(w, "forbidden", http.StatusForbidden)
+	case err != nil:
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	default:
+		writeJSON(w, http.StatusNoContent, nil)
+	}
 }
 
 func getUserIDFromContext(ctx context.Context) (int64, bool) {

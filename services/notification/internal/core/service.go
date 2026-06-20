@@ -115,3 +115,32 @@ func (s *Service) MarkReadAll(ctx context.Context, userID int64) (int64, error) 
 
 	return rows, nil
 }
+
+func (s *Service) Dismiss(ctx context.Context, userID int64, id int64) error {
+
+	notif, err := s.queries.GetNotificationByID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return failure.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if notif.UserID != userID {
+		return failure.ErrForbidden
+	}
+
+	rows, err := s.queries.DismissNotification(ctx, database.DismissNotificationParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return failure.ErrNotFound
+	}
+
+	return nil
+}
