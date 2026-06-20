@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -31,39 +32,34 @@ func (h *Handler) Routes(secret string) http.Handler {
 	return JwtMiddleware(secret)(mux)
 }
 
-// TODO: err is lost this way if we dont return a better error log
-
 // GET /notifications
 func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 
 	var read *bool
 	readParam := r.URL.Query().Get("read")
-	switch readParam {
-	case "false":
-		*read = false
-	case "true":
-		*read = true
-	default:
-		http.Error(w, "invalid read", http.StatusBadRequest)
-		return
+	if readParam != "" {
+		b, err := strconv.ParseBool(readParam)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid read"))
+			return
+		}
+		read = &b
 	}
 
 	var includeDismissed *bool
 	includeDismissedParam := r.URL.Query().Get("include_dismissed")
-	switch includeDismissedParam {
-	case "false":
-		*includeDismissed = false
-	case "true":
-		*includeDismissed = true
-	default:
-		http.Error(w, "invalid include dismissed", http.StatusBadRequest)
-		return
+	if includeDismissedParam != "" {
+		b, err := strconv.ParseBool(includeDismissedParam)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid include dismissed"))
+			return
+		}
+		includeDismissed = &b
 	}
 
 	var before *int64
@@ -71,7 +67,7 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 	if beforeParam != "" {
 		parsed, err := strconv.ParseInt(beforeParam, 10, 64)
 		if err != nil {
-			http.Error(w, "invalid before", http.StatusBadRequest)
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid before"))
 			return
 		}
 		before = &parsed
@@ -82,10 +78,10 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 	if limitParam != "" {
 		parsed, err := strconv.ParseInt(limitParam, 10, 32)
 		if err != nil {
-			http.Error(w, "invalid limit", http.StatusBadRequest)
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid limit"))
 			return
 		}
-		limit = int32(min(max(parsed, 0), 100)) // clamp
+		limit = int32(min(max(parsed, 1), 100)) // clamp
 	}
 
 	notifs, err := h.svc.List(r.Context(), userID, notification.ListInput{
@@ -95,15 +91,15 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 		RowLimit:         limit,
 	})
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeError(w, r, err)
 		return
 	}
 
 	dtos := make([]NotificationDTO, len(notifs))
 	for i, n := range notifs {
 		dtos[i] = ToDTO(n)
-	}	
-	writeJSON(w, 200, dtos)
+	}
+	writeJSON(w, http.StatusOK, dtos)
 }
 
 // PATCH /notifications/{id}/read
@@ -111,27 +107,21 @@ func (h *Handler) MarkReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeJSON(w, http.StatusBadRequest, errorBody("invalid id"))
 		return
 	}
 
 	err = h.svc.MarkRead(r.Context(), userID, id)
-	switch {
-	case errors.Is(err, failure.ErrNotFound):
-		http.Error(w, "not found", http.StatusNotFound)
-	case errors.Is(err, failure.ErrForbidden):
-		http.Error(w, "forbidden", http.StatusForbidden)
-	case err != nil:
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	default:
-		writeJSON(w, http.StatusOK, map[string]any{"id": id, "read": true})
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "read": true})
 }
 
 // GET /notifications/unread-count
@@ -139,17 +129,15 @@ func (h *Handler) UnreadCountHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 
 	rows, err := h.svc.UnreadCount(r.Context(), userID)
-	switch {
-	case err != nil:
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	default:
-		writeJSON(w, http.StatusOK, map[string]any{"count": rows})
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
+	writeJSON(w, http.StatusOK, map[string]any{"count": rows})
 }
 
 // PATCH /notifications/read-all
@@ -157,44 +145,36 @@ func (h *Handler) MarkReadAllHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 
 	rows, err := h.svc.MarkReadAll(r.Context(), userID)
-	switch {
-	case err != nil:
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	default:
-		writeJSON(w, http.StatusOK, map[string]any{"updated": rows})
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
+	writeJSON(w, http.StatusOK, map[string]any{"updated": rows})
 }
 
 // DELETE /notifications/{id}
 func (h *Handler) DismissHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeJSON(w, http.StatusBadRequest, errorBody("invalid id"))
 		return
 	}
 
 	err = h.svc.Dismiss(r.Context(), userID, id)
-	switch {
-	case errors.Is(err, failure.ErrNotFound):
-		http.Error(w, "not found", http.StatusNotFound)
-	case errors.Is(err, failure.ErrForbidden):
-		http.Error(w, "forbidden", http.StatusForbidden)
-	case err != nil:
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	default:
-		writeJSON(w, http.StatusNoContent, nil)
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
+	writeJSON(w, http.StatusNoContent, nil)
 }
 
 func getUserIDFromContext(ctx context.Context) (int64, bool) {
@@ -207,5 +187,21 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.WriteHeader(status)
 	if body != nil {
 		json.NewEncoder(w).Encode(body)
+	}
+}
+
+func errorBody(msg string) map[string]string {
+	return map[string]string{"error": msg}
+}
+
+func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, failure.ErrNotFound):
+		writeJSON(w, http.StatusNotFound, errorBody("not found"))
+	case errors.Is(err, failure.ErrForbidden):
+		writeJSON(w, http.StatusForbidden, errorBody("forbidden"))
+	default:
+		log.Printf("error %s %s: %v", r.Method, r.URL.Path, err)
+		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
 	}
 }
