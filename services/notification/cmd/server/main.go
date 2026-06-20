@@ -8,10 +8,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
+	pgxpool "github.com/jackc/pgx/v5/pgxpool"
+	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
-	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
+	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
+	api "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/api"
 	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
 	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/tunnel"
 )
@@ -44,6 +45,16 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 func main() {
 	ctx := context.Background()
 
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		log.Fatal("BASE_URL is not set")
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET is not set")
+	}
+
 	// ─── Database ───
 	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -51,10 +62,10 @@ func main() {
 	}
 	defer pool.Close()
 
-	queries := db.New(pool)
+	queries := database.New(pool)
 
 	// ─── Service ───
-	sflkGen, err := sflk.NewGenerator(1, 1)
+	sflkGen, err := snowflake.NewGenerator(1, 1)
 	if err != nil {
 		log.Fatalf("Unable to create a snowflake generator: %s", err)
 	}
@@ -82,12 +93,16 @@ func main() {
 	}
 	go consumer.Run(svc)
 
+	// ─── Handler Endpoint ───
+	handler, err := api.NewHandler(svc)
+	if err != nil {
+		log.Fatalf("Unable to create a http handler: %s", err)
+	}
+
 	// ─── Server HTTP ───
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", healthz)
 	srv := &http.Server{
 		Addr:              ":" + os.Getenv("APP_PORT"),
-		Handler:           mux,
+		Handler:           handler.Routes(jwtSecret),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      20 * time.Second,

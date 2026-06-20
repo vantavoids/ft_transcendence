@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
-	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
 )
 
 const (
@@ -154,10 +154,10 @@ type Validator interface {
 func parse[T Validator](d amqp.Delivery) (T, error) {
 	ev, err := decode[T](d)
 	if err != nil {
-		return ev, fmt.Errorf("parsing: %w: %s", er.ErrorPermanent, err)
+		return ev, fmt.Errorf("parsing: %w: %s", failure.ErrorPermanent, err)
 	}
 	if err := ev.Validate(); err != nil {
-		return ev, fmt.Errorf("parsing: %w: %s", er.ErrorPermanent, err)
+		return ev, fmt.Errorf("parsing: %w: %s", failure.ErrorPermanent, err)
 	}
 	return ev, nil
 }
