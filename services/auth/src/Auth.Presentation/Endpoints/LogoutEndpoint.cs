@@ -1,5 +1,4 @@
 using Carter;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Abstractions.Security;
@@ -36,16 +35,14 @@ public sealed class LogoutEndpoint : ICarterModule
         var command = new LogoutCommand(currentUser.Id);
         var result = await handler.HandleAsync(command, ctx.RequestAborted);
 
+
+        ctx.Response.Cookies.Delete(options.CookieName, new CookieOptions
+        {
+            Secure   = options.Secure,
+            SameSite = SameSiteMode.Strict,
+        });
         return result.Match<LogoutEndpointHttpResults>(
-            () =>
-            {
-                ctx.Response.Cookies.Delete(options.CookieName, new CookieOptions
-                {
-                    Secure   = options.Secure,
-                    SameSite = SameSiteMode.Strict,
-                });
-                return TypedResults.NoContent();
-            },
+            () => TypedResults.NoContent(),
             _ => TypedResults.Unauthorized()
         );
     }
