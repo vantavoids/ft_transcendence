@@ -25,9 +25,6 @@ services:
       POSTGRES_PORT: 5432
       Database__Host: guild-db
       Database__Port: 5432
-      Database__Name: ${POSTGRES_DB:-guild}
-      Database__User: ${POSTGRES_USER}
-      Database__Password: ${POSTGRES_PASSWORD}
     depends_on:
       guild-db:
         condition: service_healthy
@@ -54,9 +51,6 @@ services:
       RabbitMQ__Password: ${RABBITMQ_PASS}
       Database__Host: guild-db
       Database__Port: 5432
-      Database__Name: ${POSTGRES_DB:-guild}
-      Database__User: ${POSTGRES_USER}
-      Database__Password: ${POSTGRES_PASSWORD}
       Services__UserService: http://user:8080
       BackendConfiguration__BaseUrl: ${BASE_URL}
       BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
