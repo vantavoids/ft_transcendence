@@ -58,7 +58,7 @@ internal sealed class OAuthCallbackHandler(
 
         var rawRefreshToken = tokenGenerator.GenerateRefreshToken();
         var setTokenResult = user.SetRefreshToken(
-            hasher.Hash(rawRefreshToken),
+            hasher.HashDeterministic(rawRefreshToken),
             now,
             now.Add(tokenGenerator.GetRefreshTokenLifetime()));
         if (setTokenResult.IsFailure)
