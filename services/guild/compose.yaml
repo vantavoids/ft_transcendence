@@ -13,6 +13,7 @@ services:
 
   guild-migrate:
     container_name: guild-migrate
+    profiles: ["migrate"]
     image: guild-migrate-service
     pull_policy: never
     build:
@@ -66,8 +67,6 @@ services:
         condition: service_healthy
       guild-db:
         condition: service_healthy
-      guild-migrate:
-        condition: service_completed_successfully
 
 volumes:
   guild_db_data:

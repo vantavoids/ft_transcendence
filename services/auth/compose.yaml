@@ -13,6 +13,7 @@ services:
 
   auth-migrate:
     container_name: auth-migrate
+    profiles: ["migrate"]
     image: auth-migrate-service
     pull_policy: never
     build:
@@ -49,8 +50,6 @@ services:
         condition: service_healthy
       auth-db:
         condition: service_healthy
-      auth-migrate:
-        condition: service_completed_successfully
 
 volumes:
   auth_db_data:
