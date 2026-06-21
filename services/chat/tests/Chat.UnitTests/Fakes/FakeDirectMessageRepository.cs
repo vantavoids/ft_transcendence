@@ -8,6 +8,8 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 	private readonly List<DirectMessage> _saved = [];
 	private readonly Dictionary<(long SenderId, long RecipientId, string Nonce), long> _nonces = [];
 	private readonly Dictionary<(long, long), long> _conversations = [];
+	private readonly Dictionary<(long ConversationId, long ReplyToId), long> _replies = [];
+
 
 	public IReadOnlyList<DirectMessage> Saved => _saved;
 
@@ -21,13 +23,14 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 		_saved.Clear();
 		_nonces.Clear();
 		_conversations.Clear();
+		_replies.Clear();
 	}
 
 	public Task<long?> FindConversationAsync(long senderId, long recipientId, CancellationToken ct) =>
 		Task.FromResult(_conversations.TryGetValue(Pair(senderId, recipientId), out var id) ? id : (long?)null);
 
 	public Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct) =>
-		Task.FromResult<long?>(null);
+		Task.FromResult(_replies.TryGetValue((conversationId, replyToId), out var id) ? id : (long?)null);
 
 	public Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct)
 	{
@@ -49,4 +52,6 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 		var message = _saved.FirstOrDefault(m => m.Id == messageId);
 		return Task.FromResult(message);
 	}
-}
+
+	public void WithReply(long conversationId, long replyToId) =>
+		_replies[(conversationId, replyToId)] = replyToId;}
