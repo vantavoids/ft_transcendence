@@ -20,6 +20,9 @@ public static class DirectMessageFailures
 	public static readonly Failure ConversationNotFound =
 		new("DirectMessage.ConversationNotFound", "Conversation not found.");
 
+	public static readonly Failure InvalidReplyTarget =
+		new("DirectMessage.InvalidReplyTarget", "Reply target was not found in this conversation.");
+
 	public static readonly Failure InvalidSenderId =
 		new("DirectMessage.InvalidSenderId", "Sender id must be a positive snowflake.");
 
