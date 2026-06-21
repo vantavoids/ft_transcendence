@@ -32,6 +32,7 @@ builder.Services.AddSingleton<CallRegistry>();
 builder.Services.Configure<SignalingOptions>(builder.Configuration.GetSection(SignalingOptions.SectionName));
 builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
 builder.Services.AddScoped<IUserBroadcaster, SignalRUserBroadcaster>();
+builder.Services.AddScoped<IConversationUnicast, SignalRConversationUnicast>();
 builder.Services.AddCarter();
 
 var jwtSecret = builder.Configuration["Jwt:SecretKey"]
