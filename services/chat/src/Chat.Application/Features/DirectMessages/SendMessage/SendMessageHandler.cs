@@ -54,12 +54,7 @@ internal sealed class SendDirectMessageHandler(
 
 		if (command.ReplyToId is not null)
 		{
-			var replyExists = await repository.FindReplyExistsAsync(
-				conversationId,
-				command.ReplyToId.Value,
-				cancellationToken);
-
-			if (replyExists is null)
+			if (await repository.FindReplyExistsAsync(conversationId, command.ReplyToId.Value, cancellationToken) is null)
 				return DirectMessageFailures.InvalidReplyTarget;
 		}
 
