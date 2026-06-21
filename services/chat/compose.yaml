@@ -13,6 +13,7 @@ services:
 
   chat-migrate:
     container_name: chat-migrate
+    profiles: ["migrate"]
     image: docker.io/scylladb/scylla:6.2
     entrypoint: ["sh", "/schema/apply.sh"]
     volumes:
@@ -50,8 +51,6 @@ services:
         condition: service_healthy
       chat-db:
         condition: service_healthy
-      chat-migrate:
-        condition: service_completed_successfully
 
 volumes:
   chat_db_data:

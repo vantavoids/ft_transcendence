@@ -1,8 +1,20 @@
 NAME         := ft_transcendence
 ANNOUNCER    := Announcer
 
-COMPOSE      ?= podman-compose
-DOCKER       ?= podman
+# engine autodetect (podman preferred, docker fallback), override with
+# `make ENGINE=docker` to force docker, or set DOCKER / COMPOSE directly
+ENGINE       ?= $(shell if command -v podman >/dev/null 2>&1; then echo podman; elif command -v docker >/dev/null 2>&1; then echo docker; fi)
+ifeq ($(ENGINE),docker)
+    DOCKER   := docker
+    COMPOSE  := docker compose
+else
+    DOCKER   := podman
+    COMPOSE  := podman-compose
+endif
+
+MIGRATE_SERVICES = $(filter-out $(shell $(COMPOSE) config --services 2>/dev/null),$(shell $(COMPOSE) --profile migrate config --services 2>/dev/null))
+DB_SERVICES      = $(filter %-db,$(shell $(COMPOSE) config --services 2>/dev/null))
+BUILT_IMAGES     = $(shell $(COMPOSE) --profile migrate config 2>/dev/null | awk '/^  [a-z].*:$$/{if(b&&i)print i;b=0;i=""} /^    build:/{b=1} /^    image:/{i=$$2} END{if(b&&i)print i}')
 
 ENV_FILES := .env \
              frontend/.env \
@@ -18,62 +30,77 @@ SECRETMANAGER_DIR := tools/secretman
 get_color = $(if $(filter Purple,$(1)),$(shell tput setaf 5),$(if $(filter Red,$(1)),$(shell tput setaf 1),$(if $(filter Cyan,$(1)),$(shell tput setaf 6),$(if $(filter Blue,$(1)),$(shell tput setaf 4),$(if $(filter Yellow,$(1)),$(shell tput setaf 3),$(if $(filter Green,$(1)),$(shell tput setaf 2),$(shell tput sgr0)))))))
 ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$(1))]$(call get_color,Off)
 
-.PHONY: all build up down re clean fclean logs ps login dev check-env _build _up secrets-setup secrets-decrypt secrets-encrypt secrets-refresh
+.PHONY: all help build up down re clean fclean logs ps login dev check-env _build _up _certs _migrate secrets-setup secrets-decrypt secrets-encrypt secrets-refresh
 
-all: check-env _build _up
+all: check-env _build _up ## Build all images and start the full stack (default)
 
-build: check-env _build
-	@echo "$(call ann,Green) It works on my machine™"
+help: ## Show this help
+	@echo "$(call ann,Cyan) $(call get_color,Purple)$(NAME)$(call get_color,Off) - available targets:"
+	@grep -hE '^[a-zA-Z][a-zA-Z_-]*:.*## ' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN{FS=":.*## "}{printf "  $(call get_color,Green)%-16s$(call get_color,Off) %s\n", $$1, $$2}'
 
-up: check-env _up
-	@echo "$(call ann,Green) $(call get_color,Purple)$(NAME)$(call get_color,Off): All systems go (famous last words)"
+build: check-env _build ## Build all service images
+	@echo "$(call ann,Green) All service images built. It works on my machine™"
 
-down:
-	@echo "$(call ann,Yellow) Going dark. At least you won't need to download more RAM today :)"
+up: check-env _up ## Start the stack (assumes images are already built)
+	@echo "$(call ann,Green) $(call get_color,Purple)$(NAME)$(call get_color,Off) is up at https://localhost:1443. All systems go (famous last words)"
+
+down: ## Stop and remove all containers
+	@echo "$(call ann,Yellow) Stopping and removing all containers. Going dark, at least you won't need to download more RAM today :)"
 	@$(COMPOSE) down
 
-re:
-	@echo "$(call ann,Yellow) Scorched earth and rebuild. Classic."
+re: ## Full clean, then rebuild and start from scratch
+	@echo "$(call ann,Yellow) Full clean, then rebuild and start from scratch. Scorched earth. Classic."
 	@$(MAKE) fclean all
 
-clean: down
-	@echo "$(call ann,Yellow) Those images knew too much anyway"
+clean: down ## Stop the stack and prune dangling images
+	@echo "$(call ann,Yellow) Pruning dangling images. They knew too much anyway"
 	@$(DOCKER) image prune -f
 	@echo "$(call ann,Green) Poof. Like it never happened :O"
 
-fclean: down
-	@echo "$(call ann,Red) docker system prune but make it personal"
-	@$(DOCKER) container rm -af 2>/dev/null || true
-	@$(DOCKER) image rm -f $$($(DOCKER) image ls -q) 2>/dev/null || true
-	@$(DOCKER) system prune -a --volumes -f
-	@echo "$(call ann,Red) It's all gone. You won't have to download extra storage (no need to thank me) :)"
+fclean: ## Remove containers + our built images (prompts before deleting DB volumes)
+	@echo "$(call ann,Red) Tearing down $(NAME): containers + our built images (base images and cache kept)"
+	@printf "$(call ann,Yellow) Also delete database volumes? This permanently destroys all data [y/N] "; \
+	read ans; \
+	case "$$ans" in \
+		[yY]|[yY][eE][sS]) vols="--volumes"; echo "$(call ann,Red) Nuking volumes too, hope you meant it";; \
+		*) vols=""; echo "$(call ann,Green) Keeping volumes (your data lives another day)";; \
+	esac; \
+	$(COMPOSE) --profile migrate down $$vols --remove-orphans
+	@$(DOCKER) image rm -f $(BUILT_IMAGES) 2>/dev/null || true
+	@echo "$(call ann,Red) Done. Base images and build cache untouched :)"
 
-logs:
-	@echo "$(call ann,Cyan) Looking at the containers' yapping... (Ctrl+C to look away)"
-	@$(COMPOSE) logs -f
+ifeq (logs,$(firstword $(MAKECMDGOALS)))
+  LOG_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(LOG_ARGS):;@:)
+endif
 
-ps:
+logs: ## Tail logs of all containers, or specific ones: make logs auth chat
+	@echo "$(call ann,Cyan) Tuning into the logs ($(if $(LOG_ARGS),$(LOG_ARGS),everything)). Ctrl+C to look away"
+	@$(COMPOSE) logs -f $(LOG_ARGS)
+
+ps: ## List the stack's containers
 	@$(COMPOSE) ps
 
-login:
+login: ## Log in to docker.io (raise pull rate limits)
 	@echo "$(call ann,Cyan) Exchanging dignity for pull access"
 	@$(DOCKER) login docker.io
 	@echo "$(call ann,Green) You're in. The rate limiter is watching"
 
-secrets-setup:
+secrets-setup: ## Set up SOPS secret management
 	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) setup
 
-secrets-decrypt:
+secrets-decrypt: ## Decrypt the encrypted .env files
 	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) decrypt
 
-secrets-encrypt:
+secrets-encrypt: ## Encrypt the .env files
 	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) encrypt
 
-secrets-refresh:
+secrets-refresh: ## Re-encrypt secrets with the current recipients
 	@$(MAKE) --no-print-directory -C $(SECRETMANAGER_DIR) refresh
 
-dev: check-env
-	@echo "$(call ann,Cyan) Go do wonders. We believe in you (we don't have a choice)"
+dev: check-env ## Start the Tilt hot-reload dev environment
+	@echo "$(call ann,Cyan) Starting the Tilt dev environment (hot-reload). Go do wonders, we believe in you (we don't have a choice)"
 	@tilt up
 
 check-env:
@@ -89,9 +116,32 @@ check-env:
 	done
 
 _build:
-	@echo "$(call ann,Cyan) Turning caffeine and regret into Docker layers."
-	@$(COMPOSE) build
+	@echo "$(call ann,Cyan) Building all service images. Turning caffeine and regret into Docker layers."
+	@$(COMPOSE) --profile migrate build
 
-_up:
-	@echo "$(call ann,Cyan) Rise and shine, you beautiful disasters!"
+_certs:
+	@echo "$(call ann,Cyan) Minting TLS certs host-side, before the containers wake up. Self-signed and proud (your browser won't be)"
+	@sh infra/cert-gen/cert-gen.sh
+
+_migrate:
+	@echo "$(call ann,Cyan) Waking the databases and waiting for them to be healthy (no operating on a patient without a pulse)"
+	@$(COMPOSE) up -d $(DB_SERVICES)
+	@for db in $(DB_SERVICES); do \
+		echo "$(call ann,Blue) checking $$db for a pulse ..."; \
+		ok=; \
+		for i in $$(seq 1 120); do \
+			hs=$$($(DOCKER) inspect -f '{{.State.Health.Status}}' "$$db" 2>/dev/null || echo missing); \
+			[ "$$hs" = "healthy" ] && { ok=1; break; }; \
+			sleep 2; \
+		done; \
+		[ -n "$$ok" ] || { echo "$(call ann,Red) $$db flatlined (never became healthy). Calling it, aborting"; exit 1; }; \
+	done
+	@echo "$(call ann,Cyan) Applying database migrations one-shot, before the apps wake up asking for tables that don't exist"
+	@for m in $(MIGRATE_SERVICES); do \
+		echo "$(call ann,Blue) running migration: $$m (hold still)"; \
+		$(COMPOSE) --profile migrate run --rm $$m || { echo "$(call ann,Red) migration $$m belly-flopped. Aborting"; exit 1; }; \
+	done
+
+_up: _certs _migrate
+	@echo "$(call ann,Cyan) Starting the application containers. Rise and shine, you beautiful disasters!"
 	@$(COMPOSE) up -d

@@ -32,16 +32,9 @@ local_resource(
 
 local_resource(
     'cert-gen',
-    cmd=(
-        DOCKER + ' run ' + FLAGS + '--rm ' +
-        '-v certs:/certs ' +
-        '--entrypoint sh docker.io/alpine/openssl ' +
-        '-c "rm -f /certs/key.pem /certs/cert.pem && ' +
-        'openssl req -x509 -newkey rsa:4096 -nodes ' +
-        '-keyout /certs/key.pem -out /certs/cert.pem ' +
-        '-days 365 -subj \'/CN=localhost\' ' +
-        '-addext \'subjectAltName=DNS:localhost\'"'
-    ),
+    # host-side generation (openssl on the host) to mirror `make` and keep the
+    # certs owned by the current user; nginx bind-mounts them below.
+    cmd='sh infra/cert-gen/cert-gen.sh',
     labels=['infra'],
 )
 
@@ -51,7 +44,7 @@ local_resource(
         '--network host ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
-        '-v certs:/etc/nginx/certs:ro ' +
+        '-v $(pwd)/certs:/etc/nginx/certs:ro ' +
         'docker.io/nginx:alpine'
     ),
     resource_deps=['cert-gen', 'dev-network', 'gateway', 'frontend'],

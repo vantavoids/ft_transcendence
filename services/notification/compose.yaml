@@ -13,6 +13,7 @@ services:
 
   notification-migrate:
     container_name: notification-migrate
+    profiles: ["migrate"]
     image: notification-migrate-service
     pull_policy: never
     build:
@@ -43,8 +44,6 @@ services:
         condition: service_healthy
       notification-db:
         condition: service_healthy
-      notification-migrate:
-        condition: service_completed_successfully
 
 volumes:
   notification_db_data:
