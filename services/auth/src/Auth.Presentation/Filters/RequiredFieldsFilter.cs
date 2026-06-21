@@ -2,8 +2,6 @@ using Auth.Presentation.Contracts;
 
 namespace Auth.Presentation.Filters;
 
-#nullable enable
-
 public sealed class RequiredFieldsFilter<T> : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(

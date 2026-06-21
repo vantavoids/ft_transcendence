@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Auth.Infrastructure.Options;
 
-#nullable enable
-
 [Serializable]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 public class EvenNumberAttribute : ValidationAttribute

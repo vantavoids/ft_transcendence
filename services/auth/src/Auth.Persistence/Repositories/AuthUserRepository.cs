@@ -5,8 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Persistence.Repositories;
 
-#nullable enable
-
 internal sealed class AuthUserRepository(AuthDbContext context) : IAuthUserRepository
 {
     public async Task<AuthUser?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
