@@ -62,7 +62,6 @@ internal sealed class GithubOAuthProvider(
         return new OAuthUserInfo(user.Id.ToString(), email, verified);
     }
 
-#nullable enable
     private async Task<Result<(bool? Verified, string? Email)>> GetEmailFields(string accessToken, CancellationToken ct)
     {
         var result = await FetchAuthenticated<IReadOnlyList<GithubEmailResp>>(

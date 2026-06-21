@@ -73,7 +73,6 @@ internal sealed class OAuthCallbackHandler(
         return new OAuthCallbackResult(accessToken, rawRefreshToken, isNewUser);
     }
 
-#nullable enable
     private static void UpdateOAuthUser(DateTimeOffset now, AuthUser existing, string ?email, bool verified)
     {
         if (!string.IsNullOrWhiteSpace(email) && (existing.Email is null || existing.Email.Value != email))
@@ -82,7 +81,6 @@ internal sealed class OAuthCallbackHandler(
         if (existing.Email is not null && !existing.Email.IsVerified && verified)
             existing.VerifyEmail(now);
     }
-#nullable disable
 
     private async Task<Result<AuthUser>> CreateOAuthUser(DateTimeOffset now, OAuthProvider provider, OAuthUserInfo userInfo, CancellationToken ct)
     {

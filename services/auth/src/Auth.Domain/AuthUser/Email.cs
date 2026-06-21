@@ -15,7 +15,6 @@ public sealed record Email
     public string Value { get; }
     public bool   IsVerified { get; }
 
-#nullable enable
     public static Result<Email> Create(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -28,7 +27,6 @@ public sealed record Email
 
         return new Email(normalized, false);
     }
-#nullable disable
 
     public Email Verify() => new(Value, true);
 

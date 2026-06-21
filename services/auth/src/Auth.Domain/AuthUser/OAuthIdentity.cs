@@ -21,7 +21,6 @@ public sealed record OAuthIdentity
     public OAuthProvider Provider { get; }
     public string        Id { get; }
 
-#nullable enable
     public static Result<OAuthIdentity> Create(OAuthProvider? provider, string? oauthId)
     {
         if (provider is null)

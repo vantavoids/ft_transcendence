@@ -2,8 +2,6 @@ using Auth.Domain.Results;
 
 namespace Auth.Domain.AuthUser;
 
-#nullable enable
-
 public sealed class AuthUser
 {
     public AuthUser() {}

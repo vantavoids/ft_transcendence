@@ -76,7 +76,6 @@ internal sealed class GoogleOAuthProvider(
         [property: JsonPropertyName("access_token")] string AccessToken,
         [property: JsonPropertyName("id_token")]     string IdToken);
 
-#nullable enable
     private sealed record GoogleIdTokenPayload(
         [property: JsonPropertyName("sub")]   string  Sub,
         [property: JsonPropertyName("email")] string? Email,

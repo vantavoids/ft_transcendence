@@ -23,8 +23,6 @@ public sealed record StoredRefreshToken
     public DateTimeOffset ExpiresAt { get; }
     public bool           Revoked { get; }
 
-#nullable enable
-
     public static Result<StoredRefreshToken> Create(
         string? hash,
         DateTimeOffset issuedAt,
