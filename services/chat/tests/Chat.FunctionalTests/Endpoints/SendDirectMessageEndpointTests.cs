@@ -146,14 +146,71 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		Assert.Single(factory.SavedDirectMessages);
 	}
 
+	[Fact]
+	public async Task Get_History_ReturnsLatestMessagesFirst()
+	{
+		var client = BuildClient(userId: 42);
+
+		var first = await client.PostAsJsonAsync("/v1/dms/100/messages",
+				new { content = "history functional test 1", nonce = "history-functional-1" });
+
+		var second = await client.PostAsJsonAsync("/v1/dms/100/messages",
+				new { content = "history functional test 2", nonce = "history-functional-2" });
+
+		Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+		Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+
+		var response = await client.GetAsync("/v1/dms/100/messages?limit=50");
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+		var messages = await response.Content.ReadFromJsonAsync<List<DirectMessageBody>>(JsonOptions);
+
+		Assert.NotNull(messages);
+		Assert.Equal(2, messages!.Count);
+
+		Assert.Equal("history functional test 2", messages[0].Content);
+		Assert.Equal("history functional test 1", messages[1].Content);
+
+		Assert.Equal(messages[0].ConversationId, messages[1].ConversationId);
+		Assert.Equal("42", messages[0].SenderId);
+		Assert.Equal("100", messages[0].RecipientId);
+		Assert.Null(messages[0].Nonce);
+	}
+
+	[Fact]
+	public async Task Get_HistoryWithoutConversation_ReturnsEmptyList()
+	{
+		var client = BuildClient(userId: 42);
+
+		var response = await client.GetAsync("/v1/dms/999/messages?limit=50");
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+		var messages = await response.Content.ReadFromJsonAsync<List<DirectMessageBody>>(JsonOptions);
+
+		Assert.NotNull(messages);
+		Assert.Empty(messages!);
+	}
+
+	[Fact]
+	public async Task Get_HistoryWithSelf_Returns400()
+	{
+		var client = BuildClient(userId: 42);
+
+		var response = await client.GetAsync("/v1/dms/42/messages?limit=50");
+
+		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+	}
+
 	private sealed record DirectMessageBody(
-		string Id,
-		string ConversationId,
-		string SenderId,
-		string RecipientId,
-		string? Content,
-		string? ReplyToId,
-		DateTimeOffset? EditedAt,
-		DateTimeOffset CreatedAt,
-		string? Nonce);
+			string Id,
+			string ConversationId,
+			string SenderId,
+			string RecipientId,
+			string? Content,
+			string? ReplyToId,
+			DateTimeOffset? EditedAt,
+			DateTimeOffset CreatedAt,
+			string? Nonce);
 }

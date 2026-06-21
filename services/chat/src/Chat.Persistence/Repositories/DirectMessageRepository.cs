@@ -145,5 +145,27 @@ internal sealed class DirectMessageRepository(
 		return trimmed.Length <= 100 ? trimmed : trimmed[..100];
 	}
 
+	public async Task<IReadOnlyList<DirectMessage>> ListAsync(
+			long conversationId,
+			int limit,
+			CancellationToken ct)
+	{
+		var stmt = await statements.SelectDirectMessagesByConversation.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, limit));
+
+		return rows
+			.Select(row => DirectMessage.Reconstitute(
+						id: row.GetValue<long>("id"),
+						conversationId: row.GetValue<long>("conversation_id"),
+						senderId: row.GetValue<long>("sender_id"),
+						recipientId: row.GetValue<long>("recipient_id"),
+						replyToId: row.GetValue<long?>("reply_to_id"),
+						content: row.GetValue<string?>("content"),
+						isDeleted: row.GetValue<bool>("is_deleted"),
+						editedAt: row.GetValue<DateTime?>("edited_at"),
+						createdAt: new DateTimeOffset(row.GetValue<DateTime>("created_at"), TimeSpan.Zero)))
+			.ToList();
+	}
+
 	private readonly record struct MessageLookup(long ConversationId, DateTime CreatedAt);
 }

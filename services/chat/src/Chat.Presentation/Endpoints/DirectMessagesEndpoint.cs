@@ -2,6 +2,7 @@ using Carter;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.DirectMessages.SendMessage;
+using Chat.Application.Features.DirectMessages.ListMessages;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -13,6 +14,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 	{
 		var group = app.MapGroup("/dms/{userId:long}/messages").WithTags("Direct Messages");
 		group.MapPost("/", SendAsync);
+		group.MapGet("/", ListAsync);
 	}
 
 	private static async Task<Results<
@@ -43,6 +45,27 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 
 		return MapError(result.Error);
 	}
+
+	private static async Task<Results<
+		Ok<IReadOnlyList<DirectMessageResponse>>,
+	BadRequest<ErrorBody>>>
+		ListAsync(
+				long userId,
+				int? limit,
+				IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
+				CancellationToken cancellationToken)
+		{
+			var result = await handler.HandleAsync(
+					new ListDirectMessagesQuery(
+						RecipientId: userId,
+						Limit: limit ?? 50),
+					cancellationToken);
+
+			if (result.Succeeded)
+				return TypedResults.Ok(result.Value);
+
+			return TypedResults.BadRequest(new ErrorBody(result.Error.Message));
+		}
 
 	private static Results<
 		Created<DirectMessageResponse>,

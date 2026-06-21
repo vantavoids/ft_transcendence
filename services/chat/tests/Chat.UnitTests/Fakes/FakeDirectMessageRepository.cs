@@ -53,5 +53,21 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 		return Task.FromResult(message);
 	}
 
+	public Task<IReadOnlyList<DirectMessage>> ListAsync(
+			long conversationId,
+			int limit,
+			CancellationToken ct)
+	{
+		var messages = _saved
+			.Where(m => m.ConversationId == conversationId)
+			.OrderByDescending(m => m.CreatedAt)
+			.ThenByDescending(m => m.Id)
+			.Take(limit)
+			.ToList();
+
+		return Task.FromResult<IReadOnlyList<DirectMessage>>(messages);
+	}
+
 	public void WithReply(long conversationId, long replyToId) =>
-		_replies[(conversationId, replyToId)] = replyToId;}
+		_replies[(conversationId, replyToId)] = replyToId;
+}
