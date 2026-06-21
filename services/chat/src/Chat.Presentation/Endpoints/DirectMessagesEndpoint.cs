@@ -11,7 +11,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 {
 	public void AddRoutes(IEndpointRouteBuilder app)
 	{
-		var group = app.MapGroup("/channels/{channelId:long}/messages").WithTags("Direct Messages");
+		var group = app.MapGroup("/dms/{userId:long}/messages").WithTags("Direct Messages");
 		group.MapPost("/", SendAsync);
 	}
 
@@ -67,6 +67,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			"DirectMessage.InvalidConversationId" => TypedResults.BadRequest(body),
 			"DirectMessage.InvalidSenderId" => TypedResults.BadRequest(body),
 			"DirectMessage.InvalidRecipientId" => TypedResults.BadRequest(body),
+			"DirectMessage.InvalidReplyTarget" => TypedResults.BadRequest(body),
 			"DirectMessage.CannotMessageSelf" => TypedResults.BadRequest(body),
 			"DirectMessage.NonceTooLong" => TypedResults.BadRequest(body),
 
