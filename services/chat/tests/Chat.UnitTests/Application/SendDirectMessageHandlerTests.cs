@@ -164,4 +164,45 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Unicaster.Unicasts);
 	}
+
+	[Fact]
+	public async Task ReplyToId_NotInConversation_ReturnsInvalidReplyTarget_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.Repository.WithConversation(42, 100, conversationId: 555);
+
+		var result = await handler.HandleAsync(
+				new SendDirectMessageCommand(
+					RecipientId: 100,
+					Content: "reply",
+					ReplyToId: 999,
+					Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(DirectMessageFailures.InvalidReplyTarget, result.Error);
+		Assert.Empty(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Unicaster.Unicasts);
+	}
+
+	[Fact]
+	public async Task ReplyToId_InSameConversation_Succeeds_AndPersistsReplyToId()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.Repository.WithConversation(42, 100, conversationId: 555);
+		h.Repository.WithReply(conversationId: 555, replyToId: 999);
+
+		var result = await handler.HandleAsync(
+				new SendDirectMessageCommand(
+					RecipientId: 100,
+					Content: "reply",
+					ReplyToId: 999,
+					Nonce: null));
+
+		Assert.True(result.Succeeded);
+
+		var saved = Assert.Single(h.Repository.Saved);
+		Assert.Equal(999L, saved.ReplyToId);
+		Assert.Equal(555L, saved.ConversationId);
+	}
 }
