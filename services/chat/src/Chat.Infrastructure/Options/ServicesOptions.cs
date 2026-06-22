@@ -5,4 +5,5 @@ namespace Chat.Infrastructure.Options;
 public sealed class ServicesOptions
 {
 	[Required] public required string GuildService { get; init; }
+	[Required] public required string UserService { get; init; }
 }

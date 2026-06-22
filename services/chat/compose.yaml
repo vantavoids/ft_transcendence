@@ -44,6 +44,7 @@ services:
       BackendConfiguration__BaseUrl: ${BASE_URL}
       BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
       Services__GuildService: http://guild:8080
+      Services__UserService: http://user:8080
       Jwt__SecretKey: ${JWT_SECRET}
     depends_on:
       rabbitmq:

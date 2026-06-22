@@ -44,6 +44,7 @@ local_resource(
         '-e BackendConfiguration__BaseUrl=' + BASE_URL + ' ' +
         '-e BackendConfiguration__BaseApiUrl=' + BASE_API_URL + ' ' +
         '-e Services__GuildService=http://guild:8080 ' +
+        '-e Services__UserService=http://user:8080 ' +
         '-e DOTNET_USE_POLLING_FILE_WATCHER=1 ' +
         '-e Jwt__SecretKey=' + JWT_SECRET + ' ' +
         '-v $(pwd)/src:/app/src ' +
