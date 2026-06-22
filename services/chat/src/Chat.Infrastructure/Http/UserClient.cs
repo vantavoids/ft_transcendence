@@ -17,7 +17,7 @@ internal sealed class UserClient(HttpClient http) : IUserClient
 		try
 		{
 			return await http.GetFromJsonAsync<UsersRelationship>(
-				$"users/{callerId}/realtionship-with/{recipientId}", JsonOptions, ct);
+				$"users/{callerId}/relationship-with/{recipientId}", JsonOptions, ct);
 		}
 		// GetFromJsonAsync throws on non-2xx; map 404 to null so the handler's
 		// `relationship is null -> UserNotFound` branch fires as intended
