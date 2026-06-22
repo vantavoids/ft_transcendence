@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Features.OAuth;
@@ -24,13 +23,6 @@ namespace Auth.Presentation.Endpoints;
 
 public sealed class OAuthEndpoint : ICarterModule
 {
-    private static readonly FrozenDictionary<string, OAuthProvider> ProviderMap =
-        new Dictionary<string, OAuthProvider>
-        {
-            ["fortytwo"] = OAuthProvider.FortyTwo,
-            ["google"]   = OAuthProvider.Google,
-            ["github"]   = OAuthProvider.Github,
-        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public void AddRoutes(IEndpointRouteBuilder app)
     {
@@ -62,7 +54,7 @@ public sealed class OAuthEndpoint : ICarterModule
         OAuthStateCookieOptions stateOpts,
         HttpResponse resp)
     {
-        if (!ProviderMap.TryGetValue(provider, out var oauthProvider))
+        if (!OAuthProviderExtensions.TryFromSlug(provider, out var oauthProvider))
             return TypedResults.BadRequest(new ErrorResponse(AuthFailures.InvalidOAuthProvider.Message));
 
         var result = await handler.HandleAsync(new OAuthLoginCommand(oauthProvider));
@@ -94,7 +86,7 @@ public sealed class OAuthEndpoint : ICarterModule
         AppOptions appOpts,
         HttpContext ctx)
     {
-        if (!ProviderMap.TryGetValue(provider, out var oauthProvider))
+        if (!OAuthProviderExtensions.TryFromSlug(provider, out var oauthProvider))
             return TypedResults.BadRequest(new ErrorResponse(AuthFailures.InvalidOAuthProvider.Message));
 
         var storedState = ctx.Request.Cookies[stateOpts.CookieName];
