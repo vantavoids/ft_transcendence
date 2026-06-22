@@ -74,6 +74,7 @@ public static class DependencyInjection
 			});
 		});
 
+		services.AddMemoryCache();
 		services.AddHttpContextAccessor();
 
 		services.AddScoped<IEventBus, EventBus>();

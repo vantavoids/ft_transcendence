@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Chat.Presentation.Hubs;
 
@@ -15,7 +15,8 @@ public sealed class ChatHub(
 	ICurrentUser currentUser,
 	UserConnectionTracker connectionTracker,
 	IEventBus eventBus,
-	IClock clock) : Hub<IChatClient>
+	IClock clock,
+	IMemoryCache cache) : Hub<IChatClient>
 {
 	private const long SendMessages = 1L << 0;
 	private const long ReadMessages = 1L << 1;
@@ -38,8 +39,6 @@ public sealed class ChatHub(
 			await eventBus.PublishAsync(new UserOffline(currentUser.UserId), CancellationToken.None);
 		await base.OnDisconnectedAsync(exception);
 	}
-
-	private static readonly ConcurrentDictionary<(long, string, long), DateTimeOffset> _ratelimit = new();
 
 	public async Task JoinChannel(long channelId)
 	{
@@ -66,11 +65,10 @@ public sealed class ChatHub(
 	public async Task Typing(string scope, long id)
 	{
 		var now = clock.UtcNow;
-		var key = (currentUser.UserId, scope, id);
+		var cacheKey = $"typing:{currentUser.UserId}:{scope}:{id}";
 
-		if (_ratelimit.TryGetValue(key, out var until) && until > now)
+		if (cache.TryGetValue(cacheKey, out DateTimeOffset until) && until > now)
 			return;
-		_ratelimit[key] = now.AddSeconds(TypingRateLimitDuration);
 
 		var err = scope switch
 		{
@@ -84,6 +82,10 @@ public sealed class ChatHub(
 			await Clients.Caller.Error(err.Code, err.Message);
 			return;
 		}
+
+		// ? Expiry stored as value so the check above uses IClock (testable); the cache TTL only drives memory eviction
+		var expiry = now.AddSeconds(TypingRateLimitDuration);
+		cache.Set(cacheKey, expiry, TimeSpan.FromSeconds(TypingRateLimitDuration));
 
 		var recipient = (scope == "channel") ? Clients.OthersInGroup($"channel:{id}") : Clients.User(id.ToString());
 		await recipient.TypingStarted(currentUser.UserId.ToString(), scope, id.ToString(), now.AddSeconds(TypingExpirationDelay));
@@ -110,9 +112,9 @@ public sealed class ChatHub(
 
 		return relationship.Status switch
 		{
-			"accepted"                         => null,
+			"accepted"                           => null,
 			"blocked_by_me" or "blocked_by_them" => MessageFailures.RecipientBlocked,
-			_                                  => MessageFailures.RecipientNotFriend
+			_                            => MessageFailures.RecipientNotFriend
 		};
 	}
 }
