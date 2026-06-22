@@ -3,6 +3,7 @@ using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
 using Auth.Application.Abstractions.OAuth;
 using Auth.Application.Abstractions.Security;
+using Auth.Infrastructure.Http;
 using Auth.Infrastructure.OAuth;
 using Auth.Infrastructure.Options;
 using Auth.Infrastructure.Security;
@@ -37,6 +38,8 @@ public static class DependencyInjection
             })
         );
 
+        RegisterHttpClient<IGuildClient, GuildClient>(services, opts => opts.GuildService);
+
         services.AddHttpContextAccessor();
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<IClock, SystemClock>();
@@ -46,6 +49,19 @@ public static class DependencyInjection
         services.AddTransient<ICurrentUser, CurrentUser>();
 
         return services;
+    }
+
+    private static void RegisterHttpClient<TInterface, T>(
+        IServiceCollection services,
+        Func<ServicesOptions, string> selectBaseUrl)
+        where TInterface : class
+        where T : class, TInterface
+    {
+        services.AddHttpClient<TInterface, T>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<IOptions<ServicesOptions>>().Value;
+            client.BaseAddress = new Uri(selectBaseUrl(opts).TrimEnd('/') + "/internal/");
+        });
     }
 
     private static void SetupFromAssembly(
