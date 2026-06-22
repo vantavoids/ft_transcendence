@@ -45,9 +45,9 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 func main() {
 	ctx := context.Background()
 
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		log.Fatal("BASE_URL is not set")
+	userServiceURL := os.Getenv("USER_SERVICE_URL")
+	if userServiceURL == "" {
+		log.Fatal("USER_SERVICE_URL is not set")
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
