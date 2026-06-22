@@ -25,9 +25,14 @@ app.AddCommand("listen", async (string url = DefaultChatHub, string? token = nul
 	conn.On<object>("MessageEdited",        m => Console.WriteLine($"<- MessageEdited: {m}"));
 	conn.On<object>("MessageDeleted",       m => Console.WriteLine($"<- MessageDeleted: {m}"));
 	conn.On<object>("UserPresence",         m => Console.WriteLine($"<- UserPresence: {m}"));
-	conn.On<object, object>("GuildJoined",  (id, name) => Console.WriteLine($"<- GuildJoined: {id} ({name})"));
 	conn.On<object>("GuildLeft",            id => Console.WriteLine($"<- GuildLeft: {id}"));
-	conn.On<string, string>("Error",        (code, msg) => Console.WriteLine($"<- Error: {code} — {msg}"));
+	conn.On<object,
+			object>("GuildJoined",   (id, name) => Console.WriteLine($"<- GuildJoined: {id} ({name})"));
+	conn.On<string,
+			string,
+			string,
+			object>("TypingStarted", (userId, scope, id, until) => Console.WriteLine($"<- TypingStarted: user={userId} scope={scope} id={id} until={until}"));
+	conn.On<string, string>("Error", (code, msg) => Console.WriteLine($"<- Error: {code} — {msg}"));
 
 	await conn.StartAsync();
 	Console.WriteLine($"connected to {url}");
@@ -41,6 +46,32 @@ app.AddCommand("listen", async (string url = DefaultChatHub, string? token = nul
 	Console.WriteLine($"listening {seconds}s...");
 	await Task.Delay(TimeSpan.FromSeconds(seconds));
 }).WithDescription("hold a connection open and print every server-pushed event");
+
+app.AddCommand("send-typing", async ([Argument] string scope, [Argument] long id, string url = DefaultChatHub, string? token = null) =>
+{
+	await using var conn = Build(url, token);
+	conn.On<string, string>("Error", (code, msg) => Console.WriteLine($"<- Error: {code} — {msg}"));
+
+	await conn.StartAsync();
+	Console.WriteLine($"connected to {url}");
+
+	if (scope == "channel")
+	{
+		await conn.InvokeAsync("JoinChannel", id);
+		Console.WriteLine($"-> JoinChannel({id})");
+	}
+
+	Console.WriteLine("press Enter to send Typing, Esc to quit");
+	while (true)
+	{
+		var key = Console.ReadKey(intercept: true);
+		if (key.Key == ConsoleKey.Escape) break;
+		if (key.Key != ConsoleKey.Enter) continue;
+
+		await conn.InvokeAsync("Typing", scope, id);
+		Console.WriteLine($"-> Typing({scope}, {id})");
+	}
+}).WithDescription("join a channel (if scope=channel) and invoke Typing interactively — Enter sends, Esc quits");
 
 app.AddCommand("signal-listen", async (string url = DefaultSignalingHub, string? token = null, int seconds = 60) =>
 {
