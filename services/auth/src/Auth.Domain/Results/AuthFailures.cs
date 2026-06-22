@@ -37,4 +37,7 @@ public static class AuthFailures
 
     public static readonly Failure OAuthUpstreamError =
         new("Auth.OAuthUpstreamError", "OAuth provider is temporarily unavailable.");
+
+    public static readonly Failure OAuthCantPatchEmail =
+        new("Auth.OAuthCantPatchEmail", "Cannot patch email for OAuth user.");
 }

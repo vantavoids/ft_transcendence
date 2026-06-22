@@ -60,7 +60,7 @@ public sealed class AuthUser
             return AuthFailures.InvalidAuthUserState;
 
         if (string.IsNullOrWhiteSpace(passwordHash))
-            return AuthFailures.InvalidAuthUserState;
+            return AuthFailures.WeakPassword;
 
         var mailResult = Email.Create(email);
         if (mailResult.IsFailure)
@@ -141,6 +141,37 @@ public sealed class AuthUser
         Email = verified == true ? emailResult.Value.Verify() : emailResult.Value;
         UpdatedAt = now;
 
+        return Result.Ok();
+    }
+
+    public Result Update(
+        DateTimeOffset now,
+        string? email = null,
+        string? passwordHash = null,
+        bool? emailVerified = null)
+    {
+        if ((email is not null || emailVerified is not null) && HasOAuthCredentials)
+            return AuthFailures.OAuthCantPatchEmail;
+
+        if (email is not null)
+        {
+            var emailResult = Email.Create(email);
+            if (emailResult.IsFailure)
+                return emailResult.Error;
+            Email = emailResult.Value;
+        }
+
+        if (emailVerified == true && Email is not null)
+            Email = Email.Verify();
+
+        if (passwordHash is not null)
+        {
+            if (string.IsNullOrWhiteSpace(passwordHash))
+                return AuthFailures.WeakPassword;
+            PasswordHash = passwordHash;
+        }
+
+        UpdatedAt = now;
         return Result.Ok();
     }
 
