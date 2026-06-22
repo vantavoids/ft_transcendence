@@ -39,6 +39,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
+      USER_SERVICE_URL: http://user:8000
+      BASE_URL: ${BASE_URL}
+      BASE_API_URL: ${BASE_API_URL}
     depends_on:
       rabbitmq:
         condition: service_healthy

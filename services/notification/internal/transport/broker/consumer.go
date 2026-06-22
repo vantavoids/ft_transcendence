@@ -50,7 +50,10 @@ func NewConsumer() (*Consumer, error) {
 	// Try and retries to connect to the rabbitmq connection
 	var conn *amqp.Connection
 	for attempt := 1; attempt <= 10; attempt++ {
-		conn, err = amqp.Dial(os.Getenv("AMQP_URL"))
+		amqpURL := fmt.Sprintf("amqp://%s:%s@rabbitmq:5672/",
+			os.Getenv("RABBITMQ_USER"),
+			os.Getenv("RABBITMQ_PASS"))
+		conn, err = amqp.Dial(amqpURL)
 		if err == nil {
 			break
 		}
