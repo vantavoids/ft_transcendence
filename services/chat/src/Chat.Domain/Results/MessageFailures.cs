@@ -51,8 +51,8 @@ public static class MessageFailures
 		new("Message.UserNotFound", "User not found.");
 
 	public static readonly Failure RecipientNotFriend =
-		new("Messages.RecipientNotFriend", "You must be friends to send direct message");
+		new("Message.RecipientNotFriend", "You must be friends to send direct message");
 
 	public static readonly Failure RecipientBlocked =
-		new("Messages.RecipientBlocked", "You can't send messages to blocked user");
+		new("Message.RecipientBlocked", "You can't send messages to blocked user");
 }

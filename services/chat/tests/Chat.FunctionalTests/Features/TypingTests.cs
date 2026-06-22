@@ -378,7 +378,7 @@ public sealed class DmTypingTests(ChatApiFactory factory)
 		Assert.Equal("Message.UserNotFound", code);
 	}
 
-	// T4.13 & T4.14 — blocked relationship → Error("Messages.RecipientBlocked", ...)
+	// T4.13 & T4.14 — blocked relationship → Error("Message.RecipientBlocked", ...)
 	[Theory]
 	[InlineData("blocked_by_me")]
 	[InlineData("blocked_by_them")]
@@ -400,10 +400,10 @@ public sealed class DmTypingTests(ChatApiFactory factory)
 		await conn.InvokeAsync("Typing", "dm", partnerId);
 
 		var code = await errTcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
-		Assert.Equal("Messages.RecipientBlocked", code);
+		Assert.Equal("Message.RecipientBlocked", code);
 	}
 
-	// T4.15 — pending relationship → Error("Messages.RecipientNotFriend", ...)
+	// T4.15 — pending relationship → Error("Message.RecipientNotFriend", ...)
 	[Fact]
 	public async Task Typing_DmPending_SendsError()
 	{
@@ -420,7 +420,7 @@ public sealed class DmTypingTests(ChatApiFactory factory)
 		await conn.InvokeAsync("Typing", "dm", UserDmPartnerPend);
 
 		var code = await errTcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
-		Assert.Equal("Messages.RecipientNotFriend", code);
+		Assert.Equal("Message.RecipientNotFriend", code);
 	}
 }
 
