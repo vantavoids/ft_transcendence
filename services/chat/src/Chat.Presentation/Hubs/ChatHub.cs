@@ -22,7 +22,7 @@ public sealed class ChatHub(
 	private const long ReadMessages = 1L << 1;
 	private const long Administrator = 1L << 8;
 
-	// ? In seconds
+	// In seconds
 	private const int TypingRateLimitDuration = 3;
 	private const int TypingExpirationDelay = 8;
 
@@ -83,7 +83,7 @@ public sealed class ChatHub(
 			return;
 		}
 
-		// ? Expiry stored as value so the check above uses IClock (testable); the cache TTL only drives memory eviction
+ 		// Store expiry in the value so the check above uses IClock (testable); cache TTL is only for eviction.
 		var expiry = now.AddSeconds(TypingRateLimitDuration);
 		cache.Set(cacheKey, expiry, TimeSpan.FromSeconds(TypingRateLimitDuration));
 

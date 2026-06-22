@@ -8,9 +8,9 @@ namespace Chat.FunctionalTests.Features;
 // ─────────────────────────────────────────────────────────────────────────────
 // T4.01 – T4.10 · Typing — channel scope
 //
-// _ratelimit is a static ConcurrentDictionary inside ChatHub that persists for
-// the entire process lifetime. every test uses unique (userId, channelId) pairs
-// so no two tests can share a rate-limit entry.
+// Rate limiting is backed by an IMemoryCache singleton inside the Chat service that
+// persists for the entire process lifetime. Every test uses unique (userId, scope, id)
+// triples so no two tests can share a rate-limit entry.
 // ─────────────────────────────────────────────────────────────────────────────
 public sealed class ChannelTypingTests(ChatApiFactory factory)
 	: IClassFixture<ChatApiFactory>, IAsyncLifetime
