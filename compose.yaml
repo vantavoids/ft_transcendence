@@ -57,7 +57,7 @@ services:
       - minio_data:/data
       - ./infra/minio/entrypoint.sh:/usr/local/bin/minio-entrypoint.sh:ro,z
     healthcheck:
-      test: ["CMD", "sh", "-c", "mc ready local && mc stat local/$$MINIO_BUCKET >/dev/null"]
+      test: ["CMD", "sh", "-c", "mc ready local && mc stat local/$$MINIO_BUCKET local/$$MINIO_USER_BUCKET local/$$MINIO_GUILD_BUCKET >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
