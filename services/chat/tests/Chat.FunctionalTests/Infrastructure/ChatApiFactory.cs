@@ -133,6 +133,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 				["BackendConfiguration:BaseApiUrl"] = "http://localhost/api",
 
 				["Services:GuildService"] = "http://localhost:5101",
+				["Services:UserService"] = "http://localhost:5101",
 			});
 		});
 
