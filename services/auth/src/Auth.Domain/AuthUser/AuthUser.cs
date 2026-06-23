@@ -118,17 +118,13 @@ public sealed class AuthUser
 
     public void RevokeRefreshToken(DateTimeOffset now)
     {
-        if (RefreshToken is not null)
-            RefreshToken = RefreshToken.Revoke();
-
+        RefreshToken = RefreshToken?.Revoke();
         UpdatedAt = now;
     }
 
     public void VerifyEmail(DateTimeOffset now)
     {
-        if (Email is not null)
-            Email = Email.Verify();
-
+        Email = Email?.Verify();
         UpdatedAt = now;
     }
 
@@ -150,9 +146,6 @@ public sealed class AuthUser
         string? passwordHash = null,
         bool? emailVerified = null)
     {
-        if ((email is not null || emailVerified is not null) && HasOAuthCredentials)
-            return AuthFailures.OAuthCantPatchEmail;
-
         if (email is not null)
         {
             var emailResult = Email.Create(email);
