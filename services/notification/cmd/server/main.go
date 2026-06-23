@@ -37,9 +37,14 @@ func main() {
 	}
 	defer pool.Close()
 
+	// ─── Service ───
 	queries := database.New(pool)
 
-	// ─── Service ───
+	hub, err := notification.NewHub()
+	if err != nil {
+		log.Fatalf("Unable to create a hub: %s", err)
+	}
+
 	sflkGen, err := snowflake.NewGenerator(1, 1)
 	if err != nil {
 		log.Fatalf("Unable to create a snowflake generator: %s", err)
@@ -69,11 +74,6 @@ func main() {
 	go consumer.Run(svc)
 
 	// ─── Handler Endpoint ───
-	hub, err := api.NewHub()
-	if err != nil {
-		log.Fatalf("Unable to create a hub: %s", err)
-	}
-
 	handler, err := api.NewHandler(svc, hub)
 	if err != nil {
 		log.Fatalf("Unable to create a http handler: %s", err)

@@ -74,6 +74,8 @@ func (o *Orchestrator) Create(ctx context.Context, in CreateInput) error {
 		return fmt.Errorf("insert notification: %w: %s", failure.FailTemporary, err)
 	}
 	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
+
+	s.hub.Push(id, ToSSE(n))
 	return nil
 }
 

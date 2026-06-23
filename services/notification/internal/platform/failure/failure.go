@@ -5,6 +5,8 @@ import "errors"
 var (
 	FailPermanent = errors.New("permanent error")
 	FailTemporary = errors.New("temporary error")
+
+	Discarded = errors.New("discarded notif")
 )
 
 var (

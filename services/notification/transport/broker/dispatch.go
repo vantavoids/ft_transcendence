@@ -23,7 +23,7 @@ const (
 )
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
-func Dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) error {
+func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) error {
 	switch d.RoutingKey {
 
 	case "chat.message_sent":
