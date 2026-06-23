@@ -43,4 +43,7 @@ public static class AuthFailures
 
     public static readonly Failure AtLeastOneFieldToPatch =
         new("Auth.AtLeastOneFieldToPatch", "No field provided, at least one required");
+
+    public static readonly Failure OwnedGuildsConflict =
+        new("Auth.OwnedGuildsConflict", "Transfer or delete your guilds before deleting your account.");
 }
