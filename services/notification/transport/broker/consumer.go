@@ -150,7 +150,7 @@ func handle(svc *core.Orchestrator, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := Dispatch(ctx, svc, d)
+	err := dispatch(ctx, svc, d)
 	if err == nil {
 		d.Ack(false)
 		return

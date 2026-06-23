@@ -1,4 +1,4 @@
-package api
+package notification
 
 import (
 	"log"
