@@ -30,7 +30,7 @@ func main() {
 	if cfg.Dev {
 		mux.HandleFunc("/api/openapi.json", handler.AggregateOpenAPI(cfg))
 	}
-	mux.HandleFunc("/api/gateway/health", handler.Healthcheck())
+	mux.HandleFunc("/healthz", handler.Healthcheck())
 	mux.HandleFunc("/api/{rest...}", handler.Redirect(proxies))
 
 	//  ─────────────────────────────────────────────
