@@ -9,6 +9,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Chat.UnitTests"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\Chat.Application\Chat.Application.csproj"/>
         <ProjectReference Include="..\Chat.Infrastructure\Chat.Infrastructure.csproj"/>
         <ProjectReference Include="..\Chat.Persistence\Chat.Persistence.csproj"/>
