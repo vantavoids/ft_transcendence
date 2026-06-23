@@ -28,14 +28,14 @@ public sealed class ChatHub(
 
 	public override async Task OnConnectedAsync()
 	{
-		if (connectionTracker.TrackConnected(currentUser.UserId))
+		if (connectionTracker.TrackConnected(currentUser.UserId, Context.ConnectionId))
 			await eventBus.PublishAsync(new UserOnline(currentUser.UserId), CancellationToken.None);
 		await base.OnConnectedAsync();
 	}
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
-		if (connectionTracker.TrackDisconnected(currentUser.UserId))
+		if (connectionTracker.TrackDisconnected(currentUser.UserId, Context.ConnectionId))
 			await eventBus.PublishAsync(new UserOffline(currentUser.UserId), CancellationToken.None);
 		await base.OnDisconnectedAsync(exception);
 	}
@@ -57,10 +57,14 @@ public sealed class ChatHub(
 		}
 
 		await Groups.AddToGroupAsync(Context.ConnectionId, $"channel:{channelId}", Context.ConnectionAborted);
+		connectionTracker.TrackChannelJoined(currentUser.UserId, Context.ConnectionId, channelId, membership.GuildId);
 	}
 
-	public Task LeaveChannel(long channelId) =>
-		Groups.RemoveFromGroupAsync(Context.ConnectionId, $"channel:{channelId}");
+	public async Task LeaveChannel(long channelId)
+	{
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"channel:{channelId}");
+		connectionTracker.TrackChannelLeft(currentUser.UserId, Context.ConnectionId, channelId);
+	}
 
 	public async Task Typing(string scope, long id)
 	{
