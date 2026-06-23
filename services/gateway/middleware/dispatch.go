@@ -24,7 +24,7 @@ func Dispatch(bypassHandler http.Handler, fullpathHandler http.Handler) http.Han
 
 		bypass := func(path string) bool {
 			return path == "/api/openapi.json" ||
-				strings.HasPrefix(path, "/api/gateway/")
+				path == "/healthz"
 		}
 
 		if bypass(r.URL.Path) {

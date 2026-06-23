@@ -13,7 +13,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:$$GATEWAY_PORT/api/gateway/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:$$GATEWAY_PORT/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
