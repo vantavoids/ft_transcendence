@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	"github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
@@ -29,7 +31,9 @@ func (h *Handler) Routes(secret string) http.Handler {
 	mux.HandleFunc("PATCH /v1/notifications/read-all", h.MarkReadAllHandler)
 	mux.HandleFunc("DELETE /v1/notifications/{id}", h.DismissHandler)
 
-	mux.HandleFunc("GET /healthz", h.healthzHandler)
+	mux.HandleFunc("GET /notifications/events", h.SseHandler)
+
+    mux.HandleFunc("GET /healthz", h.healthzHandler)
 
 	return LoggingMiddleware()(JwtMiddleware(secret)(mux))
 }
@@ -98,9 +102,9 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dtos := make([]NotificationDTO, len(notifs))
+	dtos := make([]NotificationREST, len(notifs))
 	for i, n := range notifs {
-		dtos[i] = ToDTO(n)
+		dtos[i] = ToREST(n)
 	}
 	writeJSON(w, http.StatusOK, dtos)
 }
@@ -182,6 +186,52 @@ func (h *Handler) DismissHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) SseHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, errorBody("unauthorized error"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	rc := http.NewResponseController(w)
+	ch := h.hub.Subscribe(userID)
+	defer h.hub.Unsubscribe(userID, ch)
+
+	rc.Flush()
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			log.Printf("Client: %d disconnected", userID)
+			return
+		case notif := <-ch:
+			data, err := json.Marshal(notif)
+			if err != nil {
+				log.Printf("failed to marshal notification: %v", err)
+				continue
+			}
+			fmt.Fprintf(w, "event: ReceiveNotification\n")
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			if err := rc.Flush(); err != nil {
+				return
+			}
+		case <-ticker.C:
+			if _, err := fmt.Fprintf(w, ": ping\n\n"); err != nil {
+				return
+			}
+			if err := rc.Flush(); err != nil {
+				return
+			}
+		}
+	}
 }
 
 func getUserIDFromContext(ctx context.Context) (int64, bool) {
