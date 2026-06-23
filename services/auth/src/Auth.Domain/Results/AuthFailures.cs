@@ -40,4 +40,7 @@ public static class AuthFailures
 
     public static readonly Failure OAuthCantPatchEmail =
         new("Auth.OAuthCantPatchEmail", "Cannot patch email for OAuth user.");
+
+    public static readonly Failure AtLeastOneFieldToPatch =
+        new("Auth.AtLeastOneFieldToPatch", "No field provided, at least one required");
 }
