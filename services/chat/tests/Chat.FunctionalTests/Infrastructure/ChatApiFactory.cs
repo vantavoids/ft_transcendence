@@ -97,6 +97,24 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 		await broadcaster.BroadcastGuildLeftAsync(userId, guildId, CancellationToken.None);
 	}
 
+	// server-side eviction primitive (the guild.member_left side effect): purges
+	// the user's connections from every channel group they joined under the guild.
+	public async Task SimulateGuildEvictionAsync(long userId, long guildId)
+	{
+		using var scope = Server.Services.CreateScope();
+		var broadcaster = scope.ServiceProvider.GetRequiredService<IUserBroadcaster>();
+		await broadcaster.EvictFromGuildChannelsAsync(userId, guildId, CancellationToken.None);
+	}
+
+	// server-side eviction primitive scoped to a single channel (the future
+	// channel.access_revoked side effect): purges the user from one channel group.
+	public async Task SimulateChannelEvictionAsync(long userId, long channelId)
+	{
+		using var scope = Server.Services.CreateScope();
+		var broadcaster = scope.ServiceProvider.GetRequiredService<IUserBroadcaster>();
+		await broadcaster.EvictFromChannelAsync(userId, channelId, CancellationToken.None);
+	}
+
 	// Bypasses IChannelBroadcaster (replaced by a fake) and pushes a message
 	// directly into the SignalR channel group. Use to verify that a connected
 	// client receives ReceiveMessage after JoinChannel.

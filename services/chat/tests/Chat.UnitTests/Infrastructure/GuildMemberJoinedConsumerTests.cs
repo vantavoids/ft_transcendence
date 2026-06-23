@@ -34,3 +34,31 @@ public sealed class GuildMemberJoinedConsumerTests
 		Assert.Equal("skafenings", call.GuildName);
 	}
 }
+
+public sealed class GuildMemberLeftConsumerTests
+{
+	[Fact]
+	public async Task Consume_EvictsFromGuildChannels_AndNotifiesClient()
+	{
+		var broadcaster = new FakeUserBroadcaster();
+		await using var provider = new ServiceCollection()
+			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddMassTransitTestHarness(x => x.AddConsumer<GuildMemberLeftConsumer>())
+			.BuildServiceProvider(true);
+
+		var harness = provider.GetRequiredService<ITestHarness>();
+		await harness.Start();
+
+		await harness.Bus.Publish(new GuildMemberLeft(GuildId: 100, UserId: 42));
+
+		Assert.True(await harness.Consumed.Any<GuildMemberLeft>());
+
+		var (UserId, GuildId) = Assert.Single(broadcaster.EvictGuildCalls);
+		Assert.Equal(42L, UserId);
+		Assert.Equal(100L, GuildId);
+
+		var left = Assert.Single(broadcaster.LeftCalls);
+		Assert.Equal(42L, left.UserId);
+		Assert.Equal(100L, left.GuildId);
+	}
+}

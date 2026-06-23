@@ -490,3 +490,139 @@ public sealed class GuildEventTests(ChatApiFactory factory)
 		Assert.False(bReceived);
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// T1.25 – T1.28 · Server-side eviction (guild.member_left / kick / ban)
+// ─────────────────────────────────────────────────────────────────────────────
+
+public sealed class ChannelEvictionTests(ChatApiFactory factory)
+	: IClassFixture<ChatApiFactory>, IAsyncLifetime
+{
+	private const long ReadMessages = 1L << 1;
+	private const long GuildId      = 777;
+	private const long OtherGuildId = 778;
+	private const long ChannelId    = 400;
+	private const long OtherChannel = 401;
+
+	private const long UserEvicted       = 5_001;
+	private const long UserOtherGuild    = 5_002;
+	private const long UserRejoinAfter   = 5_003;
+	private const long UserChannelEvict  = 5_004;
+
+	public Task InitializeAsync() { factory.EventBus.Reset(); return Task.CompletedTask; }
+	public Task DisposeAsync() => Task.CompletedTask;
+
+	// T1.25 - after guild eviction, a joined member stops receiving channel messages
+	[Fact]
+	public async Task GuildEviction_AfterJoin_StopsReceivingMessages()
+	{
+		factory.WithMembershipFor(ChannelId, UserEvicted, GuildId, ReadMessages);
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserEvicted);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var received = false;
+		conn.On<MessageResponse>("ReceiveMessage", _ => received = true);
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+
+		await factory.SimulateGuildEvictionAsync(UserEvicted, GuildId);
+
+		await factory.SimulateChannelMessageAsync(ChannelId, Message(ChannelId, "after eviction"));
+		await Task.Delay(300);
+
+		Assert.False(received);
+	}
+
+	// T1.26 - eviction only targets channels of the named guild
+	[Fact]
+	public async Task GuildEviction_LeavesOtherGuildChannelsSubscribed()
+	{
+		factory.GuildClient.Setup(ChannelId, UserOtherGuild,
+			new ChannelMembership(IsMember: true, GuildId: GuildId, Permissions: ReadMessages));
+		factory.GuildClient.Setup(OtherChannel, UserOtherGuild,
+			new ChannelMembership(IsMember: true, GuildId: OtherGuildId, Permissions: ReadMessages));
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserOtherGuild);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var otherReceived = new TaskCompletionSource<MessageResponse>();
+		conn.On<MessageResponse>("ReceiveMessage", msg =>
+		{
+			if (msg.ChannelId == OtherChannel.ToString())
+				otherReceived.TrySetResult(msg);
+		});
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+		await conn.InvokeAsync("JoinChannel", OtherChannel);
+
+		await factory.SimulateGuildEvictionAsync(UserOtherGuild, GuildId);
+
+		await factory.SimulateChannelMessageAsync(OtherChannel, Message(OtherChannel, "still here"));
+
+		var received = await otherReceived.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		Assert.Equal("still here", received.Content);
+	}
+
+	// T1.27 - an evicted user can re-join (e.g. re-invited) and receive again
+	[Fact]
+	public async Task GuildEviction_ThenRejoin_ReceivesMessagesAgain()
+	{
+		factory.WithMembershipFor(ChannelId, UserRejoinAfter, GuildId, ReadMessages);
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserRejoinAfter);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var messageTcs = new TaskCompletionSource<MessageResponse>();
+		conn.On<MessageResponse>("ReceiveMessage", msg => messageTcs.TrySetResult(msg));
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+		await factory.SimulateGuildEvictionAsync(UserRejoinAfter, GuildId);
+
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+		await factory.SimulateChannelMessageAsync(ChannelId, Message(ChannelId, "welcome back"));
+
+		var received = await messageTcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		Assert.Equal("welcome back", received.Content);
+	}
+
+	// T1.28 - channel-scoped eviction drops one channel but leaves the rest
+	[Fact]
+	public async Task ChannelEviction_DropsTargetChannelOnly()
+	{
+		factory.GuildClient.Setup(ChannelId, UserChannelEvict,
+			new ChannelMembership(IsMember: true, GuildId: GuildId, Permissions: ReadMessages));
+		factory.GuildClient.Setup(OtherChannel, UserChannelEvict,
+			new ChannelMembership(IsMember: true, GuildId: GuildId, Permissions: ReadMessages));
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserChannelEvict);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var evictedReceived = false;
+		var survivorReceived = new TaskCompletionSource<MessageResponse>();
+		conn.On<MessageResponse>("ReceiveMessage", msg =>
+		{
+			if (msg.ChannelId == ChannelId.ToString())
+				evictedReceived = true;
+			else if (msg.ChannelId == OtherChannel.ToString())
+				survivorReceived.TrySetResult(msg);
+		});
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+		await conn.InvokeAsync("JoinChannel", OtherChannel);
+
+		await factory.SimulateChannelEvictionAsync(UserChannelEvict, ChannelId);
+
+		await factory.SimulateChannelMessageAsync(ChannelId, Message(ChannelId, "gone"));
+		await factory.SimulateChannelMessageAsync(OtherChannel, Message(OtherChannel, "kept"));
+
+		var received = await survivorReceived.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		Assert.Equal("kept", received.Content);
+		Assert.False(evictedReceived);
+	}
+
+	private static MessageResponse Message(long channelId, string content) =>
+		new(Id: "1", ChannelId: channelId.ToString(), AuthorId: "1",
+			Content: content, ReplyToId: null, EditedAt: null,
+			CreatedAt: DateTimeOffset.UtcNow, Attachments: [], Reactions: [], Nonce: null);
+}
