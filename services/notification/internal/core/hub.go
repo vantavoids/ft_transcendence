@@ -21,6 +21,8 @@ func (h *Hub) Subscribe(userID int64) chan NotificationSSE {
 	h.subs[userID] = append(h.subs[userID], ch)
 	h.mu.Unlock()
 
+	log.Printf("client user=%d connected", userID)
+
 	return ch
 }
 
@@ -46,6 +48,8 @@ func (h *Hub) Unsubscribe(userID int64, ch chan NotificationSSE) {
 	} else {
 		h.subs[userID] = filtered
 	}
+
+	log.Printf("client user=%d disconnected", userID)
 
 	close(ch)
 }
