@@ -35,14 +35,22 @@ public sealed class GuildMemberLeftConsumer(
 	{
 		var msg = context.Message;
 
+		// pull the user's connections out of the guild's channel groups *before*
+		// notifying the client, so a kicked/banned member stops receiving channel
+		// broadcasts server-side even if their client never calls LeaveChannel.
+		var evicted = await broadcaster.EvictFromGuildChannelsAsync(
+			userId: msg.UserId,
+			guildId: msg.GuildId,
+			ct: context.CancellationToken);
+
 		await broadcaster.BroadcastGuildLeftAsync(
 			userId: msg.UserId,
 			guildId: msg.GuildId,
 			ct: context.CancellationToken);
 
 		logger.LogDebug(
-			"guild.member_left consumed: guild_id={GuildId} user_id={UserId}",
-			msg.GuildId, msg.UserId);
+			"guild.member_left consumed: guild_id={GuildId} user_id={UserId} evicted_subscriptions={Evicted}",
+			msg.GuildId, msg.UserId, evicted);
 	}
 }
 
