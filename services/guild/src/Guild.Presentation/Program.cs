@@ -6,6 +6,7 @@ using Guild.Infrastructure;
 using Guild.Persistence;
 using Guild.Presentation.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -81,7 +82,23 @@ app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+	ResponseWriter = static async (ctx, report) =>
+	{
+		ctx.Response.ContentType = "application/json";
+		await ctx.Response.WriteAsync(JsonSerializer.Serialize(new
+		{
+			status = report.Status.ToString(),
+			checks = report.Entries.Select(e => new
+			{
+				name = e.Key,
+				status = e.Value.Status.ToString(),
+				description = e.Value.Description,
+			}),
+		}));
+	},
+});
 
 var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
