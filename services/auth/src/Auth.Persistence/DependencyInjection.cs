@@ -1,8 +1,10 @@
 using Auth.Application.Abstractions.Persistence;
 using Auth.Persistence.Db;
+using Auth.Persistence.Health;
 using Auth.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
 namespace Auth.Persistence;
@@ -25,4 +27,7 @@ public static class DependencyInjection
 
         return services;
     }
+
+    public static IHealthChecksBuilder AddPersistenceHealthChecks(this IHealthChecksBuilder builder)
+        => builder.AddCheck<EfCoreHealthCheck>("postgres");
 }

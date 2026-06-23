@@ -4,6 +4,7 @@ using Auth.Infrastructure;
 using Auth.Persistence;
 using Auth.Presentation.Middleware;
 using Auth.Presentation;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using System.Text.Json;
 
@@ -14,8 +15,9 @@ builder.Services.ConfigureHttpJsonOptions(o =>
                     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
                 );
 
-builder.Services.AddOpenApi()
-                .AddHealthChecks();
+builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks()
+                .AddPersistenceHealthChecks();
 
 builder.Services.AddApplication()
                 .AddInfrastructure()
@@ -40,7 +42,23 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    ResponseWriter = static async (ctx, report) =>
+    {
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+            }),
+        }));
+    },
+});
 var v1 = app.MapGroup("/v1");
 v1.MapCarter();
 

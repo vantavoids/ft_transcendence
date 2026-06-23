@@ -40,7 +40,7 @@ services:
       RabbitMQ__Password: ${RABBITMQ_PASS}
       Jwt__SecretKey: ${JWT_SECRET}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/hello-world"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
