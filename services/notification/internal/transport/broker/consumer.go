@@ -9,14 +9,14 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
-	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
 const (
 	queueName    = "notifications"
-	exchange     = "events"
-	exchangeType = "topic"
+	exchangeName = "events"
+	exchangeType = "direct" // direct // topic // fanout
 )
 
 var events = []string{
@@ -63,15 +63,15 @@ func NewConsumer() (*Consumer, error) {
 	log.Printf("rabbitmq ready")
 	c.conn = conn
 
-	// Open a channel to the said connection
+	// Open a channel (connection mutliplex)
 	c.channel, err = c.conn.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("Channel: %s", err)
 	}
 
-	// Declare the mail sorting office (On est inscrit au bureau de tri)
+	// Declare the mail sorting office
 	if err = c.channel.ExchangeDeclare(
-		exchange,     // name of the exchange
+		exchangeName, // name of the exchange
 		exchangeType, // type
 		true,         // durable
 		false,        // delete when complete
@@ -82,7 +82,7 @@ func NewConsumer() (*Consumer, error) {
 		return nil, fmt.Errorf("Exchange Declare: %s", err)
 	}
 
-	// Declare my letter box (On a declarer qu on possede une boite au lettre)
+	// Declare my letter box
 	queue, err := c.channel.QueueDeclare(
 		queueName, // name of the queue
 		true,      // durable
@@ -95,14 +95,14 @@ func NewConsumer() (*Consumer, error) {
 		return nil, fmt.Errorf("Queue Declare: %s", err)
 	}
 
-	// Ready to sort only these events into my letterbox (On veut que recevoir ce type de lettre)
+	// Ready to sort only these events into my letterbox
 	for _, key := range events {
 		if err = c.channel.QueueBind(
-			queue.Name, // name of the queue
-			key,        // bindingKey
-			exchange,   // sourceExchange
-			false,      // noWait
-			nil,        // arguments
+			queue.Name,   // name of the queue
+			key,          // bindingKey
+			exchangeName, // sourceExchange
+			false,        // noWait
+			nil,          // arguments
 		); err != nil {
 			return nil, fmt.Errorf("Queue Bind: %s", err)
 		}
@@ -125,7 +125,7 @@ func NewConsumer() (*Consumer, error) {
 	return c, nil
 }
 
-func (c *Consumer) Run(svc *notif.Service) {
+func (c *Consumer) Run(svc *core.Service) {
 	defer func() {
 		fmt.Printf("Run: deliveries channel closed\n")
 		c.done <- nil
@@ -138,7 +138,7 @@ func (c *Consumer) Run(svc *notif.Service) {
 	}
 }
 
-func handle(svc *notif.Service, d amqp.Delivery) {
+func handle(svc *core.Service, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

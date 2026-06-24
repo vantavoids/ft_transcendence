@@ -9,10 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	db "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
-	client "github.com/vantavoids/ft_transcendence/services/notification/internal/client"
-	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
+	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	sflk "github.com/vantavoids/ft_transcendence/services/notification/internal/snowflake"
 	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
+	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/tunnel"
 )
 
 type healthCheck struct {
@@ -61,7 +61,7 @@ func main() {
 	// 	os.Getenv("USER_SERVICE_URL"),
 	// 	&http.Client{Timeout: 5 * time.Second},
 	// )
-	fakeUserClient, err := client.NewFakeClient(
+	fakeUserTunnel, err := tunnel.NewFakeTunnel(
 		os.Getenv("USER_SERVICE_URL"),
 		&http.Client{Timeout: 5 * time.Second},
 	)
@@ -69,7 +69,7 @@ func main() {
 		log.Fatalf("Unable to create an user client: %s", err)
 	}
 
-	svc, err := notif.NewService(queries, sflkGen, fakeUserClient)
+	svc, err := core.NewService(queries, sflkGen, fakeUserTunnel)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}

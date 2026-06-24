@@ -1,4 +1,4 @@
-package notif
+package core
 
 import (
 	"context"
@@ -33,11 +33,11 @@ func NewService(db *db.Queries, sflk *sflk.SnowflakeGenerator, userClient Relati
 	return &Service{db: db, snowflake: sflk, clientUser: userClient}, nil
 }
 
-func (s *Service) Create(ctx context.Context, in CreateInput) error {
+func (n *Service) Create(ctx context.Context, in CreateInput) error {
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
-		blocked, err := s.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
+		blocked, err := n.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
 			return fmt.Errorf("user client: %w: %s", er.ErrorTemporary, err)
 		}
@@ -52,14 +52,14 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 		return fmt.Errorf("masharl payload: %w: %s", er.ErrorPermanent, err)
 	}
 
-	id, err := s.snowflake.Generate()
+	id, err := n.snowflake.Generate()
 	if err != nil {
 		return fmt.Errorf("snowflake generate: %w: %s", er.ErrorTemporary, err)
 	}
 
 	// TODO: Push this notification into signalR when the hub is set
 	// TODO: maybe an ON CONFLICT DO NOTHING if rabbitmq send two times the same exact publish
-	_, err = s.db.CreateNotification(ctx, db.CreateNotificationParams{
+	_, err = n.db.CreateNotification(ctx, db.CreateNotificationParams{
 		ID:       id,
 		UserID:   in.UserID,
 		Type:     db.NotificationType(in.Type),
