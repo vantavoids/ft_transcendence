@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	er "github.com/vantavoids/ft_transcendence/services/notification/internal/errors"
-	notif "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 )
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
-func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
+func Dispatch(ctx context.Context, svc *core.Service, d amqp.Delivery) error {
 	switch d.RoutingKey {
 
 	case "chat.message_sent":
@@ -36,7 +36,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 			if err != nil {
 				return err
 			}
-			if err := svc.Create(ctx, notif.CreateInput{
+			if err := svc.Create(ctx, core.CreateInput{
 				UserID:   uid,
 				Type:     TypeMention,
 				ActorID:  &ev.AuthorID,
@@ -57,7 +57,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, notif.CreateInput{
+		return svc.Create(ctx, core.CreateInput{
 			UserID:   ev.RecipientID,
 			Type:     TypeDM,
 			ActorID:  &ev.SenderID,
@@ -73,7 +73,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, notif.CreateInput{
+		return svc.Create(ctx, core.CreateInput{
 			UserID:   ev.AddresseeID,
 			Type:     TypeFriendRequest,
 			ActorID:  &ev.RequesterID,
@@ -86,7 +86,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, notif.CreateInput{
+		return svc.Create(ctx, core.CreateInput{
 			UserID:   ev.InvitedUserID,
 			Type:     TypeGuildInvite,
 			ActorID:  &ev.InvitedByUserID,
@@ -101,7 +101,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, notif.CreateInput{
+		return svc.Create(ctx, core.CreateInput{
 			UserID:   ev.UserID,
 			Type:     TypeGuildWelcome,
 			ActorID:  nil,
@@ -116,7 +116,7 @@ func Dispatch(ctx context.Context, svc *notif.Service, d amqp.Delivery) error {
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, notif.CreateInput{
+		return svc.Create(ctx, core.CreateInput{
 			UserID:   ev.CalleeID,
 			Type:     TypeIncomingCall,
 			ActorID:  &ev.CallerID,
