@@ -26,18 +26,18 @@ type RelationshipChecker interface {
 type Service struct {
 	db         *db.Queries
 	snowflake  *sflk.SnowflakeGenerator
-	clientUser RelationshipChecker
+	userTunnel RelationshipChecker
 }
 
 func NewService(db *db.Queries, sflk *sflk.SnowflakeGenerator, userClient RelationshipChecker) (*Service, error) {
-	return &Service{db: db, snowflake: sflk, clientUser: userClient}, nil
+	return &Service{db: db, snowflake: sflk, userTunnel: userClient}, nil
 }
 
 func (n *Service) Create(ctx context.Context, in CreateInput) error {
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
-		blocked, err := n.clientUser.IsBlockedBy(ctx, in.UserID, *in.ActorID)
+		blocked, err := n.userTunnel.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
 			return fmt.Errorf("user client: %w: %s", er.ErrorTemporary, err)
 		}

@@ -140,7 +140,6 @@ func Dispatch(ctx context.Context, svc *core.Service, d amqp.Delivery) error {
 func decode[T any](d amqp.Delivery) (T, error) {
 	var ev T
 	dec := json.NewDecoder(bytes.NewReader(d.Body))
-	dec.DisallowUnknownFields()
 	if err := dec.Decode(&ev); err != nil {
 		return ev, err
 	}
