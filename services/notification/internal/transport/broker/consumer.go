@@ -43,7 +43,7 @@ func NewConsumer() (*Consumer, error) {
 		conn:       nil,
 		channel:    nil,
 		deliveries: nil,
-		tag:        "",
+		tag:        "notification-consumer",
 		done:       make(chan error),
 	}
 
@@ -108,6 +108,8 @@ func NewConsumer() (*Consumer, error) {
 		}
 	}
 
+	c.channel.Qos(10, 0, false)
+
 	// Ready to open these events in my letterbox
 	c.deliveries, err = c.channel.Consume(
 		queue.Name, // name
@@ -125,19 +127,18 @@ func NewConsumer() (*Consumer, error) {
 	return c, nil
 }
 
+// TODO: graceful shutdown with consumer.done
 func (c *Consumer) Run(svc *core.Service) {
-	defer func() {
-		fmt.Printf("Run: deliveries channel closed\n")
-		c.done <- nil
-	}()
 
 	// TODO: for the moment this is a single worker working on event one by one,
-	// in the future if needed, we can readapt this to add a goroutine per worker
+	// in the future if needed, we can add a goroutine per worker
 	for d := range c.deliveries {
 		handle(svc, d)
 	}
 }
 
+// TODO: backoff / dead-letter avec TTL.
+// TODO: context background doesnt allow graceful shutdown, try to plug it to a parent ctx
 func handle(svc *core.Service, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

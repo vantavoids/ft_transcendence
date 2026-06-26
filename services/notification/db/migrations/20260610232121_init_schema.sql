@@ -1,6 +1,5 @@
 -- +goose Up
 
--- +goose StatementBegin
 CREATE TYPE notification_type AS ENUM (
     'mention',
     'dm',
@@ -9,7 +8,6 @@ CREATE TYPE notification_type AS ENUM (
     'guild_welcome',
     'incoming_call'
 );
--- +goose StatementEnd
 
 CREATE TABLE notifications (
     id            BIGINT            PRIMARY KEY,
