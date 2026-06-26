@@ -11,6 +11,7 @@ internal sealed class GetChannelMessagesHandler(
 	ICurrentUser currentUser,
 	IGuildClient guildClient,
 	IMessageRepository repository,
+	IAttachmentRepository attachmentRepository,
 	IClock clock)
 	: IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>>
 {
@@ -36,7 +37,15 @@ internal sealed class GetChannelMessagesHandler(
 		var beforeTime = query.BeforeTime ?? clock.UtcNow;
 		var messages = await repository.GetChannelMessagesAsync(query.ChannelId, beforeTime, query.Limit, cancellationToken);
 
-		return Result.Ok<IReadOnlyList<MessageResponse>>(
-			messages.Select(m => MessageResponse.From(m, null)).ToList());
+		// hydrate each message's attachments; message_attachments is partitioned by
+		// (channel_id, message_id) so this is one point read per message in the page
+		var hydrated = await Task.WhenAll(messages.Select(async m =>
+		{
+			var attachments = await attachmentRepository
+				.GetChannelMessageAttachmentsAsync(m.ChannelId, m.Id, cancellationToken);
+			return MessageResponse.From(m, null, attachments);
+		}));
+
+		return Result.Ok<IReadOnlyList<MessageResponse>>(hydrated);
 	}
 }

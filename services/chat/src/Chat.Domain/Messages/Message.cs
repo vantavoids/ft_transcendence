@@ -80,7 +80,8 @@ public sealed class Message
 		long authorId,
 		string? content,
 		long? replyToId,
-		DateTimeOffset now)
+		DateTimeOffset now,
+		bool hasAttachments = false)
 	{
 		if (id <= 0)
 			return MessageFailures.InvalidId;
@@ -91,17 +92,22 @@ public sealed class Message
 		if (authorId <= 0)
 			return MessageFailures.InvalidAuthorId;
 
+		// content is optional only when the message carries at least one attachment
 		if (string.IsNullOrWhiteSpace(content))
-			return MessageFailures.ContentRequired;
-
-		if (content.Length > MaxContentLen)
+		{
+			if (!hasAttachments)
+				return MessageFailures.ContentRequired;
+		}
+		else if (content.Length > MaxContentLen)
+		{
 			return MessageFailures.ContentTooLong;
+		}
 
 		return new Message(
 			id: id,
 			channelId: channelId,
 			authorId: authorId,
-			content: content,
+			content: string.IsNullOrWhiteSpace(content) ? null : content,
 			replyToId: replyToId,
 			editedAt: null,
 			isDeleted: false,

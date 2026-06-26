@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Amazon.S3;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
@@ -8,6 +9,7 @@ using Chat.Infrastructure.Messaging;
 using Chat.Infrastructure.Messaging.Consumers;
 using Chat.Infrastructure.Messaging.Contracts;
 using Chat.Infrastructure.Options;
+using Chat.Infrastructure.Storage;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -35,6 +37,11 @@ public static class DependencyInjection
 
 		services.AddOptions<SnowflakeOptions>()
 			.BindConfiguration("Snowflake")
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+
+		services.AddOptions<MinioOptions>()
+			.BindConfiguration("Minio")
 			.ValidateDataAnnotations()
 			.ValidateOnStart();
 
@@ -81,6 +88,20 @@ public static class DependencyInjection
 		services.AddSingleton<IClock, SystemClock>();
 		services.AddSingleton<ISnowflakeIdGenerator, SnowflakeIdGenerator>();
 		services.AddScoped<ICurrentUser, CurrentUser>();
+
+		services.AddSingleton<IAmazonS3>(sp =>
+		{
+			var opts = sp.GetRequiredService<IOptions<MinioOptions>>().Value;
+			var config = new AmazonS3Config
+			{
+				ServiceURL = opts.Endpoint,
+				// MinIO only speaks path-style addressing (no virtual-host buckets)
+				ForcePathStyle = true,
+			};
+			return new AmazonS3Client(opts.AccessKey, opts.SecretKey, config);
+		});
+		services.AddSingleton<IObjectStore, MinioObjectStore>();
+		services.AddSingleton<IAttachmentUrlFactory, AttachmentUrlFactory>();
 
 		RegisterAndConfHttpClient<IGuildClient, GuildClient>(services, opts => opts.GuildService);
 		RegisterAndConfHttpClient<IUserClient, UserClient>(services, opts => opts.UserService);

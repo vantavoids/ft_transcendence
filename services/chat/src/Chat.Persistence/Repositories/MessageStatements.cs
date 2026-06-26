@@ -38,4 +38,17 @@ internal sealed class MessageStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectChannelMessages { get; } = new(() => session.PrepareAsync(
 		"SELECT channel_id, created_at, id, author_id, content, edited_at, is_deleted, reply_to_id " +
 		"FROM messages WHERE channel_id = ? AND created_at < ? LIMIT ?"));
+
+	public Lazy<Task<PreparedStatement>> InsertMessageAttachment { get; } = new(() => session.PrepareAsync(
+		"INSERT INTO message_attachments " +
+		"(channel_id, message_id, id, url, filename, size_bytes, mime_type) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?)"));
+
+	public Lazy<Task<PreparedStatement>> InsertAttachmentLookup { get; } = new(() => session.PrepareAsync(
+		"INSERT INTO attachment_lookup " +
+		"(attachment_id, is_dm, channel_id, conversation_id, message_id) " +
+		"VALUES (?, false, ?, ?, ?)"));
+
+	public Lazy<Task<PreparedStatement>> DeleteDraftAttachment { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM draft_attachments WHERE id = ?"));
 }
