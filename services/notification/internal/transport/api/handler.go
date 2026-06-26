@@ -8,15 +8,15 @@ import (
 	"net/http"
 	"strconv"
 
-	notification "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
+	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	"github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 )
 
 type Handler struct {
-	svc *notification.Service
+	svc *core.Service
 }
 
-func NewHandler(svc *notification.Service) (*Handler, error) {
+func NewHandler(svc *core.Service) (*Handler, error) {
 	return &Handler{svc: svc}, nil
 }
 
@@ -84,7 +84,7 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 		limit = int32(min(max(parsed, 1), 100)) // clamp
 	}
 
-	notifs, err := h.svc.List(r.Context(), userID, notification.ListInput{
+	notifs, err := h.svc.List(r.Context(), userID, core.ListInput{
 		Read:             read,
 		IncludeDismissed: includeDismissed,
 		Before:           before,

@@ -16,11 +16,11 @@ import (
 type Service struct {
 	queries    *database.Queries
 	snowflake  *snowflake.Generator
-	clientUser RelationshipChecker
+	userTunnel RelationshipChecker
 }
 
 func NewService(queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Service, error) {
-	return &Service{queries: queries, snowflake: sflk, clientUser: userClient}, nil
+	return &Service{queries: queries, snowflake: sflk, userTunnel: userClient}, nil
 }
 
 type CreateInput struct {
@@ -40,7 +40,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
 	if in.ActorID != nil {
-		blocked, err := n.userTunnel.IsBlockedBy(ctx, in.UserID, *in.ActorID)
+		blocked, err := s.userTunnel.IsBlockedBy(ctx, in.UserID, *in.ActorID)
 		if err != nil {
 			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
 		}
@@ -55,7 +55,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) error {
 		return fmt.Errorf("marshal payload: %w: %s", failure.FailPermanent, err)
 	}
 
-	id, err := n.snowflake.Generate()
+	id, err := s.snowflake.Generate()
 	if err != nil {
 		return fmt.Errorf("snowflake generate: %w: %s", failure.FailTemporary, err)
 	}
