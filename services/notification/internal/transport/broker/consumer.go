@@ -9,8 +9,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
+	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 )
 
 const (
@@ -146,6 +146,7 @@ func (c *Consumer) Run(svc *core.Service) {
 
 // TODO: backoff / dead-letter avec TTL.
 // TODO: context background doesnt allow graceful shutdown, try to plug it to a parent ctx
+func handle(svc *core.Service, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
