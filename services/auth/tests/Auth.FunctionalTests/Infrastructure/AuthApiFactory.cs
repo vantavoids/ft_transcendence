@@ -55,6 +55,8 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["App:BaseUrl"]       = "https://localhost:1443",
+
                 ["Database:Host"]     = "test",
                 ["Database:Port"]     = "5432",
                 ["Database:Name"]     = "test",
@@ -73,6 +75,18 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
                 ["RefreshToken:TtlDays"]    = "7",
                 ["RefreshToken:ByteLength"] = "64",
                 ["RefreshToken:CookieName"] = "refresh_token",
+
+                ["OAuth:FortyTwo:ClientId"]     = "test",
+                ["OAuth:FortyTwo:ClientSecret"] = "test",
+                ["OAuth:FortyTwo:RedirectUri"]  = "https://localhost:1443/auth/callback/42",
+
+                ["OAuth:Github:ClientId"]     = "test",
+                ["OAuth:Github:ClientSecret"] = "test",
+                ["OAuth:Github:RedirectUri"]  = "https://localhost:1443/auth/callback/github",
+
+                ["OAuth:Google:ClientId"]     = "test",
+                ["OAuth:Google:ClientSecret"] = "test",
+                ["OAuth:Google:RedirectUri"]  = "https://localhost:1443/auth/callback/google",
             });
         });
 
