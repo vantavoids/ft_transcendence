@@ -56,7 +56,12 @@ public sealed class MessagesEndpoint : ICarterModule
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(
-			new SendMessageCommand(channelId, request.Content, request.ReplyToId, request.Nonce),
+			new SendMessageCommand(
+				channelId,
+				request.Content,
+				request.ReplyToId,
+				request.AttachmentIds ?? [],
+				request.Nonce),
 			cancellationToken);
 
 		return result.Succeeded
@@ -134,6 +139,10 @@ public sealed class MessagesEndpoint : ICarterModule
 			_ => TypedResults.NotFound(new ErrorBody(failure.Message)),
 		};
 
-	private sealed record SendMessageRequest(string? Content, long? ReplyToId, string? Nonce);
+	private sealed record SendMessageRequest(
+		string? Content,
+		long? ReplyToId,
+		IReadOnlyList<long>? AttachmentIds,
+		string? Nonce);
 	private sealed record EditMessageRequest(string? Content);
 }

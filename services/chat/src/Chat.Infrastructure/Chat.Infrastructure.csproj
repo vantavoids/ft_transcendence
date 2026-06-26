@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="AWSSDK.S3" Version="3.7.416.4"/>
         <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1"/>
     </ItemGroup>
 

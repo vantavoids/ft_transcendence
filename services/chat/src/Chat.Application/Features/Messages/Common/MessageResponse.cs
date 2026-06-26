@@ -1,11 +1,13 @@
+using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
+using Chat.Application.Features.Attachments.Common;
 
 namespace Chat.Application.Features.Messages.Common;
 
 /// <summary>
 /// wire shape that mirrors the contract's <c>ReceiveMessage</c> event. snowflake
 /// IDs are quoted strings so JS clients can hold them without precision loss.
-/// attachments and reactions are empty arrays on freshly-created messages
+/// reactions are an empty array on freshly-created messages
 /// </summary>
 public sealed record MessageResponse(
 	string Id,
@@ -15,11 +17,14 @@ public sealed record MessageResponse(
 	string? ReplyToId,
 	DateTimeOffset? EditedAt,
 	DateTimeOffset CreatedAt,
-	object[] Attachments,
+	IReadOnlyList<AttachmentResponse> Attachments,
 	object[] Reactions,
 	string? Nonce)
 {
-	public static MessageResponse From(Message m, string? nonce) => new(
+	public static MessageResponse From(
+		Message m,
+		string? nonce,
+		IReadOnlyList<AttachmentMetadata>? attachments = null) => new(
 		Id: m.Id.ToString(),
 		ChannelId: m.ChannelId.ToString(),
 		AuthorId: m.AuthorId.ToString(),
@@ -27,7 +32,9 @@ public sealed record MessageResponse(
 		ReplyToId: m.ReplyToId?.ToString(),
 		EditedAt: m.EditedAt,
 		CreatedAt: m.CreatedAt,
-		Attachments: [],
+		Attachments: attachments is null or { Count: 0 }
+			? []
+			: attachments.Select(AttachmentResponse.From).ToArray(),
 		Reactions: [],
 		Nonce: nonce);
 }
