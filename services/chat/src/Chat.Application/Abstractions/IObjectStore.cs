@@ -11,4 +11,13 @@ public interface IObjectStore
 
 	/// <summary>opens a read stream for the blob, or <c>null</c> if the key is absent</summary>
 	Task<Stream?> GetAsync(string key, CancellationToken ct);
+
+	/// <summary>deletes the blob; a no-op if the key is already absent</summary>
+	Task DeleteAsync(string key, CancellationToken ct);
+
+	/// <summary>streams every stored blob's key and last-modified time, for the reaper</summary>
+	IAsyncEnumerable<ObjectInfo> ListAsync(CancellationToken ct);
 }
+
+/// <summary>minimal listing entry: the object key and when it was last written</summary>
+public sealed record ObjectInfo(string Key, DateTimeOffset LastModified);
