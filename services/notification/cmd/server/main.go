@@ -75,7 +75,7 @@ func main() {
 
 	// ─── Server HTTP ───
 	srv := &http.Server{
-		Addr:              ":" + os.Getenv("APP_PORT"),
+		Addr:              ":8080",
 		Handler:           handler.Routes(jwtSecret),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
