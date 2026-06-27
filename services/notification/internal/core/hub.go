@@ -1,4 +1,4 @@
-package notification
+package core
 
 import (
 	"log"

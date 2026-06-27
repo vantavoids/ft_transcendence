@@ -10,16 +10,16 @@ import (
 	"strconv"
 	"time"
 
-	notification "github.com/vantavoids/ft_transcendence/services/notification/internal/notification"
+	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 )
 
 type Handler struct {
-	svc *notification.Service
-	hub *notification.Hub
+	svc *core.Service
+	hub *core.Hub
 }
 
-func NewHandler(svc *notification.Service, hub *notification.Hub) (*Handler, error) {
+func NewHandler(svc *core.Service, hub *core.Hub) (*Handler, error) {
 	return &Handler{svc: svc, hub: hub}, nil
 }
 
@@ -32,13 +32,13 @@ func (h *Handler) Routes(secret string) http.Handler {
 	mux.HandleFunc("PATCH /notifications/read-all", markReadAllHandler(h.svc))
 	mux.HandleFunc("DELETE /notifications/{id}", dismissHandler(h.svc))
 
-	mux.HandleFunc("GET /notifications/events", sseHandler(h.svc, h.hub))
+	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
 
 	return JwtMiddleware(secret)(mux)
 }
 
 // GET /notifications
-func listHandler(svc *notification.Service) http.HandlerFunc {
+func listHandler(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -89,7 +89,7 @@ func listHandler(svc *notification.Service) http.HandlerFunc {
 			limit = int32(min(max(parsed, 1), 100)) // clamp
 		}
 
-		notifs, err := svc.List(r.Context(), userID, notification.ListInput{
+		notifs, err := svc.List(r.Context(), userID, core.ListInput{
 			Read:             read,
 			IncludeDismissed: includeDismissed,
 			Before:           before,
@@ -100,16 +100,16 @@ func listHandler(svc *notification.Service) http.HandlerFunc {
 			return
 		}
 
-		dtos := make([]notification.NotificationREST, len(notifs))
+		dtos := make([]core.NotificationREST, len(notifs))
 		for i, n := range notifs {
-			dtos[i] = notification.ToREST(n)
+			dtos[i] = core.ToREST(n)
 		}
 		writeJSON(w, http.StatusOK, dtos)
 	}
 }
 
 // PATCH /notifications/{id}/read
-func markReadHandler(svc *notification.Service) http.HandlerFunc {
+func markReadHandler(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -133,7 +133,7 @@ func markReadHandler(svc *notification.Service) http.HandlerFunc {
 }
 
 // GET /notifications/unread-count
-func unreadCountHandler(svc *notification.Service) http.HandlerFunc {
+func unreadCountHandler(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -151,7 +151,7 @@ func unreadCountHandler(svc *notification.Service) http.HandlerFunc {
 }
 
 // PATCH /notifications/read-all
-func markReadAllHandler(svc *notification.Service) http.HandlerFunc {
+func markReadAllHandler(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -169,7 +169,7 @@ func markReadAllHandler(svc *notification.Service) http.HandlerFunc {
 }
 
 // DELETE /notifications/{id}
-func dismissHandler(svc *notification.Service) http.HandlerFunc {
+func dismissHandler(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -192,7 +192,7 @@ func dismissHandler(svc *notification.Service) http.HandlerFunc {
 	}
 }
 
-func sseHandler(svc *notification.Service, hub *notification.Hub) http.HandlerFunc {
+func sseHandler(hub *core.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {

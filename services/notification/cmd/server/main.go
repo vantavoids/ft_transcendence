@@ -13,8 +13,8 @@ import (
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
 	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/tunnel"
-	api "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/api"
-	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
+	api "github.com/vantavoids/ft_transcendence/services/notification/transport/api"
+	broker "github.com/vantavoids/ft_transcendence/services/notification/transport/broker"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	// ─── Service ───
 	queries := database.New(pool)
 
-	hub, err := notification.NewHub()
+	hub, err := core.NewHub()
 	if err != nil {
 		log.Fatalf("Unable to create a hub: %s", err)
 	}

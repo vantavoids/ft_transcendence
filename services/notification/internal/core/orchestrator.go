@@ -15,12 +15,14 @@ import (
 
 type Orchestrator struct {
 	queries    *database.Queries
+    hub *Hub
+
 	snowflake  *snowflake.Generator
 	userTunnel RelationshipChecker
 }
 
-func NewOrchestrator(queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Orchestrator, error) {
-	return &Orchestrator{queries: queries, snowflake: sflk, userTunnel: userClient}, nil
+func NewOrchestrator(hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Service, error) {
+	return &Orchestrator{queries: queries, hub: hub, snowflake: sflk, userTunnel: userClient}, nil
 }
 
 type CreateInput struct {
