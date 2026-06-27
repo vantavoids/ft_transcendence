@@ -53,16 +53,16 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
     public async Task<string> SeedUserWithRefreshTokenAsync(string email, string rawPassword)
     {
-        using var scope  = Services.CreateScope();
-        var sp           = scope.ServiceProvider;
-        var repo         = sp.GetRequiredService<IAuthUserRepository>();
-        var hasher       = sp.GetRequiredService<ISecretHasher>();
-        var clock        = sp.GetRequiredService<IClock>();
-        var idGen        = sp.GetRequiredService<IIdGenerator>();
-        var tokenGen     = sp.GetRequiredService<ITokenGenerator>();
+        using var scope = Services.CreateScope();
+        var sp = scope.ServiceProvider;
+        var repo = sp.GetRequiredService<IAuthUserRepository>();
+        var hasher = sp.GetRequiredService<ISecretHasher>();
+        var clock = sp.GetRequiredService<IClock>();
+        var idGen = sp.GetRequiredService<IIdGenerator>();
+        var tokenGen = sp.GetRequiredService<ITokenGenerator>();
 
         var rawRefreshToken = tokenGen.GenerateRefreshToken();
-        var now             = clock.UtcNow;
+        var now = clock.UtcNow;
 
         var user = AuthUser.CreateEmailPasswordUser(
             id: idGen.NextId(),
@@ -140,6 +140,27 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         var repo = scope.ServiceProvider.GetRequiredService<IAuthUserRepository>();
         var user = await repo.GetByIdAsync(userId);
         return user?.RefreshToken?.Revoked ?? false;
+    }
+
+    public async Task<string> SeedOAuthUserWithAccessTokenAsync(OAuthProvider provider, string oauthId)
+    {
+        using var scope = Services.CreateScope();
+        var sp       = scope.ServiceProvider;
+        var repo     = sp.GetRequiredService<IAuthUserRepository>();
+        var clock    = sp.GetRequiredService<IClock>();
+        var idGen    = sp.GetRequiredService<IIdGenerator>();
+        var tokenGen = sp.GetRequiredService<ITokenGenerator>();
+
+        var user = AuthUser.CreateOAuthUser(
+            id: idGen.NextId(),
+            oauthProvider: provider,
+            oauthId: oauthId,
+            now: clock.UtcNow).Value;
+
+        await repo.AddAsync(user);
+        await repo.SaveChangesAsync();
+
+        return tokenGen.GenerateAccessToken(user.Id);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

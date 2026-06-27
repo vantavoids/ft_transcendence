@@ -24,6 +24,16 @@ internal static class HandlerFactory
         return (ICommandHandler<TCommand, TResult>)Activator.CreateInstance(handlerType, ctorArgs)!;
     }
 
+    internal static IQueryHandler<TQuery, TResponse> CreateQuery<TQuery, TResponse>(
+        params object[] ctorArgs)
+        where TQuery : class, IQuery<TResponse>
+        where TResponse : class
+    {
+        var handlerType = FindImplementer(
+            typeof(IQueryHandler<,>).MakeGenericType(typeof(TQuery), typeof(TResponse)));
+        return (IQueryHandler<TQuery, TResponse>)Activator.CreateInstance(handlerType, ctorArgs)!;
+    }
+
     private static Type FindImplementer(Type closedInterface)
     {
         return ApplicationAssembly.GetTypes()
