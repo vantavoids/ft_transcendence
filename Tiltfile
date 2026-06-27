@@ -10,6 +10,9 @@ MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET = root_env.get('MINIO_BUCKET',       'chat-attachments')
 MINIO_USER_BUCKET  = root_env.get('MINIO_USER_BUCKET',  'user-avatars')
 MINIO_GUILD_BUCKET = root_env.get('MINIO_GUILD_BUCKET', 'guild-icons')
+TURN_REALM    = root_env.get('TURN_REALM',    'localhost')
+TURN_USERNAME = root_env.get('TURN_USERNAME', 'ft_turn')
+TURN_PASSWORD = root_env.get('TURN_PASSWORD', 'ft_turn')
 DOCKER       = detect_engine()
 FLAGS        = run_flags(DOCKER)
 
@@ -54,6 +57,26 @@ local_resource(
     resource_deps=['dev-network'],
     labels=['infra'],
     links=['http://localhost:9001'],
+)
+
+local_resource(
+    'coturn',
+    # STUN/TURN for WebRTC. Host networking (like nginx) so the relay UDP range
+    # and 3478/5349 bind directly. Realm + long-term user come from the root .env;
+    # the rest of the config is in infra/coturn/turnserver.conf.
+    serve_cmd=container_serve(DOCKER, FLAGS, 'coturn',
+        '--network host ' +
+        # run as root so coturn can read the 0600 TLS key in ./certs (see compose.yaml)
+        '--user 0:0 ' +
+        '-v $(pwd)/infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro ' +
+        '-v $(pwd)/certs:/etc/coturn/certs:ro ' +
+        'docker.io/coturn/coturn:alpine ' +
+        '-c /etc/coturn/turnserver.conf ' +
+        '--realm=' + TURN_REALM + ' ' +
+        '--user=' + TURN_USERNAME + ':' + TURN_PASSWORD
+    ),
+    resource_deps=['cert-gen', 'dev-network'],
+    labels=['infra'],
 )
 
 local_resource(
