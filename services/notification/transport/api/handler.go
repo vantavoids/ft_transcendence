@@ -34,6 +34,8 @@ func (h *Handler) Routes(secret string) http.Handler {
 
 	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
 
+	mux.HandleFunc("GET /heatlz", healthzHandler)
+
 	return JwtMiddleware(secret)(mux)
 }
 
