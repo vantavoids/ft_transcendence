@@ -21,7 +21,7 @@ type Orchestrator struct {
 	userTunnel RelationshipChecker
 }
 
-func NewOrchestrator(hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Service, error) {
+func NewOrchestrator(hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Orchestrator, error) {
 	return &Orchestrator{queries: queries, hub: hub, snowflake: sflk, userTunnel: userClient}, nil
 }
 
@@ -62,9 +62,8 @@ func (o *Orchestrator) Create(ctx context.Context, in CreateInput) error {
 		return fmt.Errorf("snowflake generate: %w: %s", failure.FailTemporary, err)
 	}
 
-	// TODO: Push this notification into signalR when the hub is set
-	// TODO: maybe an ON CONFLICT DO NOTHING if rabbitmq send two times the same exact publish
-	_, err = o.queries.CreateNotification(ctx, database.CreateNotificationParams{
+	// TODO: maybe an ON CONFLICT DO NOTHING if rabbitmq send two times the same exact publish (nonce problem)
+	n, err := o.queries.CreateNotification(ctx, database.CreateNotificationParams{
 		ID:       id,
 		UserID:   in.UserID,
 		Type:     database.NotificationType(in.Type),
@@ -77,7 +76,7 @@ func (o *Orchestrator) Create(ctx context.Context, in CreateInput) error {
 	}
 	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
 
-	s.hub.Push(id, ToSSE(n))
+	o.hub.Push(id, ToSSE(n))
 	return nil
 }
 

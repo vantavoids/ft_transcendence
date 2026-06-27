@@ -15,11 +15,11 @@ import (
 )
 
 type Handler struct {
-	svc *core.Service
+	svc *core.Orchestrator
 	hub *core.Hub
 }
 
-func NewHandler(svc *core.Service, hub *core.Hub) (*Handler, error) {
+func NewHandler(svc *core.Orchestrator, hub *core.Hub) (*Handler, error) {
 	return &Handler{svc: svc, hub: hub}, nil
 }
 
@@ -38,7 +38,7 @@ func (h *Handler) Routes(secret string) http.Handler {
 }
 
 // GET /notifications
-func listHandler(svc *core.Service) http.HandlerFunc {
+func listHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -109,7 +109,7 @@ func listHandler(svc *core.Service) http.HandlerFunc {
 }
 
 // PATCH /notifications/{id}/read
-func markReadHandler(svc *core.Service) http.HandlerFunc {
+func markReadHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -133,7 +133,7 @@ func markReadHandler(svc *core.Service) http.HandlerFunc {
 }
 
 // GET /notifications/unread-count
-func unreadCountHandler(svc *core.Service) http.HandlerFunc {
+func unreadCountHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -151,7 +151,7 @@ func unreadCountHandler(svc *core.Service) http.HandlerFunc {
 }
 
 // PATCH /notifications/read-all
-func markReadAllHandler(svc *core.Service) http.HandlerFunc {
+func markReadAllHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -169,7 +169,7 @@ func markReadAllHandler(svc *core.Service) http.HandlerFunc {
 }
 
 // DELETE /notifications/{id}
-func dismissHandler(svc *core.Service) http.HandlerFunc {
+func dismissHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
