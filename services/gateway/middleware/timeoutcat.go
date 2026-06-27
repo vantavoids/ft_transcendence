@@ -34,7 +34,7 @@ func TimeoutCat(next http.Handler) http.Handler {
 
 		case CatUpload:
 			logs.Info(host, "Attributed timeout category Upload...")
-			r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5 MB
+			r.Body = http.MaxBytesReader(w, r.Body, 26<<20) // 26 MB
 			_ = rc.SetReadDeadline(time.Now().Add(60 * time.Second))
 			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
 

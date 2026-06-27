@@ -105,7 +105,7 @@ func pickTimeoutCat(r *http.Request, service string) TimeoutCategory {
 	if isWebSocketUpgrade(r) && wsCapable[service] {
 		return CatWebSocket // 3
 	}
-	if isAvatarUpload(r) {
+	if isUpload(r) {
 		return CatUpload // 2
 	}
 	return CatJSON // 1
@@ -118,19 +118,28 @@ func isWebSocketUpgrade(r *http.Request) bool {
 		strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade")
 }
 
-func isAvatarUpload(r *http.Request) bool {
+func isUpload(r *http.Request) bool {
 
 	if r.Method != http.MethodPost && r.Method != http.MethodPut {
 		return false
 	}
 
 	parts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
-	if len(parts) < 6 {
+	partsLen := len(parts)
+	if partsLen < 5 {
 		return false
 	}
 
 	service := parts[2]
+	if service == "chat" && parts[4] == "attachments" {
+		return true
+	}
+
 	if service != "user" && service != "guild" {
+		return false
+	}
+
+	if partsLen < 6 {
 		return false
 	}
 
