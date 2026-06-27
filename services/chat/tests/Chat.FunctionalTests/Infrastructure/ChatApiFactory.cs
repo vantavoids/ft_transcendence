@@ -38,6 +38,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	public FakeGuildClient GuildClient { get; } = new();
 	public FakeUserClient UserClient { get; } = new();
 	public FakeMessageRepository MessageRepository { get; } = new();
+	public FakeAttachmentRepository AttachmentRepository { get; } = new();
 	public FakeEventBus EventBus { get; } = new();
 	public FakeChannelBroadcaster Broadcaster { get; } = new();
 	public FakeClock Clock { get; } = new();
@@ -150,6 +151,13 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 				["BackendConfiguration:BaseUrl"] = "http://localhost",
 				["BackendConfiguration:BaseApiUrl"] = "http://localhost/api",
 
+				// MinioOptions validates on start even though IObjectStore is never
+				// exercised in these tests; supply dummy values to keep the bind happy
+				["Minio:Endpoint"] = "http://localhost:9000",
+				["Minio:AccessKey"] = "test",
+				["Minio:SecretKey"] = "test",
+				["Minio:Bucket"] = "chat-attachments",
+
 				["Services:GuildService"] = "http://localhost:5101",
 				["Services:UserService"] = "http://localhost:5101",
 			});
@@ -174,6 +182,11 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 
 			services.RemoveAll<IMessageRepository>();
 			services.AddSingleton<IMessageRepository>(MessageRepository);
+
+			// the real AttachmentRepository needs ISession (stripped above), so
+			// swap in the in-memory fake for the message handlers that depend on it
+			services.RemoveAll<IAttachmentRepository>();
+			services.AddSingleton<IAttachmentRepository>(AttachmentRepository);
 
 			services.RemoveAll<IChannelBroadcaster>();
 			services.AddSingleton<IChannelBroadcaster>(Broadcaster);

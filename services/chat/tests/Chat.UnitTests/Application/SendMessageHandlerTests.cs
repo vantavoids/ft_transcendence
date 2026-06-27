@@ -2,6 +2,7 @@ using Chat.Application.Abstractions;
 using Chat.Application.Contracts;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.SendMessage;
+using Chat.Domain.Attachments;
 using Chat.Domain.Results;
 using Chat.UnitTests.Fakes;
 using Xunit;
@@ -18,6 +19,7 @@ public sealed class SendMessageHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeGuildClient GuildClient,
 		FakeMessageRepository Repository,
+		FakeAttachmentRepository AttachmentRepository,
 		FakeIdGenerator IdGenerator,
 		FakeClock Clock,
 		FakeEventBus EventBus,
@@ -30,15 +32,16 @@ public sealed class SendMessageHandlerTests
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var guildClient = new FakeGuildClient();
 		var repository = new FakeMessageRepository();
+		var attachmentRepository = new FakeAttachmentRepository();
 		var ids = new FakeIdGenerator();
 		var clock = new FakeClock();
 		var eventBus = new FakeEventBus();
 		var broadcaster = new FakeChannelBroadcaster();
 
 		var handler = HandlerFactory.CreateCommand<SendMessageCommand, Result<MessageResponse>>(
-			currentUser, guildClient, repository, ids, clock, eventBus, broadcaster);
+			currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster);
 
-		return (new Harness(currentUser, guildClient, repository, ids, clock, eventBus, broadcaster), handler);
+		return (new Harness(currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster), handler);
 	}
 
 	[Fact]
@@ -47,7 +50,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = null;
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.ChannelNotFound, result.Error);
@@ -62,7 +65,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: false, GuildId: 5, Permissions: 0);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.NotAMember, result.Error);
@@ -75,7 +78,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: 0);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.MissingSendPermission, result.Error);
@@ -91,7 +94,7 @@ public sealed class SendMessageHandlerTests
 		// admin bit set, SEND_MESSAGES clear: should still go through
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: AdministratorPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.Succeeded);
 		Assert.Single(h.Repository.Saved);
@@ -105,7 +108,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: 7, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: 7, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.Succeeded);
 		var response = result.Value;
@@ -147,7 +150,7 @@ public sealed class SendMessageHandlerTests
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
 		var nonce = new string('x', 64);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: nonce));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: nonce));
 
 		Assert.True(result.Succeeded);
 		Assert.Equal(nonce, result.Value.Nonce);
@@ -159,7 +162,7 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, Nonce: new string('x', 65)));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: new string('x', 65)));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.NonceTooLong, result.Error);
@@ -175,14 +178,14 @@ public sealed class SendMessageHandlerTests
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
 
 		// first call — persists the message
-		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "my-nonce"));
+		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "my-nonce"));
 		Assert.True(first.Succeeded);
 
 		h.EventBus.Reset();
 		h.Broadcaster.Reset();
 
 		// second call with the same nonce — must return the original message
-		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "my-nonce"));
+		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "my-nonce"));
 
 		Assert.True(second.Succeeded);
 		Assert.Equal(first.Value.Id, second.Value.Id);
@@ -201,8 +204,8 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
 
-		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "nonce-a"));
-		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, Nonce: "nonce-b"));
+		var first = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "nonce-a"));
+		var second = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "nonce-b"));
 
 		Assert.True(first.Succeeded);
 		Assert.True(second.Succeeded);
@@ -218,12 +221,120 @@ public sealed class SendMessageHandlerTests
 		var (h, handler) = BuildHandler();
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
 
-		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "   ", ReplyToId: null, Nonce: null));
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "   ", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(MessageFailures.ContentRequired, result.Error);
 		Assert.Empty(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	private static DraftAttachment SeedDraft(FakeAttachmentRepository repo, long id, long uploaderId)
+	{
+		var draft = DraftAttachment.Create(
+			id: id, uploaderId: uploaderId,
+			url: $"http://localhost/api/chat/v1/attachments/{id}/pic.png",
+			filename: "pic.png", sizeBytes: 1024, mimeType: "image/png",
+			now: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero)).Value;
+		repo.SeedDraft(draft);
+		return draft;
+	}
+
+	[Fact]
+	public async Task ValidDraft_AttachesToMessage_HydratesResponse_AndPersists()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		var draft = SeedDraft(h.AttachmentRepository, id: 555, uploaderId: 42);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: "look", ReplyToId: null, AttachmentIds: [draft.Id], Nonce: null));
+
+		Assert.True(result.Succeeded);
+		var attachment = Assert.Single(result.Value.Attachments);
+		Assert.Equal("555", attachment.Id);
+		Assert.Equal("pic.png", attachment.Filename);
+
+		// the message persisted with its attachment metadata attached
+		var saved = Assert.Single(h.Repository.Saved);
+		var persisted = Assert.Single(h.Repository.SavedAttachments[saved.Id]);
+		Assert.Equal(555L, persisted.Id);
+	}
+
+	[Fact]
+	public async Task AttachmentWithoutContent_Succeeds()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		var draft = SeedDraft(h.AttachmentRepository, id: 777, uploaderId: 42);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: null, ReplyToId: null, AttachmentIds: [draft.Id], Nonce: null));
+
+		Assert.True(result.Succeeded);
+		Assert.Single(result.Value.Attachments);
+	}
+
+	[Fact]
+	public async Task TooManyAttachments_ReturnsTooMany_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		long[] ids = [.. Enumerable.Range(1, 11).Select(i => (long)i)];
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: ids, Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(AttachmentFailures.TooMany, result.Error);
+		Assert.Empty(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	[Fact]
+	public async Task UnknownDraft_ReturnsInvalidReference_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [999], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(AttachmentFailures.InvalidReference, result.Error);
+		Assert.Empty(h.Repository.Saved);
+	}
+
+	[Fact]
+	public async Task DraftOwnedByAnotherUser_ReturnsInvalidReference()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		var draft = SeedDraft(h.AttachmentRepository, id: 555, uploaderId: 7); // not 42
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [draft.Id], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(AttachmentFailures.InvalidReference, result.Error);
+		Assert.Empty(h.Repository.Saved);
+	}
+
+	[Fact]
+	public async Task AlreadyAttachedDraft_ReturnsInvalidReference()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		var draft = SeedDraft(h.AttachmentRepository, id: 555, uploaderId: 42);
+		h.AttachmentRepository.MarkAttached(draft.Id);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(
+			ChannelId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [draft.Id], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(AttachmentFailures.InvalidReference, result.Error);
+		Assert.Empty(h.Repository.Saved);
 	}
 }
