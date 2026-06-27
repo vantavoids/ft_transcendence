@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
+	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 )
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
-func Dispatch(ctx context.Context, svc *core.Service, d amqp.Delivery) error {
+func Dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) error {
 	switch d.RoutingKey {
 
 	case "chat.message_sent":

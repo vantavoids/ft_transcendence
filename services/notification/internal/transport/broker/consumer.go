@@ -131,7 +131,7 @@ func NewConsumer() (*Consumer, error) {
 }
 
 // TODO: graceful shutdown with consumer.done
-func (c *Consumer) Run(svc *core.Service) {
+func (c *Consumer) Run(svc *core.Orchestrator) {
 	defer func() {
 		fmt.Printf("Run: deliveries channel closed\n")
 		c.done <- nil
@@ -146,7 +146,7 @@ func (c *Consumer) Run(svc *core.Service) {
 
 // TODO: backoff / dead-letter avec TTL.
 // TODO: context background doesnt allow graceful shutdown, try to plug it to a parent ctx
-func handle(svc *core.Service, d amqp.Delivery) {
+func handle(svc *core.Orchestrator, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
