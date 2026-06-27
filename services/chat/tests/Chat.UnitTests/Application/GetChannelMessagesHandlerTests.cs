@@ -18,6 +18,7 @@ public sealed class GetChannelMessagesHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeGuildClient GuildClient,
 		FakeMessageRepository Repository,
+		FakeAttachmentRepository AttachmentRepository,
 		FakeClock Clock);
 
 	private static (Harness Harness, IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>> Handler)
@@ -26,12 +27,13 @@ public sealed class GetChannelMessagesHandlerTests
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var guildClient = new FakeGuildClient();
 		var repository = new FakeMessageRepository();
+		var attachmentRepository = new FakeAttachmentRepository();
 		var clock = new FakeClock();
 
 		var handler = HandlerFactory.CreateQuery<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>>(
-			currentUser, guildClient, repository, clock);
+			currentUser, guildClient, repository, attachmentRepository, clock);
 
-		return (new Harness(currentUser, guildClient, repository, clock), handler);
+		return (new Harness(currentUser, guildClient, repository, attachmentRepository, clock), handler);
 	}
 
 	private static Message SeedMessage(FakeMessageRepository repo, long id, long channelId, DateTimeOffset createdAt, bool isDeleted = false)
