@@ -2,6 +2,7 @@ using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.GetChannelMessages;
+using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 using Chat.Domain.Results;
 using Chat.UnitTests.Fakes;
@@ -114,6 +115,33 @@ public sealed class GetChannelMessagesHandlerTests
 
 		Assert.True(result.Succeeded);
 		Assert.Single(result.Value);
+	}
+
+	[Fact]
+	public async Task HydratesAttachments_PerMessage_InOneBatch()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+
+		var anchor = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+		SeedMessage(h.Repository, id: 1, channelId: 100, createdAt: anchor.AddMinutes(-10));
+		SeedMessage(h.Repository, id: 2, channelId: 100, createdAt: anchor.AddMinutes(-5));
+
+		// only message 2 carries an attachment
+		h.AttachmentRepository.SeedChannelAttachment(channelId: 100, messageId: 2,
+			new AttachmentMetadata(555, "http://localhost/api/chat/v1/attachments/555/pic.png", "pic.png", 1024, "image/png"));
+
+		var result = await handler.HandleAsync(new GetChannelMessagesQuery(ChannelId: 100, BeforeTime: anchor, Limit: 50));
+
+		Assert.True(result.Succeeded);
+		var withAttachment = Assert.Single(result.Value, m => m.Id == "2");
+		var attachment = Assert.Single(withAttachment.Attachments);
+		Assert.Equal("555", attachment.Id);
+		Assert.Equal("pic.png", attachment.Filename);
+
+		// the other message hydrates to an empty list, not null
+		var withoutAttachment = Assert.Single(result.Value, m => m.Id == "1");
+		Assert.Empty(withoutAttachment.Attachments);
 	}
 
 	[Fact]

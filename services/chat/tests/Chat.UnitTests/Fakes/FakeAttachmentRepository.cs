@@ -74,4 +74,15 @@ public sealed class FakeAttachmentRepository : IAttachmentRepository
 			_byMessage.GetValueOrDefault((channelId, messageId)) ?? [];
 		return Task.FromResult(result);
 	}
+
+	public Task<ILookup<long, AttachmentMetadata>> GetChannelMessagesAttachmentsAsync(
+		long channelId, IReadOnlyList<long> messageIds, CancellationToken ct)
+	{
+		var wanted = messageIds.ToHashSet();
+		var lookup = _byMessage
+			.Where(e => e.Key.ChannelId == channelId && wanted.Contains(e.Key.MessageId))
+			.SelectMany(e => e.Value.Select(m => (e.Key.MessageId, Metadata: m)))
+			.ToLookup(x => x.MessageId, x => x.Metadata);
+		return Task.FromResult(lookup);
+	}
 }
