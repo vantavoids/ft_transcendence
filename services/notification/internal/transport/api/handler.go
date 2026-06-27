@@ -13,10 +13,10 @@ import (
 )
 
 type Handler struct {
-	svc *core.Service
+	svc *core.Orchestrator
 }
 
-func NewHandler(svc *core.Service) (*Handler, error) {
+func NewHandler(svc *core.Orchestrator) (*Handler, error) {
 	return &Handler{svc: svc}, nil
 }
 
