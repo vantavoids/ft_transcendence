@@ -37,14 +37,16 @@ internal sealed class GetChannelMessagesHandler(
 		var beforeTime = query.BeforeTime ?? clock.UtcNow;
 		var messages = await repository.GetChannelMessagesAsync(query.ChannelId, beforeTime, query.Limit, cancellationToken);
 
-		// hydrate each message's attachments; message_attachments is partitioned by
-		// (channel_id, message_id) so this is one point read per message in the page
-		var hydrated = await Task.WhenAll(messages.Select(async m =>
-		{
-			var attachments = await attachmentRepository
-				.GetChannelMessageAttachmentsAsync(m.ChannelId, m.Id, cancellationToken);
-			return MessageResponse.From(m, null, attachments);
-		}));
+		// hydrate the whole page's attachments in a single multi-message read rather
+		// than one point read per message; the lookup yields an empty sequence for
+		// any message that has none
+		var messageIds = messages.Select(m => m.Id).ToList();
+		var attachmentsByMessage = await attachmentRepository
+			.GetChannelMessagesAttachmentsAsync(query.ChannelId, messageIds, cancellationToken);
+
+		var hydrated = messages
+			.Select(m => MessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]]))
+			.ToList();
 
 		return Result.Ok<IReadOnlyList<MessageResponse>>(hydrated);
 	}

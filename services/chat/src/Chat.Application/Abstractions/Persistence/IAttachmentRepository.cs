@@ -17,6 +17,13 @@ public interface IAttachmentRepository
 	Task<AttachmentMetadata?> GetChannelAttachmentAsync(long channelId, long messageId, long id, CancellationToken ct);
 
 	Task<IReadOnlyList<AttachmentMetadata>> GetChannelMessageAttachmentsAsync(long channelId, long messageId, CancellationToken ct);
+
+	/// <summary>
+	/// hydrates attachments for a whole page of messages in one query, keyed by
+	/// message id (messages with no attachments are simply absent from the lookup)
+	/// </summary>
+	Task<ILookup<long, AttachmentMetadata>> GetChannelMessagesAttachmentsAsync(
+		long channelId, IReadOnlyList<long> messageIds, CancellationToken ct);
 }
 
 /// <summary>

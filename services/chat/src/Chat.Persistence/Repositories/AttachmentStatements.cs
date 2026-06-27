@@ -26,4 +26,11 @@ internal sealed class AttachmentStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectChannelMessageAttachments { get; } = new(() => session.PrepareAsync(
 		"SELECT id, url, filename, size_bytes, mime_type " +
 		"FROM message_attachments WHERE channel_id = ? AND message_id = ?"));
+
+	// IN on message_id (the trailing partition-key column) collapses a page's worth
+	// of per-message reads into one query; channel_id pins the leading component.
+	// the page limit bounds the IN list, so coordinator fan-out stays small
+	public Lazy<Task<PreparedStatement>> SelectChannelMessagesAttachments { get; } = new(() => session.PrepareAsync(
+		"SELECT message_id, id, url, filename, size_bytes, mime_type " +
+		"FROM message_attachments WHERE channel_id = ? AND message_id IN ?"));
 }
