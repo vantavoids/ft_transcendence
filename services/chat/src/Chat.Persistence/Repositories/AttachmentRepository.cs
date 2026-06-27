@@ -71,6 +71,18 @@ internal sealed class AttachmentRepository(ISession session, AttachmentStatement
 		return rows.Select(MapMetadata).ToList();
 	}
 
+	public async Task<ILookup<long, AttachmentMetadata>> GetChannelMessagesAttachmentsAsync(
+		long channelId, IReadOnlyList<long> messageIds, CancellationToken ct)
+	{
+		if (messageIds.Count == 0)
+			return Enumerable.Empty<AttachmentMetadata>().ToLookup(_ => 0L);
+
+		var stmt = await statements.SelectChannelMessagesAttachments.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(channelId, messageIds.ToArray()));
+
+		return rows.ToLookup(row => row.GetValue<long>("message_id"), MapMetadata);
+	}
+
 	private static AttachmentMetadata MapMetadata(Row row) => new(
 		Id: row.GetValue<long>("id"),
 		Url: row.GetValue<string>("url"),
