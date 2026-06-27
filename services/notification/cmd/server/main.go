@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -61,7 +60,7 @@ func main() {
 		log.Fatalf("Unable to create an user client: %s", err)
 	}
 
-	svc, err := core.NewOrchestrator(queries, sflkGen, fakeUserTunnel)
+	svc, err := core.NewOrchestrator(hub, queries, sflkGen, fakeUserTunnel)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
