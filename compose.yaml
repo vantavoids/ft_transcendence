@@ -40,6 +40,25 @@ services:
       timeout: 5s
       retries: 5
 
+  coturn:
+    container_name: coturn
+    image: docker.io/coturn/coturn:alpine
+    # the image runs as 'nobody', which cannot read the 0600 TLS private key in
+    # ./certs; run as root to read it (same effective access as nginx's root
+    # master process). without this the 5349 TLS/DTLS listener fails to start.
+    user: "0:0"
+    # host networking so the UDP relay port range and 3478/5349 are reachable
+    # without publishing a large port span (same approach as nginx)
+    network_mode: host
+    command: >
+      -c /etc/coturn/turnserver.conf
+      --realm=${TURN_REALM}
+      --user=${TURN_USERNAME}:${TURN_PASSWORD}
+    volumes:
+      - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro,z
+      - ./certs:/etc/coturn/certs:ro,z
+    restart: unless-stopped
+
   minio:
     container_name: minio
     image: docker.io/minio/minio
