@@ -34,7 +34,7 @@ internal sealed class TokenGenerator(
             issuer: _jwtOptions.Issuer,
             audience: _jwtOptions.Audience,
             claims: claims,
-            expires: clock.UtcNow.AddMinutes(_jwtOptions.AccessTokenTtlMinutes).DateTime,
+            expires: clock.UtcNow.AddMinutes(_jwtOptions.AccessTokenTtlMinutes).UtcDateTime,
             signingCredentials: credentials
         );
 
