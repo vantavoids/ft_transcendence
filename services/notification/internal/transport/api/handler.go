@@ -23,11 +23,13 @@ func NewHandler(svc *core.Service) (*Handler, error) {
 func (h *Handler) Routes(secret string) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET		/v1/notifications", h.ListHandler)
-	mux.HandleFunc("PATCH	/v1/notifications/{id}/read", h.MarkReadHandler)
-	mux.HandleFunc("GET		/v1/notifications/unread-count", h.UnreadCountHandler)
-	mux.HandleFunc("PATCH	/v1/notifications/read-all", h.MarkReadAllHandler)
-	mux.HandleFunc("DELETE	/v1/notifications/{id}", h.DismissHandler)
+	mux.HandleFunc("GET /v1/notifications", h.ListHandler)
+	mux.HandleFunc("PATCH /v1/notifications/{id}/read", h.MarkReadHandler)
+	mux.HandleFunc("GET /v1/notifications/unread-count", h.UnreadCountHandler)
+	mux.HandleFunc("PATCH /v1/notifications/read-all", h.MarkReadAllHandler)
+	mux.HandleFunc("DELETE /v1/notifications/{id}", h.DismissHandler)
+
+	mux.HandleFunc("GET /healthz", h.healthzHandler)
 
 	return LoggingMiddleware()(JwtMiddleware(secret)(mux))
 }
