@@ -30,6 +30,22 @@ public sealed class FakeAttachmentRepository : IAttachmentRepository
 	/// <summary>mark an attachment as already bound to a message</summary>
 	public void MarkAttached(long id) => _attached.Add(id);
 
+	/// <summary>
+	/// seed an attachment already bound to a channel message, so the download path's
+	/// lookup + per-message read both resolve (mirrors the real attachment_lookup +
+	/// message_attachments rows written when a draft is sent)
+	/// </summary>
+	public void SeedChannelAttachment(long channelId, long messageId, AttachmentMetadata metadata)
+	{
+		_attached.Add(metadata.Id);
+		_locations[metadata.Id] = new AttachmentLocation(
+			IsDm: false, ChannelId: channelId, ConversationId: null, MessageId: messageId);
+
+		if (!_byMessage.TryGetValue((channelId, messageId), out var list))
+			_byMessage[(channelId, messageId)] = list = [];
+		list.Add(metadata);
+	}
+
 	public Task AddDraftAsync(DraftAttachment draft, CancellationToken ct)
 	{
 		_drafts[draft.Id] = draft;
