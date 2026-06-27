@@ -84,6 +84,7 @@ func main() {
 
 	// ─── Server HTTP ───
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthz)
 	srv := &http.Server{
 		Addr:              ":" + os.Getenv("APP_PORT"),
 		Handler:           mux,
