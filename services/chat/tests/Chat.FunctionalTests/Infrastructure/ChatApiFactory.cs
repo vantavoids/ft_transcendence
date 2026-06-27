@@ -159,6 +159,10 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 				["Minio:SecretKey"] = "test",
 				["Minio:Bucket"] = "chat-attachments",
 
+				// the background reaper would otherwise wake up and sweep the fake
+				// object store mid-test; keep it dormant for deterministic runs
+				["AttachmentReaper:Enabled"] = "false",
+
 				["Services:GuildService"] = "http://localhost:5101",
 				["Services:UserService"] = "http://localhost:5101",
 			});
