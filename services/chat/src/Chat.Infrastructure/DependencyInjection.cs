@@ -45,6 +45,11 @@ public static class DependencyInjection
 			.ValidateDataAnnotations()
 			.ValidateOnStart();
 
+		services.AddOptions<AttachmentReaperOptions>()
+			.BindConfiguration("AttachmentReaper")
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+
 		services.AddMassTransit(x =>
 		{
 			x.AddConsumer<GuildMemberJoinedConsumer>();
@@ -102,6 +107,7 @@ public static class DependencyInjection
 		});
 		services.AddSingleton<IObjectStore, MinioObjectStore>();
 		services.AddSingleton<IAttachmentUrlFactory, AttachmentUrlFactory>();
+		services.AddHostedService<AttachmentReaper>();
 
 		RegisterAndConfHttpClient<IGuildClient, GuildClient>(services, opts => opts.GuildService);
 		RegisterAndConfHttpClient<IUserClient, UserClient>(services, opts => opts.UserService);
