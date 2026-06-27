@@ -1,4 +1,4 @@
-package notification
+package core
 
 import (
 	"encoding/json"
