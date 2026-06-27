@@ -36,7 +36,7 @@ func (h *Handler) Routes(secret string) http.Handler {
 
 	mux.HandleFunc("GET /heatlz", healthzHandler)
 
-	return JwtMiddleware(secret)(mux)
+	return LoggingMiddleware()(JwtMiddleware(secret)(mux))
 }
 
 // GET /notifications
