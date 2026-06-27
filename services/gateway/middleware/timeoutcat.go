@@ -38,12 +38,6 @@ func TimeoutCat(next http.Handler) http.Handler {
 			_ = rc.SetReadDeadline(time.Now().Add(60 * time.Second))
 			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
 
-		case CatAttachment:
-			logs.Info(host, "Attributed timeout category Attachment...")
-			r.Body = http.MaxBytesReader(w, r.Body, 26<<20) // 26 MB (25 MB file + multipart overhead)
-			_ = rc.SetReadDeadline(time.Now().Add(60 * time.Second))
-			_ = rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
-
 		default:
 			logs.Info(host, "Attributed timeout category JSON...")
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB
