@@ -14,10 +14,9 @@ type timeoutCatKey struct{}
 type TimeoutCategory uint8
 
 const (
-	CatJSON       TimeoutCategory = 1
-	CatUpload     TimeoutCategory = 2
-	CatWebSocket  TimeoutCategory = 3
-	CatAttachment TimeoutCategory = 4
+	CatJSON      TimeoutCategory = 1
+	CatUpload    TimeoutCategory = 2
+	CatWebSocket TimeoutCategory = 3
 )
 
 var validServices = map[string]bool{
@@ -106,29 +105,10 @@ func pickTimeoutCat(r *http.Request, service string) TimeoutCategory {
 	if isWebSocketUpgrade(r) && wsCapable[service] {
 		return CatWebSocket // 3
 	}
-	if isAttachmentUpload(r) {
-		return CatAttachment // 4
-	}
 	if isAvatarUpload(r) {
 		return CatUpload // 2
 	}
 	return CatJSON // 1
-}
-
-// chat file attachments: POST /api/chat/v1/attachments. Capped at 25 MB per file
-// by the Chat Service, so this only needs a larger body budget than plain JSON.
-func isAttachmentUpload(r *http.Request) bool {
-
-	if r.Method != http.MethodPost {
-		return false
-	}
-
-	parts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
-	if len(parts) != 5 {
-		return false
-	}
-
-	return parts[2] == "chat" && parts[4] == "attachments"
 }
 
 func isWebSocketUpgrade(r *http.Request) bool {
