@@ -12,9 +12,9 @@ import (
 	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
+	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/tunnel"
 	api "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/api"
 	broker "github.com/vantavoids/ft_transcendence/services/notification/internal/transport/broker"
-	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/tunnel"
 )
 
 type healthCheck struct {
