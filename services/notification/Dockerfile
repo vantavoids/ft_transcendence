@@ -15,7 +15,7 @@ COPY . .
 
 # Disable Go functionality using external C libraries
 # Then tell the compiler to target linux env even if on MacOS or Windows
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/notification .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/notification ./cmd/server
 
 FROM alpine:3.23.3
 RUN apk add --no-cache curl
