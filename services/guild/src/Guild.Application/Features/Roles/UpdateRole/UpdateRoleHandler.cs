@@ -53,7 +53,6 @@ internal sealed class UpdateRoleHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		return RoleResponse.From(updateResult.Value);

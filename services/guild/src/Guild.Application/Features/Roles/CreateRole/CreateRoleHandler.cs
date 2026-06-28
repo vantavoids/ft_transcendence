@@ -41,7 +41,6 @@ internal sealed class CreateRoleHandler(
 		if (addResult.IsFailure)
 			return addResult.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		return RoleResponse.From(addResult.Value);

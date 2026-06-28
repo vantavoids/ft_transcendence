@@ -70,7 +70,6 @@ public sealed class LeaveGuildHandlerTests
 
 		Assert.True(result.Succeeded);
 		Assert.DoesNotContain(guild.Members, m => m.UserId == 99);
-		Assert.Equal(1, repo.UpdateCount);
 		Assert.Equal(1, repo.SaveChangesCount);
 
 		var evt = bus.Single<GuildMemberLeft>();

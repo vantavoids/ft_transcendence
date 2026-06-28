@@ -68,7 +68,6 @@ internal sealed class JoinByInviteCodeHandler(
 		await users.ExistsAsync(currentUser.Id, cancellationToken);
 
 		invites.Update(invite);
-		guilds.Update(guild);
 
 		// publish BEFORE SaveChanges so the bus outbox binds the GuildMemberJoined
 		// event to the same transaction as the invite consume + member add
