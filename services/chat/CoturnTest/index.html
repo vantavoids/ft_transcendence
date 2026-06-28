@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>coturn relay test (#210)</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #1a1a1a; }
+  h1 { font-size: 1.2rem; }
+  .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .card { border: 1px solid #ccc; border-radius: 8px; padding: .6rem; }
+  video { width: 320px; height: 240px; background: #000; border-radius: 6px; }
+  button { padding: .5rem .9rem; margin: .2rem; border-radius: 6px; border: 1px solid #888;
+           background: #f4f4f4; cursor: pointer; }
+  button:hover { background: #e8e8e8; }
+  input { padding: .35rem; }
+  #verdict { font-weight: 700; font-size: 1.1rem; padding: .5rem; border-radius: 6px; }
+  .ok { background: #d8f5d8; } .bad { background: #f7d8d8; } .wait { background: #f5f0d8; }
+  pre { background: #f6f6f6; padding: .6rem; border-radius: 6px; white-space: pre-wrap;
+        max-height: 220px; overflow: auto; font-size: 12px; }
+  .muted { color: #666; font-size: .9rem; }
+</style>
+</head>
+<body>
+<h1>coturn relay test</h1>
+<p class="muted">
+  <code>iceTransportPolicy: 'relay'</code> so the only way media can flow is through coturn.
+  Open dev console for details.
+</p>
+
+<div class="card">
+  <label><input type="checkbox" id="realmedia"> use real camera + microphone
+    (needs HTTPS)</label>
+  <div class="muted" id="mediahint"></div>
+</div>
+
+<div class="card">
+  <b>Mode</b><br>
+  <button onclick="loopback()">① Loopback - both peers in THIS tab (single machine)</button>
+  <br>
+  <span>② Two machines on the LAN:</span>
+  <input id="room" value="test" size="10">
+  <button onclick="join('A')">Start as A (caller)</button>
+  <button onclick="join('B')">Join as B (callee)</button>
+  <div class="muted">For the two-machine test: open this same page on each computer,
+    pick the SAME room, click <b>A</b> on one and <b>B</b> on the other.</div>
+</div>
+
+<p><span id="verdict" class="wait">idle</span></p>
+
+<div class="row">
+  <div class="card"><div>local (sent)</div><video id="lv" autoplay muted playsinline></video></div>
+  <div class="card"><div>remote (received via relay)</div><video id="rv" autoplay playsinline></video></div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <div><b>selected candidate pair / stats</b></div>
+  <pre id="stats">...</pre>
+</div>
+<div class="card" style="margin-top:1rem">
+  <div><b>log</b></div>
+  <pre id="log"></pre>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const log = (...a) => { console.log(...a); $('log').textContent += a.join(' ') + '\n'; };
+const verdict = (txt, cls) => { const v=$('verdict'); v.textContent=txt; v.className=cls; };
+
+let TURN = null;
+async function turnConfig() {
+  if (TURN) return TURN;
+  const c = await (await fetch('/config.json')).json();
+  const host = location.hostname || 'localhost';
+  // 0.0.0.0 / :: / empty are bind-any addresses, NOT connectable destinations.
+  // turn:0.0.0.0 silently fails to allocate (ICE error 701), so refuse early
+  // with a clear pointer instead of "gathered ZERO relay candidates".
+  if (['0.0.0.0', '', '[::]', '::', '0'].includes(host)) {
+    verdict('✗ open this page by the host LAN IP (e.g. http://192.168.1.52:8088), not ' + location.host, 'bad');
+    throw new Error('unusable TURN host "' + host + '": 0.0.0.0/empty is a bind address, not connectable');
+  }
+  TURN = {
+    iceServers: [{
+      urls: [
+        `turn:${host}:3478?transport=udp`,   // preferred
+        `turn:${host}:3478?transport=tcp`,   // fallback if UDP is firewalled
+      ],
+      username: c.username, credential: c.credential,
+    }],
+    iceTransportPolicy: 'relay',          // <-- the whole point: relay-only
+  };
+  log('TURN turn:' + host + ':3478 (udp+tcp)  user=' + c.username);
+  return TURN;
+}
+
+// ---- synthetic media: animated canvas (video) + oscillator (audio) ----
+function syntheticStream(label) {
+  const cv = document.createElement('canvas');
+  cv.width = 320; cv.height = 240;
+  const ctx = cv.getContext('2d');
+  let t = 0;
+  setInterval(() => {
+    t += 0.05;
+    ctx.fillStyle = '#0b3'; ctx.fillRect(0, 0, 320, 240);
+    ctx.fillStyle = '#fff';
+    const x = 140 + 110 * Math.sin(t), y = 100 + 70 * Math.cos(t * 1.3);
+    ctx.fillRect(x, y, 40, 40);
+    ctx.font = '20px sans-serif';
+    ctx.fillText(label + ' ' + new Date().toLocaleTimeString(), 10, 30);
+  }, 66);
+  const vstream = cv.captureStream(15);
+
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ac.createOscillator(); osc.frequency.value = 440;
+  const dst = ac.createMediaStreamDestination();
+  osc.connect(dst); osc.start();
+
+  const stream = new MediaStream();
+  vstream.getVideoTracks().forEach(tr => stream.addTrack(tr));
+  dst.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+	return stream;
+}
+
+// real camera+mic if the box is checked AND the browser allows it (secure
+// context: https or localhost). otherwise fall back to synthetic media.
+async function getLocalStream(label) {
+	if ($('realmedia').checked) {
+		if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+			verdict('⚠ camera/mic blocked — this origin is not a secure context (need HTTPS)', 'bad');
+			throw new Error('getUserMedia unavailable (insecure context)');
+		}
+		log('requesting real camera + microphone…');
+		return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+	}
+	return syntheticStream(label);
+}
+
+// show whether real devices are even possible on this origin
+window.addEventListener('load', () => {
+	const ok = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext;
+	$('mediahint').textContent = ok
+		? 'this origin is a secure context, real camera/mic available.'
+		: 'this origin is NOT secure (plain http), real camera/mic is blocked by the browser; '
+			+ 'load over https://<host>:8443 to enable it. Synthetic media works either way.';
+	if (!ok) $('realmedia').disabled = true;
+});
+
+function newPC(cfg) {
+	const pc = new RTCPeerConnection(cfg);
+	pc._relayCands = 0;
+	pc.oniceconnectionstatechange = () => {
+		log('ice:', pc.iceConnectionState);
+		if (pc.iceConnectionState === 'failed')
+			verdict('✗ ICE failed - no working candidate pair (see log)', 'bad');
+	};
+	// surfaces the actual STUN/TURN failure (401 unauthorized, 701 alloc error,
+	// 300 try-alternate, etc.) instead of silently gathering nothing.
+	pc.onicecandidateerror = e => {
+		// host-candidate "errors" on .local mDNS are benign noise; only flag TURN/STUN.
+		if (e.errorCode === 701 || (e.url && e.url.startsWith('turn')))
+			log('ICE CAND ERROR', e.errorCode, e.errorText || '', e.url || '');
+	};
+	pc.onicegatheringstatechange = () => {
+		if (pc.iceGatheringState === 'complete' && pc._relayCands === 0)
+			verdict('✗ gathered ZERO relay candidates - TURN allocation failed (check ICE CAND ERROR in log)', 'bad');
+	};
+	return pc;
+}
+
+// poll getStats and render the selected pair; declare success on relay + bytes
+function watchStats(pc) {
+	setInterval(async () => {
+		const stats = await pc.getStats();
+		let pair = null, local = {}, remote = {};
+		stats.forEach(r => {
+			if (r.type === 'candidate-pair' && (r.selected || r.nominated) && r.state === 'succeeded') pair = r;
+		});
+		if (!pair) stats.forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded') pair = pair || r; });
+		if (pair) {
+			stats.forEach(r => { if (r.id === pair.localCandidateId) local = r; if (r.id === pair.remoteCandidateId) remote = r; });
+			const lines = [
+				`state:        ${pair.state}`,
+				`local  type:  ${local.candidateType}  (${local.address || local.ip || '?'}:${local.port || '?'})`,
+				`remote type:  ${remote.candidateType}  (${remote.address || remote.ip || '?'}:${remote.port || '?'})`,
+				`bytes sent:   ${pair.bytesSent}`,
+				`bytes recv:   ${pair.bytesReceived}`,
+				`rtt:          ${pair.currentRoundTripTime ?? '?'} s`,
+			];
+			$('stats').textContent = lines.join('\n');
+			const relayed = local.candidateType === 'relay' || remote.candidateType === 'relay';
+			if (relayed && pair.bytesReceived > 0)
+				verdict('streaming through the TURN relay', 'ok');
+				else if (relayed)
+					verdict('… relay pair selected, waiting for bytes', 'wait');
+		}
+	}, 1000);
+}
+
+// ---------- mode ①: loopback (two PCs, same tab) ----------
+async function loopback() {
+	const cfg = await turnConfig();
+	verdict('… connecting (loopback, relay-only)', 'wait');
+	const a = newPC(cfg), b = newPC(cfg);
+	const relayCount = pc => c => { if (c.candidate.includes(' typ relay')) pc._relayCands++; };
+	a.onicecandidate = e => { if (e.candidate) { relayCount(a)(e.candidate); b.addIceCandidate(e.candidate); } };
+	b.onicecandidate = e => { if (e.candidate) { relayCount(b)(e.candidate); a.addIceCandidate(e.candidate); } };
+	b.ontrack = e => { $('rv').srcObject = e.streams[0]; };
+
+	const local = await getLocalStream('A');
+	$('lv').srcObject = local;
+	local.getTracks().forEach(tr => a.addTrack(tr, local));
+
+	const off = await a.createOffer();
+	await a.setLocalDescription(off); await b.setRemoteDescription(off);
+	const ans = await b.createAnswer();
+	await b.setLocalDescription(ans); await a.setRemoteDescription(ans);
+	log('loopback negotiated');
+	watchStats(a);
+}
+
+// ---------- mode ②: two machines via the signaling mailbox ----------
+async function join(role) {
+	const cfg = await turnConfig();
+	const room = encodeURIComponent($('room').value || 'test');
+	const me = role, other = role === 'A' ? 'B' : 'A';
+	verdict(`… connecting as ${me} (relay-only)`, 'wait');
+	const pc = newPC(cfg);
+	const local = await getLocalStream(me);
+	$('lv').srcObject = local;
+	local.getTracks().forEach(tr => pc.addTrack(tr, local));
+	pc.ontrack = e => { $('rv').srcObject = e.streams[0]; };
+
+	const post = (msg) => fetch(`/signal/${room}`, {
+		method: 'POST', headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ from: me, msg })
+	});
+	pc.onicecandidate = e => {
+		if (!e.candidate) return;
+		if (e.candidate.candidate.includes(' typ relay')) { pc._relayCands++; log('got relay candidate'); }
+		post({ kind: 'ice', candidate: e.candidate });
+	};
+
+	let haveRemote = false;
+	const pending = [];
+	async function applyRemote(desc) {
+		await pc.setRemoteDescription(desc); haveRemote = true;
+		for (const c of pending.splice(0)) { try { await pc.addIceCandidate(c); } catch (e) { log('ice add err', e); } }
+	}
+
+	if (role === 'A') {
+		// A is the caller: wipe stale signaling from prior runs so we don't
+		// replay an old answer/offer and end up applying it in the wrong state.
+		await fetch('/reset', { method: 'POST' });
+		const off = await pc.createOffer();
+		await pc.setLocalDescription(off);
+		await post({ kind: 'offer', sdp: off });
+		log('A: offer posted, waiting for B...');
+	} else {
+		log('B: waiting for A offer...');
+	}
+
+	let since = 0;
+	setInterval(async () => {
+		const r = await (await fetch(`/signal/${room}?since=${since}&me=${me}`)).json();
+		const mx = r.maxId || 0;
+		if (mx < since) { since = 0; return; }   // room was reset; replay from the start next tick
+		since = Math.max(since, mx);
+		for (const m of r.messages) {
+			const msg = m.msg;
+			if (!msg) continue;
+			if (msg.kind === 'offer' && role === 'B') {
+				if (pc.signalingState !== 'stable') { log('B: ignoring extra offer'); continue; }
+				await applyRemote(msg.sdp);
+				const ans = await pc.createAnswer();
+				await pc.setLocalDescription(ans);
+				await post({ kind: 'answer', sdp: ans });
+				log('B: answer posted');
+			} else if (msg.kind === 'answer' && role === 'A') {
+				if (pc.signalingState !== 'have-local-offer') { log('A: ignoring stale/dup answer'); continue; }
+				await applyRemote(msg.sdp);
+				log('A: answer applied');
+			} else if (msg.kind === 'ice') {
+				if (haveRemote) { try { await pc.addIceCandidate(msg.candidate); } catch (e) { log('ice add err', e); } }
+				else pending.push(msg.candidate);
+			}
+		}
+	}, 600);
+
+	watchStats(pc);
+}
+		</script>
+	</body>
+</html>
