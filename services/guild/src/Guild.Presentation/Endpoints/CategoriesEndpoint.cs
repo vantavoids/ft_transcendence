@@ -15,9 +15,9 @@ public sealed class CategoriesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/categories");
-		group.MapPost("/", CreateAsync);
-		group.MapPatch("/{categoryId:long}", UpdateAsync);
-		group.MapDelete("/{categoryId:long}", DeleteAsync);
+		group.MapPost("/", CreateAsync).ProducesGuildErrors();
+		group.MapPatch("/{categoryId:long}", UpdateAsync).ProducesGuildErrors();
+		group.MapDelete("/{categoryId:long}", DeleteAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Created<CategoryResponse>, JsonHttpResult<ErrorBody>>>

@@ -17,11 +17,11 @@ public sealed class RolesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/roles");
-		group.MapGet("/", ListAsync);
-		group.MapPost("/", CreateAsync);
-		group.MapPatch("/", ReorderAsync);
-		group.MapPatch("/{roleId:long}", UpdateAsync);
-		group.MapDelete("/{roleId:long}", DeleteAsync);
+		group.MapGet("/", ListAsync).ProducesGuildErrors();
+		group.MapPost("/", CreateAsync).ProducesGuildErrors();
+		group.MapPatch("/", ReorderAsync).ProducesGuildErrors();
+		group.MapPatch("/{roleId:long}", UpdateAsync).ProducesGuildErrors();
+		group.MapDelete("/{roleId:long}", DeleteAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Ok<IReadOnlyList<RoleResponse>>, JsonHttpResult<ErrorBody>>>

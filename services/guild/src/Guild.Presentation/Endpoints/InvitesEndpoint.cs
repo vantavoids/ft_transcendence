@@ -20,8 +20,8 @@ public sealed class InvitesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/invites/{code}");
-		group.MapGet("/", PreviewAsync);
-		group.MapPost("/join", JoinAsync);
+		group.MapGet("/", PreviewAsync).ProducesGuildErrors();
+		group.MapPost("/join", JoinAsync).ProducesGuildErrors().ProducesConflict();
 	}
 
 	private static async Task<Results<Ok<InvitePreviewDto>, JsonHttpResult<ErrorBody>>>

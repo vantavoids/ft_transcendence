@@ -14,9 +14,9 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/channels/{channelId:long}/permissions");
-		group.MapGet("/", ListAsync);
-		group.MapPut("/{targetId:long}", PutAsync);
-		group.MapDelete("/{targetId:long}", DeleteAsync);
+		group.MapGet("/", ListAsync).ProducesGuildErrors();
+		group.MapPut("/{targetId:long}", PutAsync).ProducesGuildErrors();
+		group.MapDelete("/{targetId:long}", DeleteAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Ok<IReadOnlyList<OverwriteItem>>, JsonHttpResult<ErrorBody>>>

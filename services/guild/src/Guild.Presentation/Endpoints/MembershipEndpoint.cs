@@ -18,11 +18,11 @@ public sealed class MembershipEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}");
-		group.MapPost("/join", JoinAsync);
-		group.MapPost("/leave", LeaveAsync);
-		group.MapGet("/members", ListMembersAsync);
-		group.MapPatch("/members/{userId:long}", UpdateNicknameAsync);
-		group.MapDelete("/members/{userId:long}", KickAsync);
+		group.MapPost("/join", JoinAsync).ProducesGuildErrors().ProducesConflict();
+		group.MapPost("/leave", LeaveAsync).ProducesGuildErrors();
+		group.MapGet("/members", ListMembersAsync).ProducesGuildErrors();
+		group.MapPatch("/members/{userId:long}", UpdateNicknameAsync).ProducesGuildErrors();
+		group.MapDelete("/members/{userId:long}", KickAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Ok<GuildDto>, JsonHttpResult<ErrorBody>>>

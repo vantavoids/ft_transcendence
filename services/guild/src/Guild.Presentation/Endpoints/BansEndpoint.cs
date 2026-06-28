@@ -15,9 +15,9 @@ public sealed class BansEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/bans");
-		group.MapGet("/", ListAsync);
-		group.MapPost("/{userId:long}", BanAsync);
-		group.MapDelete("/{userId:long}", UnbanAsync);
+		group.MapGet("/", ListAsync).ProducesGuildErrors();
+		group.MapPost("/{userId:long}", BanAsync).ProducesGuildErrors().ProducesConflict();
+		group.MapDelete("/{userId:long}", UnbanAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Ok<IReadOnlyList<BanResponse>>, JsonHttpResult<ErrorBody>>>
