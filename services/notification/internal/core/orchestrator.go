@@ -190,3 +190,12 @@ func (o *Orchestrator) DeleteUser(ctx context.Context, userID int64) error {
 
 	return nil
 }
+
+func (o *Orchestrator) DeleteOlder(ctx context.Context) error {
+
+	if err := o.queries.DeleteNotificationsOlderThan7Days(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
