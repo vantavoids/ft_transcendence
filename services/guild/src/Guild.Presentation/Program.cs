@@ -73,6 +73,16 @@ app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
 			: "bad request";
 		await ctx.Response.WriteAsJsonAsync(new ErrorBody(message));
 	}
+	else if (err is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+	{
+		// optimistic-concurrency conflict: another request modified the same row
+		// version between our read and write (xmin token, see the entity configs).
+		// surface a retryable 409 instead of a 500 so the client can re-fetch and
+		// retry rather than treating it as a server fault
+		ctx.Response.StatusCode = StatusCodes.Status409Conflict;
+		await ctx.Response.WriteAsJsonAsync(
+			new ErrorBody("the resource was modified by another request; please retry"));
+	}
 	else
 	{
 		ctx.Response.StatusCode = 500;

@@ -11,6 +11,9 @@ internal sealed class GuildInviteConfig : IEntityTypeConfiguration<GuildInvite>
 	{
 		builder.ToTable("guild_invites");
 
+		// optimistic concurrency via Postgres xmin (no DDL). see GuildConfig.
+		builder.UseXminConcurrencyToken();
+
 		builder.HasKey(i => i.Code);
 
 		builder.Property(i => i.Code)

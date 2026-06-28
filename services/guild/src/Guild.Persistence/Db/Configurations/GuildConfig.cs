@@ -10,6 +10,14 @@ internal sealed class GuildConfig : IEntityTypeConfiguration<GuildEntity>
 	{
 		builder.ToTable("guilds");
 
+		// optimistic concurrency via Postgres' xmin system column. two writers
+		// that loaded the same row version and both commit make the second
+		// SaveChanges throw DbUpdateConcurrencyException (mapped to 409 Conflict
+		// in Program.cs), closing the last-write-wins races (ban, role reorder,
+		// settings). no DDL and no migration column: xmin already exists on every
+		// row, EF just maps a shadow property onto it.
+		builder.UseXminConcurrencyToken();
+
 		builder.HasKey(g => g.Id);
 		builder.Property(g => g.Id)
 			.HasColumnName("id")

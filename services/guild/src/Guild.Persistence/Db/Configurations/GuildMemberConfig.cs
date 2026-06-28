@@ -10,6 +10,9 @@ internal sealed class GuildMemberConfig : IEntityTypeConfiguration<GuildMember>
 	{
 		builder.ToTable("guild_members");
 
+		// optimistic concurrency via Postgres xmin (no DDL). see GuildConfig.
+		builder.UseXminConcurrencyToken();
+
 		builder.HasKey(m => new { m.GuildId, m.UserId });
 
 		builder.Property(m => m.GuildId).HasColumnName("guild_id");
