@@ -35,3 +35,8 @@ WHERE user_id = $1
     AND (sqlc.narg(before)::bigint IS NULL OR id < sqlc.narg(before)::bigint )
 ORDER BY id DESC
 LIMIT sqlc.arg(row_limit)::int;
+
+-- name: DeleteFromUser :exec
+DELETE FROM notifications
+WHERE user_id = $1;
+
