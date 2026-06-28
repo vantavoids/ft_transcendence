@@ -16,11 +16,7 @@ public sealed class MemberPermissionsEndpoint : ICarterModule
 			GetAsync);
 	}
 
-	private static async Task<Results<
-		Ok<MemberPermissionsResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<MemberPermissionsResponse>, JsonHttpResult<ErrorBody>>>
 	GetAsync(
 		long id,
 		long userId,
@@ -33,12 +29,6 @@ public sealed class MemberPermissionsEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 }

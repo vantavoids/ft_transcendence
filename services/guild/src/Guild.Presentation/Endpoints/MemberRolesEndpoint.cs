@@ -17,11 +17,7 @@ public sealed class MemberRolesEndpoint : ICarterModule
 		group.MapDelete("/{roleId:long}", UnassignAsync);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	AssignAsync(
 		long id,
 		long userId,
@@ -35,25 +31,10 @@ public sealed class MemberRolesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.RoleNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotGrantPermissionsYouLack" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotAssignDefaultRole" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	UnassignAsync(
 		long id,
 		long userId,
@@ -67,17 +48,6 @@ public sealed class MemberRolesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.RoleNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.RoleAssignmentNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotUnassignDefaultRole" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 }

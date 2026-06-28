@@ -24,9 +24,7 @@ public sealed class GuildsEndpoint : ICarterModule
 		group.MapPatch("/{id:long}/owner", TransferOwnershipAsync);
 	}
 
-	private static async Task<Results<
-		Created<GuildDto>,
-		BadRequest<ErrorBody>>>
+	private static async Task<Results<Created<GuildDto>, JsonHttpResult<ErrorBody>>>
 	CreateAsync(
 		CreateGuildRequest request,
 		ICommandHandler<CreateGuildCommand, Result<GuildDto>> handler,
@@ -38,27 +36,20 @@ public sealed class GuildsEndpoint : ICarterModule
 
 		return result.Succeeded
 			? TypedResults.Created($"/v1/guilds/{result.Value.Id}", result.Value)
-			: TypedResults.BadRequest(new ErrorBody(result.Error.Message));
+			: TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status400BadRequest);
 	}
 
-	private static async Task<Results<
-		Ok<GuildDetailsDto>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<GuildDetailsDto>, JsonHttpResult<ErrorBody>>>
 	GetAsync(
 		long id,
 		IQueryHandler<GetGuildQuery, Result<GuildDetailsDto>> handler,
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(new GetGuildQuery(id), cancellationToken);
-		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorGet(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<GuildDto>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<GuildDto>, JsonHttpResult<ErrorBody>>>
 	UpdateAsync(
 		long id,
 		UpdateGuildRequest request,
@@ -69,27 +60,20 @@ public sealed class GuildsEndpoint : ICarterModule
 			new UpdateGuildCommand(id, request.Name, request.Description, request.IconUrl, request.BannerUrl),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorUpdate(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	DeleteAsync(
 		long id,
 		ICommandHandler<DeleteGuildCommand, Result> handler,
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(new DeleteGuildCommand(id), cancellationToken);
-		return result.Succeeded ? TypedResults.NoContent() : MapErrorDelete(result.Error);
+		return result.Succeeded ? TypedResults.NoContent() : EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<GuildDto>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<GuildDto>, JsonHttpResult<ErrorBody>>>
 	TransferOwnershipAsync(
 		long id,
 		TransferOwnershipRequest request,
@@ -97,13 +81,13 @@ public sealed class GuildsEndpoint : ICarterModule
 		CancellationToken cancellationToken)
 	{
 		if (!long.TryParse(request.NewOwnerId, out var newOwnerId))
-			return TypedResults.BadRequest(new ErrorBody("new_owner_id must be a snowflake string."));
+			return TypedResults.Json(new ErrorBody("new_owner_id must be a snowflake string."), statusCode: StatusCodes.Status400BadRequest);
 
 		var result = await handler.HandleAsync(
 			new TransferOwnershipCommand(id, newOwnerId),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorTransfer(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : EndpointResults.Problem(result.Error);
 	}
 
 	// ---- error mapping ----
@@ -112,41 +96,9 @@ public sealed class GuildsEndpoint : ICarterModule
 	// separate mapper methods so the compiler can pick the correct implicit
 	// conversion to each variant. the mapping logic itself is shared
 
-	private static Results<Ok<GuildDetailsDto>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorGet(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
-	private static Results<Ok<GuildDto>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorUpdate(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.NotTheOwner" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<NoContent, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorDelete(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotTheOwner" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
-	private static Results<Ok<GuildDto>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorTransfer(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotTheOwner" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
 	// ---- request shapes (snake_case via ConfigureHttpJsonOptions) ----
 

@@ -20,10 +20,7 @@ public static class ChannelMembershipEndpoint
 		endpoints.MapGet("/channels/{channelId:long}/membership", GetAsync);
 	}
 
-	private static async Task<Results<
-		Ok<MembershipResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>>>
+	private static async Task<Results<Ok<MembershipResponse>, JsonHttpResult<ErrorBody>>>
 	GetAsync(
 		long channelId,
 		string? user_id,
@@ -33,7 +30,7 @@ public static class ChannelMembershipEndpoint
 		// user_id is a snowflake (long). the contract doc lists it as uuid but
 		// snowflakes are the project-wide id format -> parse as long
 		if (string.IsNullOrWhiteSpace(user_id) || !long.TryParse(user_id, out var userId) || userId <= 0)
-			return TypedResults.BadRequest(new ErrorBody("user_id query parameter must be a positive snowflake."));
+			return TypedResults.Json(new ErrorBody("user_id query parameter must be a positive snowflake."), statusCode: StatusCodes.Status400BadRequest);
 
 		var result = await handler.HandleAsync(
 			new GetChannelMembershipQuery(channelId, userId),
@@ -42,11 +39,6 @@ public static class ChannelMembershipEndpoint
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 }

@@ -20,11 +20,7 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 		group.MapDelete("/{code}", DeleteAsync);
 	}
 
-	private static async Task<Results<
-		Created<InviteDto>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Created<InviteDto>, JsonHttpResult<ErrorBody>>>
 	CreateAsync(
 		long id,
 		CreateInviteRequest request,
@@ -38,19 +34,10 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Created($"/v1/invites/{result.Value.Code}", result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<IReadOnlyList<InviteDto>>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<IReadOnlyList<InviteDto>>, JsonHttpResult<ErrorBody>>>
 	ListAsync(
 		long id,
 		IQueryHandler<ListInvitesQuery, Result<IReadOnlyList<InviteDto>>> handler,
@@ -61,17 +48,10 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	DeleteAsync(
 		long id,
 		string code,
@@ -83,13 +63,7 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.InviteNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.InviteGuildMismatch" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
 	private sealed record CreateInviteRequest(int? MaxUses, int? ExpiresInHours);

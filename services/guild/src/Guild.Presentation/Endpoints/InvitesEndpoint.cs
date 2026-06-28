@@ -24,9 +24,7 @@ public sealed class InvitesEndpoint : ICarterModule
 		group.MapPost("/join", JoinAsync);
 	}
 
-	private static async Task<Results<
-		Ok<InvitePreviewDto>,
-		NotFound<ErrorBody>>>
+	private static async Task<Results<Ok<InvitePreviewDto>, JsonHttpResult<ErrorBody>>>
 	PreviewAsync(
 		string code,
 		IQueryHandler<GetInvitePreviewQuery, Result<InvitePreviewDto>> handler,
@@ -37,14 +35,10 @@ public sealed class InvitesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return TypedResults.NotFound(new ErrorBody(result.Error.Message));
+		return TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status404NotFound);
 	}
 
-	private static async Task<Results<
-		Ok<GuildDto>,
-		NotFound<ErrorBody>,
-		Conflict<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<GuildDto>, JsonHttpResult<ErrorBody>>>
 	JoinAsync(
 		string code,
 		ICommandHandler<JoinByInviteCodeCommand, Result<GuildDto>> handler,
@@ -57,11 +51,6 @@ public sealed class InvitesEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.AlreadyMember" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
-			"Guild.JoinBannedFromGuild" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 }

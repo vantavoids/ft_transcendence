@@ -19,10 +19,7 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 		group.MapDelete("/{targetId:long}", DeleteAsync);
 	}
 
-	private static async Task<Results<
-		Ok<IReadOnlyList<OverwriteItem>>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<IReadOnlyList<OverwriteItem>>, JsonHttpResult<ErrorBody>>>
 	ListAsync(
 		long channelId,
 		IQueryHandler<GetOverwritesQuery, Result<OverwritesResponse>> handler,
@@ -31,14 +28,10 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 		var result = await handler.HandleAsync(new GetOverwritesQuery(channelId), cancellationToken);
 		return result.Succeeded
 			? TypedResults.Ok(result.Value.Items)
-			: MapErrorList(result.Error);
+			: EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	PutAsync(
 		long channelId,
 		long targetId,
@@ -57,13 +50,10 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 
 		return result.Succeeded
 			? TypedResults.NoContent()
-			: MapErrorPut(result.Error);
+			: EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	DeleteAsync(
 		long channelId,
 		long targetId,
@@ -74,40 +64,13 @@ public sealed class ChannelPermissionsEndpoint : ICarterModule
 			new DeleteOverwriteCommand(channelId, targetId),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.NoContent() : MapErrorDelete(result.Error);
+		return result.Succeeded ? TypedResults.NoContent() : EndpointResults.Problem(result.Error);
 	}
 
 	// ---- error mapping ----
 
-	private static Results<Ok<IReadOnlyList<OverwriteItem>>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorList(Failure failure) => failure.Code switch
-		{
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
-	private static Results<NoContent, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorPut(Failure failure) => failure.Code switch
-		{
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<NoContent, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorDelete(Failure failure) => failure.Code switch
-		{
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.OverwriteNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
 	// ---- request shape ----
 
