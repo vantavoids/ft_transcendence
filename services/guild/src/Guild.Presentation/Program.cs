@@ -85,6 +85,15 @@ app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
 	}
 	else
 	{
+		// genuinely unexpected: log it (with the exception) before returning an
+		// opaque 500. previously the error was read and silently swallowed, so
+		// production failures left no trace.
+		var logger = ctx.RequestServices
+			.GetRequiredService<ILoggerFactory>()
+			.CreateLogger("Guild.GlobalExceptionHandler");
+		logger.LogError(err, "Unhandled exception processing {Method} {Path}",
+			ctx.Request.Method, ctx.Request.Path);
+
 		ctx.Response.StatusCode = 500;
 		await ctx.Response.WriteAsJsonAsync(new ErrorBody("internal_server_error"));
 	}
