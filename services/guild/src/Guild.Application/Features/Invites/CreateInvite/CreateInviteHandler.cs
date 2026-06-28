@@ -50,11 +50,14 @@ internal sealed class CreateInviteHandler(
 			return inviteResult.Error;
 
 		await invites.AddAsync(inviteResult.Value, cancellationToken);
-		await invites.SaveChangesAsync(cancellationToken);
 
+		// publish BEFORE SaveChanges so the bus outbox binds the GuildInviteCreated
+		// event to the same transaction as the invite insert
 		await eventBus.PublishAsync(
 			new GuildInviteCreated(guild.Id, guild.Name, currentUser.Id, InvitedUserId: null),
 			cancellationToken);
+
+		await invites.SaveChangesAsync(cancellationToken);
 
 		return InviteDto.FromEntity(inviteResult.Value);
 	}

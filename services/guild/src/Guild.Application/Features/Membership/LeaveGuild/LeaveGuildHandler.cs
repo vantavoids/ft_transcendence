@@ -27,11 +27,14 @@ internal sealed class LeaveGuildHandler(
 			return removeResult.Error;
 
 		guilds.Update(guild);
-		await guilds.SaveChangesAsync(cancellationToken);
 
+		// publish BEFORE SaveChanges so the bus outbox binds the GuildMemberLeft
+		// event to the same transaction as the membership removal
 		await eventBus.PublishAsync(
 			new GuildMemberLeft(guild.Id, currentUser.Id),
 			cancellationToken);
+
+		await guilds.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

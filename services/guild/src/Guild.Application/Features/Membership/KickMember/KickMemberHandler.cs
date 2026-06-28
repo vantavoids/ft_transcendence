@@ -45,11 +45,15 @@ internal sealed class KickMemberHandler(
 			return removeResult.Error;
 
 		guilds.Update(guild);
-		await guilds.SaveChangesAsync(cancellationToken);
 
+		// publish BEFORE SaveChanges: the bus outbox records the event as an
+		// OutboxMessage row in this same transaction, so the kick and the
+		// GuildMemberLeft event commit atomically (or not at all)
 		await eventBus.PublishAsync(
 			new GuildMemberLeft(guild.Id, command.TargetUserId),
 			cancellationToken);
+
+		await guilds.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}
