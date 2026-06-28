@@ -78,6 +78,8 @@ func main() {
 		log.Fatalf("Unable to create a http handler: %s", err)
 	}
 
+	core.RunCleanupLoop(ctx, orch)
+
 	// ─── Server HTTP ───
 	srv := &http.Server{
 		Addr:              ":8080",
