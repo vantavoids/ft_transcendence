@@ -32,6 +32,10 @@ internal sealed class FakeGuildBanRepository : IGuildBanRepository
 
 	public Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default)
 	{
+		if (_store.ContainsKey((ban.GuildId, ban.UserId)))
+			throw new InvalidOperationException(
+				$"A GuildBan with key ({ban.GuildId}, {ban.UserId}) is already tracked.");
+
 		_store[(ban.GuildId, ban.UserId)] = ban;
 		AddCount++;
 		return Task.CompletedTask;
