@@ -142,3 +142,14 @@ func (e CallIncomingEvent) Validate() error {
 	}
 	return nil
 }
+
+type UserDeletedEvent struct {
+	UserID int64 `json:"call_id,string"`
+}
+
+func (e UserDeletedEvent) Validate() error {
+	if e.UserID == 0 {
+		return fmt.Errorf("user.deleted: missing user_id")
+	}
+	return nil
+}
