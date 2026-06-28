@@ -127,13 +127,16 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		})
 
 	case "user.deleted":
-		// TODO: clear all uid's notification
+		ev, err := parse[UserDeletedEvent](d)
+		if err != nil {
+			return err
+		}
+		return svc.DeleteUser(ctx, ev.UserID)
 
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)
 		return nil
 	}
-	return nil
 }
 
 // Decode a delivery into the struct [T] and return an error if a field is wrong.
