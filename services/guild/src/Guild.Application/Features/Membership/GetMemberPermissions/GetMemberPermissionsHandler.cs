@@ -1,6 +1,7 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
@@ -15,19 +16,17 @@ internal sealed class GetMemberPermissionsHandler(
 		GetMemberPermissionsQuery query,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(query.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, query.GuildId, Permission.None, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		if (guild.Members.All(m => m.UserId != query.TargetUserId))
 			return GuildFailures.TargetNotAMember;
 
 		var isOwner = query.TargetUserId == guild.OwnerId;
-		var effective = PermissionResolver.Resolve(
-			query.TargetUserId, guild.OwnerId, guild.Roles, guild.MemberRoles);
+		var effective = PermissionResolver.Resolve(guild, query.TargetUserId);
 
 		// @everyone is implicit for every member; explicit assignments add to that.
 		// the owner additionally sees the seeded Administrator role.

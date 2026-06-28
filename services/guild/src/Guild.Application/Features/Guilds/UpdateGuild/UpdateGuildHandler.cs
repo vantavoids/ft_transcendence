@@ -2,6 +2,7 @@ using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Guilds.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -18,25 +19,11 @@ internal sealed class UpdateGuildHandler(
 		UpdateGuildCommand command,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await repository.GetByIdWithMembershipAsync(command.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		var effectiveMask = PermissionResolver.Resolve(
-			currentUser.Id,
-			guild.OwnerId,
-			guild.Roles,
-			guild.MemberRoles);
-
-		// MANAGE_GUILD also requires the caller to actually be a member; the
-		// resolver gives @everyone perms unconditionally, but a non-member can
-		// never legitimately reach this branch with MANAGE_GUILD.
-		var isMember = guild.Members.Any(m => m.UserId == currentUser.Id);
-		if (!isMember)
-			return GuildFailures.NotAMember;
-
-		if (!PermissionResolver.HasPermission(effectiveMask, Permission.ManageGuild))
-			return GuildFailures.MissingPermission;
+		var auth = await AuthorizationContext.LoadAsync(
+			repository, currentUser, command.GuildId, Permission.ManageGuild, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		var updateResult = guild.UpdateSettings(
 			name: command.Name,

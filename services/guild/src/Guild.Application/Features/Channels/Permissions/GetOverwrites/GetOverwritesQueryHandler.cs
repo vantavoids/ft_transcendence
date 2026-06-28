@@ -1,6 +1,7 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
@@ -21,17 +22,11 @@ internal sealed class GetOverwritesQueryHandler(
 		if (channel is null)
 			return GuildFailures.ChannelNotFound;
 
-		var guild = await guilds.GetByIdWithMembershipAsync(channel.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
-
-		var mask = PermissionResolver.Resolve(
-			currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-		if (!PermissionResolver.HasPermission(mask, Permission.ManageChannels))
-			return GuildFailures.MissingPermission;
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, channel.GuildId, Permission.ManageChannels, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		var rows = await overwrites.GetForChannelAsync(channel.Id, cancellationToken);
 		return new OverwritesResponse([.. rows.Select(OverwriteItem.From)]);
