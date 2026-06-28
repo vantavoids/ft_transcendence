@@ -39,7 +39,7 @@ internal sealed class CreateGuildHandler(
 		if (guildResult.IsFailure)
 			return guildResult.Error;
 
-		await repository.AddAsync(guildResult.Value, cancellationToken);
+		repository.Add(guildResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guildResult.Value);

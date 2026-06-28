@@ -48,7 +48,7 @@ public sealed class CreateChannelHandlerTests
 		var channelRepo = new FakeChannelRepository();
 		var categoryRepo = new FakeChannelCategoryRepository();
 		var guild = CreateGuildWithBareMember(memberId: 2, ownerId: 1);
-		await guildRepo.AddAsync(guild);
+		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
 			guildRepo, channelRepo, categoryRepo,
@@ -194,7 +194,7 @@ public sealed class CreateChannelHandlerTests
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
-		await guilds.AddAsync(guild);
+		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
 			guilds, channels, cats,
@@ -224,7 +224,7 @@ public sealed class CreateChannelHandlerTests
 			var guild = GuildEntity.Create(
 				id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 				ownerId: ownerId, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-			guilds.AddAsync(guild).GetAwaiter().GetResult();
+			guilds.Add(guild);
 		}
 
 		return HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(

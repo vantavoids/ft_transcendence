@@ -49,7 +49,7 @@ internal sealed class CreateCategoryHandler(
 		if (categoryResult.IsFailure)
 			return categoryResult.Error;
 
-		await categories.AddAsync(categoryResult.Value, cancellationToken);
+		categories.Add(categoryResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return CategoryResponse.From(categoryResult.Value);

@@ -16,7 +16,7 @@ public interface IChannelCategoryRepository
 	/// </summary>
 	Task<int?> GetMaxPositionAsync(long guildId, CancellationToken cancellationToken = default);
 
-	Task AddAsync(ChannelCategory category, CancellationToken cancellationToken = default);
+	void Add(ChannelCategory category);
 	void Update(ChannelCategory category);
 	void Remove(ChannelCategory category);
 }

@@ -30,7 +30,7 @@ internal sealed class FakeGuildBanRepository : IGuildBanRepository
 		return Task.FromResult(ban);
 	}
 
-	public Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default)
+	public void Add(GuildBan ban)
 	{
 		if (_store.ContainsKey((ban.GuildId, ban.UserId)))
 			throw new InvalidOperationException(
@@ -38,7 +38,6 @@ internal sealed class FakeGuildBanRepository : IGuildBanRepository
 
 		_store[(ban.GuildId, ban.UserId)] = ban;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Remove(GuildBan ban)

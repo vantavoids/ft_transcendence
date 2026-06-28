@@ -34,11 +34,10 @@ internal sealed class FakeChannelCategoryRepository : IChannelCategoryRepository
 		return Task.FromResult(result);
 	}
 
-	public Task AddAsync(ChannelCategory category, CancellationToken cancellationToken = default)
+	public void Add(ChannelCategory category)
 	{
 		_store[category.Id] = category;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Update(ChannelCategory category)

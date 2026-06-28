@@ -29,9 +29,9 @@ internal sealed class GuildBanRepository(GuildDbContext context) : IGuildBanRepo
 			.FirstOrDefaultAsync(b => b.GuildId == guildId && b.UserId == userId, cancellationToken);
 	}
 
-	public async Task AddAsync(GuildBan ban, CancellationToken cancellationToken = default)
+	public void Add(GuildBan ban)
 	{
-		await context.GuildBans.AddAsync(ban, cancellationToken);
+		context.GuildBans.Add(ban);
 	}
 
 	public void Remove(GuildBan ban)

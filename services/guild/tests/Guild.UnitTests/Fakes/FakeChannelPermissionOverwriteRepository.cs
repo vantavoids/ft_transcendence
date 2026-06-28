@@ -46,11 +46,10 @@ internal sealed class FakeChannelPermissionOverwriteRepository : IChannelPermiss
 		return Task.FromResult(match);
 	}
 
-	public Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default)
+	public void Add(ChannelPermissionOverwrite overwrite)
 	{
 		_store[overwrite.Id] = overwrite;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Update(ChannelPermissionOverwrite overwrite)

@@ -68,7 +68,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		long id,
 		string? after,
 		int? limit,
-		IQueryHandler<ListMembersQuery, Result<MemberListResponse>> handler,
+		IQueryHandler<ListMembersQuery, Result<IReadOnlyList<MemberResponse>>> handler,
 		CancellationToken cancellationToken)
 	{
 		var (afterCursor, effectiveLimit, error) = Pagination.Parse(after, limit);
@@ -80,7 +80,7 @@ public sealed class MembershipEndpoint : ICarterModule
 			cancellationToken);
 
 		if (result.Succeeded)
-			return TypedResults.Ok(result.Value.Items);
+			return TypedResults.Ok(result.Value);
 
 		return EndpointResults.Problem(result.Error);
 	}

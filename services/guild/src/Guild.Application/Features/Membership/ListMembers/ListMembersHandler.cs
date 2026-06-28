@@ -9,9 +9,9 @@ namespace Guild.Application.Features.Membership.ListMembers;
 internal sealed class ListMembersHandler(
 	IGuildRepository guilds,
 	ICurrentUser currentUser)
-	: IQueryHandler<ListMembersQuery, Result<MemberListResponse>>
+	: IQueryHandler<ListMembersQuery, Result<IReadOnlyList<MemberResponse>>>
 {
-	public async Task<Result<MemberListResponse>> HandleAsync(
+	public async Task<Result<IReadOnlyList<MemberResponse>>> HandleAsync(
 		ListMembersQuery query,
 		CancellationToken cancellationToken = default)
 	{
@@ -29,7 +29,7 @@ internal sealed class ListMembersHandler(
 		var page = await guilds.PageMembersAsync(
 			query.GuildId, query.After, query.Limit, cancellationToken);
 
-		var items = page
+		IReadOnlyList<MemberResponse> items = page
 			.Select(m => new MemberResponse(
 				UserId: m.UserId.ToString(),
 				GuildId: query.GuildId.ToString(),
@@ -38,6 +38,6 @@ internal sealed class ListMembersHandler(
 				JoinedAt: m.JoinedAt))
 			.ToList();
 
-		return new MemberListResponse(items);
+		return Result.Ok(items);
 	}
 }

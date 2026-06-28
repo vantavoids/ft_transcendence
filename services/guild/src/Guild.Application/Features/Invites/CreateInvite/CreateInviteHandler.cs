@@ -45,7 +45,7 @@ internal sealed class CreateInviteHandler(
 		if (inviteResult.IsFailure)
 			return inviteResult.Error;
 
-		await invites.AddAsync(inviteResult.Value, cancellationToken);
+		invites.Add(inviteResult.Value);
 
 		// publish BEFORE SaveChanges so the bus outbox binds the GuildInviteCreated
 		// event to the same transaction as the invite insert

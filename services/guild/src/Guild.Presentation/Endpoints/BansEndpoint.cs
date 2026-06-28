@@ -25,7 +25,7 @@ public sealed class BansEndpoint : ICarterModule
 		long id,
 		string? after,
 		int? limit,
-		IQueryHandler<ListBansQuery, Result<BanListResponse>> handler,
+		IQueryHandler<ListBansQuery, Result<IReadOnlyList<BanResponse>>> handler,
 		CancellationToken cancellationToken)
 	{
 		var (afterCursor, effectiveLimit, error) = Pagination.Parse(after, limit);
@@ -37,7 +37,7 @@ public sealed class BansEndpoint : ICarterModule
 			cancellationToken);
 
 		if (result.Succeeded)
-			return TypedResults.Ok(result.Value.Items);
+			return TypedResults.Ok(result.Value);
 
 		return EndpointResults.Problem(result.Error);
 	}

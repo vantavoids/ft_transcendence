@@ -32,9 +32,9 @@ internal sealed class ChannelRepository(GuildDbContext context) : IChannelReposi
 			.MaxAsync(cancellationToken);
 	}
 
-	public async Task AddAsync(Channel channel, CancellationToken cancellationToken = default)
+	public void Add(Channel channel)
 	{
-		await context.Channels.AddAsync(channel, cancellationToken);
+		context.Channels.Add(channel);
 	}
 
 	public void Update(Channel channel)

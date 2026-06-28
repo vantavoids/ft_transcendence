@@ -16,6 +16,6 @@ public interface IGuildInviteRepository
 	/// </summary>
 	Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default);
 
-	Task AddAsync(GuildInvite invite, CancellationToken cancellationToken = default);
+	void Add(GuildInvite invite);
 	void Update(GuildInvite invite);
 }

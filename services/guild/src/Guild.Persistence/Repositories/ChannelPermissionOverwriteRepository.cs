@@ -41,9 +41,9 @@ internal sealed class ChannelPermissionOverwriteRepository(GuildDbContext contex
 				cancellationToken);
 	}
 
-	public async Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default)
+	public void Add(ChannelPermissionOverwrite overwrite)
 	{
-		await context.ChannelPermissionOverwrites.AddAsync(overwrite, cancellationToken);
+		context.ChannelPermissionOverwrites.Add(overwrite);
 	}
 
 	public void Update(ChannelPermissionOverwrite overwrite)

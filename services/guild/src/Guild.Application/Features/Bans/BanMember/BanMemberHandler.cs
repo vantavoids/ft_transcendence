@@ -58,7 +58,7 @@ internal sealed class BanMemberHandler(
 		if (banResult.IsFailure)
 			return banResult.Error;
 
-		await bans.AddAsync(banResult.Value, cancellationToken);
+		bans.Add(banResult.Value);
 
 		if (wasMember)
 		{

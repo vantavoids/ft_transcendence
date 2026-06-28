@@ -169,7 +169,7 @@ public sealed class BanMemberHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		guilds.AddAsync(guild).GetAwaiter().GetResult();
+		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<BanMemberCommand, Result>(
 			guilds, bans, events, clock, new FakeCurrentUser { Id = currentUser });

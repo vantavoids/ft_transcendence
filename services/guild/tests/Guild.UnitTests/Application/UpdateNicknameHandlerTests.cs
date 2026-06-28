@@ -184,7 +184,7 @@ public sealed class UpdateNicknameHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		guilds.AddAsync(guild).GetAwaiter().GetResult();
+		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateNicknameCommand, Result<MemberResponse>>(
 			guilds, new FakeCurrentUser { Id = currentUser });

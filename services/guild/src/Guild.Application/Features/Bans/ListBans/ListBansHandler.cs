@@ -12,9 +12,9 @@ internal sealed class ListBansHandler(
 	IGuildRepository guilds,
 	IGuildBanRepository bans,
 	ICurrentUser currentUser)
-	: IQueryHandler<ListBansQuery, Result<BanListResponse>>
+	: IQueryHandler<ListBansQuery, Result<IReadOnlyList<BanResponse>>>
 {
-	public async Task<Result<BanListResponse>> HandleAsync(
+	public async Task<Result<IReadOnlyList<BanResponse>>> HandleAsync(
 		ListBansQuery query,
 		CancellationToken cancellationToken = default)
 	{
@@ -25,6 +25,7 @@ internal sealed class ListBansHandler(
 		var guild = auth.Value.Guild;
 
 		var page = await bans.ListByGuildAsync(guild.Id, query.After, query.Limit, cancellationToken);
-		return new BanListResponse(page.Select(BanResponse.From).ToList());
+		IReadOnlyList<BanResponse> items = page.Select(BanResponse.From).ToList();
+		return Result.Ok(items);
 	}
 }

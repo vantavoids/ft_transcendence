@@ -42,8 +42,8 @@ public sealed class ListMembersHandlerTests
 		var result = await handler.HandleAsync(new ListMembersQuery(100, After: null, Limit: 50));
 
 		Assert.True(result.Succeeded);
-		Assert.Single(result.Value.Items);
-		Assert.Equal("1", result.Value.Items[0].UserId);
+		Assert.Single(result.Value);
+		Assert.Equal("1", result.Value[0].UserId);
 	}
 
 	[Fact]
@@ -57,7 +57,7 @@ public sealed class ListMembersHandlerTests
 		var result = await handler.HandleAsync(new ListMembersQuery(100, After: 5, Limit: 50));
 
 		Assert.True(result.Succeeded);
-		Assert.Equal(new[] { "7", "9" }, result.Value.Items.Select(m => m.UserId).ToArray());
+		Assert.Equal(new[] { "7", "9" }, result.Value.Select(m => m.UserId).ToArray());
 	}
 
 	[Fact]
@@ -70,9 +70,9 @@ public sealed class ListMembersHandlerTests
 		var result = await handler.HandleAsync(new ListMembersQuery(100, After: null, Limit: 2));
 
 		Assert.True(result.Succeeded);
-		Assert.Equal(2, result.Value.Items.Count);
-		Assert.Equal("1", result.Value.Items[0].UserId);
-		Assert.Equal("2", result.Value.Items[1].UserId);
+		Assert.Equal(2, result.Value.Count);
+		Assert.Equal("1", result.Value[0].UserId);
+		Assert.Equal("2", result.Value[1].UserId);
 	}
 
 	[Fact]
@@ -87,14 +87,14 @@ public sealed class ListMembersHandlerTests
 		var result = await handler.HandleAsync(new ListMembersQuery(100, After: null, Limit: 50));
 
 		Assert.True(result.Succeeded);
-		var member2 = result.Value.Items.Single(m => m.UserId == "2");
+		var member2 = result.Value.Single(m => m.UserId == "2");
 		Assert.Equal(new[] { "500" }, member2.Roles.ToArray());
-		var owner = result.Value.Items.Single(m => m.UserId == "1");
+		var owner = result.Value.Single(m => m.UserId == "1");
 		Assert.Single(owner.Roles);
 	}
 
 	private static (
-		Guild.Application.Abstractions.Messaging.IQueryHandler<ListMembersQuery, Result<MemberListResponse>> Handler,
+		Guild.Application.Abstractions.Messaging.IQueryHandler<ListMembersQuery, Result<IReadOnlyList<MemberResponse>>> Handler,
 		FakeGuildRepository Guilds)
 		MakeHandler(long currentUser)
 	{
@@ -102,9 +102,9 @@ public sealed class ListMembersHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		guilds.AddAsync(guild).GetAwaiter().GetResult();
+		guilds.Add(guild);
 
-		var handler = HandlerFactory.CreateQuery<ListMembersQuery, Result<MemberListResponse>>(
+		var handler = HandlerFactory.CreateQuery<ListMembersQuery, Result<IReadOnlyList<MemberResponse>>>(
 			guilds, new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}

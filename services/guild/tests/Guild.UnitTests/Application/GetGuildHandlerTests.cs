@@ -68,6 +68,6 @@ public sealed class GetGuildHandlerTests
 			everyoneRoleId: 101,
 			adminRoleId: 102,
 			now: Now).Value;
-		repo.AddAsync(guild).GetAwaiter().GetResult();
+		repo.Add(guild);
 	}
 }

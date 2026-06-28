@@ -189,7 +189,7 @@ public sealed class UpdateChannelHandlerTests
 			var guild = GuildEntity.Create(
 				id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 				ownerId: ownerId, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-			guilds.AddAsync(guild).GetAwaiter().GetResult();
+			guilds.Add(guild);
 		}
 
 		var handler = HandlerFactory.CreateCommand<UpdateChannelCommand, Result<ChannelResponse>>(
