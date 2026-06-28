@@ -18,7 +18,7 @@ internal sealed class ListRolesHandler(
 		CancellationToken cancellationToken = default)
 	{
 		var auth = await AuthorizationContext.LoadAsync(
-			guilds, currentUser, query.GuildId, Permission.None, cancellationToken);
+			guilds, currentUser, query.GuildId, Permission.None, cancellationToken, asNoTracking: true);
 		if (auth.IsFailure)
 			return auth.Error;
 		var guild = auth.Value.Guild;

@@ -1,9 +1,7 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
-using Guild.Application.Authorization;
 using Guild.Application.Features.Membership.Common;
-using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
 namespace Guild.Application.Features.Membership.ListMembers;
@@ -17,28 +15,29 @@ internal sealed class ListMembersHandler(
 		ListMembersQuery query,
 		CancellationToken cancellationToken = default)
 	{
-		var auth = await AuthorizationContext.LoadAsync(
-			guilds, currentUser, query.GuildId, Permission.None, cancellationToken);
-		if (auth.IsFailure)
-			return auth.Error;
-		var guild = auth.Value.Guild;
+		// lightweight gate: listing members never needs the full aggregate or a
+		// permission, just "guild exists" + "caller is a member". the members
+		// themselves are then keyset-paged straight from the DB, so a 10k-member
+		// guild no longer hydrates every row to return one page.
+		var guild = await guilds.GetByIdAsync(query.GuildId, cancellationToken);
+		if (guild is null)
+			return GuildFailures.GuildNotFound;
 
-		var rolesByMember = guild.MemberRoles
-			.GroupBy(mr => mr.UserId)
-			.ToDictionary(g => g.Key, g => g.Select(mr => mr.RoleId.ToString()).ToList());
+		if (!await guilds.IsMemberAsync(query.GuildId, currentUser.Id, cancellationToken))
+			return GuildFailures.NotAMember;
 
-		var page = guild.Members
-			.Where(m => query.After is null || m.UserId > query.After.Value)
-			.OrderBy(m => m.UserId)
-			.Take(query.Limit)
+		var page = await guilds.PageMembersAsync(
+			query.GuildId, query.After, query.Limit, cancellationToken);
+
+		var items = page
 			.Select(m => new MemberResponse(
 				UserId: m.UserId.ToString(),
-				GuildId: guild.Id.ToString(),
+				GuildId: query.GuildId.ToString(),
 				Nickname: m.Nickname,
-				Roles: rolesByMember.TryGetValue(m.UserId, out var ids) ? ids : new List<string>(),
+				Roles: m.RoleIds.Select(id => id.ToString()).ToList(),
 				JoinedAt: m.JoinedAt))
 			.ToList();
 
-		return new MemberListResponse(page);
+		return new MemberListResponse(items);
 	}
 }

@@ -19,7 +19,7 @@ internal sealed class ListBansHandler(
 		CancellationToken cancellationToken = default)
 	{
 		var auth = await AuthorizationContext.LoadAsync(
-			guilds, currentUser, query.GuildId, Permission.BanMembers, cancellationToken);
+			guilds, currentUser, query.GuildId, Permission.BanMembers, cancellationToken, asNoTracking: true);
 		if (auth.IsFailure)
 			return auth.Error;
 		var guild = auth.Value.Guild;
