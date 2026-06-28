@@ -68,12 +68,17 @@ local_resource(
         '--network host ' +
         # run as root so coturn can read the 0600 TLS key in ./certs (see compose.yaml)
         '--user 0:0 ' +
+        # entrypoint pins the relay/external IP to one reachable IPv4 (see
+        # infra/coturn/entrypoint.sh); realm + user come from the environment.
+        '-e TURN_REALM=' + TURN_REALM + ' ' +
+        '-e TURN_USERNAME=' + TURN_USERNAME + ' ' +
+        '-e TURN_PASSWORD=' + TURN_PASSWORD + ' ' +
+        '-e TURN_RELAY_IP=' + root_env.get('TURN_RELAY_IP', '') + ' ' +
+        '--entrypoint /usr/local/bin/coturn-entrypoint.sh ' +
         '-v $(pwd)/infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro ' +
+        '-v $(pwd)/infra/coturn/entrypoint.sh:/usr/local/bin/coturn-entrypoint.sh:ro ' +
         '-v $(pwd)/certs:/etc/coturn/certs:ro ' +
-        'docker.io/coturn/coturn:alpine ' +
-        '-c /etc/coturn/turnserver.conf ' +
-        '--realm=' + TURN_REALM + ' ' +
-        '--user=' + TURN_USERNAME + ':' + TURN_PASSWORD
+        'docker.io/coturn/coturn:alpine'
     ),
     resource_deps=['cert-gen', 'dev-network'],
     labels=['infra'],
