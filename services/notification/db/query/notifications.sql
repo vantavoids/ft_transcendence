@@ -36,10 +36,10 @@ WHERE user_id = $1
 ORDER BY id DESC
 LIMIT sqlc.arg(row_limit)::int;
 
--- name: DeleteFromUser :exec
+-- name: DeleteUserNotifications :exec
 DELETE FROM notifications
 WHERE user_id = $1;
 
--- name: DeleteOlderThan7Days :exec
+-- name: DeleteNotificationsOlderThan7Days :exec
 DELETE FROM notifications
 WHERE created_at < NOW() - INTERVAL '7 days';
