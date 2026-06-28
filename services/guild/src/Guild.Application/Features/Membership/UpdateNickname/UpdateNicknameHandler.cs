@@ -1,6 +1,7 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Membership.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -16,19 +17,18 @@ internal sealed class UpdateNicknameHandler(
 		UpdateNicknameCommand command,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(command.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
+		// membership-gate only: editing your OWN nickname needs no permission,
+		// editing someone else's needs MANAGE_NICKNAMES plus out-ranking them
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, command.GuildId, Permission.None, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		var isSelf = command.TargetUserId == currentUser.Id;
 		if (!isSelf)
 		{
-			var mask = PermissionResolver.Resolve(
-				currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-			if (!PermissionResolver.HasPermission(mask, Permission.ManageNicknames))
+			if (!PermissionResolver.HasPermission(auth.Value.EffectiveMask, Permission.ManageNicknames))
 				return GuildFailures.MissingPermission;
 
 			if (!PermissionResolver.OutRanks(guild, currentUser.Id, command.TargetUserId))

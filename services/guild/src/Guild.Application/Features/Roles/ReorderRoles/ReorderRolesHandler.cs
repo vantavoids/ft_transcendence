@@ -2,6 +2,7 @@ using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Roles.Common;
 using Guild.Application.Features.Roles.ListRoles;
 using Guild.Domain.Guild;
@@ -19,17 +20,11 @@ internal sealed class ReorderRolesHandler(
 		ReorderRolesCommand command,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(command.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
-
-		var mask = PermissionResolver.Resolve(
-			currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-		if (!PermissionResolver.HasPermission(mask, Permission.ManageRoles))
-			return GuildFailures.MissingPermission;
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, command.GuildId, Permission.ManageRoles, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		// hierarchy guard (Discord rule): for every role whose position actually
 		// CHANGES, the caller must strictly out-rank it at both its old and new

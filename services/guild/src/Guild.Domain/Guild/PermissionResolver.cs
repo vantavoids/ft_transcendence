@@ -7,28 +7,36 @@ namespace Guild.Domain.Guild;
 /// </summary>
 public static class PermissionResolver
 {
-	public static long Resolve(
-		long userId,
-		long ownerId,
-		IEnumerable<Role> allGuildRoles,
-		IEnumerable<MemberRole> userAssignments)
+	/// <summary>
+	/// guild-scoped resolution for <paramref name="userId"/>. symmetric with the
+	/// channel-scoped overload below: the owner short-circuits to ADMINISTRATOR,
+	/// a non-member resolves to 0, and everyone else gets the union of the
+	/// @everyone role and their explicitly assigned roles. folding the
+	/// membership check in here (rather than leaving every caller to remember a
+	/// separate <c>guild.Members.All(...)</c> guard) removes the footgun where a
+	/// forgotten check leaked @everyone perms to non-members.
+	/// </summary>
+	public static long Resolve(Guild guild, long userId)
 	{
-		if (userId == ownerId)
+		if (userId == guild.OwnerId)
 			return (long)Permission.Administrator;
 
-		// the default (@everyone) role is always granted, regardless of explicit
-		// assignment. it encodes the baseline permissions for all members
-		var mask = allGuildRoles.Where(role => role.IsDefault).Aggregate(0L, (current, role) => current | role.Permissions);
+		if (guild.Members.All(m => m.UserId != userId))
+			return 0L;
 
-		// explicitly assigned roles add to the mask
-		var assignedRoleIds = new HashSet<long>();
-		foreach (var assignment in userAssignments)
+		var assignedRoleIds = guild.MemberRoles
+			.Where(mr => mr.UserId == userId)
+			.Select(mr => mr.RoleId)
+			.ToHashSet();
+
+		var mask = 0L;
+		foreach (var role in guild.Roles)
 		{
-			if (assignment.UserId == userId)
-				assignedRoleIds.Add(assignment.RoleId);
+			if (role.IsDefault || assignedRoleIds.Contains(role.Id))
+				mask |= role.Permissions;
 		}
 
-		return assignedRoleIds.Count <= 0 ? mask : allGuildRoles.Where(role => assignedRoleIds.Contains(role.Id)).Aggregate(mask, (current, role) => current | role.Permissions);
+		return mask;
 	}
 
 	/// <summary>

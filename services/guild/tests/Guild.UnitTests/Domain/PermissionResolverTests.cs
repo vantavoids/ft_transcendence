@@ -10,68 +10,69 @@ public sealed class PermissionResolverTests
 	private static readonly DateTimeOffset Now =
 		new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+	// @everyone baseline = SendMessages(1) | ReadMessages(2) | CreateInvite(512)
+	private const long EveryoneMask = 515L;
+
 	[Fact]
 	public void Owner_AlwaysResolvesToAdministrator_RegardlessOfRoles()
 	{
 		var guild = CreateGuild(ownerId: 42);
 
-		var mask = PermissionResolver.Resolve(
-			userId: 42,
-			ownerId: 42,
-			allGuildRoles: guild.Roles,
-			userAssignments: guild.MemberRoles);
+		var mask = PermissionResolver.Resolve(guild, userId: 42);
 
 		Assert.Equal((long)Permission.Administrator, mask);
 	}
 
 	[Fact]
-	public void NonOwner_NoAssignedRoles_GetsOnlyDefaultRoleMask()
+	public void NonMember_ResolvesToZero()
 	{
+		// user 2 is not in the guild's member list. the guild-scoped resolver
+		// folds the membership check in, so a non-member gets no permissions
+		// (previously it leaked the @everyone mask to outsiders)
 		var guild = CreateGuild(ownerId: 1);
 
-		// user 2 is not a member, but the resolver itself only checks
-		// assignments; @everyone applies unconditionally
-		var mask = PermissionResolver.Resolve(
-			userId: 2,
-			ownerId: 1,
-			allGuildRoles: guild.Roles,
-			userAssignments: Array.Empty<MemberRole>());
+		var mask = PermissionResolver.Resolve(guild, userId: 2);
 
-		Assert.Equal(515L, mask);
+		Assert.Equal(0L, mask);
 	}
 
 	[Fact]
-	public void NonOwner_WithAssignedRole_OrsTogetherDefaultAndAssigned()
+	public void Member_NoAssignedRoles_GetsOnlyDefaultRoleMask()
 	{
 		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+
+		var mask = PermissionResolver.Resolve(guild, userId: 2);
+
+		Assert.Equal(EveryoneMask, mask);
+	}
+
+	[Fact]
+	public void Member_WithAssignedRole_OrsTogetherDefaultAndAssigned()
+	{
+		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
 		long modPerms = (long)Permission.KickMembers | (long)Permission.BanMembers;
 		var modRole = DomainSeed.AddCustomRole(
 			guild, roleId: 100, name: "Moderator", permissions: modPerms, position: 2, now: Now);
 		DomainSeed.AssignRole(guild, userId: 2, roleId: modRole.Id, now: Now);
 
-		var mask = PermissionResolver.Resolve(
-			userId: 2,
-			ownerId: 1,
-			allGuildRoles: guild.Roles,
-			userAssignments: guild.MemberRoles);
+		var mask = PermissionResolver.Resolve(guild, userId: 2);
 
-		Assert.Equal(515L | modPerms, mask);
+		Assert.Equal(EveryoneMask | modPerms, mask);
 		Assert.Equal(563L, mask);
 	}
 
 	[Fact]
-	public void NonOwner_AdministratorRoleAssigned_MaskIncludesAdministratorBit()
+	public void Member_AdministratorRoleAssigned_MaskIncludesAdministratorBit()
 	{
 		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
 		// the seeded admin role for the owner. assign it explicitly to user 2.
 		var adminRole = guild.Roles.Single(r => r.Name == "Administrator");
 		DomainSeed.AssignRole(guild, userId: 2, roleId: adminRole.Id, now: Now);
 
-		var mask = PermissionResolver.Resolve(
-			userId: 2,
-			ownerId: 1,
-			allGuildRoles: guild.Roles,
-			userAssignments: guild.MemberRoles);
+		var mask = PermissionResolver.Resolve(guild, userId: 2);
 
 		Assert.NotEqual(0L, mask & (long)Permission.Administrator);
 	}
@@ -103,11 +104,12 @@ public sealed class PermissionResolverTests
 	}
 
 	[Fact]
-	public void NonOwner_TwoRolesGrantingSameBit_BitIsGrantedNotXored()
+	public void Member_TwoRolesGrantingSameBit_BitIsGrantedNotXored()
 	{
 		// if perms were accumulated with ^= instead of |=, a bit shared by two
 		// assigned roles would cancel back to 0; this test catches that mutation
 		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
 		long sharedBit = (long)Permission.ManageGuild;
 		var role1 = DomainSeed.AddCustomRole(
 			guild, roleId: 100, name: "R1", permissions: sharedBit, position: 2, now: Now);
@@ -116,11 +118,7 @@ public sealed class PermissionResolverTests
 		DomainSeed.AssignRole(guild, userId: 2, roleId: role1.Id, now: Now);
 		DomainSeed.AssignRole(guild, userId: 2, roleId: role2.Id, now: Now);
 
-		var mask = PermissionResolver.Resolve(
-			userId: 2,
-			ownerId: 1,
-			allGuildRoles: guild.Roles,
-			userAssignments: guild.MemberRoles);
+		var mask = PermissionResolver.Resolve(guild, userId: 2);
 
 		Assert.NotEqual(0L, mask & sharedBit);
 	}
@@ -129,19 +127,16 @@ public sealed class PermissionResolverTests
 	public void Resolver_IgnoresAssignmentsForOtherUsers()
 	{
 		var guild = CreateGuild(ownerId: 1);
+		DomainSeed.AddMember(guild, userId: 42, joinedAt: Now);
 		long modPerms = (long)Permission.KickMembers;
 		var modRole = DomainSeed.AddCustomRole(
 			guild, roleId: 100, name: "Moderator", permissions: modPerms, position: 2, now: Now);
 		// assignment belongs to user 99, not 42; should be ignored
 		DomainSeed.AssignRole(guild, userId: 99, roleId: modRole.Id, now: Now);
 
-		var mask = PermissionResolver.Resolve(
-			userId: 42,
-			ownerId: 1,
-			allGuildRoles: guild.Roles,
-			userAssignments: guild.MemberRoles);
+		var mask = PermissionResolver.Resolve(guild, userId: 42);
 
-		Assert.Equal(515L, mask);
+		Assert.Equal(EveryoneMask, mask);
 	}
 
 	private static GuildEntity CreateGuild(long ownerId) =>

@@ -1,6 +1,7 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Invites.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -17,17 +18,11 @@ internal sealed class ListInvitesHandler(
 		ListInvitesQuery query,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(query.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
-
-		var mask = PermissionResolver.Resolve(
-			currentUser.Id, guild.OwnerId, guild.Roles, guild.MemberRoles);
-		if (!PermissionResolver.HasPermission(mask, Permission.ManageGuild))
-			return GuildFailures.MissingPermission;
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, query.GuildId, Permission.ManageGuild, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		var rows = await invites.ListByGuildAsync(query.GuildId, cancellationToken);
 		IReadOnlyList<InviteDto> dtos = rows.Select(InviteDto.FromEntity).ToList();

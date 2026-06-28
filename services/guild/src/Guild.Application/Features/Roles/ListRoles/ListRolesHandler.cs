@@ -1,7 +1,9 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Roles.Common;
+using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
 namespace Guild.Application.Features.Roles.ListRoles;
@@ -15,12 +17,11 @@ internal sealed class ListRolesHandler(
 		ListRolesQuery query,
 		CancellationToken cancellationToken = default)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(query.GuildId, cancellationToken);
-		if (guild is null)
-			return GuildFailures.GuildNotFound;
-
-		if (guild.Members.All(m => m.UserId != currentUser.Id))
-			return GuildFailures.NotAMember;
+		var auth = await AuthorizationContext.LoadAsync(
+			guilds, currentUser, query.GuildId, Permission.None, cancellationToken);
+		if (auth.IsFailure)
+			return auth.Error;
+		var guild = auth.Value.Guild;
 
 		var items = guild.Roles
 			.OrderBy(r => r.Position)
