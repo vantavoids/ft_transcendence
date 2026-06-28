@@ -20,11 +20,7 @@ public sealed class CategoriesEndpoint : ICarterModule
 		group.MapDelete("/{categoryId:long}", DeleteAsync);
 	}
 
-	private static async Task<Results<
-		Created<CategoryResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Created<CategoryResponse>, JsonHttpResult<ErrorBody>>>
 	CreateAsync(
 		long id,
 		CreateCategoryRequest request,
@@ -37,14 +33,10 @@ public sealed class CategoriesEndpoint : ICarterModule
 
 		return result.Succeeded
 			? TypedResults.Created($"/v1/guilds/{id}/categories/{result.Value.Id}", result.Value)
-			: MapErrorCreate(result.Error);
+			: EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<CategoryResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<CategoryResponse>, JsonHttpResult<ErrorBody>>>
 	UpdateAsync(
 		long id,
 		long categoryId,
@@ -56,13 +48,10 @@ public sealed class CategoriesEndpoint : ICarterModule
 			new UpdateCategoryCommand(id, categoryId, request.Name, request.Position),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorUpdate(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	DeleteAsync(
 		long id,
 		long categoryId,
@@ -73,38 +62,13 @@ public sealed class CategoriesEndpoint : ICarterModule
 			new DeleteCategoryCommand(id, categoryId),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.NoContent() : MapErrorDelete(result.Error);
+		return result.Succeeded ? TypedResults.NoContent() : EndpointResults.Problem(result.Error);
 	}
 
 	// ---- error mapping ----
 
-	private static Results<Created<CategoryResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorCreate(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<Ok<CategoryResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorUpdate(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.CategoryNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<NoContent, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorDelete(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.CategoryNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
 	// ---- request shapes (snake_case via ConfigureHttpJsonOptions) ----
 

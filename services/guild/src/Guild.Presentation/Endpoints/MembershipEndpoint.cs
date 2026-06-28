@@ -28,12 +28,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		group.MapDelete("/members/{userId:long}", KickAsync);
 	}
 
-	private static async Task<Results<
-		Ok<GuildDto>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		Conflict<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<GuildDto>, JsonHttpResult<ErrorBody>>>
 	JoinAsync(
 		long id,
 		JoinByPathRequest request,
@@ -47,20 +42,17 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.AlreadyMember" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
-			"Guild.JoinBannedFromGuild" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		// contract: on POST /guilds/{id}/join an invalid/expired/wrong-guild invite
+		// is a 400 (the body carried a bad code), unlike POST /invites/{code}/join
+		// where the same failures are 404. override the table's 404 default here.
+		return EndpointResults.Problem(
+			result.Error,
+			("Guild.InviteNotFound", StatusCodes.Status400BadRequest),
+			("Guild.InviteUnusable", StatusCodes.Status400BadRequest),
+			("Guild.InviteGuildMismatch", StatusCodes.Status400BadRequest));
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	LeaveAsync(
 		long id,
 		ICommandHandler<LeaveGuildCommand, Result> handler,
@@ -71,20 +63,10 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.OwnerCannotLeave" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<IReadOnlyList<MemberResponse>>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<IReadOnlyList<MemberResponse>>, JsonHttpResult<ErrorBody>>>
 	ListMembersAsync(
 		long id,
 		string? after,
@@ -96,13 +78,13 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (after is not null)
 		{
 			if (!long.TryParse(after, out var parsed) || parsed <= 0)
-				return TypedResults.BadRequest(new ErrorBody("after must be a positive snowflake."));
+				return TypedResults.Json(new ErrorBody("after must be a positive snowflake."), statusCode: StatusCodes.Status400BadRequest);
 			afterCursor = parsed;
 		}
 
 		var effectiveLimit = limit ?? DefaultListLimit;
 		if (effectiveLimit <= 0 || effectiveLimit > MaxListLimit)
-			return TypedResults.BadRequest(new ErrorBody($"limit must be between 1 and {MaxListLimit}."));
+			return TypedResults.Json(new ErrorBody($"limit must be between 1 and {MaxListLimit}."), statusCode: StatusCodes.Status400BadRequest);
 
 		var result = await handler.HandleAsync(
 			new ListMembersQuery(id, afterCursor, effectiveLimit),
@@ -111,19 +93,10 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value.Items);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<MemberResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<MemberResponse>, JsonHttpResult<ErrorBody>>>
 	UpdateNicknameAsync(
 		long id,
 		long userId,
@@ -138,24 +111,10 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.NicknameTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			"Guild.NicknameInvalid" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	KickAsync(
 		long id,
 		long userId,
@@ -167,16 +126,7 @@ public sealed class MembershipEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.TargetNotAMember" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotKickOwner" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
 	private sealed record JoinByPathRequest(string? InviteCode);

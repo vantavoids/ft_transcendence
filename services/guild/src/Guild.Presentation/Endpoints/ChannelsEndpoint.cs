@@ -22,10 +22,7 @@ public sealed class ChannelsEndpoint : ICarterModule
 		group.MapDelete("/{channelId:long}", DeleteAsync);
 	}
 
-	private static async Task<Results<
-		Ok<IReadOnlyList<ChannelResponse>>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<IReadOnlyList<ChannelResponse>>, JsonHttpResult<ErrorBody>>>
 	ListAsync(
 		long id,
 		IQueryHandler<ListChannelsQuery, Result<ChannelListResponse>> handler,
@@ -34,14 +31,10 @@ public sealed class ChannelsEndpoint : ICarterModule
 		var result = await handler.HandleAsync(new ListChannelsQuery(id), cancellationToken);
 		return result.Succeeded
 			? TypedResults.Ok(result.Value.Items)
-			: MapErrorList(result.Error);
+			: EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Created<ChannelResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Created<ChannelResponse>, JsonHttpResult<ErrorBody>>>
 	CreateAsync(
 		long id,
 		CreateChannelRequest request,
@@ -52,7 +45,7 @@ public sealed class ChannelsEndpoint : ICarterModule
 		if (request.CategoryId is { Length: > 0 } raw)
 		{
 			if (!long.TryParse(raw, out var parsed))
-				return TypedResults.BadRequest(new ErrorBody("category_id must be a snowflake string."));
+				return TypedResults.Json(new ErrorBody("category_id must be a snowflake string."), statusCode: StatusCodes.Status400BadRequest);
 			categoryId = parsed;
 		}
 
@@ -70,14 +63,10 @@ public sealed class ChannelsEndpoint : ICarterModule
 
 		return result.Succeeded
 			? TypedResults.Created($"/v1/guilds/{id}/channels/{result.Value.Id}", result.Value)
-			: MapErrorCreate(result.Error);
+			: EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		Ok<ChannelResponse>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<ChannelResponse>, JsonHttpResult<ErrorBody>>>
 	UpdateAsync(
 		long id,
 		long channelId,
@@ -96,7 +85,7 @@ public sealed class ChannelsEndpoint : ICarterModule
 		if (categoryProvided && request.CategoryId is { Length: > 0 } raw)
 		{
 			if (!long.TryParse(raw, out var parsed))
-				return TypedResults.BadRequest(new ErrorBody("category_id must be a snowflake string or empty to clear."));
+				return TypedResults.Json(new ErrorBody("category_id must be a snowflake string or empty to clear."), statusCode: StatusCodes.Status400BadRequest);
 			categoryId = parsed;
 		}
 
@@ -112,13 +101,10 @@ public sealed class ChannelsEndpoint : ICarterModule
 				TopicProvided: topicProvided),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.Ok(result.Value) : MapErrorUpdate(result.Error);
+		return result.Succeeded ? TypedResults.Ok(result.Value) : EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	DeleteAsync(
 		long id,
 		long channelId,
@@ -129,48 +115,14 @@ public sealed class ChannelsEndpoint : ICarterModule
 			new DeleteChannelCommand(id, channelId),
 			cancellationToken);
 
-		return result.Succeeded ? TypedResults.NoContent() : MapErrorDelete(result.Error);
+		return result.Succeeded ? TypedResults.NoContent() : EndpointResults.Problem(result.Error);
 	}
 
 	// ---- error mapping ----
 
-	private static Results<Ok<IReadOnlyList<ChannelResponse>>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorList(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
-	private static Results<Created<ChannelResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorCreate(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.CategoryNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<Ok<ChannelResponse>, BadRequest<ErrorBody>, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorUpdate(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.CategoryNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
-		};
 
-	private static Results<NoContent, NotFound<ErrorBody>, JsonHttpResult<ErrorBody>>
-		MapErrorDelete(Failure failure) => failure.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
-		};
 
 	// ---- request shapes (snake_case via ConfigureHttpJsonOptions) ----
 

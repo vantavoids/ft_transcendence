@@ -23,11 +23,7 @@ public sealed class BansEndpoint : ICarterModule
 		group.MapDelete("/{userId:long}", UnbanAsync);
 	}
 
-	private static async Task<Results<
-		Ok<IReadOnlyList<BanResponse>>,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<Ok<IReadOnlyList<BanResponse>>, JsonHttpResult<ErrorBody>>>
 	ListAsync(
 		long id,
 		string? after,
@@ -39,13 +35,13 @@ public sealed class BansEndpoint : ICarterModule
 		if (after is not null)
 		{
 			if (!long.TryParse(after, out var parsed) || parsed <= 0)
-				return TypedResults.BadRequest(new ErrorBody("after must be a positive snowflake."));
+				return TypedResults.Json(new ErrorBody("after must be a positive snowflake."), statusCode: StatusCodes.Status400BadRequest);
 			afterCursor = parsed;
 		}
 
 		var effectiveLimit = limit ?? DefaultListLimit;
 		if (effectiveLimit <= 0 || effectiveLimit > MaxListLimit)
-			return TypedResults.BadRequest(new ErrorBody($"limit must be between 1 and {MaxListLimit}."));
+			return TypedResults.Json(new ErrorBody($"limit must be between 1 and {MaxListLimit}."), statusCode: StatusCodes.Status400BadRequest);
 
 		var result = await handler.HandleAsync(
 			new ListBansQuery(id, afterCursor, effectiveLimit),
@@ -54,21 +50,10 @@ public sealed class BansEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.Ok(result.Value.Items);
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		Conflict<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	BanAsync(
 		long id,
 		long userId,
@@ -83,25 +68,10 @@ public sealed class BansEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotBanOwner" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.RoleHierarchyBlocked" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.CannotBanSelf" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			"Guild.BanReasonTooLong" => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-			"Guild.AlreadyBanned" => TypedResults.Conflict(new ErrorBody(result.Error.Message)),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
-	private static async Task<Results<
-		NoContent,
-		BadRequest<ErrorBody>,
-		NotFound<ErrorBody>,
-		JsonHttpResult<ErrorBody>>>
+	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
 	UnbanAsync(
 		long id,
 		long userId,
@@ -114,14 +84,7 @@ public sealed class BansEndpoint : ICarterModule
 		if (result.Succeeded)
 			return TypedResults.NoContent();
 
-		return result.Error.Code switch
-		{
-			"Guild.GuildNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.BanNotFound" => TypedResults.NotFound(new ErrorBody(result.Error.Message)),
-			"Guild.NotAMember" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			"Guild.MissingPermission" => TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status403Forbidden),
-			_ => TypedResults.BadRequest(new ErrorBody(result.Error.Message)),
-		};
+		return EndpointResults.Problem(result.Error);
 	}
 
 	private sealed record BanRequest(string? Reason);
