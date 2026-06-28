@@ -14,8 +14,8 @@ import (
 )
 
 type Orchestrator struct {
-	queries    *database.Queries
-    hub *Hub
+	queries *database.Queries
+	hub     *Hub
 
 	snowflake  *snowflake.Generator
 	userTunnel RelationshipChecker
@@ -175,6 +175,17 @@ func (o *Orchestrator) Dismiss(ctx context.Context, userID int64, id int64) erro
 
 	if rows == 0 {
 		return failure.ErrNotFound
+	}
+
+	return nil
+}
+
+// TODO: dont forget to add preferences in the delete section
+// TODO: dont forget to add a rollback after adding the preference
+func (o *Orchestrator) DeleteUser(ctx context.Context, userID int64) error {
+
+	if err := o.queries.DeleteUserNotifications(ctx, userID); err != nil {
+		return err
 	}
 
 	return nil
