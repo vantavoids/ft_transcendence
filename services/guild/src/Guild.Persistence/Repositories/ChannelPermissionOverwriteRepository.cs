@@ -55,9 +55,4 @@ internal sealed class ChannelPermissionOverwriteRepository(GuildDbContext contex
 	{
 		context.ChannelPermissionOverwrites.Remove(overwrite);
 	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		return context.SaveChangesAsync(cancellationToken);
-	}
 }

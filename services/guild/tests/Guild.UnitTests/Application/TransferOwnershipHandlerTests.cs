@@ -71,7 +71,6 @@ public sealed class TransferOwnershipHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Equal("2", result.Value.OwnerId);
 		Assert.Equal(2L, repo.Store[100].OwnerId);
-		Assert.Equal(1, repo.SaveChangesCount);
 	}
 
 	private static void Seed(FakeGuildRepository repo, long ownerId)

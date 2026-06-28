@@ -14,7 +14,8 @@ internal sealed class PutOverwriteHandler(
 	IChannelPermissionOverwriteRepository overwrites,
 	IIdGenerator ids,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<PutOverwriteCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -58,7 +59,7 @@ internal sealed class PutOverwriteHandler(
 				return updateResult.Error;
 
 			overwrites.Update(existing);
-			await overwrites.SaveChangesAsync(cancellationToken);
+			await unitOfWork.SaveChangesAsync(cancellationToken);
 			return Result.Ok();
 		}
 
@@ -76,7 +77,7 @@ internal sealed class PutOverwriteHandler(
 			return createResult.Error;
 
 		await overwrites.AddAsync(createResult.Value, cancellationToken);
-		await overwrites.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

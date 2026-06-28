@@ -38,9 +38,4 @@ internal sealed class ChannelCategoryRepository(GuildDbContext context) : IChann
 	{
 		context.ChannelCategories.Remove(category);
 	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		return context.SaveChangesAsync(cancellationToken);
-	}
 }

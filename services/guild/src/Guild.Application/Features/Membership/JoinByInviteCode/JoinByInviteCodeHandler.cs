@@ -16,7 +16,8 @@ internal sealed class JoinByInviteCodeHandler(
 	IEventBus eventBus,
 	IUserService users,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<JoinByInviteCodeCommand, Result<GuildDto>>
 {
 	public async Task<Result<GuildDto>> HandleAsync(
@@ -75,7 +76,7 @@ internal sealed class JoinByInviteCodeHandler(
 			new GuildMemberJoined(guild.Id, guild.Name, currentUser.Id),
 			cancellationToken);
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);
 	}

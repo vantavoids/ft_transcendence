@@ -82,7 +82,6 @@ public sealed class DeleteInviteHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.True(invite.IsRevoked);
 		Assert.Equal(1, i.UpdateCount);
-		Assert.Equal(1, i.SaveChangesCount);
 	}
 
 	[Fact]

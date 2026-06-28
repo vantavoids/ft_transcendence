@@ -11,7 +11,8 @@ namespace Guild.Application.Features.Roles.DeleteRole;
 internal sealed class DeleteRoleHandler(
 	IGuildRepository guilds,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteRoleCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -41,7 +42,7 @@ internal sealed class DeleteRoleHandler(
 		if (removeResult.IsFailure)
 			return removeResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

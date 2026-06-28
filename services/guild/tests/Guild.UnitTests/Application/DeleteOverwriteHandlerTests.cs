@@ -48,7 +48,6 @@ public sealed class DeleteOverwriteHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Empty(overwrites.Store);
 		Assert.Equal(1, overwrites.RemoveCount);
-		Assert.Equal(1, overwrites.SaveChangesCount);
 	}
 
 	[Fact]

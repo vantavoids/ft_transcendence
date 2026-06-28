@@ -7,7 +7,8 @@ namespace Guild.Application.Features.Guilds.DeleteGuild;
 
 internal sealed class DeleteGuildHandler(
 	IGuildRepository repository,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteGuildCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -22,7 +23,7 @@ internal sealed class DeleteGuildHandler(
 			return GuildFailures.NotTheOwner;
 
 		repository.Remove(guild);
-		await repository.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

@@ -31,11 +31,6 @@ internal sealed class GuildInviteRepository(GuildDbContext context) : IGuildInvi
 		context.GuildInvites.Update(invite);
 	}
 
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		return context.SaveChangesAsync(cancellationToken);
-	}
-
 	public Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default) => context.GuildInvites
 		.Where(i => i.IsRevoked || (i.ExpiresAt != null && i.ExpiresAt < expiredBefore))
 		.ExecuteDeleteAsync(cancellationToken);

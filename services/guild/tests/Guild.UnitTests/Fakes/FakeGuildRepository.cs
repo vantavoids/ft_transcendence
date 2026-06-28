@@ -12,7 +12,6 @@ internal sealed class FakeGuildRepository : IGuildRepository
 	public int AddCount { get; private set; }
 	public int UpdateCount { get; private set; }
 	public int RemoveCount { get; private set; }
-	public int SaveChangesCount { get; private set; }
 
 	public Task<GuildEntity?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
 	{
@@ -93,11 +92,5 @@ internal sealed class FakeGuildRepository : IGuildRepository
 	{
 		_store.Remove(guild.Id);
 		RemoveCount++;
-	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		SaveChangesCount++;
-		return Task.CompletedTask;
 	}
 }

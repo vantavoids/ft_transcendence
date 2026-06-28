@@ -18,6 +18,4 @@ public interface IGuildInviteRepository
 
 	Task AddAsync(GuildInvite invite, CancellationToken cancellationToken = default);
 	void Update(GuildInvite invite);
-
-	Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

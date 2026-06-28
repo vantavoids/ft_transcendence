@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Membership.UpdateNickname;
 
 internal sealed class UpdateNicknameHandler(
 	IGuildRepository guilds,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateNicknameCommand, Result<MemberResponse>>
 {
 	public async Task<Result<MemberResponse>> HandleAsync(
@@ -39,7 +40,7 @@ internal sealed class UpdateNicknameHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		var member = updateResult.Value;
 		var assignedRoleIds = guild.MemberRoles

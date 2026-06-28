@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Guilds.TransferOwnership;
 internal sealed class TransferOwnershipHandler(
 	IGuildRepository repository,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<TransferOwnershipCommand, Result<GuildDto>>
 {
 	public async Task<Result<GuildDto>> HandleAsync(
@@ -35,7 +36,7 @@ internal sealed class TransferOwnershipHandler(
 		if (transferResult.IsFailure)
 			return transferResult.Error;
 
-		await repository.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);
 	}

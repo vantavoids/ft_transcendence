@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Channels.DeleteChannel;
 internal sealed class DeleteChannelHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteChannelCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -28,7 +29,7 @@ internal sealed class DeleteChannelHandler(
 			return GuildFailures.ChannelNotFound;
 
 		channels.Remove(channel);
-		await channels.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

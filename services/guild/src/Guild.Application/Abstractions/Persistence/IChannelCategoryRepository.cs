@@ -19,6 +19,4 @@ public interface IChannelCategoryRepository
 	Task AddAsync(ChannelCategory category, CancellationToken cancellationToken = default);
 	void Update(ChannelCategory category);
 	void Remove(ChannelCategory category);
-
-	Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

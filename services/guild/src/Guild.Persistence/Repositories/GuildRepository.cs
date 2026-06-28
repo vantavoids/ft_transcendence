@@ -110,9 +110,4 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 	{
 		context.Guilds.Remove(guild);
 	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		return context.SaveChangesAsync(cancellationToken);
-	}
 }

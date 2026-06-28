@@ -13,7 +13,8 @@ namespace Guild.Application.Features.Roles.ReorderRoles;
 internal sealed class ReorderRolesHandler(
 	IGuildRepository guilds,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<ReorderRolesCommand, Result<RoleListResponse>>
 {
 	public async Task<Result<RoleListResponse>> HandleAsync(
@@ -54,7 +55,7 @@ internal sealed class ReorderRolesHandler(
 		if (result.IsFailure)
 			return result.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		var items = result.Value.Select(RoleResponse.From).ToList();
 		return new RoleListResponse(items);

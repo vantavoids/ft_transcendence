@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Invites.DeleteInvite;
 internal sealed class DeleteInviteHandler(
 	IGuildRepository guilds,
 	IGuildInviteRepository invites,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteInviteCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -40,7 +41,7 @@ internal sealed class DeleteInviteHandler(
 			return revokeResult.Error;
 
 		invites.Update(invite);
-		await invites.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

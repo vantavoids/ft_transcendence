@@ -11,7 +11,8 @@ namespace Guild.Application.Features.Membership.UnassignRole;
 internal sealed class UnassignRoleHandler(
 	IGuildRepository guilds,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UnassignRoleCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -35,7 +36,7 @@ internal sealed class UnassignRoleHandler(
 		if (unassignResult.IsFailure)
 			return unassignResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

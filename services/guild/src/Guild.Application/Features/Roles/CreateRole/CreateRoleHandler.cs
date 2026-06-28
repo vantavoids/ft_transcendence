@@ -13,7 +13,8 @@ internal sealed class CreateRoleHandler(
 	IGuildRepository guilds,
 	IIdGenerator ids,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<CreateRoleCommand, Result<RoleResponse>>
 {
 	public async Task<Result<RoleResponse>> HandleAsync(
@@ -41,7 +42,7 @@ internal sealed class CreateRoleHandler(
 		if (addResult.IsFailure)
 			return addResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return RoleResponse.From(addResult.Value);
 	}

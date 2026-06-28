@@ -79,7 +79,6 @@ public sealed class CreateInviteHandlerTests
 		Assert.NotNull(result.Value.ExpiresAt);
 
 		Assert.Equal(1, i.AddCount);
-		Assert.Equal(1, i.SaveChangesCount);
 
 		var evt = b.Single<GuildInviteCreated>();
 		Assert.Equal(guild.Id, evt.GuildId);
