@@ -23,7 +23,7 @@ const (
 )
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
-func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) error {
+func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) error {
 	switch d.RoutingKey {
 
 	case "chat.message_sent":
@@ -36,7 +36,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 			if err != nil {
 				return err
 			}
-			if err := svc.Create(ctx, core.CreateInput{
+			if err := orch.Create(ctx, core.CreateInput{
 				UserID:   uid,
 				Type:     TypeMention,
 				ActorID:  &ev.AuthorID,
@@ -57,7 +57,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, core.CreateInput{
+		return orch.Create(ctx, core.CreateInput{
 			UserID:   ev.RecipientID,
 			Type:     TypeDM,
 			ActorID:  &ev.SenderID,
@@ -73,7 +73,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, core.CreateInput{
+		return orch.Create(ctx, core.CreateInput{
 			UserID:   ev.AddresseeID,
 			Type:     TypeFriendRequest,
 			ActorID:  &ev.RequesterID,
@@ -86,7 +86,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, core.CreateInput{
+		return orch.Create(ctx, core.CreateInput{
 			UserID:   ev.InvitedUserID,
 			Type:     TypeGuildInvite,
 			ActorID:  &ev.InvitedByUserID,
@@ -101,7 +101,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, core.CreateInput{
+		return orch.Create(ctx, core.CreateInput{
 			UserID:   ev.UserID,
 			Type:     TypeGuildWelcome,
 			ActorID:  nil,
@@ -116,7 +116,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.Create(ctx, core.CreateInput{
+		return orch.Create(ctx, core.CreateInput{
 			UserID:   ev.CalleeID,
 			Type:     TypeIncomingCall,
 			ActorID:  &ev.CallerID,
@@ -131,7 +131,7 @@ func dispatch(ctx context.Context, svc *core.Orchestrator, d amqp.Delivery) erro
 		if err != nil {
 			return err
 		}
-		return svc.DeleteUser(ctx, ev.UserID)
+		return orch.DeleteUser(ctx, ev.UserID)
 
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)

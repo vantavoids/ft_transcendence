@@ -60,7 +60,7 @@ func main() {
 		log.Fatalf("Unable to create an user client: %s", err)
 	}
 
-	svc, err := core.NewOrchestrator(hub, queries, sflkGen, fakeUserTunnel)
+	orch, err := core.NewOrchestrator(hub, queries, sflkGen, fakeUserTunnel)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
@@ -70,10 +70,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to create a rabbitMQ consumer: %s", err)
 	}
-	go consumer.Run(svc)
+	go consumer.Run(orch)
 
 	// ─── Handler Endpoint ───
-	handler, err := api.NewHandler(svc, hub)
+	handler, err := api.NewHandler(orch, hub)
 	if err != nil {
 		log.Fatalf("Unable to create a http handler: %s", err)
 	}

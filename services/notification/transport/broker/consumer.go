@@ -131,7 +131,7 @@ func NewConsumer() (*Consumer, error) {
 }
 
 // TODO: graceful shutdown with consumer.done
-func (c *Consumer) Run(svc *core.Orchestrator) {
+func (c *Consumer) Run(orch *core.Orchestrator) {
 	defer func() {
 		fmt.Printf("Run: deliveries channel closed\n")
 		c.done <- nil
@@ -140,17 +140,17 @@ func (c *Consumer) Run(svc *core.Orchestrator) {
 	// TODO: for the moment this is a single worker working on event one by one,
 	// in the future if needed, we can add a goroutine per worker
 	for d := range c.deliveries {
-		handle(svc, d)
+		handle(orch, d)
 	}
 }
 
 // TODO: backoff / dead-letter avec TTL.
 // TODO: context background doesnt allow graceful shutdown, try to plug it to a parent ctx
-func handle(svc *core.Orchestrator, d amqp.Delivery) {
+func handle(orch *core.Orchestrator, d amqp.Delivery) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := dispatch(ctx, svc, d)
+	err := dispatch(ctx, orch, d)
 	if err == nil {
 		d.Ack(false)
 		return
