@@ -30,7 +30,8 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
     private readonly string _dbName = "auth-tests-" + Guid.NewGuid();
 
-    public FakeOAuthProviderClient OAuthClient { get; } = new();
+    public FakeOAuthProviderClient OAuthClient  { get; } = new();
+    public FakeGuildClient         GuildClient { get; } = new();
 
     public async Task SeedEmailUserAsync(string email, string rawPassword)
     {
@@ -204,6 +205,8 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
                 ["OAuth:Github:ClientId"]       = "test-client-id",
                 ["OAuth:Github:ClientSecret"]   = "test-client-secret",
                 ["OAuth:Github:RedirectUri"]    = "https://app.test/callback",
+
+                ["Services:GuildService"] = "http://fake-guild",
             });
         });
 
@@ -217,6 +220,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
             foreach (var provider in new[] { OAuthProvider.FortyTwo, OAuthProvider.Google, OAuthProvider.Github })
                 services.AddKeyedSingleton<IOAuthProviderClient>(provider, OAuthClient);
+
+            services.RemoveAll<IGuildClient>();
+            services.AddSingleton<IGuildClient>(GuildClient);
         });
     }
 
@@ -258,6 +264,14 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         public Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
             where T : class, IEvent => Task.CompletedTask;
     }
+}
+
+public sealed class FakeGuildClient : IGuildClient
+{
+    public int OwnedGuildsCount { get; set; } = 0;
+
+    public Task<int> GetOwnedGuildsCountAsync(long userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(OwnedGuildsCount);
 }
 
 public sealed class FakeOAuthProviderClient : IOAuthProviderClient
