@@ -40,3 +40,6 @@ LIMIT sqlc.arg(row_limit)::int;
 DELETE FROM notifications
 WHERE user_id = $1;
 
+-- name: DeleteOlderThan7Days :exec
+DELETE FROM notifications
+WHERE created_at < NOW() - INTERVAL '7 days';
