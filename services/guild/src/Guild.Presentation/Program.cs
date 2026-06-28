@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureHostOptions(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
 builder.Services.ConfigureHttpJsonOptions(o =>
-	o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+	o.SerializerOptions.PropertyNamingPolicy = GuildSerialization.NamingPolicy);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
