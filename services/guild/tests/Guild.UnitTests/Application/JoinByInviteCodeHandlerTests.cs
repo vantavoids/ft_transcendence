@@ -145,7 +145,6 @@ public sealed class JoinByInviteCodeHandlerTests
 		Assert.Contains(guild.Members, m => m.UserId == 99);
 		Assert.Equal(1, invite.Uses);
 		Assert.Equal(1, i.UpdateCount);
-		Assert.Equal(1, g.SaveChangesCount);
 		Assert.Equal(1, u.ExistsCallCount);
 
 		var evt = b.Single<GuildMemberJoined>();

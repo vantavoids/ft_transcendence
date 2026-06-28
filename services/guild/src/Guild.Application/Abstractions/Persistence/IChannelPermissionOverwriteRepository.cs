@@ -28,6 +28,4 @@ public interface IChannelPermissionOverwriteRepository
 	Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default);
 	void Update(ChannelPermissionOverwrite overwrite);
 	void Remove(ChannelPermissionOverwrite overwrite);
-
-	Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

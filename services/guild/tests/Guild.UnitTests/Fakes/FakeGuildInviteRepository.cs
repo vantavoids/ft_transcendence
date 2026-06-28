@@ -11,7 +11,6 @@ internal sealed class FakeGuildInviteRepository : IGuildInviteRepository
 
 	public int AddCount { get; private set; }
 	public int UpdateCount { get; private set; }
-	public int SaveChangesCount { get; private set; }
 
 	public Task<GuildInvite?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
 	{
@@ -39,12 +38,6 @@ internal sealed class FakeGuildInviteRepository : IGuildInviteRepository
 	{
 		_store[invite.Code] = invite;
 		UpdateCount++;
-	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		SaveChangesCount++;
-		return Task.CompletedTask;
 	}
 
 	public Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default)

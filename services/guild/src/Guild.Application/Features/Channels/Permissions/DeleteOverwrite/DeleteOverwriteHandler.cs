@@ -11,7 +11,8 @@ internal sealed class DeleteOverwriteHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
 	IChannelPermissionOverwriteRepository overwrites,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteOverwriteCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -37,7 +38,7 @@ internal sealed class DeleteOverwriteHandler(
 			return GuildFailures.OverwriteNotFound;
 
 		overwrites.Remove(match);
-		await overwrites.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

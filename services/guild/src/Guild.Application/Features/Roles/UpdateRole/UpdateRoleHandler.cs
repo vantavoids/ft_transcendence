@@ -12,7 +12,8 @@ namespace Guild.Application.Features.Roles.UpdateRole;
 internal sealed class UpdateRoleHandler(
 	IGuildRepository guilds,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateRoleCommand, Result<RoleResponse>>
 {
 	public async Task<Result<RoleResponse>> HandleAsync(
@@ -53,7 +54,7 @@ internal sealed class UpdateRoleHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return RoleResponse.From(updateResult.Value);
 	}

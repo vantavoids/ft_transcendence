@@ -13,7 +13,8 @@ internal sealed class UpdateCategoryHandler(
 	IGuildRepository guilds,
 	IChannelCategoryRepository categories,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateCategoryCommand, Result<CategoryResponse>>
 {
 	public async Task<Result<CategoryResponse>> HandleAsync(
@@ -47,7 +48,7 @@ internal sealed class UpdateCategoryHandler(
 		}
 
 		categories.Update(category);
-		await categories.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return CategoryResponse.From(category);
 	}

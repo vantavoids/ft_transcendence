@@ -14,7 +14,8 @@ internal sealed class UpdateChannelHandler(
 	IChannelRepository channels,
 	IChannelCategoryRepository categories,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateChannelCommand, Result<ChannelResponse>>
 {
 	public async Task<Result<ChannelResponse>> HandleAsync(
@@ -69,7 +70,7 @@ internal sealed class UpdateChannelHandler(
 		}
 
 		channels.Update(channel);
-		await channels.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return ChannelResponse.From(channel);
 	}

@@ -16,7 +16,8 @@ internal sealed class CreateInviteHandler(
 	IInviteCodeGenerator codes,
 	IEventBus eventBus,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<CreateInviteCommand, Result<InviteDto>>
 {
 	public async Task<Result<InviteDto>> HandleAsync(
@@ -52,7 +53,7 @@ internal sealed class CreateInviteHandler(
 			new GuildInviteCreated(guild.Id, guild.Name, currentUser.Id, InvitedUserId: null),
 			cancellationToken);
 
-		await invites.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return InviteDto.FromEntity(inviteResult.Value);
 	}

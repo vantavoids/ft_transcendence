@@ -32,8 +32,6 @@ public interface IGuildRepository
 	Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default);
 	void Update(GuildEntity guild);
 	void Remove(GuildEntity guild);
-
-	Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

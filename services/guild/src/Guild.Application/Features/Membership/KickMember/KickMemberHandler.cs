@@ -13,7 +13,8 @@ internal sealed class KickMemberHandler(
 	IGuildRepository guilds,
 	IEventBus eventBus,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<KickMemberCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -26,6 +27,9 @@ internal sealed class KickMemberHandler(
 			return auth.Error;
 		var guild = auth.Value.Guild;
 
+		// kick rejects a non-member target up front: you cannot remove someone who
+		// is not in the guild. (BanMember deliberately does NOT do this, because a
+		// pre-emptive ban against a never-joined user is legal - see that handler.)
 		if (guild.Members.All(m => m.UserId != command.TargetUserId))
 			return GuildFailures.TargetNotAMember;
 
@@ -46,7 +50,7 @@ internal sealed class KickMemberHandler(
 			new GuildMemberLeft(guild.Id, command.TargetUserId),
 			cancellationToken);
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

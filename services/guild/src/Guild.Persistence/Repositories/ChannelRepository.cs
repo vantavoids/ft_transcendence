@@ -46,9 +46,4 @@ internal sealed class ChannelRepository(GuildDbContext context) : IChannelReposi
 	{
 		context.Channels.Remove(channel);
 	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		return context.SaveChangesAsync(cancellationToken);
-	}
 }

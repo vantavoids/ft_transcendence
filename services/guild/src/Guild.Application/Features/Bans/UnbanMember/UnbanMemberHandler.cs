@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Bans.UnbanMember;
 internal sealed class UnbanMemberHandler(
 	IGuildRepository guilds,
 	IGuildBanRepository bans,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UnbanMemberCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -28,7 +29,7 @@ internal sealed class UnbanMemberHandler(
 			return GuildFailures.BanNotFound;
 
 		bans.Remove(ban);
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

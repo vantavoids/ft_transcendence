@@ -10,7 +10,8 @@ namespace Guild.Application.Features.Categories.DeleteCategory;
 internal sealed class DeleteCategoryHandler(
 	IGuildRepository guilds,
 	IChannelCategoryRepository categories,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteCategoryCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -28,7 +29,7 @@ internal sealed class DeleteCategoryHandler(
 			return GuildFailures.CategoryNotFound;
 
 		categories.Remove(category);
-		await categories.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

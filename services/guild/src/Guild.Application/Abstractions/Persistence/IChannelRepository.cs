@@ -22,6 +22,4 @@ public interface IChannelRepository
 	Task AddAsync(Channel channel, CancellationToken cancellationToken = default);
 	void Update(Channel channel);
 	void Remove(Channel channel);
-
-	Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -11,7 +11,8 @@ internal sealed class LeaveGuildHandler(
 	IGuildRepository guilds,
 	IEventBus eventBus,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<LeaveGuildCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -32,7 +33,7 @@ internal sealed class LeaveGuildHandler(
 			new GuildMemberLeft(guild.Id, currentUser.Id),
 			cancellationToken);
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

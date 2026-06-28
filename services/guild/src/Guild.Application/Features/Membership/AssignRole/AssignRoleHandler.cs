@@ -11,7 +11,8 @@ namespace Guild.Application.Features.Membership.AssignRole;
 internal sealed class AssignRoleHandler(
 	IGuildRepository guilds,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<AssignRoleCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -39,7 +40,7 @@ internal sealed class AssignRoleHandler(
 		if (assignResult.IsFailure)
 			return assignResult.Error;
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

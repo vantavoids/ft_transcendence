@@ -14,7 +14,8 @@ internal sealed class CreateCategoryHandler(
 	IChannelCategoryRepository categories,
 	IIdGenerator ids,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<CreateCategoryCommand, Result<CategoryResponse>>
 {
 	public async Task<Result<CategoryResponse>> HandleAsync(
@@ -49,7 +50,7 @@ internal sealed class CreateCategoryHandler(
 			return categoryResult.Error;
 
 		await categories.AddAsync(categoryResult.Value, cancellationToken);
-		await categories.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return CategoryResponse.From(categoryResult.Value);
 	}

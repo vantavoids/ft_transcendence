@@ -12,7 +12,8 @@ namespace Guild.Application.Features.Guilds.UpdateGuild;
 internal sealed class UpdateGuildHandler(
 	IGuildRepository repository,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateGuildCommand, Result<GuildDto>>
 {
 	public async Task<Result<GuildDto>> HandleAsync(
@@ -35,7 +36,7 @@ internal sealed class UpdateGuildHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		await repository.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);
 	}

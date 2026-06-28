@@ -1,6 +1,7 @@
 using System.Reflection;
 using Guild.Application;
 using Guild.Application.Abstractions.Messaging;
+using Guild.Application.Abstractions.Persistence;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -72,6 +73,14 @@ internal static class HandlerFactory
 				// exposes it as a property), so reach for the field here
 				var nullLogger = typeof(NullLogger<>).MakeGenericType(type.GetGenericArguments()[0]);
 				args[i] = nullLogger.GetField("Instance")!.GetValue(null)!;
+			}
+			else if (type == typeof(IUnitOfWork))
+			{
+				// committing handlers take an IUnitOfWork; like ILogger it is plumbing,
+				// not behaviour under test, so auto-fill it and let callers keep their
+				// existing arg lists. the real commit path is covered by the functional
+				// tests, which resolve the production UnitOfWork over the DbContext
+				args[i] = new FakeUnitOfWork();
 			}
 			else
 			{

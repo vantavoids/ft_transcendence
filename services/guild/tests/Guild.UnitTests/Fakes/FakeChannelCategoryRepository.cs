@@ -12,7 +12,6 @@ internal sealed class FakeChannelCategoryRepository : IChannelCategoryRepository
 	public int AddCount { get; private set; }
 	public int UpdateCount { get; private set; }
 	public int RemoveCount { get; private set; }
-	public int SaveChangesCount { get; private set; }
 
 	public Task<ChannelCategory?> GetByIdAsync(
 		long guildId,
@@ -52,12 +51,6 @@ internal sealed class FakeChannelCategoryRepository : IChannelCategoryRepository
 	{
 		_store.Remove(category.Id);
 		RemoveCount++;
-	}
-
-	public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-	{
-		SaveChangesCount++;
-		return Task.CompletedTask;
 	}
 
 	internal void Seed(ChannelCategory category) => _store[category.Id] = category;

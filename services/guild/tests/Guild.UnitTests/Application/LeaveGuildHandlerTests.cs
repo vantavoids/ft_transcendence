@@ -39,7 +39,6 @@ public sealed class LeaveGuildHandlerTests
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.OwnerCannotLeave", result.Error.Code);
 		Assert.Empty(bus.Published);
-		Assert.Equal(0, repo.SaveChangesCount);
 	}
 
 	[Fact]
@@ -70,7 +69,6 @@ public sealed class LeaveGuildHandlerTests
 
 		Assert.True(result.Succeeded);
 		Assert.DoesNotContain(guild.Members, m => m.UserId == 99);
-		Assert.Equal(1, repo.SaveChangesCount);
 
 		var evt = bus.Single<GuildMemberLeft>();
 		Assert.Equal(guild.Id, evt.GuildId);

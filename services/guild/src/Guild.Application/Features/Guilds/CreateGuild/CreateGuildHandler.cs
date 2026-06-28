@@ -12,7 +12,8 @@ internal sealed class CreateGuildHandler(
 	IGuildRepository repository,
 	IIdGenerator ids,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<CreateGuildCommand, Result<GuildDto>>
 {
 	public async Task<Result<GuildDto>> HandleAsync(
@@ -39,7 +40,7 @@ internal sealed class CreateGuildHandler(
 			return guildResult.Error;
 
 		await repository.AddAsync(guildResult.Value, cancellationToken);
-		await repository.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guildResult.Value);
 	}

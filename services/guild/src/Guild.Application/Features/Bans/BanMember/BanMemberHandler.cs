@@ -14,7 +14,8 @@ internal sealed class BanMemberHandler(
 	IGuildBanRepository bans,
 	IEventBus eventBus,
 	IClock clock,
-	ICurrentUser currentUser)
+	ICurrentUser currentUser,
+	IUnitOfWork unitOfWork)
 	: ICommandHandler<BanMemberCommand, Result>
 {
 	public async Task<Result> HandleAsync(
@@ -27,6 +28,10 @@ internal sealed class BanMemberHandler(
 			return auth.Error;
 		var guild = auth.Value.Guild;
 
+		// NOTE: unlike KickMember, there is intentionally no TargetNotAMember guard
+		// here - banning a user who has never joined is a legal pre-emptive ban.
+		// the `wasMember` branch below only removes membership / emits the left
+		// event when the target actually was in the guild.
 		if (command.TargetUserId == currentUser.Id)
 			return GuildFailures.CannotBanSelf;
 
@@ -70,7 +75,7 @@ internal sealed class BanMemberHandler(
 				cancellationToken);
 		}
 
-		await guilds.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}

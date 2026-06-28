@@ -25,6 +25,7 @@ public static class DependencyInjection
 			config.UseNpgsql(options.ToConnectionString(), o => o.MapPostgresEnums());
 		});
 
+		services.AddScoped<IUnitOfWork, UnitOfWork>();
 		services.AddScoped<IGuildRepository, GuildRepository>();
 		services.AddScoped<IGuildInviteRepository, GuildInviteRepository>();
 		services.AddScoped<IGuildBanRepository, GuildBanRepository>();
