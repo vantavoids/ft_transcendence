@@ -13,8 +13,8 @@ public sealed class MemberRolesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/members/{userId:long}/roles");
-		group.MapPut("/{roleId:long}", AssignAsync);
-		group.MapDelete("/{roleId:long}", UnassignAsync);
+		group.MapPut("/{roleId:long}", AssignAsync).ProducesGuildErrors();
+		group.MapDelete("/{roleId:long}", UnassignAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>

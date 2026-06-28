@@ -15,9 +15,9 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/invites");
-		group.MapPost("/", CreateAsync);
-		group.MapGet("/", ListAsync);
-		group.MapDelete("/{code}", DeleteAsync);
+		group.MapPost("/", CreateAsync).ProducesGuildErrors();
+		group.MapGet("/", ListAsync).ProducesGuildErrors();
+		group.MapDelete("/{code}", DeleteAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Created<InviteDto>, JsonHttpResult<ErrorBody>>>

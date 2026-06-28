@@ -12,8 +12,9 @@ public sealed class MemberPermissionsEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		endpoints.MapGet(
-			"/guilds/{id:long}/members/{userId:long}/permissions",
-			GetAsync);
+				"/guilds/{id:long}/members/{userId:long}/permissions",
+				GetAsync)
+			.ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Ok<MemberPermissionsResponse>, JsonHttpResult<ErrorBody>>>

@@ -17,11 +17,11 @@ public sealed class GuildsEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds");
-		group.MapPost("/", CreateAsync);
-		group.MapGet("/{id:long}", GetAsync);
-		group.MapPatch("/{id:long}", UpdateAsync);
-		group.MapDelete("/{id:long}", DeleteAsync);
-		group.MapPatch("/{id:long}/owner", TransferOwnershipAsync);
+		group.MapPost("/", CreateAsync).ProducesGuildErrors();
+		group.MapGet("/{id:long}", GetAsync).ProducesGuildErrors();
+		group.MapPatch("/{id:long}", UpdateAsync).ProducesGuildErrors();
+		group.MapDelete("/{id:long}", DeleteAsync).ProducesGuildErrors();
+		group.MapPatch("/{id:long}/owner", TransferOwnershipAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Created<GuildDto>, JsonHttpResult<ErrorBody>>>
