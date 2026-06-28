@@ -40,6 +40,7 @@ func (h *Handler) ListHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
+		return
 	}
 
 	var read *bool
@@ -110,6 +111,7 @@ func (h *Handler) MarkReadHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
+		return
 	}
 
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -132,6 +134,7 @@ func (h *Handler) UnreadCountHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
+		return
 	}
 
 	rows, err := h.svc.UnreadCount(r.Context(), userID)
@@ -148,6 +151,7 @@ func (h *Handler) MarkReadAllHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
+		return
 	}
 
 	rows, err := h.svc.MarkReadAll(r.Context(), userID)
@@ -163,6 +167,7 @@ func (h *Handler) DismissHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getUserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusInternalServerError, errorBody("internal error"))
+		return
 	}
 
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
