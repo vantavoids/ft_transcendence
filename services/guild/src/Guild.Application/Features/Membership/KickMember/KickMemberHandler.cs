@@ -39,8 +39,6 @@ internal sealed class KickMemberHandler(
 		if (removeResult.IsFailure)
 			return removeResult.Error;
 
-		guilds.Update(guild);
-
 		// publish BEFORE SaveChanges: the bus outbox records the event as an
 		// OutboxMessage row in this same transaction, so the kick and the
 		// GuildMemberLeft event commit atomically (or not at all)

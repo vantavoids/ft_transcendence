@@ -41,7 +41,6 @@ internal sealed class DeleteRoleHandler(
 		if (removeResult.IsFailure)
 			return removeResult.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();

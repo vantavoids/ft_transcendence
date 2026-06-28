@@ -39,7 +39,6 @@ internal sealed class UpdateNicknameHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		var member = updateResult.Value;

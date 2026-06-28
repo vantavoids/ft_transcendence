@@ -26,8 +26,6 @@ internal sealed class LeaveGuildHandler(
 		if (removeResult.IsFailure)
 			return removeResult.Error;
 
-		guilds.Update(guild);
-
 		// publish BEFORE SaveChanges so the bus outbox binds the GuildMemberLeft
 		// event to the same transaction as the membership removal
 		await eventBus.PublishAsync(

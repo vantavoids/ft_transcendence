@@ -35,7 +35,6 @@ internal sealed class UpdateGuildHandler(
 		if (updateResult.IsFailure)
 			return updateResult.Error;
 
-		repository.Update(guild);
 		await repository.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);

@@ -35,7 +35,6 @@ internal sealed class TransferOwnershipHandler(
 		if (transferResult.IsFailure)
 			return transferResult.Error;
 
-		repository.Update(guild);
 		await repository.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);

@@ -54,7 +54,6 @@ internal sealed class ReorderRolesHandler(
 		if (result.IsFailure)
 			return result.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		var items = result.Value.Select(RoleResponse.From).ToList();

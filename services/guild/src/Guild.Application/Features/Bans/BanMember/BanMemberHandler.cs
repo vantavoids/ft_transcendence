@@ -60,7 +60,6 @@ internal sealed class BanMemberHandler(
 			var removeResult = guild.RemoveMember(command.TargetUserId, now);
 			if (removeResult.IsFailure)
 				return removeResult.Error;
-			guilds.Update(guild);
 
 			// publish BEFORE SaveChanges so the bus outbox binds the event to the
 			// same transaction as the ban insert + member removal. only a member

@@ -35,7 +35,6 @@ internal sealed class UnassignRoleHandler(
 		if (unassignResult.IsFailure)
 			return unassignResult.Error;
 
-		guilds.Update(guild);
 		await guilds.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();

@@ -84,7 +84,6 @@ public sealed class UpdateGuildHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Equal("Renamed", result.Value.Name);
 		Assert.Equal("Renamed", repo.Store[100].Name);
-		Assert.Equal(1, repo.UpdateCount);
 		Assert.Equal(1, repo.SaveChangesCount);
 	}
 
