@@ -1,4 +1,5 @@
 using Guild.Domain.Guild;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using GuildEntity = Guild.Domain.Guild.Guild;
 
@@ -20,6 +21,16 @@ public sealed class GuildDbContext(DbContextOptions<GuildDbContext> options) : D
 	{
 		base.OnModelCreating(modelBuilder);
 		modelBuilder.RegisterPostgresEnums();
+
+		// MassTransit transactional (bus) outbox tables. publishing an event now
+		// writes an OutboxMessage row inside the same SaveChanges as the business
+		// change, so the DB commit and the event can never diverge: a broker
+		// outage no longer drops events, and the delivery service ships them once
+		// the transaction has committed. see Infrastructure AddEntityFrameworkOutbox
+		modelBuilder.AddInboxStateEntity();
+		modelBuilder.AddOutboxStateEntity();
+		modelBuilder.AddOutboxMessageEntity();
+
 		modelBuilder.ApplyConfigurationsFromAssembly(typeof(GuildDbContext).Assembly);
 	}
 }

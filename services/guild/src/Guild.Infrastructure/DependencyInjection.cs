@@ -10,6 +10,7 @@ using Guild.Infrastructure.Security;
 using Guild.Infrastructure.Users;
 using MassTransit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +18,8 @@ namespace Guild.Infrastructure;
 
 public static class DependencyInjection
 {
-	public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+	public static IServiceCollection AddInfrastructure<TDbContext>(this IServiceCollection services)
+		where TDbContext : DbContext
 	{
 		var optionsTypes = typeof(DependencyInjection).Assembly.GetTypes()
 			.Where(t => t is { IsAbstract: false, IsInterface: false } &&
@@ -34,6 +36,18 @@ public static class DependencyInjection
 
 		services.AddMassTransit(x =>
 		{
+			// transactional bus outbox: a published event is written to the
+			// OutboxMessage table inside the same SaveChanges as the business
+			// change (so a broker outage can no longer drop an event), then the
+			// delivery service ships it to RabbitMQ after the commit. TDbContext
+			// is supplied by the composition root so Infrastructure never has to
+			// reference the Persistence project (LayerDependencyTests forbids it).
+			x.AddEntityFrameworkOutbox<TDbContext>(o =>
+			{
+				o.UsePostgres();
+				o.UseBusOutbox();
+			});
+
 			x.UsingRabbitMq((ctx, cfg) =>
 			{
 				var options = ctx.GetRequiredService<IOptions<RabbitMqOptions>>().Value;

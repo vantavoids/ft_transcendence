@@ -4,6 +4,7 @@ using Carter;
 using Guild.Application;
 using Guild.Infrastructure;
 using Guild.Persistence;
+using Guild.Persistence.Db;
 using Guild.Presentation.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -22,7 +23,7 @@ builder.Services.AddHealthChecks()
 	.AddPersistenceHealthChecks();
 
 builder.Services.AddApplication()
-	.AddInfrastructure()
+	.AddInfrastructure<GuildDbContext>()
 	.AddPersistence();
 
 builder.Services.AddCarter();

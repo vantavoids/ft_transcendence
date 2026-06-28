@@ -69,11 +69,14 @@ internal sealed class JoinByInviteCodeHandler(
 
 		invites.Update(invite);
 		guilds.Update(guild);
-		await guilds.SaveChangesAsync(cancellationToken);
 
+		// publish BEFORE SaveChanges so the bus outbox binds the GuildMemberJoined
+		// event to the same transaction as the invite consume + member add
 		await eventBus.PublishAsync(
 			new GuildMemberJoined(guild.Id, guild.Name, currentUser.Id),
 			cancellationToken);
+
+		await guilds.SaveChangesAsync(cancellationToken);
 
 		return GuildDto.FromEntity(guild);
 	}

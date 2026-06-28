@@ -66,16 +66,17 @@ internal sealed class BanMemberHandler(
 			if (removeResult.IsFailure)
 				return removeResult.Error;
 			guilds.Update(guild);
-		}
 
-		await guilds.SaveChangesAsync(cancellationToken);
-
-		if (wasMember)
-		{
+			// publish BEFORE SaveChanges so the bus outbox binds the event to the
+			// same transaction as the ban insert + member removal. only a member
+			// who was actually in the guild produces a GuildMemberLeft (a
+			// pre-emptive ban against a non-member has nothing to announce)
 			await eventBus.PublishAsync(
 				new GuildMemberLeft(guild.Id, command.TargetUserId),
 				cancellationToken);
 		}
+
+		await guilds.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
 	}
