@@ -61,23 +61,23 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 	return i, err
 }
 
-const deleteFromUser = `-- name: DeleteFromUser :exec
-DELETE FROM notifications
-WHERE user_id = $1
-`
-
-func (q *Queries) DeleteFromUser(ctx context.Context, userID int64) error {
-	_, err := q.db.Exec(ctx, deleteFromUser, userID)
-	return err
-}
-
-const deleteOlderThan7Days = `-- name: DeleteOlderThan7Days :exec
+const deleteNotificationsOlderThan7Days = `-- name: DeleteNotificationsOlderThan7Days :exec
 DELETE FROM notifications
 WHERE created_at < NOW() - INTERVAL '7 days'
 `
 
-func (q *Queries) DeleteOlderThan7Days(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, deleteOlderThan7Days)
+func (q *Queries) DeleteNotificationsOlderThan7Days(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteNotificationsOlderThan7Days)
+	return err
+}
+
+const deleteUserNotifications = `-- name: DeleteUserNotifications :exec
+DELETE FROM notifications
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserNotifications(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteUserNotifications, userID)
 	return err
 }
 
