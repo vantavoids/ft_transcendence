@@ -81,6 +81,7 @@ public sealed class MeEndpoint : ICarterModule
         MapPatchError(Failure failure) => failure.Code switch
         {
             "Auth.InvalidAccessToken"     => TypedResults.Unauthorized(),
+            "Auth.InvalidCredentials"     => TypedResults.Unauthorized(),
             "Auth.OAuthCantPatchEmail"    => TypedResults.Forbid(),
             "Auth.EmailAlreadyRegistered" => TypedResults.Json(new ErrorResponse(failure.Message), statusCode: StatusCodes.Status409Conflict),
             // "Auth.AtLeastOneFieldToPatch"
