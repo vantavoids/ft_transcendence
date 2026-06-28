@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Guild.Application;
 using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Abstractions.Users;
@@ -64,7 +65,7 @@ public static class DependencyInjection
 				// apply the same policy or deserialisation will fail
 				cfg.ConfigureJsonSerializerOptions(opts =>
 				{
-					opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+					opts.PropertyNamingPolicy = GuildSerialization.NamingPolicy;
 					return opts;
 				});
 
