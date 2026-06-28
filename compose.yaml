@@ -50,12 +50,18 @@ services:
     # host networking so the UDP relay port range and 3478/5349 are reachable
     # without publishing a large port span (same approach as nginx)
     network_mode: host
-    command: >
-      -c /etc/coturn/turnserver.conf
-      --realm=${TURN_REALM}
-      --user=${TURN_USERNAME}:${TURN_PASSWORD}
+    # entrypoint pins the relay/external IP to one reachable IPv4 (see
+    # infra/coturn/entrypoint.sh); realm + user come from the environment.
+    entrypoint: ["/usr/local/bin/coturn-entrypoint.sh"]
+    environment:
+      TURN_REALM: ${TURN_REALM}
+      TURN_USERNAME: ${TURN_USERNAME}
+      TURN_PASSWORD: ${TURN_PASSWORD}
+      # optional: force the advertised relay IP; empty => auto-detect the LAN IP
+      TURN_RELAY_IP: ${TURN_RELAY_IP:-}
     volumes:
       - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro,z
+      - ./infra/coturn/entrypoint.sh:/usr/local/bin/coturn-entrypoint.sh:ro,z
       - ./certs:/etc/coturn/certs:ro,z
     restart: unless-stopped
 
