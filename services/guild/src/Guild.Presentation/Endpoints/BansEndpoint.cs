@@ -12,9 +12,6 @@ namespace Guild.Presentation.Endpoints;
 
 public sealed class BansEndpoint : ICarterModule
 {
-	private const int DefaultListLimit = 50;
-	private const int MaxListLimit = 100;
-
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/bans");
@@ -31,17 +28,9 @@ public sealed class BansEndpoint : ICarterModule
 		IQueryHandler<ListBansQuery, Result<BanListResponse>> handler,
 		CancellationToken cancellationToken)
 	{
-		long? afterCursor = null;
-		if (after is not null)
-		{
-			if (!long.TryParse(after, out var parsed) || parsed <= 0)
-				return TypedResults.Json(new ErrorBody("after must be a positive snowflake."), statusCode: StatusCodes.Status400BadRequest);
-			afterCursor = parsed;
-		}
-
-		var effectiveLimit = limit ?? DefaultListLimit;
-		if (effectiveLimit <= 0 || effectiveLimit > MaxListLimit)
-			return TypedResults.Json(new ErrorBody($"limit must be between 1 and {MaxListLimit}."), statusCode: StatusCodes.Status400BadRequest);
+		var (afterCursor, effectiveLimit, error) = Pagination.Parse(after, limit);
+		if (error is not null)
+			return error;
 
 		var result = await handler.HandleAsync(
 			new ListBansQuery(id, afterCursor, effectiveLimit),
