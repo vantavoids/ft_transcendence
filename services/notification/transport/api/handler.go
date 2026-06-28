@@ -15,22 +15,22 @@ import (
 )
 
 type Handler struct {
-	svc *core.Orchestrator
+	orch *core.Orchestrator
 	hub *core.Hub
 }
 
 func NewHandler(svc *core.Orchestrator, hub *core.Hub) (*Handler, error) {
-	return &Handler{svc: svc, hub: hub}, nil
+	return &Handler{orch: svc, hub: hub}, nil
 }
 
 func (h *Handler) Routes(secret string) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /notifications", listHandler(h.svc))
-	mux.HandleFunc("PATCH /notifications/{id}/read", markReadHandler(h.svc))
-	mux.HandleFunc("GET /notifications/unread-count", unreadCountHandler(h.svc))
-	mux.HandleFunc("PATCH /notifications/read-all", markReadAllHandler(h.svc))
-	mux.HandleFunc("DELETE /notifications/{id}", dismissHandler(h.svc))
+	mux.HandleFunc("GET /notifications", listHandler(h.orch))
+	mux.HandleFunc("PATCH /notifications/{id}/read", markReadHandler(h.orch))
+	mux.HandleFunc("GET /notifications/unread-count", unreadCountHandler(h.orch))
+	mux.HandleFunc("PATCH /notifications/read-all", markReadAllHandler(h.orch))
+	mux.HandleFunc("DELETE /notifications/{id}", dismissHandler(h.orch))
 
 	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
 
