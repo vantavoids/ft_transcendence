@@ -10,6 +10,9 @@ internal sealed class RoleConfig : IEntityTypeConfiguration<Role>
 	{
 		builder.ToTable("roles");
 
+		// optimistic concurrency via Postgres xmin (no DDL). see GuildConfig.
+		builder.UseXminConcurrencyToken();
+
 		builder.HasKey(r => r.Id);
 		builder.Property(r => r.Id)
 			.HasColumnName("id")

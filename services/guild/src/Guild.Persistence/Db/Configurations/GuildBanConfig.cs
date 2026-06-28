@@ -11,6 +11,11 @@ internal sealed class GuildBanConfig : IEntityTypeConfiguration<GuildBan>
 	{
 		builder.ToTable("guild_bans");
 
+		// optimistic concurrency via Postgres xmin (no DDL). see GuildConfig.
+		// this is the token that turns the AlreadyBanned race into a clean 409
+		// instead of a 500 on the composite-PK insert.
+		builder.UseXminConcurrencyToken();
+
 		builder.HasKey(b => new { b.GuildId, b.UserId });
 
 		builder.Property(b => b.GuildId).HasColumnName("guild_id").IsRequired();
