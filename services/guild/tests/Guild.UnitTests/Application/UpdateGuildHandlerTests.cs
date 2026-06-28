@@ -58,7 +58,7 @@ public sealed class UpdateGuildHandlerTests
 			BindingFlags.Instance | BindingFlags.NonPublic)!;
 		var list = (List<MemberRole>)memberRolesField.GetValue(guild)!;
 		list.Clear();
-		await repo.AddAsync(guild);
+		repo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
 			repo, new FakeClock(), new FakeCurrentUser { Id = 2 });
@@ -98,7 +98,7 @@ public sealed class UpdateGuildHandlerTests
 			guild, roleId: 200, name: "Manager", permissions: (long)Permission.ManageGuild,
 			position: 2, now: Now);
 		DomainSeed.AssignRole(guild, userId: 2, roleId: modRole.Id, now: Now);
-		await repo.AddAsync(guild);
+		repo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
 			repo, new FakeClock(), new FakeCurrentUser { Id = 2 });
@@ -122,6 +122,6 @@ public sealed class UpdateGuildHandlerTests
 			everyoneRoleId: 101,
 			adminRoleId: 102,
 			now: Now).Value;
-		repo.AddAsync(guild).GetAwaiter().GetResult();
+		repo.Add(guild);
 	}
 }

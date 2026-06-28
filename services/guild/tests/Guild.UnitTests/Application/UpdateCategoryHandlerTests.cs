@@ -52,7 +52,7 @@ public sealed class UpdateCategoryHandlerTests
 		var guildRepo = new FakeGuildRepository();
 		var catRepo = new FakeChannelCategoryRepository();
 		var guild = CreateGuildWithBareMember(memberId: 2, ownerId: 1);
-		await guildRepo.AddAsync(guild);
+		guildRepo.Add(guild);
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
@@ -188,7 +188,7 @@ public sealed class UpdateCategoryHandlerTests
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
-		await guildRepo.AddAsync(guild);
+		guildRepo.Add(guild);
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
@@ -209,7 +209,7 @@ public sealed class UpdateCategoryHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: ownerId, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		guildRepo.AddAsync(guild).GetAwaiter().GetResult();
+		guildRepo.Add(guild);
 		if (seedCategory)
 			SeedCategory(catRepo, id: 500);
 	}

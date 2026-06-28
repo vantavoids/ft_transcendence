@@ -21,9 +21,9 @@ internal sealed class GuildInviteRepository(GuildDbContext context) : IGuildInvi
 			.ToListAsync(cancellationToken);
 	}
 
-	public async Task AddAsync(GuildInvite invite, CancellationToken cancellationToken = default)
+	public void Add(GuildInvite invite)
 	{
-		await context.GuildInvites.AddAsync(invite, cancellationToken);
+		context.GuildInvites.Add(invite);
 	}
 
 	public void Update(GuildInvite invite)

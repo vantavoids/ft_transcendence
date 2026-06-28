@@ -61,7 +61,7 @@ public sealed class TransferOwnershipHandlerTests
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
-		await repo.AddAsync(guild);
+		repo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<TransferOwnershipCommand, Result<GuildDto>>(
 			repo, new FakeClock(), new FakeCurrentUser { Id = 1 });
@@ -85,6 +85,6 @@ public sealed class TransferOwnershipHandlerTests
 			everyoneRoleId: 101,
 			adminRoleId: 102,
 			now: Now).Value;
-		repo.AddAsync(guild).GetAwaiter().GetResult();
+		repo.Add(guild);
 	}
 }

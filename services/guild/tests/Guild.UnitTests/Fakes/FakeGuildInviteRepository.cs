@@ -27,11 +27,10 @@ internal sealed class FakeGuildInviteRepository : IGuildInviteRepository
 		return Task.FromResult(rows);
 	}
 
-	public Task AddAsync(GuildInvite invite, CancellationToken cancellationToken = default)
+	public void Add(GuildInvite invite)
 	{
 		_store[invite.Code] = invite;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Update(GuildInvite invite)

@@ -41,11 +41,10 @@ internal sealed class FakeChannelRepository : IChannelRepository
 		return Task.FromResult(result);
 	}
 
-	public Task AddAsync(Channel channel, CancellationToken cancellationToken = default)
+	public void Add(Channel channel)
 	{
 		_store[channel.Id] = channel;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Update(Channel channel)

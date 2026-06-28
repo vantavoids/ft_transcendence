@@ -75,11 +75,10 @@ internal sealed class FakeGuildRepository : IGuildRepository
 		return Task.FromResult(guild.Members.Any(m => m.UserId == userId));
 	}
 
-	public Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default)
+	public void Add(GuildEntity guild)
 	{
 		_store[guild.Id] = guild;
 		AddCount++;
-		return Task.CompletedTask;
 	}
 
 	public void Update(GuildEntity guild)

@@ -76,7 +76,7 @@ internal sealed class PutOverwriteHandler(
 		if (createResult.IsFailure)
 			return createResult.Error;
 
-		await overwrites.AddAsync(createResult.Value, cancellationToken);
+		overwrites.Add(createResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();

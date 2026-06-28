@@ -19,7 +19,7 @@ public interface IChannelRepository
 		long? categoryId,
 		CancellationToken cancellationToken = default);
 
-	Task AddAsync(Channel channel, CancellationToken cancellationToken = default);
+	void Add(Channel channel);
 	void Update(Channel channel);
 	void Remove(Channel channel);
 }

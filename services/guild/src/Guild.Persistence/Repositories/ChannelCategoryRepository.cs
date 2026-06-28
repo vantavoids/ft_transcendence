@@ -24,9 +24,9 @@ internal sealed class ChannelCategoryRepository(GuildDbContext context) : IChann
 			.MaxAsync(cancellationToken);
 	}
 
-	public async Task AddAsync(ChannelCategory category, CancellationToken cancellationToken = default)
+	public void Add(ChannelCategory category)
 	{
-		await context.ChannelCategories.AddAsync(category, cancellationToken);
+		context.ChannelCategories.Add(category);
 	}
 
 	public void Update(ChannelCategory category)

@@ -96,9 +96,9 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.AnyAsync(m => m.GuildId == guildId && m.UserId == userId, cancellationToken);
 	}
 
-	public async Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default)
+	public void Add(GuildEntity guild)
 	{
-		await context.Guilds.AddAsync(guild, cancellationToken);
+		context.Guilds.Add(guild);
 	}
 
 	public void Update(GuildEntity guild)

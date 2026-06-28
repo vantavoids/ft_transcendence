@@ -51,7 +51,7 @@ public sealed class CreateCategoryHandlerTests
 		var guildRepo = new FakeGuildRepository();
 		var catRepo = new FakeChannelCategoryRepository();
 		var guild = CreateGuildWithBareMember(memberId: 2, ownerId: 1);
-		await guildRepo.AddAsync(guild);
+		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
 			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
@@ -152,7 +152,7 @@ public sealed class CreateCategoryHandlerTests
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
-		await guildRepo.AddAsync(guild);
+		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
 			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
@@ -168,7 +168,7 @@ public sealed class CreateCategoryHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: ownerId, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		repo.AddAsync(guild).GetAwaiter().GetResult();
+		repo.Add(guild);
 	}
 
 	private static GuildEntity CreateGuildWithBareMember(long memberId, long ownerId)

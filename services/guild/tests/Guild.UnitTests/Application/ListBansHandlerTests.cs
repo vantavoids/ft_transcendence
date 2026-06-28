@@ -56,7 +56,7 @@ public sealed class ListBansHandlerTests
 		var result = await handler.HandleAsync(new ListBansQuery(100, After: null, Limit: 50));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(result.Value.Items);
+		Assert.Empty(result.Value);
 	}
 
 	[Fact]
@@ -69,11 +69,11 @@ public sealed class ListBansHandlerTests
 		var result = await handler.HandleAsync(new ListBansQuery(100, After: null, Limit: 50));
 
 		Assert.True(result.Succeeded);
-		Assert.Collection(result.Value.Items,
+		Assert.Collection(result.Value,
 			b => Assert.Equal("3", b.UserId),
 			b => Assert.Equal("5", b.UserId));
-		Assert.Equal("1", result.Value.Items[0].BannedBy);
-		Assert.Equal("a", result.Value.Items[0].Reason);
+		Assert.Equal("1", result.Value[0].BannedBy);
+		Assert.Equal("a", result.Value[0].Reason);
 	}
 
 	[Fact]
@@ -87,12 +87,12 @@ public sealed class ListBansHandlerTests
 		var result = await handler.HandleAsync(new ListBansQuery(100, After: 3, Limit: 1));
 
 		Assert.True(result.Succeeded);
-		var only = Assert.Single(result.Value.Items);
+		var only = Assert.Single(result.Value);
 		Assert.Equal("5", only.UserId);
 	}
 
 	private static (
-		IQueryHandler<ListBansQuery, Result<BanListResponse>> Handler,
+		IQueryHandler<ListBansQuery, Result<IReadOnlyList<BanResponse>>> Handler,
 		FakeGuildRepository Guilds,
 		FakeGuildBanRepository Bans)
 		MakeHandler(long currentUser)
@@ -102,9 +102,9 @@ public sealed class ListBansHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		guilds.AddAsync(guild).GetAwaiter().GetResult();
+		guilds.Add(guild);
 
-		var handler = HandlerFactory.CreateQuery<ListBansQuery, Result<BanListResponse>>(
+		var handler = HandlerFactory.CreateQuery<ListBansQuery, Result<IReadOnlyList<BanResponse>>>(
 			guilds, bans, new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds, bans);
 	}

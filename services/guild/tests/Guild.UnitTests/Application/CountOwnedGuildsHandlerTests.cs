@@ -67,7 +67,7 @@ public sealed class CountOwnedGuildsHandlerTests
 		var guild = GuildEntity.Create(
 			id: guildId, name: $"g{guildId}", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: ownerId, everyoneRoleId: guildId + 1, adminRoleId: guildId + 2, now: Now).Value;
-		guilds.AddAsync(guild).GetAwaiter().GetResult();
+		guilds.Add(guild);
 	}
 
 	private static (

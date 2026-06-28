@@ -189,7 +189,7 @@ public sealed class JoinByInviteCodeHandlerTests
 		var guild = GuildEntity.Create(
 			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
 			ownerId: ownerId, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
-		repo.AddAsync(guild).GetAwaiter().GetResult();
+		repo.Add(guild);
 		return guild;
 	}
 

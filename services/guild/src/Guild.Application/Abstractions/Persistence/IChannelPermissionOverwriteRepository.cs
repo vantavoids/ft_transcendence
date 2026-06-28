@@ -25,7 +25,7 @@ public interface IChannelPermissionOverwriteRepository
 		long targetId,
 		CancellationToken cancellationToken = default);
 
-	Task AddAsync(ChannelPermissionOverwrite overwrite, CancellationToken cancellationToken = default);
+	void Add(ChannelPermissionOverwrite overwrite);
 	void Update(ChannelPermissionOverwrite overwrite);
 	void Remove(ChannelPermissionOverwrite overwrite);
 }

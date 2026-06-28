@@ -29,7 +29,7 @@ public interface IGuildRepository
 	Task<IReadOnlyList<MemberPage>> PageMembersAsync(
 		long guildId, long? afterUserId, int limit, CancellationToken cancellationToken = default);
 
-	Task AddAsync(GuildEntity guild, CancellationToken cancellationToken = default);
+	void Add(GuildEntity guild);
 	void Update(GuildEntity guild);
 	void Remove(GuildEntity guild);
 }

@@ -66,7 +66,7 @@ internal sealed class CreateChannelHandler(
 		if (channelResult.IsFailure)
 			return channelResult.Error;
 
-		await channels.AddAsync(channelResult.Value, cancellationToken);
+		channels.Add(channelResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return ChannelResponse.From(channelResult.Value);
