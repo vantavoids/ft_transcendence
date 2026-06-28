@@ -15,11 +15,67 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 
 	public Task<GuildEntity?> GetByIdWithMembershipAsync(long id, CancellationToken cancellationToken = default)
 	{
+		// AsSplitQuery: three collection Includes on one root would otherwise
+		// produce a cartesian product (members x roles x member-roles) in a
+		// single JOIN. split queries issue one SELECT per collection instead,
+		// which EF 10 actively warns about when omitted here.
 		return context.Guilds
 			.Include(g => g.Roles)
 			.Include(g => g.Members)
 			.Include(g => g.MemberRoles)
+			.AsSplitQuery()
 			.FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+	}
+
+	public Task<GuildEntity?> GetByIdWithMembershipAsNoTrackingAsync(long id, CancellationToken cancellationToken = default)
+	{
+		return context.Guilds
+			.AsNoTracking()
+			.Include(g => g.Roles)
+			.Include(g => g.Members)
+			.Include(g => g.MemberRoles)
+			.AsSplitQuery()
+			.FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+	}
+
+	public async Task<IReadOnlyList<MemberPage>> PageMembersAsync(
+		long guildId, long? afterUserId, int limit, CancellationToken cancellationToken = default)
+	{
+		var membersQuery = context.Members
+			.AsNoTracking()
+			.Where(m => m.GuildId == guildId);
+		if (afterUserId is { } cursor)
+			membersQuery = membersQuery.Where(m => m.UserId > cursor);
+
+		var members = await membersQuery
+			.OrderBy(m => m.UserId)
+			.Take(limit)
+			.Select(m => new { m.UserId, m.Nickname, m.JoinedAt })
+			.ToListAsync(cancellationToken);
+
+		if (members.Count == 0)
+			return [];
+
+		// second bounded query: role ids for just the members on this page,
+		// grouped in memory (at most `limit` members, not the whole guild)
+		var userIds = members.Select(m => m.UserId).ToList();
+		var assignments = await context.MemberRoles
+			.AsNoTracking()
+			.Where(mr => mr.GuildId == guildId && userIds.Contains(mr.UserId))
+			.Select(mr => new { mr.UserId, mr.RoleId })
+			.ToListAsync(cancellationToken);
+
+		var rolesByUser = assignments
+			.GroupBy(a => a.UserId)
+			.ToDictionary(g => g.Key, g => (IReadOnlyList<long>)g.Select(a => a.RoleId).ToList());
+
+		return members
+			.Select(m => new MemberPage(
+				m.UserId,
+				m.Nickname,
+				m.JoinedAt,
+				rolesByUser.TryGetValue(m.UserId, out var ids) ? ids : []))
+			.ToList();
 	}
 
 	public Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default)

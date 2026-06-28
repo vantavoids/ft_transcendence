@@ -13,7 +13,7 @@ internal sealed class GuildBanRepository(GuildDbContext context) : IGuildBanRepo
 		int limit,
 		CancellationToken cancellationToken = default)
 	{
-		var query = context.GuildBans.Where(b => b.GuildId == guildId);
+		var query = context.GuildBans.AsNoTracking().Where(b => b.GuildId == guildId);
 		if (afterUserId is { } cursor)
 			query = query.Where(b => b.UserId > cursor);
 

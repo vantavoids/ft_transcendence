@@ -39,9 +39,12 @@ internal sealed class AuthorizationContext
 		ICurrentUser currentUser,
 		long guildId,
 		Permission required,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default,
+		bool asNoTracking = false)
 	{
-		var guild = await guilds.GetByIdWithMembershipAsync(guildId, cancellationToken);
+		var guild = asNoTracking
+			? await guilds.GetByIdWithMembershipAsNoTrackingAsync(guildId, cancellationToken)
+			: await guilds.GetByIdWithMembershipAsync(guildId, cancellationToken);
 		if (guild is null)
 			return GuildFailures.GuildNotFound;
 
