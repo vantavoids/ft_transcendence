@@ -1,0 +1,20 @@
+name: auth ci
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'services/auth/**'
+      - '.github/workflows/auth-ci.yml'
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "nothing to do here, zzz..."
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "nothing to do here, zzz..."
