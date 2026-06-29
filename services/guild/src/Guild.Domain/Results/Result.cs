@@ -17,11 +17,16 @@ public class Result
 
 	public static Result Ok() => new(true, Failure.None);
 	public static Result Fail(Failure error) => new(false, error);
-	public static Result<TValue> Ok<TValue>(TValue value) => new(true, value, Failure.None);
-	public static Result<TValue> Fail<TValue>(Failure error) => new(false, default!, error);
+	public static Result<TValue> Ok<TValue>(TValue value) where TValue : notnull => new(true, value, Failure.None);
+	public static Result<TValue> Fail<TValue>(Failure error) where TValue : notnull => new(false, default!, error);
 }
 
+// TValue is constrained to notnull so a Result can never be Succeeded with a null
+// Value. without this you could silently return Result<GuildDto?> { Succeeded =
+// true, Value = null } via the implicit operator below; the constraint turns that
+// into a compile error instead of a latent null deref for the caller.
 public sealed class Result<TValue>(bool isSuccess, TValue value, Failure error) : Result(isSuccess, error)
+	where TValue : notnull
 {
 	public TValue Value => Succeeded
 		? value
