@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Reflection;
 using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Users;
 using Guild.Persistence.Db;
@@ -239,9 +238,6 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	/// </summary>
 	public async Task AddMemberWithPermissionsAsync(long guildId, long userId, long permissions)
 	{
-		const BindingFlags AnyInstance =
-			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
 		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
 		var ids = scope.ServiceProvider.GetRequiredService<IIdGenerator>();
@@ -261,22 +257,8 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 		db.Roles.Add(roleResult.Value);
 		await db.SaveChangesAsync();
 
-		var memberRole = (Guild.Domain.Guild.MemberRole)Activator.CreateInstance(
-			typeof(Guild.Domain.Guild.MemberRole), AnyInstance,
-			binder: null, args: null, culture: null)!;
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.GuildId), AnyInstance)!
-			.SetValue(memberRole, guildId);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.UserId), AnyInstance)!
-			.SetValue(memberRole, userId);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.RoleId), AnyInstance)!
-			.SetValue(memberRole, roleResult.Value.Id);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.AssignedAt), AnyInstance)!
-			.SetValue(memberRole, now);
-		db.MemberRoles.Add(memberRole);
+		db.MemberRoles.Add(
+			Guild.Domain.Guild.MemberRole.Create(guildId, userId, roleResult.Value.Id, now));
 		await db.SaveChangesAsync();
 	}
 
@@ -285,34 +267,14 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	/// <c>MemberRole</c> row directly. used by tests that need to construct
 	/// role hierarchies the public API cannot natively produce (e.g. assigning
 	/// a high-position role to a target so the caller is out-ranked).
-	/// uses reflection because <see cref="Guild.Domain.Guild.MemberRole.Create"/>
-	/// is <c>internal</c> and the functional-tests assembly does not have
-	/// <c>InternalsVisibleTo</c> access to the Domain project.
 	/// </summary>
 	public async Task AssignRoleDirectAsync(long guildId, long userId, long roleId)
 	{
-		const BindingFlags AnyInstance =
-			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
 		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
 
-		var memberRole = (Guild.Domain.Guild.MemberRole)Activator.CreateInstance(
-			typeof(Guild.Domain.Guild.MemberRole), AnyInstance,
-			binder: null, args: null, culture: null)!;
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.GuildId), AnyInstance)!
-			.SetValue(memberRole, guildId);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.UserId), AnyInstance)!
-			.SetValue(memberRole, userId);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.RoleId), AnyInstance)!
-			.SetValue(memberRole, roleId);
-		typeof(Guild.Domain.Guild.MemberRole)
-			.GetProperty(nameof(Guild.Domain.Guild.MemberRole.AssignedAt), AnyInstance)!
-			.SetValue(memberRole, DateTimeOffset.UtcNow);
-		db.MemberRoles.Add(memberRole);
+		db.MemberRoles.Add(
+			Guild.Domain.Guild.MemberRole.Create(guildId, userId, roleId, DateTimeOffset.UtcNow));
 		await db.SaveChangesAsync();
 	}
 
