@@ -7,4 +7,10 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <!-- lets the functional tests seed aggregates via the internal domain
+             factories (e.g. MemberRole.Create) instead of reflection -->
+        <InternalsVisibleTo Include="Guild.FunctionalTests" />
+    </ItemGroup>
+
 </Project>
