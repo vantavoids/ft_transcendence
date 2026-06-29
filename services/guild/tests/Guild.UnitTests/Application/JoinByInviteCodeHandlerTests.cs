@@ -83,6 +83,25 @@ public sealed class JoinByInviteCodeHandlerTests
 	}
 
 	[Fact]
+	public async Task BannedUser_ReturnsJoinBannedFromGuild()
+	{
+		// caller is not a member (so the AlreadyMember check passes) but is banned;
+		// a valid invite code must not let a banned user back in
+		var (g, i, bans, b, u) = NewFakes();
+		var guild = SeedGuild(g, ownerId: 1);
+		var invite = SeedInvite(i, guildId: guild.Id, creator: 1);
+		bans.Seed(GuildBan.Create(guildId: guild.Id, userId: 99, bannedBy: 1, reason: null, now: Now).Value);
+		var handler = NewHandler(g, i, bans, b, u, callerId: 99);
+
+		var result = await handler.HandleAsync(new JoinByInviteCodeCommand(invite.Code, ExpectedGuildId: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.JoinBannedFromGuild", result.Error.Code);
+		Assert.DoesNotContain(guild.Members, m => m.UserId == 99);
+		Assert.False(b.Has<GuildMemberJoined>());
+	}
+
+	[Fact]
 	public async Task RevokedInvite_ReturnsInviteUnusable()
 	{
 		var (g, i, bans, b, u) = NewFakes();

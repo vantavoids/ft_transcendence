@@ -1,5 +1,6 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Invites.CleanupExpiredInvites;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,6 +44,12 @@ internal sealed class InviteCleanupService(
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
 			// shutting down: let the loop's WaitForNextTickAsync observe the cancellation
+		}
+		catch (DbUpdateException ex)
+		{
+			// a row lock / write conflict on the invite rows is transient; the next
+			// tick retries, so warn rather than error (which implies something broken)
+			logger.LogWarning(ex, "invite cleanup sweep hit a transient DB conflict; retrying next tick");
 		}
 		catch (Exception ex)
 		{
