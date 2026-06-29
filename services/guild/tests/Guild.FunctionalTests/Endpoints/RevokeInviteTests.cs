@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Guild.FunctionalTests.Endpoints;
 
-public sealed class DeleteInviteTests(GuildApiFactory factory) : IClassFixture<GuildApiFactory>
+public sealed class RevokeInviteTests(GuildApiFactory factory) : IClassFixture<GuildApiFactory>
 {
 	[Fact]
 	public async Task Without_Token_Returns_401()

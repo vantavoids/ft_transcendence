@@ -1,5 +1,5 @@
 using Guild.Application.Abstractions.Messaging;
-using Guild.Application.Features.Invites.DeleteInvite;
+using Guild.Application.Features.Invites.RevokeInvite;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 using Guild.UnitTests.Fakes;
@@ -8,7 +8,7 @@ using GuildEntity = Guild.Domain.Guild.Guild;
 
 namespace Guild.UnitTests.Application;
 
-public sealed class DeleteInviteHandlerTests
+public sealed class RevokeInviteHandlerTests
 {
 	private static readonly DateTimeOffset Now =
 		new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -19,7 +19,7 @@ public sealed class DeleteInviteHandlerTests
 		var (g, i) = NewFakes();
 		var handler = NewHandler(g, i, callerId: 1);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(GuildId: 1, Code: "ghost"));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(GuildId: 1, Code: "ghost"));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.InviteNotFound", result.Error.Code);
@@ -34,7 +34,7 @@ public sealed class DeleteInviteHandlerTests
 		invite.Revoke();
 		var handler = NewHandler(g, i, callerId: 1);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(guild.Id, invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(guild.Id, invite.Code));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.InviteNotFound", result.Error.Code);
@@ -48,7 +48,7 @@ public sealed class DeleteInviteHandlerTests
 		var invite = SeedInvite(i, guild.Id, creator: 1);
 		var handler = NewHandler(g, i, callerId: 1);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(GuildId: guild.Id + 1, Code: invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(GuildId: guild.Id + 1, Code: invite.Code));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.InviteGuildMismatch", result.Error.Code);
@@ -62,7 +62,7 @@ public sealed class DeleteInviteHandlerTests
 		var invite = SeedInvite(i, guild.Id, creator: 1);
 		var handler = NewHandler(g, i, callerId: 99);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(guild.Id, invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(guild.Id, invite.Code));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.NotAMember", result.Error.Code);
@@ -77,7 +77,7 @@ public sealed class DeleteInviteHandlerTests
 		var invite = SeedInvite(i, guild.Id, creator: 99);
 
 		var handler = NewHandler(g, i, callerId: 99);
-		var result = await handler.HandleAsync(new DeleteInviteCommand(guild.Id, invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(guild.Id, invite.Code));
 
 		Assert.True(result.Succeeded);
 		Assert.True(invite.IsRevoked);
@@ -93,7 +93,7 @@ public sealed class DeleteInviteHandlerTests
 		var invite = SeedInvite(i, guild.Id, creator: 1);
 		var handler = NewHandler(g, i, callerId: 99);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(guild.Id, invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(guild.Id, invite.Code));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.MissingPermission", result.Error.Code);
@@ -108,7 +108,7 @@ public sealed class DeleteInviteHandlerTests
 		var invite = SeedInvite(i, guild.Id, creator: 42);
 		var handler = NewHandler(g, i, callerId: 1);
 
-		var result = await handler.HandleAsync(new DeleteInviteCommand(guild.Id, invite.Code));
+		var result = await handler.HandleAsync(new RevokeInviteCommand(guild.Id, invite.Code));
 
 		Assert.True(result.Succeeded);
 		Assert.True(invite.IsRevoked);
@@ -117,10 +117,10 @@ public sealed class DeleteInviteHandlerTests
 	private static (FakeGuildRepository, FakeGuildInviteRepository) NewFakes()
 		=> (new FakeGuildRepository(), new FakeGuildInviteRepository());
 
-	private static ICommandHandler<DeleteInviteCommand, Result> NewHandler(
+	private static ICommandHandler<RevokeInviteCommand, Result> NewHandler(
 		FakeGuildRepository guilds, FakeGuildInviteRepository invites, long callerId)
 	{
-		return HandlerFactory.CreateCommand<DeleteInviteCommand, Result>(
+		return HandlerFactory.CreateCommand<RevokeInviteCommand, Result>(
 			guilds, invites, new FakeCurrentUser { Id = callerId });
 	}
 

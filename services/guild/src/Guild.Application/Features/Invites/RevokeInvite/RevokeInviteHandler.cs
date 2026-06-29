@@ -5,17 +5,17 @@ using Guild.Application.Authorization;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
-namespace Guild.Application.Features.Invites.DeleteInvite;
+namespace Guild.Application.Features.Invites.RevokeInvite;
 
-internal sealed class DeleteInviteHandler(
+internal sealed class RevokeInviteHandler(
 	IGuildRepository guilds,
 	IGuildInviteRepository invites,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
-	: ICommandHandler<DeleteInviteCommand, Result>
+	: ICommandHandler<RevokeInviteCommand, Result>
 {
 	public async Task<Result> HandleAsync(
-		DeleteInviteCommand command,
+		RevokeInviteCommand command,
 		CancellationToken cancellationToken = default)
 	{
 		var invite = await invites.GetByCodeAsync(command.Code, cancellationToken);

@@ -2,7 +2,7 @@ using Carter;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Invites.Common;
 using Guild.Application.Features.Invites.CreateInvite;
-using Guild.Application.Features.Invites.DeleteInvite;
+using Guild.Application.Features.Invites.RevokeInvite;
 using Guild.Application.Features.Invites.ListInvites;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +17,9 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 		var group = endpoints.MapGroup("/guilds/{id:long}/invites");
 		group.MapPost("/", CreateAsync).ProducesGuildErrors();
 		group.MapGet("/", ListAsync).ProducesGuildErrors();
-		group.MapDelete("/{code}", DeleteAsync).ProducesGuildErrors();
+		// DELETE here soft-revokes the invite (sets revoked), it does not hard-delete
+		// the row; hard deletion of expired/revoked invites is the cleanup service's job
+		group.MapDelete("/{code}", RevokeAsync).ProducesGuildErrors();
 	}
 
 	private static async Task<Results<Created<InviteDto>, JsonHttpResult<ErrorBody>>>
@@ -52,13 +54,13 @@ public sealed class GuildInvitesEndpoint : ICarterModule
 	}
 
 	private static async Task<Results<NoContent, JsonHttpResult<ErrorBody>>>
-	DeleteAsync(
+	RevokeAsync(
 		long id,
 		string code,
-		ICommandHandler<DeleteInviteCommand, Result> handler,
+		ICommandHandler<RevokeInviteCommand, Result> handler,
 		CancellationToken cancellationToken)
 	{
-		var result = await handler.HandleAsync(new DeleteInviteCommand(id, code), cancellationToken);
+		var result = await handler.HandleAsync(new RevokeInviteCommand(id, code), cancellationToken);
 
 		if (result.Succeeded)
 			return TypedResults.NoContent();
