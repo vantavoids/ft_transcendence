@@ -2,14 +2,24 @@ namespace Guild.Domain.Results;
 
 public class Result
 {
+	private readonly Failure _error;
+
 	private protected Result(bool succeeded, Failure error)
 	{
 		Succeeded = succeeded;
-		Error = error;
+		_error = error;
 	}
 
 	public bool Succeeded { get; }
-	public Failure Error { get; }
+
+	// symmetric with Result<TValue>.Value (which throws on failure): Error throws
+	// on success rather than handing back the Failure.None sentinel, so neither
+	// accessor can be read in the wrong state without it surfacing.
+	public Failure Error => Succeeded
+		? throw new InvalidOperationException(
+			"There is no error on a successful result. Check that IsFailure is true before accessing Error.")
+		: _error;
+
 	public bool IsFailure => !Succeeded;
 
 	public TResult Match<TResult>(Func<TResult> onSuccess, Func<Failure, TResult> onFailure) =>
