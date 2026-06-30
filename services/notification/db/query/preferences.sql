@@ -14,3 +14,14 @@ WHERE user_id = $1;
 -- name: RemoveNotificationPreference :execrows
 DELETE FROM notification_preferences
 WHERE user_id = $1 AND scope_type = $2 AND scope_id = $3;
+
+-- name: IsNotificationPreferenceMuted :one
+SELECT EXISTS (
+    SELECT 1
+    FROM notification_preferences
+    WHERE user_id = $1
+        AND scope_type = $2
+        AND scope_id = $3
+        AND muted = true
+        AND (muted_until IS NULL OR muted_until > NOW())
+);
