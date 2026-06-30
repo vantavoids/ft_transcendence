@@ -9,6 +9,6 @@ public sealed record ListChannelsQuery(long GuildId) : IQuery<Result<ChannelList
 /// <summary>
 /// wrapped in a record so the generic <c>IQueryHandler&lt;,&gt;</c> constraint
 /// (<c>TResponse : class</c>) is satisfied; deserialised by Carter as a JSON
-/// array via <see cref="ChannelListResponse.Items"/>
+/// array via <see cref="Items"/>
 /// </summary>
 public sealed record ChannelListResponse(IReadOnlyList<ChannelResponse> Items);

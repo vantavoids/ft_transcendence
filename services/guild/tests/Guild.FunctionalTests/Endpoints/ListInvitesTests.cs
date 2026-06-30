@@ -67,7 +67,7 @@ public sealed class ListInvitesTests(GuildApiFactory factory) : IClassFixture<Gu
 	private async Task RevokeAsync(long guildId, string code)
 	{
 		using var scope = factory.Services.CreateScope();
-		var db = scope.ServiceProvider.GetRequiredService<Guild.Persistence.Db.GuildDbContext>();
+		var db = scope.ServiceProvider.GetRequiredService<Persistence.Db.GuildDbContext>();
 		var invite = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
 			.FirstAsync(db.GuildInvites, i => i.Code == code);
 		invite.Revoke();

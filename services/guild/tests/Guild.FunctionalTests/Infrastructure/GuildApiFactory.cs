@@ -171,7 +171,7 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 	{
 		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
-		var ids = scope.ServiceProvider.GetRequiredService<Guild.Application.Abstractions.IIdGenerator>();
+		var ids = scope.ServiceProvider.GetRequiredService<IIdGenerator>();
 		var id = channelId ?? ids.NextId();
 		var channelResult = Guild.Domain.Guild.Channel.Create(
 			id: id,
@@ -206,14 +206,14 @@ public sealed class GuildApiFactory : WebApplicationFactory<Program>
 
 	public async Task AddChannelOverwriteAsync(
 		long channelId,
-		Guild.Domain.Guild.OverwriteTargetType type,
+		Domain.Guild.OverwriteTargetType type,
 		long targetId,
 		long allow,
 		long deny)
 	{
 		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<GuildDbContext>();
-		var ids = scope.ServiceProvider.GetRequiredService<Guild.Application.Abstractions.IIdGenerator>();
+		var ids = scope.ServiceProvider.GetRequiredService<IIdGenerator>();
 		var channel = await db.Channels.FindAsync(channelId)
 			?? throw new InvalidOperationException($"Channel {channelId} not found");
 		var owResult = Guild.Domain.Guild.ChannelPermissionOverwrite.Create(

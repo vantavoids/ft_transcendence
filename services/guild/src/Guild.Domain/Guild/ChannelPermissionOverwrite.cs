@@ -4,7 +4,7 @@ namespace Guild.Domain.Guild;
 
 /// <summary>
 /// per-channel allow/deny tweak applied on top of role-based permissions.
-/// see <see cref="PermissionResolver.Resolve(Guild,long,Channel,System.Collections.Generic.IReadOnlyList{ChannelPermissionOverwrite})"/>
+/// see <see cref="PermissionResolver.Resolve(Guild,long,Channel,IReadOnlyList{ChannelPermissionOverwrite})"/>
 /// for the precedence order
 /// </summary>
 public sealed class ChannelPermissionOverwrite

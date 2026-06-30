@@ -23,6 +23,6 @@ internal sealed class FakeUserService : IUserService
 	{
 		GetSummaryCallCount++;
 		_summaries.TryGetValue(userId, out var summary);
-		return Task.FromResult<UserSummary?>(summary);
+		return Task.FromResult(summary);
 	}
 }
