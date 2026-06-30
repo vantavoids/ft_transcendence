@@ -28,8 +28,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # probes each service's existing /healthz over HTTP and turns the result into
-  # probe_success metrics, giving live up/down before the /metrics jobs exist.
+  # probes each service's /healthz and exposes the result as probe_success,
+  # giving real up/down independent of app-level /metrics.
   blackbox-exporter:
     container_name: blackbox-exporter
     image: quay.io/prometheus/blackbox-exporter:v0.25.0
