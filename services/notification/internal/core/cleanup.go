@@ -13,14 +13,14 @@ func RunCleanupLoop(ctx context.Context, orch *Orchestrator) {
 	go func() {
 		defer ticker.Stop()
 
-		if err := orch.DeleteOlder(ctx); err != nil {
+		if err := orch.DeleteOlderNotifs(ctx); err != nil {
 			log.Printf("cleanup notifs: %v", err)
 		}
 
 		for {
 			select {
 			case <-ticker.C:
-				if err := orch.DeleteOlder(ctx); err != nil {
+				if err := orch.DeleteOlderNotifs(ctx); err != nil {
 					log.Printf("cleanup notifs: %v", err)
 				}
 			case <-ctx.Done():
