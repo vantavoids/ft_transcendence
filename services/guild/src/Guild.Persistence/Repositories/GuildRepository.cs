@@ -29,6 +29,13 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 
 	public Task<GuildEntity?> GetByIdWithMembershipAsNoTrackingAsync(long id, CancellationToken cancellationToken = default)
 	{
+		// KNOWN TRADE-OFF: AsSplitQuery issues one SELECT per collection, not
+		// wrapped in a single snapshot, so a membership change committing between
+		// the Members and MemberRoles selects yields a momentarily inconsistent
+		// read (e.g. member present but their role rows missing). this is an
+		// eventual-consistency read endpoint and the skew is fail-safe -
+		// permissions are under-evaluated, never over-granted - so we accept it
+		// rather than forcing a REPEATABLE READ transaction on a hot read path.
 		return context.Guilds
 			.AsNoTracking()
 			.Include(g => g.Roles)
@@ -57,7 +64,11 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			return [];
 
 		// second bounded query: role ids for just the members on this page,
-		// grouped in memory (at most `limit` members, not the whole guild)
+		// grouped in memory (at most `limit` members, not the whole guild).
+		// KNOWN TRADE-OFF: this is a separate, non-snapshotted query, so a role
+		// change committing between the two selects can leave a member listed with
+		// stale RoleIds. acceptable eventual consistency for a paginated list; a
+		// fresh page reflects the change.
 		var userIds = members.Select(m => m.UserId).ToList();
 		var assignments = await context.MemberRoles
 			.AsNoTracking()
