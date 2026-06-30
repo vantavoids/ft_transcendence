@@ -66,7 +66,7 @@ app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
 	if (err is BadHttpRequestException bad)
 	{
 		ctx.Response.StatusCode = bad.StatusCode;
-		var jsonEx = bad.InnerException as System.Text.Json.JsonException;
+		var jsonEx = bad.InnerException as JsonException;
 		var path = jsonEx?.Path?.TrimStart('$', '.');
 		var message = path is not null
 			? $"invalid value for field '{path}'"
@@ -82,6 +82,18 @@ app.UseExceptionHandler(exApp => exApp.Run(async ctx =>
 		ctx.Response.StatusCode = StatusCodes.Status409Conflict;
 		await ctx.Response.WriteAsJsonAsync(
 			new ErrorBody("the resource was modified by another request; please retry"));
+	}
+	else if (err is Microsoft.EntityFrameworkCore.DbUpdateException
+		{ InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } })
+	{
+		// lost a race to insert a row with a unique/PK that already exists - e.g.
+		// two concurrent double-bans both pass the FindAsync guard then both INSERT
+		// on guild_bans' composite PK. xmin does not cover inserts, so EF raises a
+		// plain DbUpdateException (not the concurrency variant above). 23505 is a
+		// genuine conflict, so map it to 409 rather than letting it fall to a 500.
+		ctx.Response.StatusCode = StatusCodes.Status409Conflict;
+		await ctx.Response.WriteAsJsonAsync(
+			new ErrorBody("the resource already exists"));
 	}
 	else
 	{
