@@ -6,6 +6,7 @@ include:
   - services/guild/compose.yaml
   - services/notification/compose.yaml
   - services/user/compose.yaml
+  - infra/monitoring/compose.yaml
 
 services:
   nginx:
@@ -31,8 +32,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     volumes:
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro,z
+      # enables rabbitmq_prometheus, which serves metrics on :15692
+      - ./infra/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro,z
       - rabbitmq_data:/var/lib/rabbitmq:z
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -75,6 +79,8 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}
       MINIO_GUILD_BUCKET: ${MINIO_GUILD_BUCKET}
+      # lets Prometheus scrape /minio/v2/metrics/* without a bearer token
+      MINIO_PROMETHEUS_AUTH_TYPE: public
     ports:
       - "9000:9000"
       - "9001:9001"

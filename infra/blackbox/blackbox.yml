@@ -1,0 +1,10 @@
+modules:
+  # GET the target; success = a 2xx response. /healthz returns 200 when healthy
+  # and 503 when a dependency check fails, so probe_success tracks real health.
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      preferred_ip_protocol: ip4
+      fail_if_not_ssl: false
