@@ -1,56 +1,20 @@
-package api
+package handler
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-type Handler struct {
-	orch *core.Orchestrator
-	hub  *core.Hub
-}
-
-func NewHandler(svc *core.Orchestrator, hub *core.Hub) (*Handler, error) {
-	return &Handler{orch: svc, hub: hub}, nil
-}
-
-func (h *Handler) Routes(secret string, metricsHandler http.Handler) http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /notifications", listHandler(h.orch))
-	mux.HandleFunc("PATCH /notifications/{id}/read", markReadHandler(h.orch))
-	mux.HandleFunc("GET /notifications/unread-count", unreadCountHandler(h.orch))
-	mux.HandleFunc("PATCH /notifications/read-all", markReadAllHandler(h.orch))
-	mux.HandleFunc("DELETE /notifications/{id}", dismissHandler(h.orch))
-	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
-
-	// instrument the app mux for the http.server RED metric. otelhttp sits just
-	// outside the mux (inside the auth/logging middleware) so it can read the
-	// matched route from r.Pattern for the http_route label.
-	authed := LoggingMiddleware()(JwtMiddleware(secret)(otelhttp.NewHandler(mux, "notification")))
-
-	// healthz + metrics are anonymous: probed/scraped over the docker network,
-	// never through the gateway (which only forwards /api/{service}/vN/...).
-	root := http.NewServeMux()
-	root.HandleFunc("GET /healthz", healthzHandler)
-	root.Handle("GET /metrics", metricsHandler)
-	root.Handle("/", authed)
-
-	return root
-}
-
 // GET /notifications
-func listHandler(svc *core.Orchestrator) http.HandlerFunc {
+func listNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -121,7 +85,7 @@ func listHandler(svc *core.Orchestrator) http.HandlerFunc {
 }
 
 // PATCH /notifications/{id}/read
-func markReadHandler(svc *core.Orchestrator) http.HandlerFunc {
+func markReadNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -145,7 +109,7 @@ func markReadHandler(svc *core.Orchestrator) http.HandlerFunc {
 }
 
 // GET /notifications/unread-count
-func unreadCountHandler(svc *core.Orchestrator) http.HandlerFunc {
+func unreadCountNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -163,7 +127,7 @@ func unreadCountHandler(svc *core.Orchestrator) http.HandlerFunc {
 }
 
 // PATCH /notifications/read-all
-func markReadAllHandler(svc *core.Orchestrator) http.HandlerFunc {
+func markReadAllNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -181,7 +145,7 @@ func markReadAllHandler(svc *core.Orchestrator) http.HandlerFunc {
 }
 
 // DELETE /notifications/{id}
-func dismissHandler(svc *core.Orchestrator) http.HandlerFunc {
+func dismissNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := getUserIDFromContext(r.Context())
 		if !ok {
@@ -201,58 +165,6 @@ func dismissHandler(svc *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusNoContent, nil)
-	}
-}
-
-func sseHandler(hub *core.Hub) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID, ok := getUserIDFromContext(r.Context())
-		if !ok {
-			writeJSON(w, http.StatusUnauthorized, errorBody("unauthorized error"))
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("X-Accel-Buffering", "no")
-		w.WriteHeader(http.StatusOK)
-
-		rc := http.NewResponseController(w)
-		ch := hub.Subscribe(userID)
-		defer hub.Unsubscribe(userID, ch)
-
-		if err := rc.Flush(); err != nil {
-			return
-		}
-
-		ticker := time.NewTicker(15 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-r.Context().Done():
-				log.Printf("Client: %d disconnected", userID)
-				return
-			case notif := <-ch:
-				data, err := json.Marshal(notif)
-				if err != nil {
-					log.Printf("failed to marshal notification: %v", err)
-					continue
-				}
-				fmt.Fprintf(w, "event: ReceiveNotification\n")
-				fmt.Fprintf(w, "data: %s\n\n", data)
-				if err := rc.Flush(); err != nil {
-					return
-				}
-			case <-ticker.C:
-				if _, err := fmt.Fprintf(w, ": ping\n\n"); err != nil {
-					return
-				}
-				if err := rc.Flush(); err != nil {
-					return
-				}
-			}
-		}
 	}
 }
 

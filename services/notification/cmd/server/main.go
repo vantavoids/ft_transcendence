@@ -13,8 +13,8 @@ import (
 	observability "github.com/vantavoids/ft_transcendence/services/notification/internal/observability"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
 	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/tunnel"
-	api "github.com/vantavoids/ft_transcendence/services/notification/transport/api"
 	broker "github.com/vantavoids/ft_transcendence/services/notification/transport/broker"
+	handler "github.com/vantavoids/ft_transcendence/services/notification/transport/handler"
 )
 
 func main() {
@@ -74,7 +74,7 @@ func main() {
 	go consumer.Run(orch)
 
 	// ─── Handler Endpoint ───
-	handler, err := api.NewHandler(orch, hub)
+	handler, err := handler.NewHandler(orch, hub)
 	if err != nil {
 		log.Fatalf("Unable to create a http handler: %s", err)
 	}
