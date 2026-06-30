@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
@@ -197,5 +199,39 @@ func (o *Orchestrator) DeleteOlderNotifs(ctx context.Context) error {
 		return err
 	}
 
+	return nil
+}
+
+type UpsertInput struct {
+	UserID     int64
+	ScopeType  string
+	ScopeID    int64
+	Muted      bool
+	MutedUntil time.Time
+}
+
+func (o *Orchestrator) UpsertPrefs(ctx context.Context, u UpsertInput) (database.NotificationPreference, error) {
+	p, err := o.queries.UpsertNotificationPreference(ctx, database.UpsertNotificationPreferenceParams{
+		UserID:     u.UserID,
+		ScopeType:  u.ScopeType,
+		ScopeID:    u.ScopeID,
+		Muted:      u.Muted,
+		MutedUntil: pgtype.Timestamptz{Time: u.MutedUntil, Valid: !u.MutedUntil.IsZero()},
+	})
+	if err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+func (o *Orchestrator) ListPrefs(ctx context.Context) error {
+	return nil
+}
+
+func (o *Orchestrator) RemovePrefs(ctx context.Context) error {
+	return nil
+}
+
+func (o *Orchestrator) IsMuted(ctx context.Context) error {
 	return nil
 }
