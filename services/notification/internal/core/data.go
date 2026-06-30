@@ -31,16 +31,6 @@ type NotificationREST struct {
 	CreatedAt   time.Time        `json:"created_at"`
 }
 
-type NotificationSSE struct {
-	ID        string           `json:"id"`
-	Type      NotificationType `json:"type"`
-	ActorID   *string          `json:"actor_id"`
-	SourceID  *string          `json:"source_id"`
-	Payload   json.RawMessage  `json:"payload"`
-	Read      bool             `json:"read"`
-	CreatedAt time.Time        `json:"created_at"`
-}
-
 func ToREST(notif database.Notification) NotificationREST {
 	id := strconv.FormatInt(notif.ID, 10)
 	userID := strconv.FormatInt(notif.UserID, 10)
@@ -75,6 +65,16 @@ func ToREST(notif database.Notification) NotificationREST {
 	}
 }
 
+type NotificationSSE struct {
+	ID        string           `json:"id"`
+	Type      NotificationType `json:"type"`
+	ActorID   *string          `json:"actor_id"`
+	SourceID  *string          `json:"source_id"`
+	Payload   json.RawMessage  `json:"payload"`
+	Read      bool             `json:"read"`
+	CreatedAt time.Time        `json:"created_at"`
+}
+
 func ToSSE(notif database.Notification) NotificationSSE {
 	id := strconv.FormatInt(notif.ID, 10)
 
@@ -98,5 +98,30 @@ func ToSSE(notif database.Notification) NotificationSSE {
 		Payload:   notif.Payload,
 		Read:      notif.ReadAt.Valid,
 		CreatedAt: notif.CreatedAt.Time,
+	}
+}
+
+type PreferenceScopeType string
+
+const (
+	ScopeGuild   PreferenceScopeType = "guild"
+	ScopeChannel PreferenceScopeType = "channel"
+)
+
+type PreferenceDTO struct {
+	ScopeType  PreferenceScopeType `json:"scope_type"`
+	ScopeID    string              `json:"scope_id"`
+	Muted      bool                `json:"muted"`
+	MutedUntil time.Time           `json:"muted_until"`
+}
+
+func ToPreferenceDTO(pref database.NotificationPreference) PreferenceDTO {
+	scopeId := strconv.FormatInt(pref.ScopeID, 10)
+
+	return PreferenceDTO{
+		ScopeType:  PreferenceScopeType(pref.ScopeType),
+		ScopeID:    scopeId,
+		Muted:      pref.Muted,
+		MutedUntil: pref.MutedUntil.Time,
 	}
 }
