@@ -36,7 +36,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			if err != nil {
 				return err
 			}
-			if err := orch.Create(ctx, core.CreateInput{
+			if err := orch.CreateNotif(ctx, core.CreateInput{
 				UserID:   uid,
 				Type:     TypeMention,
 				ActorID:  &ev.AuthorID,
@@ -57,7 +57,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.Create(ctx, core.CreateInput{
+		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.RecipientID,
 			Type:     TypeDM,
 			ActorID:  &ev.SenderID,
@@ -73,7 +73,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.Create(ctx, core.CreateInput{
+		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.AddresseeID,
 			Type:     TypeFriendRequest,
 			ActorID:  &ev.RequesterID,
@@ -86,7 +86,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.Create(ctx, core.CreateInput{
+		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.InvitedUserID,
 			Type:     TypeGuildInvite,
 			ActorID:  &ev.InvitedByUserID,
@@ -101,7 +101,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.Create(ctx, core.CreateInput{
+		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.UserID,
 			Type:     TypeGuildWelcome,
 			ActorID:  nil,
@@ -116,7 +116,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.Create(ctx, core.CreateInput{
+		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.CalleeID,
 			Type:     TypeIncomingCall,
 			ActorID:  &ev.CallerID,
@@ -131,7 +131,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.DeleteUser(ctx, ev.UserID)
+		return orch.DeleteUserNotifs(ctx, ev.UserID)
 
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)

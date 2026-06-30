@@ -37,7 +37,7 @@ type RelationshipChecker interface {
 	IsBlockedBy(ctx context.Context, targetID int64, senderID int64) (bool, error)
 }
 
-func (o *Orchestrator) Create(ctx context.Context, in CreateInput) error {
+func (o *Orchestrator) CreateNotif(ctx context.Context, in CreateInput) error {
 
 	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
 	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
@@ -87,7 +87,7 @@ type ListInput struct {
 	RowLimit         int32
 }
 
-func (o *Orchestrator) List(ctx context.Context, userID int64, in ListInput) ([]database.Notification, error) {
+func (o *Orchestrator) ListNotifs(ctx context.Context, userID int64, in ListInput) ([]database.Notification, error) {
 	notifs, err := o.queries.GetNotifications(ctx, database.GetNotificationsParams{
 		UserID:           userID,
 		Read:             in.Read,
@@ -102,7 +102,7 @@ func (o *Orchestrator) List(ctx context.Context, userID int64, in ListInput) ([]
 	return notifs, nil
 }
 
-func (o *Orchestrator) MarkRead(ctx context.Context, userID int64, id int64) error {
+func (o *Orchestrator) MarkReadNotif(ctx context.Context, userID int64, id int64) error {
 
 	notif, err := o.queries.GetNotificationByID(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -131,7 +131,7 @@ func (o *Orchestrator) MarkRead(ctx context.Context, userID int64, id int64) err
 	return nil
 }
 
-func (o *Orchestrator) MarkReadAll(ctx context.Context, userID int64) (int64, error) {
+func (o *Orchestrator) MarkReadAllNotifs(ctx context.Context, userID int64) (int64, error) {
 
 	rows, err := o.queries.MarkAllNotificationsRead(ctx, userID)
 	if err != nil {
@@ -141,7 +141,7 @@ func (o *Orchestrator) MarkReadAll(ctx context.Context, userID int64) (int64, er
 	return rows, nil
 }
 
-func (o *Orchestrator) UnreadCount(ctx context.Context, userID int64) (int64, error) {
+func (o *Orchestrator) UnreadCountNotifs(ctx context.Context, userID int64) (int64, error) {
 
 	rows, err := o.queries.CountUnreadNotifications(ctx, userID)
 	if err != nil {
@@ -151,7 +151,7 @@ func (o *Orchestrator) UnreadCount(ctx context.Context, userID int64) (int64, er
 	return rows, nil
 }
 
-func (o *Orchestrator) Dismiss(ctx context.Context, userID int64, id int64) error {
+func (o *Orchestrator) DismissNotif(ctx context.Context, userID int64, id int64) error {
 
 	notif, err := o.queries.GetNotificationByID(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -182,7 +182,7 @@ func (o *Orchestrator) Dismiss(ctx context.Context, userID int64, id int64) erro
 
 // TODO: dont forget to add preferences in the delete section
 // TODO: dont forget to add a rollback after adding the preference
-func (o *Orchestrator) DeleteUser(ctx context.Context, userID int64) error {
+func (o *Orchestrator) DeleteUserNotifs(ctx context.Context, userID int64) error {
 
 	if err := o.queries.DeleteUserNotifications(ctx, userID); err != nil {
 		return err
@@ -191,7 +191,7 @@ func (o *Orchestrator) DeleteUser(ctx context.Context, userID int64) error {
 	return nil
 }
 
-func (o *Orchestrator) DeleteOlder(ctx context.Context) error {
+func (o *Orchestrator) DeleteOlderNotifs(ctx context.Context) error {
 
 	if err := o.queries.DeleteNotificationsOlderThan7Days(ctx); err != nil {
 		return err

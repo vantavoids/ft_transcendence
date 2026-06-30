@@ -65,7 +65,7 @@ func listNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 			limit = int32(min(max(parsed, 1), 100)) // clamp
 		}
 
-		notifs, err := svc.List(r.Context(), userID, core.ListInput{
+		notifs, err := svc.ListNotifs(r.Context(), userID, core.ListInput{
 			Read:             read,
 			IncludeDismissed: includeDismissed,
 			Before:           before,
@@ -99,7 +99,7 @@ func markReadNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 
-		err = svc.MarkRead(r.Context(), userID, id)
+		err = svc.MarkReadNotif(r.Context(), userID, id)
 		if err != nil {
 			writeError(w, r, err)
 			return
@@ -117,7 +117,7 @@ func unreadCountNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 
-		rows, err := svc.UnreadCount(r.Context(), userID)
+		rows, err := svc.UnreadCountNotifs(r.Context(), userID)
 		if err != nil {
 			writeError(w, r, err)
 			return
@@ -135,7 +135,7 @@ func markReadAllNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 
-		rows, err := svc.MarkReadAll(r.Context(), userID)
+		rows, err := svc.MarkReadAllNotifs(r.Context(), userID)
 		if err != nil {
 			writeError(w, r, err)
 			return
@@ -159,7 +159,7 @@ func dismissNotificationHandler(svc *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 
-		err = svc.Dismiss(r.Context(), userID, id)
+		err = svc.DismissNotif(r.Context(), userID, id)
 		if err != nil {
 			writeError(w, r, err)
 			return
