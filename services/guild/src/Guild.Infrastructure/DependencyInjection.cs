@@ -96,7 +96,7 @@ public static class DependencyInjection
 	}
 
 	private static OptionsBuilder<T> ConfigureOptions<T>(IServiceCollection services)
-		where T : class, Options.IOptions
+		where T : class, IOptions
 	{
 		return services.AddOptions<T>()
 			.BindConfiguration(T.SectionName)
