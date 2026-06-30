@@ -12,8 +12,12 @@ internal sealed class GuildBanConfig : IEntityTypeConfiguration<GuildBan>
 		builder.ToTable("guild_bans");
 
 		// optimistic concurrency via Postgres xmin (no DDL). see GuildConfig.
-		// this is the token that turns the AlreadyBanned race into a clean 409
-		// instead of a 500 on the composite-PK insert.
+		// NOTE: xmin only lands in the WHERE of UPDATE/DELETE, so it guards a
+		// concurrent unban (DELETE) race, NOT the insert race. a concurrent
+		// double-ban is two INSERTs on the composite PK; the loser raises a
+		// 23505 unique violation (a DbUpdateException, not a
+		// DbUpdateConcurrencyException) that the global exception handler maps
+		// to a 409 instead of a 500.
 		builder.UseXminConcurrencyToken();
 
 		builder.HasKey(b => new { b.GuildId, b.UserId });
