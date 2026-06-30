@@ -1,3 +1,12 @@
+-- name: UpsertNotificationPreference :one
+INSERT INTO notification_preferences (user_id, scope_type, scope_id, muted, muted_until)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id, scope_type, scope_id)
+DO UPDATE SET
+    muted = EXCLUDED.muted,
+    muted_until = EXCLUDED.muted_until
+RETURNING *;
+
 -- name: ListNotificationPreferences :many
 SELECT * FROM notification_preferences
 WHERE user_id = $1;
