@@ -1,0 +1,77 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "min": 0, "max": 6, "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 1 }, { "color": "green", "value": 6 }] } }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 5, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
+      "pluginVersion": "11.3.0",
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(probe_success{job=\"healthz\"})", "refId": "A" }],
+      "title": "Services up",
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "mappings": [{ "type": "value", "options": { "0": { "text": "KO :(", "color": "red", "index": 0 }, "1": { "text": "OK :D", "color": "green", "index": 1 } } }], "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 19, "x": 5, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true },
+      "pluginVersion": "11.3.0",
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "probe_success{job=\"healthz\"}", "legendFormat": "{{service}}", "refId": "A" }],
+      "title": "Service /healthz status",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Up/down history per service from the /healthz probe.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "fillOpacity": 85, "lineWidth": 0, "insertNulls": false, "spanNulls": false }, "mappings": [{ "type": "value", "options": { "0": { "text": "KO :(", "color": "red", "index": 0 }, "1": { "text": "OK :D", "color": "green", "index": 1 } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 5 },
+      "id": 3,
+      "options": { "alignValue": "left", "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "mergeValues": true, "rowHeight": 0.9, "showValue": "never", "tooltip": { "mode": "single", "sort": "none" } },
+      "pluginVersion": "11.3.0",
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "probe_success{job=\"healthz\"}", "legendFormat": "{{service}}", "refId": "A" }],
+      "title": "Status history",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 15, "gradientMode": "opacity", "lineInterpolation": "smooth", "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 4,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.3.0",
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "probe_duration_seconds{job=\"healthz\"}", "legendFormat": "{{service}}", "refId": "A" }],
+      "title": "Probe latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "align": "left", "cellOptions": { "type": "auto" }, "filterable": false, "inspect": false }, "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] } }, "overrides": [{ "matcher": { "id": "byName", "options": "Code" }, "properties": [{ "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "basic" } }, { "id": "custom.align", "value": "center" }, { "id": "custom.width", "value": 110 }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 200 }, { "color": "orange", "value": 300 }, { "color": "red", "value": 400 }] } }] }] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 5,
+      "options": { "showHeader": true, "footer": { "show": false }, "cellHeight": "md", "sortBy": [{ "displayName": "Service", "desc": false }] },
+      "pluginVersion": "11.3.0",
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "probe_http_status_code{job=\"healthz\"}", "format": "table", "instant": true, "refId": "A" }],
+      "transformations": [{ "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "indexByName": { "service": 0, "Value": 1 }, "renameByName": { "service": "Service", "Value": "Code" } } }],
+      "title": "HTTP status code",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ft_discord"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Service Health",
+  "uid": "ft-service-health",
+  "version": 3,
+  "weekStart": ""
+}

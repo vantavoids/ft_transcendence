@@ -1,0 +1,3 @@
+# no provisioned alert rules; present only so the alerting provisioner has a
+# valid (empty) file to read instead of erroring on a missing directory.
+apiVersion: 1

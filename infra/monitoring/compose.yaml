@@ -1,0 +1,106 @@
+# DSN is built at container start from each service's own .env; $$ defers the
+# expansion to the container so no DB password is written into this file.
+x-pg-exporter: &pg-exporter
+  image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+  restart: unless-stopped
+  entrypoint:
+    - /bin/sh
+    - -c
+    - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@$${PG_HOST}:5432/$${POSTGRES_DB}?sslmode=disable" exec /bin/postgres_exporter'
+
+services:
+  prometheus:
+    container_name: prometheus
+    image: docker.io/prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ${PWD}/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # probes each service's existing /healthz over HTTP and turns the result into
+  # probe_success metrics, giving live up/down before the /metrics jobs exist.
+  blackbox-exporter:
+    container_name: blackbox-exporter
+    image: quay.io/prometheus/blackbox-exporter:v0.25.0
+    restart: unless-stopped
+    volumes:
+      - ${PWD}/infra/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro,z
+
+  grafana:
+    container_name: grafana
+    image: docker.io/grafana/grafana:11.3.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # reachable only through nginx TLS at /grafana (1443 is nginx's fixed entry
+      # port); the loopback 3001 port below is just the proxy hop, like 8080/3000.
+      GF_SERVER_ROOT_URL: https://localhost:1443/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ${PWD}/infra/grafana/provisioning:/etc/grafana/provisioning:ro,z
+      - ${PWD}/infra/grafana/dashboards:/var/lib/grafana/dashboards:ro,z
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  auth-db-exporter:
+    <<: *pg-exporter
+    container_name: auth-db-exporter
+    env_file: ${PWD}/services/auth/.env
+    environment:
+      PG_HOST: auth-db
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  user-db-exporter:
+    <<: *pg-exporter
+    container_name: user-db-exporter
+    env_file: ${PWD}/services/user/.env
+    environment:
+      PG_HOST: user-db
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  guild-db-exporter:
+    <<: *pg-exporter
+    container_name: guild-db-exporter
+    env_file: ${PWD}/services/guild/.env
+    environment:
+      PG_HOST: guild-db
+    depends_on:
+      guild-db:
+        condition: service_healthy
+
+  # chat has no exporter: it is ScyllaDB, scraped directly on chat-db:9180.
+
+  notification-db-exporter:
+    <<: *pg-exporter
+    container_name: notification-db-exporter
+    env_file: ${PWD}/services/notification/.env
+    environment:
+      PG_HOST: notification-db
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,4 @@
+# no provisioned app plugins. Present only so Grafana's plugin provisioner has a
+# valid (empty) file to read instead of logging a missing-directory error.
+apiVersion: 1
+apps: []

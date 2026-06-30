@@ -1,0 +1,68 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: rabbitmq
+    static_configs:
+      - targets: ["rabbitmq:15692"]
+
+  - job_name: minio
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets: ["minio:9000"]
+
+  - job_name: postgres
+    static_configs:
+      - targets:
+          - auth-db-exporter:9187
+          - user-db-exporter:9187
+          - guild-db-exporter:9187
+          - notification-db-exporter:9187
+
+  - job_name: scylla
+    static_configs:
+      - targets: ["chat-db:9180"]
+
+  - job_name: services
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - auth:8080
+          - user:8080
+          - guild:8080
+          - chat:8080
+          - notification:8080
+          - gateway:8080
+
+  # black-box liveness via each service's existing /healthz, probed through the
+  # blackbox exporter. the probe URL is carried in __param_target and the real
+  # scrape goes to blackbox-exporter:9115 (standard blackbox relabel pattern).
+  - job_name: healthz
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["http://auth:8080/healthz"]
+        labels: { service: auth }
+      - targets: ["http://user:8080/healthz"]
+        labels: { service: user }
+      - targets: ["http://guild:8080/healthz"]
+        labels: { service: guild }
+      - targets: ["http://chat:8080/healthz"]
+        labels: { service: chat }
+      - targets: ["http://notification:8080/healthz"]
+        labels: { service: notification }
+      - targets: ["http://gateway:8080/healthz"]
+        labels: { service: gateway }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
