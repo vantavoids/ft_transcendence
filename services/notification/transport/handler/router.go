@@ -24,6 +24,10 @@ func (h *Handler) Routes(secret string) http.Handler {
 	mux.HandleFunc("PATCH /notifications/read-all", markReadAllNotificationHandler(h.orch))
 	mux.HandleFunc("DELETE /notifications/{id}", dismissNotificationHandler(h.orch))
 
+	mux.HandleFunc("GET /notifications/preferences", listPreferenceHandler(h.orch))
+	mux.HandleFunc("PUT /notifications/preferences/{scope_type}/{scope_id}", upsertPreferenceHandler(h.orch))
+	mux.HandleFunc("DELETE /notifications/preferences/{scope_type}/{scope_id}", removePreferenceHandler(h.orch))
+
 	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
 
 	mux.HandleFunc("GET /heatlz", healthzHandler)
