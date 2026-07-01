@@ -11,11 +11,13 @@ namespace Chat.Presentation.Hubs;
 public sealed class SignalingHub(
 	ICurrentUser currentUser,
 	CallRegistry calls,
-	IEventBus eventBus) : Hub<ISignalingClient>
+	IEventBus eventBus,
+	ILogger<SignalingHub> logger) : Hub<ISignalingClient>
 {
 	public override async Task OnConnectedAsync()
 	{
 		calls.Connect(currentUser.UserId);
+		logger.LogDebug("Signaling: {User} connected", currentUser.UserId);
 		foreach (var call in calls.PendingFor(currentUser.UserId))
 			await Clients.Caller.IncomingCall(new IncomingCallEvent(
 				call.CallId.ToString(), call.CallerId.ToString(), call.CallType, call.Sdp));
@@ -25,6 +27,7 @@ public sealed class SignalingHub(
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
 		calls.Disconnect(currentUser.UserId);
+		logger.LogDebug("Signaling: {User} disconnected", currentUser.UserId);
 		await base.OnDisconnectedAsync(exception);
 	}
 
@@ -38,16 +41,23 @@ public sealed class SignalingHub(
 
 		if (!calls.TryOffer(info))
 		{
+			logger.LogInformation("Call {CallId}: {Caller} -> {Callee} rejected, peer busy", callId, callerId, calleeId);
 			await Clients.Caller.CallFailed(new CallFailedEvent(args.CallId, "user_busy"));
 			return;
 		}
 
 		if (calls.IsConnected(calleeId))
+		{
+			logger.LogInformation("Call {CallId}: relaying offer {Caller} -> {Callee} (callee online)", callId, callerId, calleeId);
 			await Clients.User(calleeId.ToString()).IncomingCall(new IncomingCallEvent(
 				args.CallId, callerId.ToString(), args.CallType, args.Sdp));
+		}
 		else
+		{
+			logger.LogInformation("Call {CallId}: {Callee} offline, publishing call.incoming", callId, calleeId);
 			await eventBus.PublishAsync(
 				new CallIncoming(callId, callerId, calleeId, args.CallType), Context.ConnectionAborted);
+		}
 	}
 
 	public async Task CallAnswer(CallAnswerArgs args)
@@ -59,6 +69,7 @@ public sealed class SignalingHub(
 		if (call is null)
 			return;
 
+		logger.LogInformation("Call {CallId}: answered by {Callee}", callId, currentUser.UserId);
 		await Clients.User(call.CallerId.ToString()).CallAnswered(new CallAnsweredEvent(args.CallId, args.Sdp));
 	}
 
@@ -71,6 +82,7 @@ public sealed class SignalingHub(
 		if (call is null)
 			return;
 
+		logger.LogInformation("Call {CallId}: rejected by {User}", callId, currentUser.UserId);
 		await Clients.User(Other(call, currentUser.UserId).ToString())
 			.CallRejected(new CallIdEvent(args.CallId));
 	}
@@ -84,6 +96,7 @@ public sealed class SignalingHub(
 		if (call is null)
 			return;
 
+		logger.LogInformation("Call {CallId}: hung up by {User}", callId, currentUser.UserId);
 		await Clients.User(Other(call, currentUser.UserId).ToString())
 			.CallHungUp(new CallIdEvent(args.CallId));
 	}
