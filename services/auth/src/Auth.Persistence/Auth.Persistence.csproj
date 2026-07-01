@@ -5,16 +5,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <!-- pin transitive to a non-vulnerable version (ef design 10.0.1 pulls 9.0.0, that's a shame) -->
-        <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0"/>
-        <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0"/>
+        <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
     </ItemGroup>
 
     <PropertyGroup>
