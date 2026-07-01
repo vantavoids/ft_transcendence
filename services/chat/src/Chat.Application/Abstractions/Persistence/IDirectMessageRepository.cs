@@ -1,3 +1,4 @@
+using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 
 namespace Chat.Application.Abstractions.Persistence;
@@ -19,7 +20,7 @@ public interface IDirectMessageRepository
 	/// <summary>excludes soft-deleted messages: a reply may not target a deleted message</summary>
 	Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct);
 
-	Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct);
+	Task AddAsync(DirectMessage message, string? nonce, IReadOnlyList<AttachmentMetadata> attachments, CancellationToken ct);
 
 	Task<long?> FindNonceAsync(long senderId, long recipientId, string nonce, CancellationToken ct);
 

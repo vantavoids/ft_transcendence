@@ -69,7 +69,9 @@ internal sealed class SendDirectMessageHandler(
 			return messageResult.Error;
 
 		var message = messageResult.Value;
-		await repository.AddAsync(message, command.Nonce, cancellationToken);
+		
+		// TODO: wire up attachment resolution; empty until then
+		await repository.AddAsync(message, command.Nonce, [], cancellationToken);
 
 		var response = DirectMessageResponse.From(message, command.Nonce);
 

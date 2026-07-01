@@ -1,5 +1,6 @@
 using Cassandra;
 using Chat.Application.Abstractions.Persistence;
+using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 
 namespace Chat.Persistence.Repositories;
@@ -47,7 +48,7 @@ internal sealed class DirectMessageRepository(
 		return row.GetValue<long>("conversation_id");
 	}
 
-	public async Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct)
+	public async Task AddAsync(DirectMessage message, string? nonce, IReadOnlyList<AttachmentMetadata> attachments, CancellationToken ct)
 	{
 		var insertDirectMessage = await statements.InsertDirectMessage.Value;
 		var insertLookup = await statements.InsertLookup.Value;
@@ -96,6 +97,33 @@ internal sealed class DirectMessageRepository(
 				message.RecipientId,
 				nonce,
 				message.Id));
+		}
+
+		// binding drafts to the message: write the permanent metadata + download
+		// lookup row and tombstone the draft, all atomic with the message itself
+		if (attachments.Count > 0)
+		{
+			var insertAttachment = await statements.InsertDmAttachment.Value;
+			var insertAttachmentLookup = await statements.InsertDmAttachmentLookup.Value;
+			var deleteDraft = await statements.DeleteDraftAttachment.Value;
+
+			foreach (var attachment in attachments)
+			{
+				batch.Add(insertAttachment.Bind(
+					message.ConversationId,
+					message.Id,
+					attachment.Id,
+					attachment.Url,
+					attachment.Filename,
+					attachment.SizeBytes,
+					attachment.MimeType));
+				batch.Add(insertAttachmentLookup.Bind(
+					attachment.Id,
+					(long?)null,
+					message.ConversationId,
+					message.Id));
+				batch.Add(deleteDraft.Bind(attachment.Id));
+			}
 		}
 
 		await session.ExecuteAsync(batch);

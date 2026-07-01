@@ -57,4 +57,17 @@ internal sealed class DirectMessageStatements(ISession session)
 		"FROM direct_messages " +
 		"WHERE conversation_id = ? AND created_at < ? " +
 		"LIMIT ?"));
+
+	public Lazy<Task<PreparedStatement>> InsertDmAttachment { get; } = new(() => session.PrepareAsync(
+		"INSERT INTO dm_attachments " +
+		"(conversation_id, message_id, id, url, filename, size_bytes, mime_type) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?)"));
+
+	public Lazy<Task<PreparedStatement>> InsertDmAttachmentLookup { get; } = new(() => session.PrepareAsync(
+		"INSERT INTO attachment_lookup " +
+		"(attachment_id, is_dm, channel_id, conversation_id, message_id) " +
+		"VALUES (?, true, ?, ?, ?)"));
+
+	public Lazy<Task<PreparedStatement>> DeleteDraftAttachment { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM draft_attachments WHERE id = ?"));
 }
