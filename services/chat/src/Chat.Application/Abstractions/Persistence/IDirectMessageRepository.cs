@@ -16,6 +16,7 @@ public interface IDirectMessageRepository
 	/// </summary>
 	Task<long> GetOrCreateConversationAsync(long senderId, long recipientId, long candidateId, CancellationToken ct);
 
+	/// <summary>excludes soft-deleted messages: a reply may not target a deleted message</summary>
 	Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct);
 
 	Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct);
