@@ -10,6 +10,7 @@ namespace Chat.Application.Features.DirectMessages.ListMessages;
 internal sealed class ListDirectMessagesHandler(
 	ICurrentUser currentUser,
 	IDirectMessageRepository repository,
+	IAttachmentRepository attachmentRepository,
 	IClock clock)
 	: IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>>
 {
@@ -41,8 +42,15 @@ internal sealed class ListDirectMessagesHandler(
 			limit,
 			cancellationToken);
 
+		// hydrate the whole page's attachments in a single multi-message read rather
+		// than one point read per message; the lookup yields an empty sequence for
+		// any message that has none
+		var messageIds = messages.Select(m => m.Id).ToList();
+		var attachmentsByMessage = await attachmentRepository
+			.GetDmMessagesAttachmentsAsync(conversationId.Value, messageIds, cancellationToken);
+
 		return messages
-			.Select(msg => DirectMessageResponse.From(msg, null))
+			.Select(msg => DirectMessageResponse.From(msg, null, [.. attachmentsByMessage[msg.Id]]))
 			.ToList();
 	}
 }
