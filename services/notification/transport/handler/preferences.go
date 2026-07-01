@@ -55,7 +55,23 @@ func upsertPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 // GET /notifications/preferences
 func listPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := getUserIDFromContext(r.Context())
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, errorBody("unauthorized invalid"))
+			return
+		}
 
+		rows, err := orch.ListPrefs(r.Context(), userID)
+		if err != nil {
+			writeError(w, r, err)
+			return
+		}
+
+		dtos := make([]core.PreferenceDTO, len(rows))
+		for i, n := range rows {
+			dtos[i] = core.ToPreferenceDTO(n)
+		}
+		writeJSON(w, http.StatusOK, dtos)
 	}
 }
 
