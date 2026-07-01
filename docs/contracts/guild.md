@@ -655,6 +655,8 @@ Transfer guild ownership to another member. Owner only.
 | 403 | Not the owner |
 | 404 | Target user is not a member |
 
+**Side effects:** Publishes `guild.owner_transferred { guild_id, old_owner_id, new_owner_id }` to RabbitMQ.
+
 ---
 
 ## Permission Bitmask
@@ -984,6 +986,7 @@ Check if a user is a member of the guild that owns this channel, and get their e
 | `guild.member_joined` | `{ guild_id, guild_name, user_id }` | User joins a guild |
 | `guild.member_left` | `{ guild_id, user_id }` | User leaves, is kicked, or banned |
 | `guild.invite_created` | `{ guild_id, guild_name, invited_by_user_id, invited_user_id? }` | Invite created; `invited_user_id` present only for targeted invites |
+| `guild.owner_transferred` | `{ guild_id, old_owner_id, new_owner_id }` | Ownership transferred to another member. At least Notification reacts (notify old and/or new owner). |
 
 ## RabbitMQ Events Consumed
 
