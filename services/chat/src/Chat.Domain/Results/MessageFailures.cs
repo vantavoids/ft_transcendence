@@ -32,6 +32,9 @@ public static class MessageFailures
 	public static readonly Failure NonceTooLong =
 		new("Message.NonceTooLong", "Nonce must be 64 characters or fewer.");
 
+	public static readonly Failure InvalidReplyTarget =
+		new("Message.InvalidReplyTarget", "Reply target was not found in this channel.");
+
 	public static readonly Failure NotFound =
 		new("Message.NotFound", "Message not found.");
 

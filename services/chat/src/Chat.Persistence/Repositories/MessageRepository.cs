@@ -77,6 +77,15 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 		return first?.GetValue<long>("message_id");
 	}
 
+	public async Task<long?> FindReplyExistsAsync(long channelId, long replyToId, CancellationToken ct)
+	{
+		var message = await GetByIdAsync(replyToId, ct);
+		if (message is null || message.ChannelId != channelId || message.IsDeleted)
+			return null;
+
+		return replyToId;
+	}
+
 	public async Task UpdateContentAsync(Message message, CancellationToken ct)
 	{
 		var stmt = await statements.UpdateContent.Value;

@@ -65,6 +65,12 @@ internal sealed class SendMessageHandler(
 			}
 		}
 
+		if (command.ReplyToId is not null)
+		{
+			if (await repository.FindReplyExistsAsync(command.ChannelId, command.ReplyToId.Value, cancellationToken) is null)
+				return MessageFailures.InvalidReplyTarget;
+		}
+
 		var attachmentsResult = await ResolveAttachmentsAsync(command.AttachmentIds, userId, cancellationToken);
 		if (attachmentsResult.IsFailure)
 			return attachmentsResult.Error;
