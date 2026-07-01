@@ -1,3 +1,4 @@
+using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Contracts;
 using Chat.Application.Features.DirectMessages.Common;
@@ -14,25 +15,28 @@ public sealed class SendDirectMessageHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeDirectMessageRepository Repository,
 		FakeIdGenerator IdGenerator,
+		FakeUserClient UserClient,
 		FakeClock Clock,
 		FakeEventBus EventBus,
 		FakeConversationUnicast Unicaster);
 
 	private static (Harness Harness,
 		ICommandHandler<SendDirectMessageCommand, Result<DirectMessageResponse>> Handler)
-		BuildHandler(long userId = 42)
+		BuildHandler(long userId = 42, long recipientId = 100)
 	{
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var repository = new FakeDirectMessageRepository();
 		var ids = new FakeIdGenerator();
+		var userClient = new FakeUserClient();
+		userClient.Setup(userId, recipientId, new UsersRelationship("none", null));
 		var clock = new FakeClock();
 		var eventBus = new FakeEventBus();
 		var unicaster = new FakeConversationUnicast();
 
 		var handler = HandlerFactory.CreateCommand<SendDirectMessageCommand, Result<DirectMessageResponse>>(
-			currentUser, repository, ids, clock, eventBus, unicaster);
+			currentUser, repository, ids, userClient, clock, eventBus, unicaster);
 
-		return (new Harness(currentUser, repository, ids, clock, eventBus, unicaster), handler);
+		return (new Harness(currentUser, repository, ids, userClient, clock, eventBus, unicaster), handler);
 	}
 
 	[Fact]

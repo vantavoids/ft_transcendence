@@ -29,6 +29,15 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 	public Task<long?> FindConversationAsync(long senderId, long recipientId, CancellationToken ct) =>
 		Task.FromResult(_conversations.TryGetValue(Pair(senderId, recipientId), out var id) ? id : (long?)null);
 
+	public Task<long> GetOrCreateConversationAsync(long senderId, long recipientId, long candidateId, CancellationToken ct)
+	{
+		var pair = Pair(senderId, recipientId);
+		if (!_conversations.TryGetValue(pair, out var id))
+			_conversations[pair] = id = candidateId;
+
+		return Task.FromResult(id);
+	}
+
 	public Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct) =>
 		Task.FromResult(_replies.TryGetValue((conversationId, replyToId), out var id) ? id : (long?)null);
 
@@ -55,11 +64,12 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 
 	public Task<IReadOnlyList<DirectMessage>> ListAsync(
 			long conversationId,
+			DateTimeOffset beforeTime,
 			int limit,
 			CancellationToken ct)
 	{
 		var messages = _saved
-			.Where(m => m.ConversationId == conversationId)
+			.Where(m => m.ConversationId == conversationId && m.CreatedAt < beforeTime)
 			.OrderByDescending(m => m.CreatedAt)
 			.ThenByDescending(m => m.Id)
 			.Take(limit)

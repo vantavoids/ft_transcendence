@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Chat.Application.Abstractions;
 using Chat.Application.Contracts;
 using Chat.FunctionalTests.Infrastructure;
 using Xunit;
@@ -22,6 +23,11 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		factory.DirectMessageRepository.Reset();
 		factory.EventBus.Reset();
 		factory.ConversationUnicast.Reset();
+		factory.UserClient.Reset();
+		// every test in this file sends as user 42; seed the relationship pairs
+		// it exercises so the handler's blocked-check passes by default
+		factory.UserClient.Setup(42, 100, new UsersRelationship("accepted", null));
+		factory.UserClient.Setup(42, 42, new UsersRelationship("accepted", null));
 		return Task.CompletedTask;
 	}
 
@@ -154,11 +160,18 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		var first = await client.PostAsJsonAsync("/v1/dms/100/messages",
 				new { content = "history functional test 1", nonce = "history-functional-1" });
 
+		// the fake clock doesn't auto-advance like a real one would between
+		// requests; advance it explicitly so each message gets a distinct
+		// created_at and none of them collide with the list's default "now" cursor
+		factory.Clock.Advance(TimeSpan.FromMilliseconds(1));
+
 		var second = await client.PostAsJsonAsync("/v1/dms/100/messages",
 				new { content = "history functional test 2", nonce = "history-functional-2" });
 
 		Assert.Equal(HttpStatusCode.Created, first.StatusCode);
 		Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+
+		factory.Clock.Advance(TimeSpan.FromMilliseconds(1));
 
 		var response = await client.GetAsync("/v1/dms/100/messages?limit=50");
 
