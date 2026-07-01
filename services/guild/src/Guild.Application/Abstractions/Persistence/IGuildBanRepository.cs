@@ -23,12 +23,19 @@ public interface IGuildBanRepository
 	void Remove(GuildBan ban);
 
 	/// <summary>
-	/// deletes every ban row referencing <paramref name="userId"/> across all
-	/// guilds in one SQL statement (bypasses the change tracker). pre-staged
-	/// for the upcoming <c>user.deleted</c> consumer in issue #147; no current
-	/// caller in this commit. note: <c>ExecuteDeleteAsync</c> is unsupported by
-	/// the InMemory provider, so functional tests cannot exercise this path
-	/// without a real database.
+	/// deletes every ban whose <c>user_id</c> (the banned subject) is
+	/// <paramref name="userId"/>, across all guilds, in one SQL statement
+	/// (bypasses the change tracker). used by the <c>user.deleted</c> GDPR cascade.
+	/// note: <c>ExecuteDeleteAsync</c> is unsupported by the InMemory provider, so
+	/// functional tests cannot exercise this path without a real database.
 	/// </summary>
 	Task RemoveAllForUserAsync(long userId, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// GDPR erasure: nulls <c>banned_by</c> on every ban issued by
+	/// <paramref name="moderatorUserId"/> (a ban against someone still present).
+	/// the ban stays in force; only the reference to the now-deleted moderator is
+	/// scrubbed. one bulk <c>ExecuteUpdateAsync</c> statement.
+	/// </summary>
+	Task ScrubModeratorAsync(long moderatorUserId, CancellationToken cancellationToken = default);
 }

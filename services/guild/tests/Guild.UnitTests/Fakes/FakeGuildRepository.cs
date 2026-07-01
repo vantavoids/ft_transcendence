@@ -109,4 +109,16 @@ internal sealed class FakeGuildRepository : IGuildRepository
 		_store.Remove(guild.Id);
 		RemoveCount++;
 	}
+
+	public int PurgeMembershipCount { get; private set; }
+	public long? LastPurgedMember { get; private set; }
+
+	public Task PurgeMembershipForUserAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		// the real repo issues bulk deletes on Members + MemberRoles; the fake holds
+		// whole guild aggregates so it records the call for orchestration assertions.
+		PurgeMembershipCount++;
+		LastPurgedMember = userId;
+		return Task.CompletedTask;
+	}
 }

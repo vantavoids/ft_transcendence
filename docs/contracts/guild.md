@@ -296,6 +296,8 @@ List banned users. Caller must be a member and have `BAN_MEMBERS` permission. Ba
 ]
 ```
 
+`banned_by` is nullable: it becomes `null` once the moderator who issued the ban has deleted their account (GDPR erasure scrubs the reference while the ban stays in force). See the `user.deleted` consumer below.
+
 **Errors:**
 | Status | Reason |
 |--------|--------|
@@ -985,7 +987,9 @@ Check if a user is a member of the guild that owns this channel, and get their e
 
 ## RabbitMQ Events Consumed
 
-| Event | Action |
-|-------|--------|
-| `user.deleted` | Delete all `guild_members`, `member_roles`, `guild_bans`, and `guild_invites` rows referencing the deleted user. Auth Service has already enforced (via 409 on `DELETE /auth/me`) that the user does not own any guilds, so no ownership transfer is needed here. |
+| Event | Payload | Action |
+|-------|---------|--------|
+| `user.deleted` | `{ user_id }` | GDPR erasure cascade. Deletes every row whose subject (or sole artifact) is the user: `guild_members` and `member_roles` (`user_id`), `guild_bans` (`user_id`, bans against them), `guild_invites` (`created_by`, their invite codes), and `channel_permission_overwrites` (`target_id` where `target_type = 'user'`, their per-channel overwrites). Additionally scrubs `guild_bans.banned_by` to `null` for bans the user *issued* against others: the ban stays in force, only the moderator reference is erased. Auth has already enforced (via 409 on `DELETE /auth/me`) that the user owns no guilds, so no ownership transfer is needed here. |
+
+Published by Auth on `Auth.Application.Contracts:UserDeleted` (exchange `user.deleted`, snake_case payload). The consumer's steps are idempotent bulk statements, so redelivery is safe.
 

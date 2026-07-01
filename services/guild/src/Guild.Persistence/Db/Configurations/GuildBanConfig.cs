@@ -24,7 +24,8 @@ internal sealed class GuildBanConfig : IEntityTypeConfiguration<GuildBan>
 
 		builder.Property(b => b.GuildId).HasColumnName("guild_id").IsRequired();
 		builder.Property(b => b.UserId).HasColumnName("user_id").IsRequired();
-		builder.Property(b => b.BannedBy).HasColumnName("banned_by").IsRequired();
+		// nullable: scrubbed to null by the user.deleted cascade (see GuildBan.BannedBy)
+		builder.Property(b => b.BannedBy).HasColumnName("banned_by");
 
 		builder.Property(b => b.Reason)
 			.HasColumnName("reason")

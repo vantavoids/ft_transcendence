@@ -16,6 +16,14 @@ public interface IGuildInviteRepository
 	/// </summary>
 	Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// deletes every invite created by <paramref name="creatorUserId"/> across all
+	/// guilds in one bulk statement. used by the <c>user.deleted</c> GDPR cascade:
+	/// an invite has no subject other than its creator, so erasing the creator
+	/// removes the invite (invalidating the code).
+	/// </summary>
+	Task RemoveAllByCreatorAsync(long creatorUserId, CancellationToken cancellationToken = default);
+
 	void Add(GuildInvite invite);
 	void Update(GuildInvite invite);
 }

@@ -34,4 +34,8 @@ internal sealed class GuildInviteRepository(GuildDbContext context) : IGuildInvi
 	public Task<int> DeleteRevokedAndExpiredAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken = default) => context.GuildInvites
 		.Where(i => i.IsRevoked || (i.ExpiresAt != null && i.ExpiresAt < expiredBefore))
 		.ExecuteDeleteAsync(cancellationToken);
+
+	public Task RemoveAllByCreatorAsync(long creatorUserId, CancellationToken cancellationToken = default) => context.GuildInvites
+		.Where(i => i.CreatedBy == creatorUserId)
+		.ExecuteDeleteAsync(cancellationToken);
 }

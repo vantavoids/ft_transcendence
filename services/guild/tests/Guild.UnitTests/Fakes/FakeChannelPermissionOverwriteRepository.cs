@@ -58,6 +58,18 @@ internal sealed class FakeChannelPermissionOverwriteRepository : IChannelPermiss
 		UpdateCount++;
 	}
 
+	public int RemoveAllForMemberCount { get; private set; }
+
+	public Task RemoveAllForMemberAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		var doomed = _store.Values
+			.Where(o => o.TargetType == OverwriteTargetType.Member && o.TargetId == userId)
+			.Select(o => o.Id).ToList();
+		foreach (var id in doomed) _store.Remove(id);
+		RemoveAllForMemberCount++;
+		return Task.CompletedTask;
+	}
+
 	public void Remove(ChannelPermissionOverwrite overwrite)
 	{
 		_store.Remove(overwrite.Id);

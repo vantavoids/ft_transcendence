@@ -41,6 +41,14 @@ internal sealed class ChannelPermissionOverwriteRepository(GuildDbContext contex
 				cancellationToken);
 	}
 
+	public Task RemoveAllForMemberAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		// constrain on target type so a role overwrite sharing the id space is never touched
+		return context.ChannelPermissionOverwrites
+			.Where(o => o.TargetType == OverwriteTargetType.Member && o.TargetId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+	}
+
 	public void Add(ChannelPermissionOverwrite overwrite)
 	{
 		context.ChannelPermissionOverwrites.Add(overwrite);
