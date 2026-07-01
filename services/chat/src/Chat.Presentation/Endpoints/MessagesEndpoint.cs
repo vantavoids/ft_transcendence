@@ -114,6 +114,7 @@ public sealed class MessagesEndpoint : ICarterModule
 			"Attachment.InvalidReference" => TypedResults.NotFound(new ErrorBody(failure.Message)),
 			"Message.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			"Message.MissingSendPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			// "Message.InvalidReplyTarget"
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
