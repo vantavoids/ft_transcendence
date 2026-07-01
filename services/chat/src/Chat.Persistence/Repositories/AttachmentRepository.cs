@@ -83,6 +83,32 @@ internal sealed class AttachmentRepository(ISession session, AttachmentStatement
 		return rows.ToLookup(row => row.GetValue<long>("message_id"), MapMetadata);
 	}
 
+	public async Task<AttachmentMetadata?> GetDmAttachmentAsync(long conversationId, long messageId, long id, CancellationToken ct)
+	{
+		var stmt = await statements.SelectDmAttachment.Value;
+		var row = (await session.ExecuteAsync(stmt.Bind(conversationId, messageId, id))).FirstOrDefault();
+		return row is null ? null : MapMetadata(row);
+	}
+
+	public async Task<IReadOnlyList<AttachmentMetadata>> GetDmMessageAttachmentsAsync(long conversationId, long messageId, CancellationToken ct)
+	{
+		var stmt = await statements.SelectDmMessageAttachments.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, messageId));
+		return rows.Select(MapMetadata).ToList();
+	}
+
+	public async Task<ILookup<long, AttachmentMetadata>> GetDmMessagesAttachmentsAsync(
+		long conversationId, IReadOnlyList<long> messageIds, CancellationToken ct)
+	{
+		if (messageIds.Count == 0)
+			return Enumerable.Empty<AttachmentMetadata>().ToLookup(_ => 0L);
+
+		var stmt = await statements.SelectDmMessagesAttachments.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, messageIds.ToArray()));
+
+		return rows.ToLookup(row => row.GetValue<long>("message_id"), MapMetadata);
+	}
+
 	private static AttachmentMetadata MapMetadata(Row row) => new(
 		Id: row.GetValue<long>("id"),
 		Url: row.GetValue<string>("url"),
