@@ -89,6 +89,30 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.ToList();
 	}
 
+	public async Task<IReadOnlyList<MyGuildSummary>> ListForMemberAsync(
+		long userId, CancellationToken cancellationToken = default)
+	{
+		// join the caller's membership rows to their guilds and project the summary
+		// shape in the database. member_count is a correlated COUNT rather than a
+		// loaded Members collection, so no aggregate is hydrated. joined_at comes
+		// from the caller's own guild_members row.
+		return await context.Members
+			.AsNoTracking()
+			.Where(m => m.UserId == userId)
+			.Join(
+				context.Guilds,
+				m => m.GuildId,
+				g => g.Id,
+				(m, g) => new MyGuildSummary(
+					g.Id,
+					g.Name,
+					g.IconUrl,
+					g.OwnerId,
+					context.Members.Count(x => x.GuildId == g.Id),
+					m.JoinedAt))
+			.ToListAsync(cancellationToken);
+	}
+
 	public Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default)
 	{
 		return context.Members

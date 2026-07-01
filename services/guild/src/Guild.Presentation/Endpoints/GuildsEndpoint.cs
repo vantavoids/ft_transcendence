@@ -4,6 +4,7 @@ using Guild.Application.Features.Guilds.Common;
 using Guild.Application.Features.Guilds.CreateGuild;
 using Guild.Application.Features.Guilds.DeleteGuild;
 using Guild.Application.Features.Guilds.GetGuild;
+using Guild.Application.Features.Guilds.ListMyGuilds;
 using Guild.Application.Features.Guilds.TransferOwnership;
 using Guild.Application.Features.Guilds.UpdateGuild;
 using Guild.Domain.Results;
@@ -18,6 +19,7 @@ public sealed class GuildsEndpoint : ICarterModule
 	{
 		var group = endpoints.MapGroup("/guilds");
 		group.MapPost("/", CreateAsync).ProducesGuildErrors();
+		group.MapGet("/me", ListMineAsync).ProducesGuildErrors();
 		group.MapGet("/{id:long}", GetAsync).ProducesGuildErrors();
 		group.MapPatch("/{id:long}", UpdateAsync).ProducesGuildErrors();
 		group.MapDelete("/{id:long}", DeleteAsync).ProducesGuildErrors();
@@ -37,6 +39,17 @@ public sealed class GuildsEndpoint : ICarterModule
 		return result.Succeeded
 			? TypedResults.Created($"/v1/guilds/{result.Value.Id}", result.Value)
 			: TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status400BadRequest);
+	}
+
+	private static async Task<Results<Ok<IReadOnlyList<MyGuildDto>>, JsonHttpResult<ErrorBody>>>
+	ListMineAsync(
+		IQueryHandler<ListMyGuildsQuery, Result<MyGuildListResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new ListMyGuildsQuery(), cancellationToken);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value.Items)
+			: EndpointResults.Problem(result.Error);
 	}
 
 	private static async Task<Results<Ok<GuildDetailsDto>, JsonHttpResult<ErrorBody>>>
