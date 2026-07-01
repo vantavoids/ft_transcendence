@@ -86,7 +86,7 @@ CREATE INDEX idx_guild_members_user ON guild_members (user_id);
 CREATE TABLE guild_bans (
     guild_id    BIGINT      NOT NULL REFERENCES guilds (id) ON DELETE CASCADE,
     user_id     BIGINT      NOT NULL,   -- logical ref → users_profile.id
-    banned_by   BIGINT      NOT NULL,   -- logical ref → users_profile.id
+    banned_by   BIGINT,                 -- logical ref → users_profile.id; NULL once the moderator is GDPR-erased (ban stays, reference scrubbed)
     reason      TEXT,
     banned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (guild_id, user_id)

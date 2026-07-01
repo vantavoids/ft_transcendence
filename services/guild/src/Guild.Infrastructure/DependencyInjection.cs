@@ -6,6 +6,8 @@ using Guild.Application.Abstractions.Security;
 using Guild.Application.Abstractions.Users;
 using Guild.Application.Contracts;
 using Guild.Infrastructure.Messaging;
+using Guild.Infrastructure.Messaging.Consumers;
+using Guild.Infrastructure.Messaging.Contracts;
 using Guild.Infrastructure.Options;
 using Guild.Infrastructure.Security;
 using Guild.Infrastructure.Users;
@@ -49,6 +51,9 @@ public static class DependencyInjection
 				o.UseBusOutbox();
 			});
 
+			// consumes Auth's user.deleted to run the GDPR erasure cascade (#147)
+			x.AddConsumer<UserDeletedConsumer>();
+
 			x.UsingRabbitMq((ctx, cfg) =>
 			{
 				var options = ctx.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
@@ -72,6 +77,10 @@ public static class DependencyInjection
 				cfg.Message<GuildMemberJoined>(m => m.SetEntityName("guild.member_joined"));
 				cfg.Message<GuildMemberLeft>(m => m.SetEntityName("guild.member_left"));
 				cfg.Message<GuildInviteCreated>(m => m.SetEntityName("guild.invite_created"));
+
+				// inbound: bind the consumer's receive endpoint to Auth's user.deleted
+				// exchange. must match the SetEntityName Auth publishes under.
+				cfg.Message<UserDeleted>(m => m.SetEntityName("user.deleted"));
 
 				cfg.ConfigureEndpoints(ctx);
 			});

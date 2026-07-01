@@ -27,7 +27,13 @@ public sealed class GuildBan
 
 	public long GuildId { get; private set; }
 	public long UserId { get; private set; }
-	public long BannedBy { get; private set; }
+
+	/// <summary>
+	/// the moderator who issued the ban. always set at creation; nulled only by the
+	/// user.deleted GDPR cascade when that moderator's account is erased (the ban
+	/// stays in force, the reference is scrubbed).
+	/// </summary>
+	public long? BannedBy { get; private set; }
 	public string? Reason { get; private set; }
 	public DateTimeOffset BannedAt { get; private set; }
 

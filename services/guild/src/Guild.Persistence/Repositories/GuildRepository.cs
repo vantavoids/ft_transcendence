@@ -107,6 +107,17 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.AnyAsync(m => m.GuildId == guildId && m.UserId == userId, cancellationToken);
 	}
 
+	public async Task PurgeMembershipForUserAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		await context.MemberRoles
+			.Where(mr => mr.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+
+		await context.Members
+			.Where(m => m.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+	}
+
 	public void Add(GuildEntity guild)
 	{
 		context.Guilds.Add(guild);

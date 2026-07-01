@@ -48,5 +48,15 @@ internal sealed class FakeGuildInviteRepository : IGuildInviteRepository
 		return Task.FromResult(doomed.Count);
 	}
 
+	public int RemoveAllByCreatorCount { get; private set; }
+
+	public Task RemoveAllByCreatorAsync(long creatorUserId, CancellationToken cancellationToken = default)
+	{
+		var doomed = _store.Values.Where(i => i.CreatedBy == creatorUserId).Select(i => i.Code).ToList();
+		foreach (var code in doomed) _store.Remove(code);
+		RemoveAllByCreatorCount++;
+		return Task.CompletedTask;
+	}
+
 	internal void Seed(GuildInvite invite) => _store[invite.Code] = invite;
 }

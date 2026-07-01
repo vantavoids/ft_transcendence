@@ -45,4 +45,13 @@ internal sealed class GuildBanRepository(GuildDbContext context) : IGuildBanRepo
 			.Where(b => b.UserId == userId)
 			.ExecuteDeleteAsync(cancellationToken);
 	}
+
+	public Task ScrubModeratorAsync(long moderatorUserId, CancellationToken cancellationToken = default)
+	{
+		return context.GuildBans
+			.Where(b => b.BannedBy == moderatorUserId)
+			.ExecuteUpdateAsync(
+				s => s.SetProperty(b => b.BannedBy, (long?)null),
+				cancellationToken);
+	}
 }

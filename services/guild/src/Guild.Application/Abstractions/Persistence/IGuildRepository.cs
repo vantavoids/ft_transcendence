@@ -22,6 +22,15 @@ public interface IGuildRepository
 	Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// deletes a user's <c>member_roles</c> and <c>guild_members</c> rows across all
+	/// guilds in bulk statements. used by the <c>user.deleted</c> GDPR cascade.
+	/// role rows go first so no membership is ever observed without its role links.
+	/// Auth's 409 gate guarantees the user owns no guilds, so no ownership handling
+	/// is needed here.
+	/// </summary>
+	Task PurgeMembershipForUserAsync(long userId, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// keyset page of members (ordered by user id, cursor = <paramref name="afterUserId"/>)
 	/// projected straight to <see cref="MemberPage"/> in the database, so listing
 	/// members never hydrates the whole guild aggregate into memory.
