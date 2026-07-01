@@ -24,6 +24,17 @@ internal sealed class FakeChannelCategoryRepository : IChannelCategoryRepository
 		return Task.FromResult<ChannelCategory?>(category);
 	}
 
+	public Task<IReadOnlyList<ChannelCategory>> GetByGuildAsync(
+		long guildId,
+		CancellationToken cancellationToken = default)
+	{
+		var categories = _store.Values
+			.Where(c => c.GuildId == guildId)
+			.OrderBy(c => c.Position)
+			.ToList();
+		return Task.FromResult<IReadOnlyList<ChannelCategory>>(categories);
+	}
+
 	public Task<int?> GetMaxPositionAsync(long guildId, CancellationToken cancellationToken = default)
 	{
 		var positions = _store.Values

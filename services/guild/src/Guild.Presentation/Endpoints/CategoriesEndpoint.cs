@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Categories.Common;
 using Guild.Application.Features.Categories.CreateCategory;
 using Guild.Application.Features.Categories.DeleteCategory;
+using Guild.Application.Features.Categories.ListCategories;
 using Guild.Application.Features.Categories.UpdateCategory;
 using Guild.Domain.Results;
 using Microsoft.AspNetCore.Http;
@@ -15,9 +16,22 @@ public sealed class CategoriesEndpoint : ICarterModule
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/categories");
+		group.MapGet("/", ListAsync).ProducesGuildErrors();
 		group.MapPost("/", CreateAsync).ProducesGuildErrors();
 		group.MapPatch("/{categoryId:long}", UpdateAsync).ProducesGuildErrors();
 		group.MapDelete("/{categoryId:long}", DeleteAsync).ProducesGuildErrors();
+	}
+
+	private static async Task<Results<Ok<IReadOnlyList<CategoryResponse>>, JsonHttpResult<ErrorBody>>>
+	ListAsync(
+		long id,
+		IQueryHandler<ListCategoriesQuery, Result<CategoryListResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new ListCategoriesQuery(id), cancellationToken);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value.Items)
+			: EndpointResults.Problem(result.Error);
 	}
 
 	private static async Task<Results<Created<CategoryResponse>, JsonHttpResult<ErrorBody>>>
