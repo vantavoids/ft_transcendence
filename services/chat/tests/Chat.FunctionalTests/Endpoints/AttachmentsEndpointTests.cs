@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Chat.Domain.Attachments;
+using Chat.Domain.Messages;
 using Chat.FunctionalTests.Infrastructure;
 using Xunit;
 
@@ -28,6 +29,7 @@ public sealed class AttachmentsEndpointTests(ChatApiFactory factory)
 		factory.GuildClient.Result = null;
 		factory.AttachmentRepository.Reset();
 		factory.ObjectStore.Reset();
+		factory.DirectMessageRepository.Reset();
 		return Task.CompletedTask;
 	}
 
@@ -181,6 +183,61 @@ public sealed class AttachmentsEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync($"/v1/attachments/{attachmentId}/pic.png");
 
 		Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+	}
+
+	// ---- download: DM path (participant-gated) ----
+
+	[Fact]
+	public async Task Get_DmAttachmentAsSender_Returns200()
+	{
+		const long attachmentId = 8001, conversationId = 900, messageId = 6001;
+		SeedDmAttachment(attachmentId, conversationId, messageId, senderId: 42, recipientId: 100, "pic.png", "image/png");
+
+		var client = BuildClient(userId: 42);
+		var response = await client.GetAsync($"/v1/attachments/{attachmentId}/pic.png");
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+		Assert.Equal(PngBytes, await response.Content.ReadAsByteArrayAsync());
+	}
+
+	[Fact]
+	public async Task Get_DmAttachmentAsRecipient_Returns200()
+	{
+		const long attachmentId = 8002, conversationId = 901, messageId = 6002;
+		SeedDmAttachment(attachmentId, conversationId, messageId, senderId: 42, recipientId: 100, "pic.png", "image/png");
+
+		var client = BuildClient(userId: 100);
+		var response = await client.GetAsync($"/v1/attachments/{attachmentId}/pic.png");
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+		Assert.Equal(PngBytes, await response.Content.ReadAsByteArrayAsync());
+	}
+
+	[Fact]
+	public async Task Get_DmAttachmentAsUnrelatedUser_Returns403()
+	{
+		const long attachmentId = 8003, conversationId = 902, messageId = 6003;
+		SeedDmAttachment(attachmentId, conversationId, messageId, senderId: 42, recipientId: 100, "pic.png", "image/png");
+
+		var client = BuildClient(userId: 99);
+		var response = await client.GetAsync($"/v1/attachments/{attachmentId}/pic.png");
+
+		Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+	}
+
+	private void SeedDmAttachment(
+		long attachmentId, long conversationId, long messageId, long senderId, long recipientId, string filename, string mimeType)
+	{
+		var url = $"http://localhost/api/chat/v1/attachments/{attachmentId}/{filename}";
+		factory.AttachmentRepository.SeedDmAttachment(conversationId, messageId,
+			new AttachmentMetadata(attachmentId, url, filename, PngBytes.Length, mimeType));
+		factory.ObjectStore.Seed(attachmentId.ToString(), PngBytes);
+
+		var message = DirectMessage.Reconstitute(
+			id: messageId, conversationId: conversationId, senderId: senderId, recipientId: recipientId,
+			replyToId: null, content: "has an attachment", isDeleted: false, editedAt: null,
+			createdAt: DateTimeOffset.UtcNow);
+		factory.DirectMessageRepository.Seed(message);
 	}
 
 	private async Task<long> UploadAsync(HttpClient client, string filename, string contentType)
