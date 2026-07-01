@@ -216,6 +216,71 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 	}
 
+	// a 1x1 PNG; the exact bytes don't matter, only that a draft can be resolved
+	private static readonly byte[] PngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x01];
+
+	private async Task<string> UploadDraftAsync(HttpClient client)
+	{
+		var fileContent = new ByteArrayContent(PngBytes);
+		fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+		var form = new MultipartFormDataContent { { fileContent, "file", "pic.png" } };
+
+		var response = await client.PostAsync("/v1/attachments", form);
+		response.EnsureSuccessStatusCode();
+		var body = await response.Content.ReadFromJsonAsync<UploadedAttachmentBody>(JsonOptions);
+		return body!.Id;
+	}
+
+	[Fact]
+	public async Task Post_WithAttachment_Returns201WithAttachment()
+	{
+		var client = BuildClient(userId: 42);
+		var attachmentId = await UploadDraftAsync(client);
+
+		var response = await client.PostAsJsonAsync("/v1/dms/100/messages",
+			new { content = "look at this", attachment_ids = new[] { attachmentId } });
+
+		Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+		var body = await response.Content.ReadFromJsonAsync<DirectMessageBody>(JsonOptions);
+		Assert.NotNull(body);
+		var attachment = Assert.Single(body.Attachments);
+		Assert.Equal(attachmentId, attachment.Id);
+		Assert.Equal("pic.png", attachment.Filename);
+	}
+
+	[Fact]
+	public async Task Post_AttachmentOnly_NoContent_Returns201()
+	{
+		var client = BuildClient(userId: 42);
+		var attachmentId = await UploadDraftAsync(client);
+
+		var response = await client.PostAsJsonAsync("/v1/dms/100/messages",
+			new { content = (string?)null, attachment_ids = new[] { attachmentId } });
+
+		Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+		var body = await response.Content.ReadFromJsonAsync<DirectMessageBody>(JsonOptions);
+		Assert.NotNull(body);
+		Assert.Single(body.Attachments);
+	}
+
+	[Fact]
+	public async Task Post_AttachmentOwnedByAnotherUser_Returns404_NoSideEffects()
+	{
+		var uploader = BuildClient(userId: 100);
+		var attachmentId = await UploadDraftAsync(uploader);
+
+		var sender = BuildClient(userId: 42);
+		var response = await sender.PostAsJsonAsync("/v1/dms/100/messages",
+			new { content = "sneaky", attachment_ids = new[] { attachmentId } });
+
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+		Assert.Empty(factory.SavedDirectMessages);
+	}
+
+	private sealed record UploadedAttachmentBody(string Id, string Url, string Filename, long SizeBytes, string MimeType);
+
+	private sealed record AttachmentBody(string Id, string Url, string Filename, long SizeBytes, string MimeType);
+
 	private sealed record DirectMessageBody(
 			string Id,
 			string ConversationId,
@@ -225,5 +290,6 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 			string? ReplyToId,
 			DateTimeOffset? EditedAt,
 			DateTimeOffset CreatedAt,
+			IReadOnlyList<AttachmentBody> Attachments,
 			string? Nonce);
 }
