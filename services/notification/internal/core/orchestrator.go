@@ -236,8 +236,18 @@ func (o *Orchestrator) ListPrefs(ctx context.Context, userID int64) ([]database.
 	return p, nil
 }
 
-func (o *Orchestrator) RemovePrefs(ctx context.Context) error {
-	return nil
+func (o *Orchestrator) RemovePrefs(ctx context.Context, userID int64, scopeType string, scopeID int64) (int64, error) {
+
+	rows, err := o.queries.RemoveNotificationPreference(ctx, database.RemoveNotificationPreferenceParams{
+		UserID:    userID,
+		ScopeType: scopeType,
+		ScopeID:   scopeID,
+	})
+	if err != nil {
+		return rows, err
+	}
+
+	return rows, nil
 }
 
 func (o *Orchestrator) IsMuted(ctx context.Context) error {
