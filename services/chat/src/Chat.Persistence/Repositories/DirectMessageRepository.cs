@@ -19,8 +19,8 @@ internal sealed class DirectMessageRepository(
 
 	public async Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct)
 	{
-		var lookup = await GetLookupAsync(replyToId);
-		if (lookup is null || lookup.Value.ConversationId != conversationId)
+		var message = await GetByIdAsync(replyToId, ct);
+		if (message is null || message.ConversationId != conversationId || message.IsDeleted)
 			return null;
 
 		return replyToId;
