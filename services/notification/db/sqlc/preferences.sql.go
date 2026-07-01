@@ -11,6 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteUserPreferences = `-- name: DeleteUserPreferences :exec
+DELETE FROM notification_preferences
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserPreferences(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteUserPreferences, userID)
+	return err
+}
+
 const isNotificationPreferenceMuted = `-- name: IsNotificationPreferenceMuted :one
 SELECT EXISTS (
     SELECT 1

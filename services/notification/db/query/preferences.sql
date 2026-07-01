@@ -25,3 +25,7 @@ SELECT EXISTS (
         AND muted = true
         AND (muted_until IS NULL OR muted_until > NOW())
 );
+
+-- name: DeleteUserPreferences :exec
+DELETE FROM notification_preferences
+WHERE user_id = $1;
