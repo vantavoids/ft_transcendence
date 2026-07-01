@@ -33,4 +33,18 @@ internal sealed class AttachmentStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectChannelMessagesAttachments { get; } = new(() => session.PrepareAsync(
 		"SELECT message_id, id, url, filename, size_bytes, mime_type " +
 		"FROM message_attachments WHERE channel_id = ? AND message_id IN ?"));
+
+	public Lazy<Task<PreparedStatement>> SelectDmAttachment { get; } = new(() => session.PrepareAsync(
+		"SELECT id, url, filename, size_bytes, mime_type " +
+		"FROM dm_attachments WHERE conversation_id = ? AND message_id = ? AND id = ?"));
+
+	public Lazy<Task<PreparedStatement>> SelectDmMessageAttachments { get; } = new(() => session.PrepareAsync(
+		"SELECT id, url, filename, size_bytes, mime_type " +
+		"FROM dm_attachments WHERE conversation_id = ? AND message_id = ?"));
+
+	// same IN-on-trailing-partition-key trick as SelectChannelMessagesAttachments,
+	// keyed by conversation_id instead of channel_id
+	public Lazy<Task<PreparedStatement>> SelectDmMessagesAttachments { get; } = new(() => session.PrepareAsync(
+		"SELECT message_id, id, url, filename, size_bytes, mime_type " +
+		"FROM dm_attachments WHERE conversation_id = ? AND message_id IN ?"));
 }
