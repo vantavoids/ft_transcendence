@@ -78,6 +78,7 @@ public static class DependencyInjection
 				cfg.Message<GuildMemberLeft>(m => m.SetEntityName("guild.member_left"));
 				cfg.Message<GuildInviteCreated>(m => m.SetEntityName("guild.invite_created"));
 				cfg.Message<GuildDeleted>(m => m.SetEntityName("guild.deleted"));
+				cfg.Message<GuildOwnerTransferred>(m => m.SetEntityName("guild.owner_transferred"));
 
 				// inbound: bind the consumer's receive endpoint to Auth's user.deleted
 				// exchange. must match the SetEntityName Auth publishes under.
