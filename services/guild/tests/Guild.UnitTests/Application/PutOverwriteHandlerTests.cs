@@ -226,7 +226,7 @@ public sealed class PutOverwriteHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<PutOverwriteCommand, Result>(
-			guilds, channels, overwrites,
+			guilds, channels, overwrites, new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds, channels, overwrites);
 	}

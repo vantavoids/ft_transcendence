@@ -12,6 +12,7 @@ internal sealed class PutOverwriteHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
 	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IIdGenerator ids,
 	IClock clock,
 	ICurrentUser currentUser,
@@ -47,10 +48,17 @@ internal sealed class PutOverwriteHandler(
 				return GuildFailures.OverwriteInvalidTarget;
 		}
 
-		var existing = await overwrites.GetForChannelAndTargetAsync(
-			channel.Id, targetType, command.TargetId, cancellationToken);
+		var channelOverwrites = await overwrites.GetForChannelAsync(channel.Id, cancellationToken);
+		var existing = channelOverwrites.FirstOrDefault(
+			o => o.TargetType == targetType && o.TargetId == command.TargetId);
+
+		var snapshot = ChannelAccess.CaptureForChannel(
+			guild, channel.Id,
+			ChannelAccess.MembersAffectedBy(guild, targetType, command.TargetId),
+			channelOverwrites);
 
 		var now = clock.UtcNow;
+		IReadOnlyList<ChannelPermissionOverwrite> after;
 
 		if (existing is not null)
 		{
@@ -59,24 +67,29 @@ internal sealed class PutOverwriteHandler(
 				return updateResult.Error;
 
 			overwrites.Update(existing);
-			await unitOfWork.SaveChangesAsync(cancellationToken);
-			return Result.Ok();
+			after = channelOverwrites; // existing is the same tracked instance, now updated in place
+		}
+		else
+		{
+			var createResult = ChannelPermissionOverwrite.Create(
+				id: ids.NextId(),
+				guildId: channel.GuildId,
+				channelId: channel.Id,
+				targetType: targetType,
+				targetId: command.TargetId,
+				allow: command.Allow,
+				deny: command.Deny,
+				now: now);
+
+			if (createResult.IsFailure)
+				return createResult.Error;
+
+			overwrites.Add(createResult.Value);
+			after = [.. channelOverwrites, createResult.Value];
 		}
 
-		var createResult = ChannelPermissionOverwrite.Create(
-			id: ids.NextId(),
-			guildId: channel.GuildId,
-			channelId: channel.Id,
-			targetType: targetType,
-			targetId: command.TargetId,
-			allow: command.Allow,
-			deny: command.Deny,
-			now: now);
+		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, channel.Id, after, cancellationToken);
 
-		if (createResult.IsFailure)
-			return createResult.Error;
-
-		overwrites.Add(createResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();

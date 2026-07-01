@@ -23,27 +23,14 @@ internal sealed class FakeChannelPermissionOverwriteRepository : IChannelPermiss
 		return Task.FromResult(list);
 	}
 
-	public Task<ChannelPermissionOverwrite?> GetForChannelAndTargetAsync(
-		long channelId,
-		OverwriteTargetType targetType,
-		long targetId,
+	public Task<IReadOnlyList<ChannelPermissionOverwrite>> GetForGuildAsync(
+		long guildId,
 		CancellationToken cancellationToken = default)
 	{
-		var match = _store.Values.FirstOrDefault(o =>
-			o.ChannelId == channelId
-			&& o.TargetType == targetType
-			&& o.TargetId == targetId);
-		return Task.FromResult(match);
-	}
-
-	public Task<ChannelPermissionOverwrite?> GetForChannelByTargetIdAsync(
-		long channelId,
-		long targetId,
-		CancellationToken cancellationToken = default)
-	{
-		var match = _store.Values.FirstOrDefault(o =>
-			o.ChannelId == channelId && o.TargetId == targetId);
-		return Task.FromResult(match);
+		IReadOnlyList<ChannelPermissionOverwrite> list = _store.Values
+			.Where(o => o.GuildId == guildId)
+			.ToList();
+		return Task.FromResult(list);
 	}
 
 	public void Add(ChannelPermissionOverwrite overwrite)

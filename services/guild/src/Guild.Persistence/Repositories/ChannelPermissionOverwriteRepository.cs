@@ -16,29 +16,15 @@ internal sealed class ChannelPermissionOverwriteRepository(GuildDbContext contex
 			.ToListAsync(cancellationToken);
 	}
 
-	public Task<ChannelPermissionOverwrite?> GetForChannelAndTargetAsync(
-		long channelId,
-		OverwriteTargetType targetType,
-		long targetId,
+	public async Task<IReadOnlyList<ChannelPermissionOverwrite>> GetForGuildAsync(
+		long guildId,
 		CancellationToken cancellationToken = default)
 	{
-		return context.ChannelPermissionOverwrites
-			.FirstOrDefaultAsync(
-				o => o.ChannelId == channelId
-					&& o.TargetType == targetType
-					&& o.TargetId == targetId,
-				cancellationToken);
-	}
-
-	public Task<ChannelPermissionOverwrite?> GetForChannelByTargetIdAsync(
-		long channelId,
-		long targetId,
-		CancellationToken cancellationToken = default)
-	{
-		return context.ChannelPermissionOverwrites
-			.FirstOrDefaultAsync(
-				o => o.ChannelId == channelId && o.TargetId == targetId,
-				cancellationToken);
+		// read-only: only feeds the channel.access_revoked read-diff, never mutated
+		return await context.ChannelPermissionOverwrites
+			.AsNoTracking()
+			.Where(o => o.GuildId == guildId)
+			.ToListAsync(cancellationToken);
 	}
 
 	public Task RemoveAllForMemberAsync(long userId, CancellationToken cancellationToken = default)

@@ -115,4 +115,21 @@ public sealed class EventSerializationTests
 
 		Assert.Equal(original, JsonSerializer.Deserialize<GuildOwnerTransferred>(json, SnakeCase));
 	}
+
+	[Fact]
+	public void ChannelAccessRevoked_SerializesWith_SnakeCaseFields()
+	{
+		var json = JsonSerializer.Serialize(new ChannelAccessRevoked(500, 2), SnakeCase);
+
+		Assert.Equal("{\"channel_id\":500,\"user_id\":2}", json);
+	}
+
+	[Fact]
+	public void ChannelAccessRevoked_RoundTrips()
+	{
+		var original = new ChannelAccessRevoked(500, 2);
+		var json = JsonSerializer.Serialize(original, SnakeCase);
+
+		Assert.Equal(original, JsonSerializer.Deserialize<ChannelAccessRevoked>(json, SnakeCase));
+	}
 }

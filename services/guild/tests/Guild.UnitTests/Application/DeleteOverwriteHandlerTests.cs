@@ -111,7 +111,7 @@ public sealed class DeleteOverwriteHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<DeleteOverwriteCommand, Result>(
-			guilds, channels, overwrites, new FakeCurrentUser { Id = currentUser });
+			guilds, channels, overwrites, new FakeEventBus(), new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds, channels, overwrites);
 	}
 }

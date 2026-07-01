@@ -988,6 +988,7 @@ Check if a user is a member of the guild that owns this channel, and get their e
 | `guild.invite_created` | `{ guild_id, guild_name, invited_by_user_id, invited_user_id? }` | Invite created; `invited_user_id` present only for targeted invites |
 | `guild.deleted` | `{ guild_id }` | Guild deleted by its owner. Downstream services cascade their own cleanup by `guild_id` (Chat channels/messages, Notification rows, membership references). |
 | `guild.owner_transferred` | `{ guild_id, old_owner_id, new_owner_id }` | Ownership transferred to another member. At least Notification reacts (notify old and/or new owner). |
+| `channel.access_revoked` | `{ channel_id, user_id }` | A member lost `READ_MESSAGES` on a channel via a role or overwrite change (role permission update, role assignment or unassignment, role deletion, or a channel-overwrite put/delete). One event per (channel, member) whose effective read flipped from allowed to denied. Chat consumes it to evict the member's live SignalR subscription (`EvictFromChannelAsync`). |
 
 ## RabbitMQ Events Consumed
 

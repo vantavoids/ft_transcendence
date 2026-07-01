@@ -100,7 +100,7 @@ public sealed class AssignRoleHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<AssignRoleCommand, Result>(
-			guilds, clock, new FakeCurrentUser { Id = currentUser });
+			guilds, new FakeChannelRepository(), new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(), clock, new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}
 }

@@ -10,6 +10,9 @@ namespace Guild.Application.Features.Roles.DeleteRole;
 
 internal sealed class DeleteRoleHandler(
 	IGuildRepository guilds,
+	IChannelRepository channels,
+	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -38,9 +41,22 @@ internal sealed class DeleteRoleHandler(
 		if (!PermissionResolver.OutRanksRole(guild, currentUser.Id, role))
 			return GuildFailures.RoleHierarchyBlocked;
 
+		// no holders -> deleting the role can't change any member's read
+		var holders = guild.MemberRoles
+			.Where(mr => mr.RoleId == command.RoleId)
+			.Select(mr => mr.UserId)
+			.Distinct()
+			.ToList();
+		ChannelReadSnapshot? snapshot = holders.Count > 0
+			? await ChannelAccess.CaptureAsync(guild, holders, channels, overwrites, cancellationToken)
+			: null;
+
 		var removeResult = guild.RemoveRole(command.RoleId, clock.UtcNow);
 		if (removeResult.IsFailure)
 			return removeResult.Error;
+
+		if (snapshot is { } snap)
+			await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snap, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
