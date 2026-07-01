@@ -21,7 +21,7 @@ internal sealed class MessageStatements(ISession session)
 		"SELECT message_id FROM message_nonce_dedup WHERE author_id = ? AND channel_id = ? AND nonce = ?"));
 
 	public Lazy<Task<PreparedStatement>> SelectLookup { get; } = new(() => session.PrepareAsync(
-		"SELECT channel_id, created_at FROM message_lookup WHERE message_id = ?"));
+		"SELECT is_dm, channel_id, created_at FROM message_lookup WHERE message_id = ?"));
 
 	public Lazy<Task<PreparedStatement>> SelectMessage { get; } = new(() => session.PrepareAsync(
 		"SELECT channel_id, created_at, id, author_id, content, edited_at, is_deleted, reply_to_id " +
