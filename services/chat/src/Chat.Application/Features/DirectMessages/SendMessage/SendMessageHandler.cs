@@ -13,6 +13,7 @@ internal sealed class SendDirectMessageHandler(
 	ICurrentUser currentUser,
 	IDirectMessageRepository repository,
 	ISnowflakeIdGenerator ids,
+	IUserClient userClient,
 	IClock clock,
 	IEventBus eventBus,
 	IConversationUnicast unicaster)
@@ -24,14 +25,16 @@ internal sealed class SendDirectMessageHandler(
 		SendDirectMessageCommand command,
 		CancellationToken cancellationToken = default)
 	{
-		// If we have a frend list requirement or server, please readd a user/guild injection in the DependencyInjection,
-		// TODO: check if the the recipient is friend with the sender and/or if they have a relation is a mutual server
-		// TODO: if a message is a reply, you need to check if the message exist in the actual conversation before pointing toward the correct message
-
 		if (command.Nonce is { Length: > MaxNonceLen })
 			return DirectMessageFailures.NonceTooLong;
 
 		var userId = currentUser.UserId;
+		var relationship = await userClient.GetUsersRelationship(userId, command.RecipientId, cancellationToken);
+		if (relationship is null)
+			return DirectMessageFailures.RecipientNotFound;
+
+		if (relationship.Status is "blocked_by_them" or "blocked_by_me")
+			return DirectMessageFailures.RecipientBlocked;
 
 		if (command.Nonce is not null)
 		{
