@@ -4,3 +4,4 @@ public sealed record GuildMemberJoined(long GuildId, string GuildName, long User
 public sealed record GuildMemberLeft(long GuildId, long UserId);
 public sealed record GuildInviteCreated(long GuildId, string GuildName, long InvitedByUserId, long? InvitedUserId);
 public sealed record GuildDeleted(long GuildId);
+public sealed record GuildOwnerTransferred(long GuildId, long OldOwnerId, long NewOwnerId);

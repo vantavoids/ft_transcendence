@@ -98,4 +98,21 @@ public sealed class EventSerializationTests
 
 		Assert.Equal(original, JsonSerializer.Deserialize<GuildDeleted>(json, SnakeCase));
 	}
+
+	[Fact]
+	public void GuildOwnerTransferred_SerializesWith_SnakeCaseFields()
+	{
+		var json = JsonSerializer.Serialize(new GuildOwnerTransferred(100, 1, 2), SnakeCase);
+
+		Assert.Equal("{\"guild_id\":100,\"old_owner_id\":1,\"new_owner_id\":2}", json);
+	}
+
+	[Fact]
+	public void GuildOwnerTransferred_RoundTrips()
+	{
+		var original = new GuildOwnerTransferred(100, 1, 2);
+		var json = JsonSerializer.Serialize(original, SnakeCase);
+
+		Assert.Equal(original, JsonSerializer.Deserialize<GuildOwnerTransferred>(json, SnakeCase));
+	}
 }
