@@ -43,6 +43,13 @@ public sealed class FakeMessageRepository : IMessageRepository
 		return Task.FromResult(message);
 	}
 
+	public Task<long?> FindReplyExistsAsync(long channelId, long replyToId, CancellationToken ct)
+	{
+		var message = _saved.FirstOrDefault(m => m.Id == replyToId);
+		var found = message is not null && message.ChannelId == channelId && !message.IsDeleted;
+		return Task.FromResult(found ? (long?)replyToId : null);
+	}
+
 	public Task UpdateContentAsync(Message message, CancellationToken ct)
 	{
 		Updated.Add(message);
