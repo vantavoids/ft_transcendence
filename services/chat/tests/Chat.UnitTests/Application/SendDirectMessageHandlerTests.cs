@@ -14,6 +14,7 @@ public sealed class SendDirectMessageHandlerTests
 	private sealed record Harness(
 		FakeCurrentUser CurrentUser,
 		FakeDirectMessageRepository Repository,
+		FakeAttachmentRepository AttachmentRepository,
 		FakeIdGenerator IdGenerator,
 		FakeUserClient UserClient,
 		FakeClock Clock,
@@ -26,6 +27,7 @@ public sealed class SendDirectMessageHandlerTests
 	{
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var repository = new FakeDirectMessageRepository();
+		var attachmentRepository = new FakeAttachmentRepository();
 		var ids = new FakeIdGenerator();
 		var userClient = new FakeUserClient();
 		userClient.Setup(userId, recipientId, new UsersRelationship("none", null));
@@ -34,9 +36,9 @@ public sealed class SendDirectMessageHandlerTests
 		var unicaster = new FakeConversationUnicast();
 
 		var handler = HandlerFactory.CreateCommand<SendDirectMessageCommand, Result<DirectMessageResponse>>(
-			currentUser, repository, ids, userClient, clock, eventBus, unicaster);
+			currentUser, repository, attachmentRepository, ids, userClient, clock, eventBus, unicaster);
 
-		return (new Harness(currentUser, repository, ids, userClient, clock, eventBus, unicaster), handler);
+		return (new Harness(currentUser, repository, attachmentRepository, ids, userClient, clock, eventBus, unicaster), handler);
 	}
 
 	[Fact]
@@ -45,7 +47,7 @@ public sealed class SendDirectMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 
 		var result = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, Nonce: null));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.Succeeded);
 		var response = result.Value;
@@ -78,7 +80,7 @@ public sealed class SendDirectMessageHandlerTests
 		h.Repository.WithConversation(42, 100, conversationId: 555);   // la paire a déjà une conversation
 
 		var result = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, Nonce: null));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.Succeeded);
 		var saved = Assert.Single(h.Repository.Saved);
@@ -92,7 +94,7 @@ public sealed class SendDirectMessageHandlerTests
 		var (h, handler) = BuildHandler();
 
 		var result = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, Nonce: new string('x', 65)));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: new string('x', 65)));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(DirectMessageFailures.NonceTooLong, result.Error);
@@ -108,7 +110,7 @@ public sealed class SendDirectMessageHandlerTests
 		var nonce = new string('x', 64);
 
 		var result = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, Nonce: nonce));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: nonce));
 
 		Assert.True(result.Succeeded);
 		Assert.Equal(nonce, result.Value.Nonce);   // ⚠️ aligne sur le nom de champ de ton DirectMessageResponse
@@ -120,14 +122,14 @@ public sealed class SendDirectMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 
 		var first = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, Nonce: "n1"));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "n1"));
 		Assert.True(first.Succeeded);
 
 		h.EventBus.Reset();
 		h.Unicaster.Reset();
 
 		var second = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, Nonce: "n1"));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "n1"));
 
 		Assert.True(second.Succeeded);
 		Assert.Equal(first.Value.Id, second.Value.Id);
@@ -142,9 +144,9 @@ public sealed class SendDirectMessageHandlerTests
 		var (h, handler) = BuildHandler(userId: 42);
 
 		var first = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, Nonce: "n-a"));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "n-a"));
 		var second = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, Nonce: "n-b"));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "n-b"));
 
 		Assert.True(first.Succeeded);
 		Assert.True(second.Succeeded);
@@ -160,7 +162,7 @@ public sealed class SendDirectMessageHandlerTests
 		var (h, handler) = BuildHandler();
 
 		var result = await handler.HandleAsync(
-			new SendDirectMessageCommand(RecipientId: 100, Content: "   ", ReplyToId: null, Nonce: null));
+			new SendDirectMessageCommand(RecipientId: 100, Content: "   ", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal(DirectMessageFailures.ContentRequired, result.Error);
@@ -180,6 +182,7 @@ public sealed class SendDirectMessageHandlerTests
 					RecipientId: 100,
 					Content: "reply",
 					ReplyToId: 999,
+					AttachmentIds: [],
 					Nonce: null));
 
 		Assert.True(result.IsFailure);
@@ -201,6 +204,7 @@ public sealed class SendDirectMessageHandlerTests
 					RecipientId: 100,
 					Content: "reply",
 					ReplyToId: 999,
+					AttachmentIds: [],
 					Nonce: null));
 
 		Assert.True(result.Succeeded);
