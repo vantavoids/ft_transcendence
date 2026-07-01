@@ -211,6 +211,7 @@ type UpsertInput struct {
 }
 
 func (o *Orchestrator) UpsertPrefs(ctx context.Context, u UpsertInput) (database.NotificationPreference, error) {
+
 	p, err := o.queries.UpsertNotificationPreference(ctx, database.UpsertNotificationPreferenceParams{
 		UserID:     u.UserID,
 		ScopeType:  u.ScopeType,
@@ -221,11 +222,18 @@ func (o *Orchestrator) UpsertPrefs(ctx context.Context, u UpsertInput) (database
 	if err != nil {
 		return p, err
 	}
+
 	return p, nil
 }
 
-func (o *Orchestrator) ListPrefs(ctx context.Context) error {
-	return nil
+func (o *Orchestrator) ListPrefs(ctx context.Context, userID int64) ([]database.NotificationPreference, error) {
+
+	p, err := o.queries.ListNotificationPreferences(ctx, userID)
+	if err != nil {
+		return p, err
+	}
+
+	return p, nil
 }
 
 func (o *Orchestrator) RemovePrefs(ctx context.Context) error {
