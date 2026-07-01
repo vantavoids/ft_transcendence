@@ -10,6 +10,9 @@ namespace Guild.Application.Features.Membership.UnassignRole;
 
 internal sealed class UnassignRoleHandler(
 	IGuildRepository guilds,
+	IChannelRepository channels,
+	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -32,9 +35,14 @@ internal sealed class UnassignRoleHandler(
 		if (!PermissionResolver.OutRanksRole(guild, currentUser.Id, role))
 			return GuildFailures.RoleHierarchyBlocked;
 
+		var snapshot = await ChannelAccess.CaptureAsync(
+			guild, [command.TargetUserId], channels, overwrites, cancellationToken);
+
 		var unassignResult = guild.UnassignRole(command.TargetUserId, command.RoleId, clock.UtcNow);
 		if (unassignResult.IsFailure)
 			return unassignResult.Error;
+
+		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

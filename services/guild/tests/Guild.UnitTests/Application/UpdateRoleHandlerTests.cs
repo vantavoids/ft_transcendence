@@ -161,7 +161,7 @@ public sealed class UpdateRoleHandlerTests
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		guilds.Add(guild);
 		var handler = HandlerFactory.CreateCommand<UpdateRoleCommand, Result<RoleResponse>>(
-			guilds, new FakeClock(Now), new FakeCurrentUser { Id = currentUser });
+			guilds, new FakeChannelRepository(), new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(), new FakeClock(Now), new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}
 }

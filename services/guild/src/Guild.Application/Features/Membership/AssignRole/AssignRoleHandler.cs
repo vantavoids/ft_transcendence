@@ -10,6 +10,9 @@ namespace Guild.Application.Features.Membership.AssignRole;
 
 internal sealed class AssignRoleHandler(
 	IGuildRepository guilds,
+	IChannelRepository channels,
+	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -36,9 +39,16 @@ internal sealed class AssignRoleHandler(
 		if (!PermissionResolver.CanGrantPermissions(mask, role.Permissions))
 			return GuildFailures.CannotGrantPermissionsYouLack;
 
+		// assigning a role adds its deny-overwrites to the member, which can revoke
+		// read on channels the role denies (base perms only ever add)
+		var snapshot = await ChannelAccess.CaptureAsync(
+			guild, [command.TargetUserId], channels, overwrites, cancellationToken);
+
 		var assignResult = guild.AssignRole(command.TargetUserId, command.RoleId, clock.UtcNow);
 		if (assignResult.IsFailure)
 			return assignResult.Error;
+
+		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

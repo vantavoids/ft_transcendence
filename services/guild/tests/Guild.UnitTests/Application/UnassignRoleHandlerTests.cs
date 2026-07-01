@@ -104,7 +104,7 @@ public sealed class UnassignRoleHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UnassignRoleCommand, Result>(
-			guilds, clock, new FakeCurrentUser { Id = currentUser });
+			guilds, new FakeChannelRepository(), new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(), clock, new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}
 }

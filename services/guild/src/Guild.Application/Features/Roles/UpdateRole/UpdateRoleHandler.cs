@@ -11,6 +11,9 @@ namespace Guild.Application.Features.Roles.UpdateRole;
 
 internal sealed class UpdateRoleHandler(
 	IGuildRepository guilds,
+	IChannelRepository channels,
+	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -43,6 +46,19 @@ internal sealed class UpdateRoleHandler(
 		    && !PermissionResolver.CanGrantPermissions(mask, newPerms))
 			return GuildFailures.CannotGrantPermissionsYouLack;
 
+		// read can only be revoked when the role loses READ_MESSAGES or ADMINISTRATOR
+		// (base perms are additive, so a grant never removes read)
+		const long readAffecting = (long)Permission.ReadMessages | (long)Permission.Administrator;
+		ChannelReadSnapshot? snapshot = null;
+		if (command.Permissions is long updatedPerms && (role.Permissions & ~updatedPerms & readAffecting) != 0)
+		{
+			var affected = role.IsDefault
+				? guild.Members.Select(m => m.UserId).ToList()
+				: guild.MemberRoles.Where(mr => mr.RoleId == command.RoleId).Select(mr => mr.UserId).Distinct().ToList();
+			if (affected.Count > 0)
+				snapshot = await ChannelAccess.CaptureAsync(guild, affected, channels, overwrites, cancellationToken);
+		}
+
 		var updateResult = guild.UpdateRole(
 			roleId: command.RoleId,
 			name: command.Name,
@@ -53,6 +69,9 @@ internal sealed class UpdateRoleHandler(
 			now: clock.UtcNow);
 		if (updateResult.IsFailure)
 			return updateResult.Error;
+
+		if (snapshot is { } snap)
+			await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snap, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
