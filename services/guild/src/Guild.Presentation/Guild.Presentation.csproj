@@ -9,21 +9,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Carter" Version="10.0.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2"/>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2"/>
-        <PackageReference Include="Scalar.AspNetCore" Version="2.6.0"/>
+        <PackageReference Include="Carter" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+        <!-- pinned to the patched 2.x line (advisory GHSA-v5pm-xwqc-g5wc affects <= 2.7.4).
+             must stay on 2.x: AspNetCore.OpenApi 10.x targets Microsoft.OpenApi 2.x, and 3.x
+             makes IOpenApiMediaType.Example read-only, breaking its source generator. -->
+        <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+        <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
         <!-- Needed by dotnet-ef for migrations generation -->
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Guild.Application\Guild.Application.csproj"/>
-        <ProjectReference Include="..\Guild.Infrastructure\Guild.Infrastructure.csproj"/>
-        <ProjectReference Include="..\Guild.Persistence\Guild.Persistence.csproj"/>
+        <ProjectReference Include="..\Guild.Application\Guild.Application.csproj" />
+        <ProjectReference Include="..\Guild.Infrastructure\Guild.Infrastructure.csproj" />
+        <ProjectReference Include="..\Guild.Persistence\Guild.Persistence.csproj" />
     </ItemGroup>
 
 </Project>

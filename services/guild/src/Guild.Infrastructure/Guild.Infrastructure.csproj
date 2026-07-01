@@ -9,8 +9,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1"/>
-        <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.4.1"/>
+        <!-- do not bump to 9.x: MassTransit 9+ requires a paid commercial license
+             and refuses to configure the bus at runtime without one. 8.x is the last
+             free/OSS line. fuck MT -->
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1" />
+        <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.4.1" />
     </ItemGroup>
 
     <PropertyGroup>
