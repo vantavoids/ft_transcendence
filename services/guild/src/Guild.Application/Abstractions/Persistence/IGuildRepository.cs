@@ -17,6 +17,15 @@ public interface IGuildRepository
 	/// </summary>
 	Task<GuildEntity?> GetByIdWithMembershipAsNoTrackingAsync(long id, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// summary of every guild <paramref name="userId"/> is a member of, projected
+	/// straight to <see cref="MyGuildSummary"/> in the database (id, name, icon,
+	/// owner, member count, and the caller's own <c>joined_at</c>) so the sidebar
+	/// listing never hydrates whole guild aggregates. order is unspecified.
+	/// </summary>
+	Task<IReadOnlyList<MyGuildSummary>> ListForMemberAsync(
+		long userId, CancellationToken cancellationToken = default);
+
 	Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default);
 	Task<int> CountOwnedByAsync(long userId, CancellationToken cancellationToken = default);
 	Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default);
@@ -44,3 +53,15 @@ public sealed record MemberPage(
 	string? Nickname,
 	DateTimeOffset JoinedAt,
 	IReadOnlyList<long> RoleIds);
+
+/// <summary>
+/// flat projection of one guild for the caller's sidebar listing: the guild's
+/// summary columns, its current member count, and the caller's own join time.
+/// </summary>
+public sealed record MyGuildSummary(
+	long Id,
+	string Name,
+	string? IconUrl,
+	long OwnerId,
+	int MemberCount,
+	DateTimeOffset JoinedAt);
