@@ -19,6 +19,17 @@ internal sealed class DirectMessageStatements(ISession session)
 		"(user_id, partner_id, conversation_id, last_message_at, last_preview, is_archived) " +
 		"VALUES (?, ?, ?, ?, ?, false)"));
 
+	// Conditional insert used by GetOrCreateConversationAsync to atomically decide
+	// the conversation_id on the very first message between two users. The caller
+	// binds (min(userA, userB), max(userA, userB)) so both send directions land on
+	// the same partition/clustering key and the LWT actually serializes the race.
+	// On a failed condition, Cassandra returns the current row's values (including
+	// conversation_id) in the same RowSet, so no follow-up read is needed.
+	public Lazy<Task<PreparedStatement>> InsertConversationIfNotExists { get; } = new(() => session.PrepareAsync(
+		"INSERT INTO user_conversations " +
+		"(user_id, partner_id, conversation_id, last_message_at, last_preview, is_archived) " +
+		"VALUES (?, ?, ?, null, null, false) IF NOT EXISTS"));
+
 	public Lazy<Task<PreparedStatement>> InsertNonce { get; } = new(() => session.PrepareAsync(
 		"INSERT INTO dm_nonce_dedup " +
 		"(sender_id, recipient_id, nonce, message_id) " +
