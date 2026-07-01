@@ -1,6 +1,7 @@
 using Chat.Presentation.Hubs;
 using Chat.Presentation.Hubs.Signaling;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -20,7 +21,7 @@ public sealed class CallRegistryTests
 	{
 		var hub = new RecordingSignalingHub();
 		var opts = Options.Create(new SignalingOptions { AnswerTimeoutSeconds = timeoutSeconds });
-		return (new CallRegistry(hub, opts), hub);
+		return (new CallRegistry(hub, opts, NullLogger<CallRegistry>.Instance), hub);
 	}
 
 	[Fact]
@@ -105,7 +106,7 @@ public sealed class CallRegistryTests
 	}
 
 	[Fact]
-	public async Task Timeout_Fires_CallFailed_ToCaller_WhenUnanswered()
+	public async Task Timeout_Fires_CallFailed_ToBothParties_WhenUnanswered()
 	{
 		var (registry, hub) = NewRegistry(timeoutSeconds: 1);
 		registry.TryOffer(Offer());
@@ -113,9 +114,11 @@ public sealed class CallRegistryTests
 		var failed = await hub.WaitForCallFailedAsync(TimeSpan.FromSeconds(4));
 
 		Assert.NotNull(failed);
-		Assert.Equal(Caller.ToString(), failed!.Value.UserId);
+		Assert.Equal("timeout", failed!.Value.Evt.Reason);
 		Assert.Equal(CallId.ToString(), failed.Value.Evt.CallId);
-		Assert.Equal("timeout", failed.Value.Evt.Reason);
+		var sent = hub.Snapshot();
+		Assert.Contains(sent, s => s.UserId == Caller.ToString() && s.Evt.Reason == "timeout");
+		Assert.Contains(sent, s => s.UserId == Callee.ToString() && s.Evt.Reason == "timeout");
 		// state cleared: the caller can offer again
 		Assert.True(registry.TryOffer(new CallInfo(905, Caller, Third, "audio", "x")));
 	}
@@ -153,6 +156,12 @@ public sealed class CallRegistryTests
 			return null;
 		}
 
+		public IReadOnlyList<(string UserId, CallFailedEvent Evt)> Snapshot()
+		{
+			lock (_lock)
+				return [.. _sent];
+		}
+
 		private void Record(string userId, CallFailedEvent evt)
 		{
 			lock (_lock)
@@ -169,7 +178,22 @@ public sealed class CallRegistryTests
 			public ISignalingClient Group(string g) => throw new NotSupportedException();
 			public ISignalingClient GroupExcept(string g, IReadOnlyList<string> e) => throw new NotSupportedException();
 			public ISignalingClient Groups(IReadOnlyList<string> g) => throw new NotSupportedException();
-			public ISignalingClient Users(IReadOnlyList<string> u) => throw new NotSupportedException();
+			public ISignalingClient Users(IReadOnlyList<string> u) => new MultiClient(owner, u);
+		}
+
+		private sealed class MultiClient(RecordingSignalingHub owner, IReadOnlyList<string> userIds) : ISignalingClient
+		{
+			public Task CallFailed(CallFailedEvent evt)
+			{
+				foreach (var id in userIds)
+					owner.Record(id, evt);
+				return Task.CompletedTask;
+			}
+			public Task IncomingCall(IncomingCallEvent evt) => Task.CompletedTask;
+			public Task CallAnswered(CallAnsweredEvent evt) => Task.CompletedTask;
+			public Task CallRejected(CallIdEvent evt) => Task.CompletedTask;
+			public Task CallHungUp(CallIdEvent evt) => Task.CompletedTask;
+			public Task IceCandidate(IceCandidateEvent evt) => Task.CompletedTask;
 		}
 
 		private sealed class Client(RecordingSignalingHub owner, string userId) : ISignalingClient

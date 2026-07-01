@@ -13,7 +13,8 @@ public sealed record CallInfo(long CallId, long CallerId, long CalleeId, string 
 /// </summary>
 public sealed class CallRegistry(
 	IHubContext<SignalingHub, ISignalingClient> hub,
-	IOptions<SignalingOptions> options)
+	IOptions<SignalingOptions> options,
+	ILogger<CallRegistry> logger)
 {
 	private sealed class Entry
 	{
@@ -153,7 +154,12 @@ public sealed class CallRegistry(
 		}
 
 		if (timedOut is not null)
-			_ = hub.Clients.User(timedOut.CallerId.ToString())
+		{
+			logger.LogInformation("Call {CallId}: unanswered after {Seconds}s, failing both parties",
+				timedOut.CallId, _answerTimeout.TotalSeconds);
+			_ = hub.Clients
+				.Users([timedOut.CallerId.ToString(), timedOut.CalleeId.ToString()])
 				.CallFailed(new CallFailedEvent(timedOut.CallId.ToString(), "timeout"));
+		}
 	}
 }
