@@ -3,6 +3,7 @@ using Chat.Application.Contracts;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Attachments;
+using Chat.Domain.Messages;
 using Chat.Domain.Results;
 using Chat.UnitTests.Fakes;
 using Xunit;
@@ -107,6 +108,7 @@ public sealed class SendMessageHandlerTests
 	{
 		var (h, handler) = BuildHandler(userId: 42);
 		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+		SeedReplyTarget(h.Repository, id: 7, channelId: 100);
 
 		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: 7, AttachmentIds: [], Nonce: null));
 
@@ -122,9 +124,8 @@ public sealed class SendMessageHandlerTests
 		Assert.Empty(response.Reactions);
 		Assert.Null(response.EditedAt);
 
-		// repo persisted the new message
-		var saved = Assert.Single(h.Repository.Saved);
-		Assert.Equal(responseId, saved.Id);
+		// repo persisted the new message (alongside the seeded reply target)
+		var saved = Assert.Single(h.Repository.Saved, m => m.Id == responseId);
 		Assert.Equal(100L, saved.ChannelId);
 		Assert.Equal(42L, saved.AuthorId);
 
@@ -228,6 +229,69 @@ public sealed class SendMessageHandlerTests
 		Assert.Empty(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	private static void SeedReplyTarget(FakeMessageRepository repo, long id, long channelId, bool isDeleted = false)
+	{
+		var message = Message.Reconstitute(
+			id: id, channelId: channelId, authorId: 1, content: "original",
+			replyToId: null, editedAt: null, isDeleted: isDeleted,
+			createdAt: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+		repo.Seed(message);
+	}
+
+	[Fact]
+	public async Task ReplyToNonexistentMessage_ReturnsInvalidReplyTarget_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: 999, AttachmentIds: [], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.InvalidReplyTarget, result.Error);
+		Assert.Empty(h.Repository.Saved);
+		Assert.Empty(h.EventBus.Published);
+		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	[Fact]
+	public async Task ReplyToDeletedMessage_ReturnsInvalidReplyTarget_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+		SeedReplyTarget(h.Repository, id: 7, channelId: 100, isDeleted: true);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: 7, AttachmentIds: [], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.InvalidReplyTarget, result.Error);
+	}
+
+	[Fact]
+	public async Task ReplyToMessageInDifferentChannel_ReturnsInvalidReplyTarget_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+		SeedReplyTarget(h.Repository, id: 7, channelId: 200); // different channel than command targets
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: 7, AttachmentIds: [], Nonce: null));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.InvalidReplyTarget, result.Error);
+	}
+
+	[Fact]
+	public async Task ReplyToValidMessage_Succeeds()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: SendMessagesPermission);
+		SeedReplyTarget(h.Repository, id: 7, channelId: 100);
+
+		var result = await handler.HandleAsync(new SendMessageCommand(ChannelId: 100, Content: "hi", ReplyToId: 7, AttachmentIds: [], Nonce: null));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("7", result.Value.ReplyToId);
 	}
 
 	private static DraftAttachment SeedDraft(FakeAttachmentRepository repo, long id, long uploaderId)
