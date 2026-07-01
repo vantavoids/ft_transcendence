@@ -87,4 +87,6 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 
 	public void WithReply(long conversationId, long replyToId) =>
 		_replies[(conversationId, replyToId)] = replyToId;
+
+	public void Seed(DirectMessage message) => _saved.Add(message);
 }
