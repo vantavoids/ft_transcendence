@@ -10,12 +10,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
 )
 
 type Orchestrator struct {
+	db      *pgxpool.Pool
 	queries *database.Queries
 	hub     *Hub
 
@@ -23,8 +25,8 @@ type Orchestrator struct {
 	userTunnel RelationshipChecker
 }
 
-func NewOrchestrator(hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Orchestrator, error) {
-	return &Orchestrator{queries: queries, hub: hub, snowflake: sflk, userTunnel: userClient}, nil
+func NewOrchestrator(db *pgxpool.Pool, hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Orchestrator, error) {
+	return &Orchestrator{db: db, queries: queries, hub: hub, snowflake: sflk, userTunnel: userClient}, nil
 }
 
 type CreateInput struct {
@@ -243,14 +245,20 @@ func (o *Orchestrator) IsMuted(ctx context.Context) error {
 	return nil
 }
 
-// TODO: dont forget to add a rollback after adding the preference
 func (o *Orchestrator) DeleteUserNotifs(ctx context.Context, userID int64) error {
+	tx, err := o.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	if err := o.queries.DeleteUserNotifications(ctx, userID); err != nil {
+	qtx := o.queries.WithTx(tx)
+
+	if err := qtx.DeleteUserNotifications(ctx, userID); err != nil {
 		return err
 	}
 
-	if err := o.queries.DeleteUserPreferences(ctx, userID); err != nil {
+	if err := qtx.DeleteUserPreferences(ctx, userID); err != nil {
 		return err
 	}
 
