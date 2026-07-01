@@ -48,12 +48,8 @@ internal sealed class SendDirectMessageHandler(
 		}
 
 		var messageId = ids.NextId();
-
-		// Generate a snowflake ids for a first time conversation
-		// There might be a data race if both person send a first time message each other, as this will create two conversation,
-		// one way to solve this is to have a conditional writing in ScyllaDb, so this line will probably dissapear
-		// TODO: conditional writing
-		var conversationId = await repository.FindConversationAsync(userId, command.RecipientId, cancellationToken) ?? ids.NextId();
+		var conversationId =
+			await repository.GetOrCreateConversationAsync(userId, command.RecipientId, ids.NextId(), cancellationToken);
 
 		if (command.ReplyToId is not null)
 		{

@@ -26,6 +26,27 @@ internal sealed class DirectMessageRepository(
 		return replyToId;
 	}
 
+	public async Task<long> GetOrCreateConversationAsync(long senderId, long recipientId, long candidateId, CancellationToken ct)
+	{
+		// Canonicalize on (min, max) so that A->B and B->A races contend on the
+		// same user_conversations partition/clustering key
+		var userId = Math.Min(senderId, recipientId);
+		var partnerId = Math.Max(senderId, recipientId);
+
+		var stmt = await statements.InsertConversationIfNotExists.Value;
+		var row = (await session.ExecuteAsync(stmt.Bind(
+														userId,
+														partnerId,
+														candidateId
+													))).FirstOrDefault();
+
+		// A CAS response row only carries "[applied]" on success
+		if (row is null || row.GetValue<bool>("[applied]"))
+			return candidateId;
+
+		return row.GetValue<long>("conversation_id");
+	}
+
 	public async Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct)
 	{
 		var insertDirectMessage = await statements.InsertDirectMessage.Value;
