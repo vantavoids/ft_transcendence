@@ -4,5 +4,10 @@ using Chat.Domain.Results;
 
 namespace Chat.Application.Features.DirectMessages.SendMessage;
 
-public sealed record SendDirectMessageCommand(long RecipientId, string? Content, long? ReplyToId, string? Nonce)
+public sealed record SendDirectMessageCommand(
+	long RecipientId,
+	string? Content,
+	long? ReplyToId,
+	IReadOnlyList<long> AttachmentIds,
+	string? Nonce)
 	: ICommand<Result<DirectMessageResponse>>;

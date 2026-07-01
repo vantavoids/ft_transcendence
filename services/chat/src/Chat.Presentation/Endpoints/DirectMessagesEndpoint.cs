@@ -33,6 +33,8 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 				RecipientId: userId,
 				Content: request.Content,
 				ReplyToId: request.ReplyToId,
+				// TODO: wire up request field; empty until
+				AttachmentIds: [],
 				Nonce: request.Nonce),
 			cancellationToken);
 
