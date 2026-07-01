@@ -168,11 +168,12 @@ internal sealed class DirectMessageRepository(
 
 	public async Task<IReadOnlyList<DirectMessage>> ListAsync(
 			long conversationId,
+			DateTimeOffset beforeTime,
 			int limit,
 			CancellationToken ct)
 	{
 		var stmt = await statements.SelectDirectMessagesByConversation.Value;
-		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, limit));
+		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, beforeTime, limit));
 
 		return rows
 			.Select(row => DirectMessage.Reconstitute(

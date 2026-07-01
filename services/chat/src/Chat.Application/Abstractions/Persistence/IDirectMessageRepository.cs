@@ -24,5 +24,6 @@ public interface IDirectMessageRepository
 	Task<long?> FindNonceAsync(long senderId, long recipientId, string nonce, CancellationToken ct);
 
 	Task<DirectMessage?> GetByIdAsync(long messageId, CancellationToken ct);
-	Task<IReadOnlyList<DirectMessage>> ListAsync(long conversationId, int limit, CancellationToken ct);
+
+	Task<IReadOnlyList<DirectMessage>> ListAsync(long conversationId, DateTimeOffset beforeTime, int limit, CancellationToken ct);
 }

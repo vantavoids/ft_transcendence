@@ -51,6 +51,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 	BadRequest<ErrorBody>>>
 		ListAsync(
 				long userId,
+				DateTimeOffset? before_time,
 				int? limit,
 				IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
 				CancellationToken cancellationToken)
@@ -58,7 +59,8 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			var result = await handler.HandleAsync(
 					new ListDirectMessagesQuery(
 						RecipientId: userId,
-						Limit: limit ?? 50),
+						Limit: limit ?? 50,
+						BeforeTime: before_time),
 					cancellationToken);
 
 			if (result.Succeeded)

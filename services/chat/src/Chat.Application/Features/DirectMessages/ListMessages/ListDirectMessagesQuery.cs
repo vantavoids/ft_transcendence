@@ -6,5 +6,6 @@ namespace Chat.Application.Features.DirectMessages.ListMessages;
 
 public sealed record ListDirectMessagesQuery(
 	long RecipientId,
+	DateTimeOffset? BeforeTime,
 	int Limit)
 	: IQuery<Result<IReadOnlyList<DirectMessageResponse>>>;
