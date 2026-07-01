@@ -84,16 +84,15 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 				body,
 				statusCode: StatusCodes.Status403Forbidden),
 
-			"DirectMessage.ContentRequired" => TypedResults.BadRequest(body),
-			"DirectMessage.ContentTooLong" => TypedResults.BadRequest(body),
-			"DirectMessage.InvalidId" => TypedResults.BadRequest(body),
-			"DirectMessage.InvalidConversationId" => TypedResults.BadRequest(body),
-			"DirectMessage.InvalidSenderId" => TypedResults.BadRequest(body),
-			"DirectMessage.InvalidRecipientId" => TypedResults.BadRequest(body),
-			"DirectMessage.InvalidReplyTarget" => TypedResults.BadRequest(body),
-			"DirectMessage.CannotMessageSelf" => TypedResults.BadRequest(body),
-			"DirectMessage.NonceTooLong" => TypedResults.BadRequest(body),
-
+			// "DirectMessage.ContentRequired"
+			// "DirectMessage.ContentTooLong"
+			// "DirectMessage.InvalidId"
+			// "DirectMessage.InvalidConversationId"
+			// "DirectMessage.InvalidSenderId"
+			// "DirectMessage.InvalidRecipientId"
+			// "DirectMessage.InvalidReplyTarget"
+			// "DirectMessage.CannotMessageSelf"
+			// "DirectMessage.NonceTooLong"
 			_ => TypedResults.BadRequest(body)
 		};
 	}

@@ -40,18 +40,7 @@ internal sealed class ListDirectMessagesHandler(
 			cancellationToken);
 
 		return messages
-			.Select(message => new DirectMessageResponse(
-				Id: message.Id.ToString(),
-				ConversationId: message.ConversationId.ToString(),
-				SenderId: message.SenderId.ToString(),
-				RecipientId: message.RecipientId.ToString(),
-				Content: message.Content,
-				ReplyToId: message.ReplyToId?.ToString(),
-				EditedAt: message.EditedAt,
-				CreatedAt: message.CreatedAt,
-				Attachments: [],
-				Reactions: [],
-				Nonce: null))
+			.Select(msg => DirectMessageResponse.From(msg, null))
 			.ToList();
 	}
 }
