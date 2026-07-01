@@ -59,7 +59,8 @@ public sealed class DirectMessage
 		long recipientId,
 		long? replyToId,
 		string? content,
-		DateTimeOffset now)
+		DateTimeOffset now,
+		bool hasAttachments = false)
 	{
 		if (id <= 0)
 			return DirectMessageFailures.InvalidId;
@@ -76,11 +77,16 @@ public sealed class DirectMessage
 		if (senderId == recipientId)
 			return DirectMessageFailures.CannotMessageSelf;
 
+		// content is optional only when the message carries at least one attachment
 		if (string.IsNullOrWhiteSpace(content))
-			return DirectMessageFailures.ContentRequired;
-
-		if (content.Length > MaxContentLen)
+		{
+			if (!hasAttachments)
+				return DirectMessageFailures.ContentRequired;
+		}
+		else if (content.Length > MaxContentLen)
+		{
 			return DirectMessageFailures.ContentTooLong;
+		}
 
 		return new DirectMessage(
 			id: id,
