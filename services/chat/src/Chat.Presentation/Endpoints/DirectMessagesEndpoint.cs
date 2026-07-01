@@ -80,9 +80,10 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 
 		return failure.Code switch
 		{
+			"DirectMessage.RecipientNotFound" or
 			"DirectMessage.ConversationNotFound" => TypedResults.NotFound(body),
 
-			"DirectMessage.NotAFriend" => TypedResults.Json(
+			"DirectMessage.RecipientBlocked" => TypedResults.Json(
 				body,
 				statusCode: StatusCodes.Status403Forbidden),
 
