@@ -32,8 +32,11 @@ public static class DirectMessageFailures
 	public static readonly Failure CannotMessageSelf =
 		new("DirectMessage.CannotMessageSelf", "Sender and Recipient can't be the same id.");
 
-	public static readonly Failure NotAFriend =
-		new("DirectMessage.NotAFriend", "Sender is not a friend of the Recipient.");
+	public static readonly Failure RecipientNotFound =
+		new("DirectMessage.RecipientNotFound", "Recipient not found.");
+
+	public static readonly Failure RecipientBlocked =
+		new("DirectMessage.RecipientBlocked", "Message cannot be sent because one of the users has blocked the other.");
 
 	public static readonly Failure NonceTooLong =
 		new("DirectMessage.NonceTooLong", "Nonce must be 64 characters or fewer.");
