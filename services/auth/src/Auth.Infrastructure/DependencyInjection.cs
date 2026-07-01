@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.Text.Json;
 using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
+using Auth.Application.Contracts;
 using Auth.Application.Abstractions.OAuth;
 using Auth.Application.Abstractions.Security;
 using Auth.Infrastructure.Http;
@@ -34,6 +36,20 @@ public static class DependencyInjection
                     h.Username(options.Username);
                     h.Password(options.Password);
                 });
+
+                // contracts document snake_case payloads; MassTransit defaults to
+                // camelCase, so without this consumers read {"user_id":..} and bind nothing.
+                conf.ConfigureJsonSerializerOptions(opts =>
+                {
+                    opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+                    return opts;
+                });
+
+                // exchange names consumers bind to; must match their SetEntityName.
+                conf.Message<UserRegistered>(m => m.SetEntityName("user.registered"));
+                conf.Message<UserLoggedOut>(m => m.SetEntityName("user.logged_out"));
+                conf.Message<UserDeleted>(m => m.SetEntityName("user.deleted"));
+
                 conf.ConfigureEndpoints(ctx);
             })
         );

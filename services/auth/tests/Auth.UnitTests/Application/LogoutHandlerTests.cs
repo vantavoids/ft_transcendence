@@ -1,4 +1,4 @@
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Application.Features.Logout;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
@@ -59,14 +59,14 @@ public sealed class LogoutHandlerTests
     }
 
     [Fact]
-    public async Task ValidUser_PublishesUserLoggedOutEvent()
+    public async Task ValidUser_PublishesUserLoggedOut()
     {
         var user = await SeedUser();
 
         await Handle(user.Id);
 
         var evt = Assert.Single(_eventBus.Published);
-        var loggedOut = Assert.IsType<UserLoggedOutEvent>(evt);
+        var loggedOut = Assert.IsType<UserLoggedOut>(evt);
         Assert.Equal(user.Id, loggedOut.UserId);
     }
 

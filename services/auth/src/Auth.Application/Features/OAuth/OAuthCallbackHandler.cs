@@ -4,7 +4,7 @@ using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Abstractions.OAuth;
 using Auth.Application.Abstractions.Persistence;
 using Auth.Application.Abstractions.Security;
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,7 +67,7 @@ internal sealed class OAuthCallbackHandler(
         await repository.SaveChangesAsync(cancellationToken);
         if (isNewUser)
             await eventBus.PublishAsync(
-                new UserRegisteredEvent(user.Id, userInfo.Email ?? string.Empty), cancellationToken);
+                new UserRegistered(user.Id, userInfo.Email ?? string.Empty), cancellationToken);
 
         var accessToken = tokenGenerator.GenerateAccessToken(user.Id);
         return new OAuthCallbackResult(accessToken, rawRefreshToken, isNewUser);

@@ -1,5 +1,5 @@
 using Auth.Application.Abstractions.Messaging;
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Application.Features.OAuth;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
@@ -50,7 +50,7 @@ public sealed class OAuthCallbackHandlerTests
         Assert.True(result.Value.IsNewUser);
         Assert.Single(repo.Store);
         Assert.Single(eventBus.Published);
-        Assert.IsType<UserRegisteredEvent>(eventBus.Published[0]);
+        Assert.IsType<UserRegistered>(eventBus.Published[0]);
     }
 
     [Fact]

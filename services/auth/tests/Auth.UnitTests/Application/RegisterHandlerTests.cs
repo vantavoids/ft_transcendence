@@ -1,4 +1,4 @@
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Application.Features.Register;
 using Auth.Domain.Results;
 using Auth.UnitTests.Fakes;
@@ -55,12 +55,12 @@ public sealed class RegisterHandlerTests
     }
 
     [Fact]
-    public async Task ValidRegistration_PublishesUserRegisteredEvent()
+    public async Task ValidRegistration_PublishesUserRegistered()
     {
         await Handle("user@example.com", "password123");
 
         var evt = Assert.Single(_eventBus.Published);
-        var registered = Assert.IsType<UserRegisteredEvent>(evt);
+        var registered = Assert.IsType<UserRegistered>(evt);
         Assert.Equal(1_000_000_000_000_000_001L, registered.UserId);
         Assert.Equal("user@example.com", registered.Email);
     }
