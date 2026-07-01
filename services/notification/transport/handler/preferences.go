@@ -78,6 +78,35 @@ func listPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 // DELETE /notifications/preferences/{scope_type}/{scope_id}
 func removePreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := getUserIDFromContext(r.Context())
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, errorBody("unauthorized invalid"))
+			return
+		}
 
+		scopeType := r.PathValue("scope_type")
+		if scopeType != "guild" && scopeType != "channel" {
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid scope type"))
+			return
+		}
+
+		scopeID, err := strconv.ParseInt(r.PathValue("scope_id"), 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, errorBody("invalid scope id"))
+			return
+		}
+
+		rows, err := orch.RemovePrefs(r.Context(), userID, scopeType, scopeID)
+		if err != nil {
+			writeError(w, r, err)
+			return
+		}
+
+		if rows == 0 {
+			writeJSON(w, http.StatusNotFound, errorBody("no preference set for this scope"))
+			return
+		}
+
+		writeJSON(w, http.StatusNoContent, nil)
 	}
 }
