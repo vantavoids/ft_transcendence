@@ -110,7 +110,8 @@ public sealed class MessagesEndpoint : ICarterModule
 	private static Results<Created<MessageResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
 		MapSendError(Failure failure) => failure.Code switch
 		{
-			"Message.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Message.ChannelNotFound" or
+			"Attachment.InvalidReference" => TypedResults.NotFound(new ErrorBody(failure.Message)),
 			"Message.NotAMember" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			"Message.MissingSendPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),

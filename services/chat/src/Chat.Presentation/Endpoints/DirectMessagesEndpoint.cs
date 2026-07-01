@@ -33,8 +33,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 				RecipientId: userId,
 				Content: request.Content,
 				ReplyToId: request.ReplyToId,
-				// TODO: wire up request field; empty until
-				AttachmentIds: [],
+				AttachmentIds: request.AttachmentIds ?? [],
 				Nonce: request.Nonce),
 			cancellationToken);
 
@@ -83,7 +82,8 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 		return failure.Code switch
 		{
 			"DirectMessage.RecipientNotFound" or
-			"DirectMessage.ConversationNotFound" => TypedResults.NotFound(body),
+			"DirectMessage.ConversationNotFound" or
+			"Attachment.InvalidReference" => TypedResults.NotFound(body),
 
 			"DirectMessage.RecipientBlocked" => TypedResults.Json(
 				body,
@@ -98,6 +98,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			// "DirectMessage.InvalidReplyTarget"
 			// "DirectMessage.CannotMessageSelf"
 			// "DirectMessage.NonceTooLong"
+			// "Attachment.TooMany"
 			_ => TypedResults.BadRequest(body)
 		};
 	}
@@ -105,6 +106,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 	private sealed record SendDirectMessageRequest(
 		string? Content,
 		long? ReplyToId,
+		IReadOnlyList<long>? AttachmentIds,
 		string? Nonce);
 
 	private sealed record ErrorBody(string Error);
