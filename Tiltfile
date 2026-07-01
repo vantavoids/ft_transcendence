@@ -99,6 +99,8 @@ local_resource(
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
         '-v $(pwd)/certs:/etc/nginx/certs:ro ' +
+        # WebRTC signaling test harness (tmp/webrtc-test-harness branch only)
+        '-v $(pwd)/services/chat/tools/webrtc-test:/usr/share/nginx/webrtc:ro ' +
         'docker.io/nginx:alpine'
     ),
     resource_deps=['cert-gen', 'dev-network', 'gateway', 'frontend'],

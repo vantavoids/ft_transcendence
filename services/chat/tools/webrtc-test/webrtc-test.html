@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebRTC signaling test</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; background:#111; color:#eee; }
+  header { padding:.6rem 1rem; background:#1b1b1b; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+  input { background:#222; color:#eee; border:1px solid #444; border-radius:6px; padding:.4rem .5rem; }
+  button { background:#2b6cb0; color:#fff; border:0; border-radius:6px; padding:.45rem .8rem; cursor:pointer; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.danger { background:#c53030; }
+  button.ok { background:#2f855a; }
+  .videos { display:flex; gap:1rem; padding:1rem; flex-wrap:wrap; }
+  .videos figure { margin:0; }
+  video { width:340px; max-width:44vw; background:#000; border-radius:8px; }
+  figcaption { font-size:.8rem; color:#aaa; margin-top:.25rem; }
+  #status { padding:.3rem 1rem; font-size:.85rem; }
+  #log { font-family:ui-monospace,monospace; font-size:.72rem; background:#0b0b0b; padding:.6rem 1rem;
+         height:34vh; overflow:auto; white-space:pre-wrap; border-top:1px solid #333; }
+  .pill { padding:.15rem .5rem; border-radius:999px; font-size:.75rem; }
+  .on { background:#22543d; } .off { background:#63171b; }
+  label { font-size:.8rem; color:#bbb; }
+</style>
+</head>
+<body>
+<header>
+  <span id="conn" class="pill off">disconnected</span>
+  <button id="registerBtn">Register new user</button>
+  <label>token <input id="token" size="22" placeholder="click Register, or paste JWT" /></label>
+  <button id="connectBtn">Connect</button>
+  <span>me: <b id="me">-</b></span>
+  <label>call <input id="callee" size="12" placeholder="callee user id" /></label>
+  <button id="callBtn" disabled>Call</button>
+  <button id="answerBtn" class="ok" disabled>Answer</button>
+  <button id="rejectBtn" class="danger" disabled>Reject</button>
+  <button id="hangupBtn" class="danger" disabled>Hang up</button>
+</header>
+<div id="status">idle</div>
+<div class="videos">
+  <figure><video id="local" autoplay playsinline muted></video><figcaption>local</figcaption></figure>
+  <figure><video id="remote" autoplay playsinline></video><figcaption>remote</figcaption></figure>
+</div>
+<div id="log"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+// coturn host defaults to whatever serves this page; TURN creds are runtime-only
+// (never commit them): pass ?turnUser=...&turnPass=... for cross-NAT relay tests.
+const HOST = params.get("iceHost") || location.hostname;
+const ICE = [{ urls: `stun:${HOST}:3478` }];
+const turnUser = params.get("turnUser"), turnPass = params.get("turnPass");
+if (turnUser && turnPass)
+  ICE.push({ urls: `turn:${HOST}:3478?transport=udp`, username: turnUser, credential: turnPass });
+
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+function log(...a){ const t=new Date().toISOString().slice(11,23);
+  logEl.textContent += `${t}  ${a.join(" ")}\n`; logEl.scrollTop = logEl.scrollHeight; }
+function status(s){ $("status").textContent = s; }
+function jwtSub(tok){ try { return JSON.parse(atob(tok.split(".")[1])).sub; } catch { return null; } }
+function newCallId(){ return String(Date.now() * 1000 + Math.floor(Math.random()*1000)); }
+
+let conn = null, pc = null, localStream = null;
+let call = null; // { callId, peerId, role: 'caller'|'callee', offerSdp? }
+
+if (params.get("token")) $("token").value = params.get("token");
+
+async function media(){
+  if (localStream) return localStream;
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  $("local").srcObject = localStream;
+  return localStream;
+}
+
+function newPeer(){
+  pc = new RTCPeerConnection({ iceServers: ICE });
+  pc.onicecandidate = (e) => {
+    if (e.candidate && call)
+      conn.invoke("IceCandidate", { call_id: call.callId, candidate: e.candidate.candidate,
+        sdp_mid: e.candidate.sdpMid, sdp_mline_index: e.candidate.sdpMLineIndex ?? 0 })
+        .catch(err => log("ice send err", err));
+  };
+  pc.ontrack = (e) => { $("remote").srcObject = e.streams[0]; log("remote track", e.track.kind); };
+  pc.oniceconnectionstatechange = () => log("ice state:", pc.iceConnectionState);
+  pc.onconnectionstatechange = () => { log("pc state:", pc.connectionState);
+    if (pc.connectionState === "connected") status("CONNECTED (P2P) ✅"); };
+  for (const t of localStream.getTracks()) pc.addTrack(t, localStream);
+}
+
+function endCall(reason){
+  if (pc){ pc.close(); pc = null; }
+  $("remote").srcObject = null;
+  call = null;
+  setButtons();
+  status("idle" + (reason ? ` (${reason})` : ""));
+}
+
+function setButtons(){
+  const connected = conn && conn.state === "Connected";
+  $("callBtn").disabled   = !connected || !!call;
+  $("answerBtn").disabled = !(call && call.role === "callee" && call.offerSdp);
+  $("rejectBtn").disabled = !(call && call.role === "callee" && call.offerSdp);
+  $("hangupBtn").disabled = !(call && (pc || call.role === "caller"));
+}
+
+$("registerBtn").onclick = async () => {
+  const email = `webrtc_${Date.now()}_${Math.floor(Math.random()*1e4)}@test.dev`;
+  try {
+    const r = await fetch(`${location.origin}/api/auth/v1/register`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "WebrtcTestPassword123!" }),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(body));
+    $("token").value = body.access_token;
+    const myId = jwtSub(body.access_token); // exact string; body.user_id is a JSON number and gets rounded by JS
+    $("me").textContent = myId;
+    log("registered as", myId);
+    status(`registered as ${myId} - click Connect`);
+  } catch (err) { log("register failed:", err); alert("register failed: " + err); }
+};
+
+$("connectBtn").onclick = async () => {
+  const token = $("token").value.trim();
+  if (!token) return alert("register or paste a JWT token");
+  $("me").textContent = jwtSub(token) ?? "?";
+  conn = new signalR.HubConnectionBuilder()
+    .withUrl(`${location.origin}/api/chat/v1/hubs/signaling`, { accessTokenFactory: () => token })
+    .withAutomaticReconnect()
+    .build();
+
+  conn.on("IncomingCall", async (e) => {
+    log("<- IncomingCall from", e.caller_id, e.call_type);
+    call = { callId: e.call_id, peerId: e.caller_id, role: "callee", offerSdp: e.sdp };
+    status(`INCOMING call from ${e.caller_id} — Answer or Reject`);
+    setButtons();
+  });
+  conn.on("CallAnswered", async (e) => {
+    log("<- CallAnswered");
+    await pc.setRemoteDescription({ type: "answer", sdp: e.sdp });
+    status("answered, connecting…");
+  });
+  conn.on("CallRejected", (e) => { log("<- CallRejected"); endCall("rejected"); });
+  conn.on("CallHungUp", (e) => { log("<- CallHungUp"); endCall("peer hung up"); });
+  conn.on("CallFailed", (e) => { log("<- CallFailed", e.reason); endCall(e.reason); });
+  conn.on("IceCandidate", async (e) => {
+    if (!pc) return;
+    try { await pc.addIceCandidate({ candidate: e.candidate, sdpMid: e.sdp_mid, sdpMLineIndex: e.sdp_mline_index }); }
+    catch (err) { log("addIceCandidate err", err); }
+  });
+  conn.onreconnected(() => { $("conn").className = "pill on"; $("conn").textContent = "connected"; });
+  conn.onclose(() => { $("conn").className = "pill off"; $("conn").textContent = "disconnected"; setButtons(); });
+
+  try {
+    await conn.start();
+    $("conn").className = "pill on"; $("conn").textContent = "connected";
+    log("hub connected as", jwtSub(token));
+    setButtons();
+  } catch (err) { log("connect failed:", err); alert("connect failed: " + err); }
+};
+
+$("callBtn").onclick = async () => {
+  const callee = $("callee").value.trim();
+  if (!callee) return alert("enter a callee user id");
+  await media(); newPeer();
+  call = { callId: newCallId(), peerId: callee, role: "caller" };
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await conn.invoke("CallOffer", { callee_id: callee, call_id: call.callId, call_type: "video", sdp: offer.sdp });
+  log("-> CallOffer to", callee, "call", call.callId);
+  status(`calling ${callee}…`);
+  setButtons();
+};
+
+$("answerBtn").onclick = async () => {
+  await media(); newPeer();
+  await pc.setRemoteDescription({ type: "offer", sdp: call.offerSdp });
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await conn.invoke("CallAnswer", { call_id: call.callId, sdp: answer.sdp });
+  log("-> CallAnswer", call.callId);
+  status("answered, connecting…");
+  call.offerSdp = null; setButtons();
+};
+
+$("rejectBtn").onclick = async () => {
+  await conn.invoke("CallReject", { call_id: call.callId });
+  log("-> CallReject", call.callId); endCall("rejected");
+};
+
+$("hangupBtn").onclick = async () => {
+  if (call) { await conn.invoke("CallHangup", { call_id: call.callId }); log("-> CallHangup", call.callId); }
+  endCall("hung up");
+};
+</script>
+</body>
+</html>
