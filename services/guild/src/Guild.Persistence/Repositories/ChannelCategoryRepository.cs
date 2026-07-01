@@ -16,6 +16,17 @@ internal sealed class ChannelCategoryRepository(GuildDbContext context) : IChann
 			.FirstOrDefaultAsync(c => c.GuildId == guildId && c.Id == categoryId, cancellationToken);
 	}
 
+	public async Task<IReadOnlyList<ChannelCategory>> GetByGuildAsync(
+		long guildId,
+		CancellationToken cancellationToken = default)
+	{
+		return await context.ChannelCategories
+			.AsNoTracking()
+			.Where(c => c.GuildId == guildId)
+			.OrderBy(c => c.Position)
+			.ToListAsync(cancellationToken);
+	}
+
 	public Task<int?> GetMaxPositionAsync(long guildId, CancellationToken cancellationToken = default)
 	{
 		return context.ChannelCategories
