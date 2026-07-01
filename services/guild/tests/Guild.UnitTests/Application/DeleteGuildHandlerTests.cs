@@ -1,3 +1,4 @@
+using Guild.Application.Contracts;
 using Guild.Application.Features.Guilds.DeleteGuild;
 using Guild.Domain.Results;
 using Guild.UnitTests.Fakes;
@@ -14,42 +15,45 @@ public sealed class DeleteGuildHandlerTests
 	[Fact]
 	public async Task UnknownGuild_Returns404()
 	{
-		var repo = new FakeGuildRepository();
+		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, new FakeCurrentUser { Id = 1 });
+			repo, bus, new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 999));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.GuildNotFound", result.Error.Code);
+		Assert.Empty(bus.Published);
 	}
 
 	[Fact]
 	public async Task NonOwner_ReturnsNotTheOwner()
 	{
-		var repo = new FakeGuildRepository();
+		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		Seed(repo, ownerId: 1);
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, new FakeCurrentUser { Id = 99 });
+			repo, bus, new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 100));
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.NotTheOwner", result.Error.Code);
+		Assert.Empty(bus.Published);
 	}
 
 	[Fact]
-	public async Task Owner_Succeeds_RemovesFromStore()
+	public async Task Owner_Succeeds_RemovesFromStore_AndPublishesGuildDeleted()
 	{
-		var repo = new FakeGuildRepository();
+		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		Seed(repo, ownerId: 1);
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, new FakeCurrentUser { Id = 1 });
+			repo, bus, new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 100));
 
 		Assert.True(result.Succeeded);
 		Assert.Empty(repo.Store);
+		Assert.Equal(100, bus.Single<GuildDeleted>().GuildId);
 	}
 
 	private static void Seed(FakeGuildRepository repo, long ownerId)

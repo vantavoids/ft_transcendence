@@ -984,6 +984,7 @@ Check if a user is a member of the guild that owns this channel, and get their e
 | `guild.member_joined` | `{ guild_id, guild_name, user_id }` | User joins a guild |
 | `guild.member_left` | `{ guild_id, user_id }` | User leaves, is kicked, or banned |
 | `guild.invite_created` | `{ guild_id, guild_name, invited_by_user_id, invited_user_id? }` | Invite created; `invited_user_id` present only for targeted invites |
+| `guild.deleted` | `{ guild_id }` | Guild deleted by its owner. Downstream services cascade their own cleanup by `guild_id` (Chat channels/messages, Notification rows, membership references). |
 
 ## RabbitMQ Events Consumed
 
