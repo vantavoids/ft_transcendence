@@ -61,7 +61,7 @@ func main() {
 		log.Fatalf("Unable to create an user client: %s", err)
 	}
 
-	orch, err := core.NewOrchestrator(hub, queries, sflkGen, fakeUserTunnel)
+	orch, err := core.NewOrchestrator(pool, hub, queries, sflkGen, fakeUserTunnel)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
