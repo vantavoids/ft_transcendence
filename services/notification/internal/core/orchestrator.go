@@ -182,17 +182,6 @@ func (o *Orchestrator) DismissNotif(ctx context.Context, userID int64, id int64)
 	return nil
 }
 
-// TODO: dont forget to add preferences in the delete section
-// TODO: dont forget to add a rollback after adding the preference
-func (o *Orchestrator) DeleteUserNotifs(ctx context.Context, userID int64) error {
-
-	if err := o.queries.DeleteUserNotifications(ctx, userID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (o *Orchestrator) DeleteOlderNotifs(ctx context.Context) error {
 
 	if err := o.queries.DeleteNotificationsOlderThan7Days(ctx); err != nil {
@@ -251,5 +240,19 @@ func (o *Orchestrator) RemovePrefs(ctx context.Context, userID int64, scopeType 
 }
 
 func (o *Orchestrator) IsMuted(ctx context.Context) error {
+	return nil
+}
+
+// TODO: dont forget to add a rollback after adding the preference
+func (o *Orchestrator) DeleteUserNotifs(ctx context.Context, userID int64) error {
+
+	if err := o.queries.DeleteUserNotifications(ctx, userID); err != nil {
+		return err
+	}
+
+	if err := o.queries.DeleteUserPreferences(ctx, userID); err != nil {
+		return err
+	}
+
 	return nil
 }
