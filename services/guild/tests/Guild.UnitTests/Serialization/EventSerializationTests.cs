@@ -5,7 +5,7 @@ using Xunit;
 namespace Guild.UnitTests.Serialization;
 
 /// <summary>
-/// pins the JSON shape of the three RabbitMQ events Guild publishes. cross-service
+/// pins the JSON shape of the RabbitMQ events Guild publishes. cross-service
 /// consumers (Notification, Chat) deserialize these by snake_case property name,
 /// so a rename or a serializer-policy drift breaks them silently at runtime. the
 /// options here mirror the MassTransit config in
@@ -80,5 +80,22 @@ public sealed class EventSerializationTests
 		var json = JsonSerializer.Serialize(original, SnakeCase);
 
 		Assert.Equal(original, JsonSerializer.Deserialize<GuildInviteCreated>(json, SnakeCase));
+	}
+
+	[Fact]
+	public void GuildDeleted_SerializesWith_SnakeCaseFields()
+	{
+		var json = JsonSerializer.Serialize(new GuildDeleted(100), SnakeCase);
+
+		Assert.Equal("{\"guild_id\":100}", json);
+	}
+
+	[Fact]
+	public void GuildDeleted_RoundTrips()
+	{
+		var original = new GuildDeleted(100);
+		var json = JsonSerializer.Serialize(original, SnakeCase);
+
+		Assert.Equal(original, JsonSerializer.Deserialize<GuildDeleted>(json, SnakeCase));
 	}
 }
