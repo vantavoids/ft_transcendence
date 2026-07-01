@@ -6,6 +6,7 @@ using Chat.Application.Abstractions;
 using Chat.Infrastructure;
 using Chat.Persistence;
 using Chat.Presentation.Hubs;
+using Chat.Presentation.Hubs.Signaling;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,8 @@ builder.Services.AddApplication()
 	.AddInfrastructure()
 	.AddPersistence();
 builder.Services.AddSingleton<UserConnectionTracker>();
+builder.Services.AddSingleton<CallRegistry>();
+builder.Services.Configure<SignalingOptions>(builder.Configuration.GetSection(SignalingOptions.SectionName));
 builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
 builder.Services.AddScoped<IUserBroadcaster, SignalRUserBroadcaster>();
 builder.Services.AddCarter();

@@ -5,10 +5,10 @@ namespace Chat.FunctionalTests.Infrastructure;
 
 internal static class HubConnectionHelper
 {
-	public static HubConnection Build(ChatApiFactory factory, string? token)
+	public static HubConnection Build(ChatApiFactory factory, string? token, string path = "/v1/hubs/chat")
 	{
 		var server = factory.Server;
-		var hubUri = new UriBuilder(server.BaseAddress) { Path = "/v1/hubs/chat" }.Uri;
+		var hubUri = new UriBuilder(server.BaseAddress) { Path = path }.Uri;
 
 		return new HubConnectionBuilder()
 			.WithUrl(hubUri, options =>
