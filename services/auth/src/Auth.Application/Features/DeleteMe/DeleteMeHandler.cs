@@ -2,7 +2,7 @@ using Auth.Application.Abstractions;
 using Auth.Application.Abstractions.Events;
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Abstractions.Persistence;
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Domain.Results;
 
 namespace Auth.Application.Features.DeleteMe;
@@ -31,7 +31,7 @@ internal sealed class DeleteMeHandler(
         user.RevokeRefreshToken(clock.UtcNow);
 
         await userRepository.SaveChangesAsync(cancellationToken);
-        await eventBus.PublishAsync(new UserDeletedEvent(command.UserId), cancellationToken);
+        await eventBus.PublishAsync(new UserDeleted(command.UserId), cancellationToken);
 
         return Result.Ok();
     }

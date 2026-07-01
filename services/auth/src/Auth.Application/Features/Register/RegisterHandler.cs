@@ -3,7 +3,7 @@ using Auth.Application.Abstractions.Events;
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Abstractions.Persistence;
 using Auth.Application.Abstractions.Security;
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
 
@@ -51,7 +51,7 @@ internal sealed class RegisterHandler(
         await userRepository.SaveChangesAsync(cancellationToken);
 
         var email = newUser.Value.Email!.Value;
-        await eventBus.PublishAsync(new UserRegisteredEvent(uid, email), cancellationToken);
+        await eventBus.PublishAsync(new UserRegistered(uid, email), cancellationToken);
 
         return new RegisterResult(uid, accessTk, refreshTk);
     }

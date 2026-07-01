@@ -1,4 +1,4 @@
-using Auth.Application.Events;
+using Auth.Application.Contracts;
 using Auth.Application.Features.DeleteMe;
 using Auth.Domain.AuthUser;
 using Auth.Domain.Results;
@@ -110,12 +110,12 @@ public sealed class DeleteMeHandlerTests
     }
 
     [Fact]
-    public async Task ValidUser_PublishesUserDeletedEvent()
+    public async Task ValidUser_PublishesUserDeleted()
     {
         var user = await SeedEmailUser();
         await Handle(user.Id);
 
-        var evt = Assert.Single(_eventBus.Published.OfType<UserDeletedEvent>());
+        var evt = Assert.Single(_eventBus.Published.OfType<UserDeleted>());
         Assert.Equal(user.Id, evt.UserId);
     }
 }
