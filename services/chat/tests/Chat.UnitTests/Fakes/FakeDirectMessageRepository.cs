@@ -1,4 +1,5 @@
 using Chat.Application.Abstractions.Persistence;
+using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 
 namespace Chat.UnitTests.Fakes;
@@ -9,9 +10,13 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 	private readonly Dictionary<(long SenderId, long RecipientId, string Nonce), long> _nonces = [];
 	private readonly Dictionary<(long, long), long> _conversations = [];
 	private readonly Dictionary<(long ConversationId, long ReplyToId), long> _replies = [];
+	private readonly Dictionary<long, IReadOnlyList<AttachmentMetadata>> _attachments = [];
 
 
 	public IReadOnlyList<DirectMessage> Saved => _saved;
+
+	/// <summary>attachments persisted alongside each message, keyed by message id</summary>
+	public IReadOnlyDictionary<long, IReadOnlyList<AttachmentMetadata>> SavedAttachments => _attachments;
 
 	private static (long, long) Pair(long a, long b) => a < b ? (a, b) : (b, a);
 
@@ -24,6 +29,7 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 		_nonces.Clear();
 		_conversations.Clear();
 		_replies.Clear();
+		_attachments.Clear();
 	}
 
 	public Task<long?> FindConversationAsync(long senderId, long recipientId, CancellationToken ct) =>
@@ -41,10 +47,11 @@ public sealed class FakeDirectMessageRepository : IDirectMessageRepository
 	public Task<long?> FindReplyExistsAsync(long conversationId, long replyToId, CancellationToken ct) =>
 		Task.FromResult(_replies.TryGetValue((conversationId, replyToId), out var id) ? id : (long?)null);
 
-	public Task AddAsync(DirectMessage message, string? nonce, CancellationToken ct)
+	public Task AddAsync(DirectMessage message, string? nonce, IReadOnlyList<AttachmentMetadata> attachments, CancellationToken ct)
 	{
 		_saved.Add(message);
 		_conversations[Pair(message.SenderId, message.RecipientId)] = message.ConversationId;
+		_attachments[message.Id] = attachments;
 		if (nonce is not null)
 			_nonces[(message.SenderId, message.RecipientId, nonce)] = message.Id;
 		return Task.CompletedTask;
