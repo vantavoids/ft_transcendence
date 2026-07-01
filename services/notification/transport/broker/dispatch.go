@@ -34,8 +34,23 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		for _, m := range ev.Mentions {
 			uid, err := strconv.ParseInt(m, 10, 64)
 			if err != nil {
-				return err
+				return failure.FailPermanent
 			}
+
+			gOk, err := orch.IsMuted(ctx, uid, "guild", ev.GuildID)
+			if err != nil {
+				return failure.FailPermanent
+			}
+
+			cOk, err := orch.IsMuted(ctx, uid, "channel", ev.ChannelID)
+			if err != nil {
+				return failure.FailPermanent
+			}
+
+			if gOk == true || cOk == true {
+				return nil
+			}
+
 			if err := orch.CreateNotif(ctx, core.CreateInput{
 				UserID:   uid,
 				Type:     TypeMention,
@@ -86,6 +101,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.InvitedUserID,
 			Type:     TypeGuildInvite,
@@ -101,6 +117,16 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
+		gOk, err := orch.IsMuted(ctx, ev.UserID, "guild", ev.GuildID)
+		if err != nil {
+			return failure.FailPermanent
+		}
+
+		if gOk == true {
+			return nil
+		}
+
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.UserID,
 			Type:     TypeGuildWelcome,
