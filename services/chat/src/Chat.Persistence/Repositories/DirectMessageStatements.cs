@@ -55,6 +55,6 @@ internal sealed class DirectMessageStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectDirectMessagesByConversation { get; } = new(() => session.PrepareAsync(
 		"SELECT conversation_id, created_at, id, sender_id, recipient_id, content, edited_at, is_deleted, reply_to_id " +
 		"FROM direct_messages " +
-		"WHERE conversation_id = ? " +
+		"WHERE conversation_id = ? AND created_at < ? " +
 		"LIMIT ?"));
 }

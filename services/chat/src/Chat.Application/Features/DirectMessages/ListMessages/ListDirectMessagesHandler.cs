@@ -9,7 +9,8 @@ namespace Chat.Application.Features.DirectMessages.ListMessages;
 
 internal sealed class ListDirectMessagesHandler(
 	ICurrentUser currentUser,
-	IDirectMessageRepository repository)
+	IDirectMessageRepository repository,
+	IClock clock)
 	: IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>>
 {
 	public async Task<Result<IReadOnlyList<DirectMessageResponse>>> HandleAsync(
@@ -36,6 +37,7 @@ internal sealed class ListDirectMessagesHandler(
 
 		var messages = await repository.ListAsync(
 			conversationId.Value,
+			query.BeforeTime ?? clock.UtcNow,
 			limit,
 			cancellationToken);
 
