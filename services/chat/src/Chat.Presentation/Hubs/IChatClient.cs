@@ -5,11 +5,11 @@ namespace Chat.Presentation.Hubs;
 
 public interface IChatClient
 {
-	Task ReceiveMessage(MessageResponse message);
+	Task ReceiveMessage(ChannelMessageResponse message);
 	Task ReceiveDirectMessage(DirectMessageResponse message);
 
-	Task MessageEdited(MessageEditedEvent evt);
-	Task MessageDeleted(MessageDeletedEvent evt);
+	Task MessageEdited(ChannelMessageEditedEvent evt);
+	Task MessageDeleted(ChannelMessageDeletedEvent evt);
 
 	Task DirectMessageEdited(DirectMessageEditedEvent evt);
 	Task DirectMessageDeleted(DirectMessageDeletedEvent evt);

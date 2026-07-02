@@ -13,12 +13,12 @@ internal sealed class GetChannelMessagesHandler(
 	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
 	IClock clock)
-	: IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>>
+	: IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>>
 {
 	private const long ReadMessages = 1L << 1;
 	private const long Administrator = 1L << 8;
 
-	public async Task<Result<IReadOnlyList<MessageResponse>>> HandleAsync(
+	public async Task<Result<IReadOnlyList<ChannelMessageResponse>>> HandleAsync(
 		GetChannelMessagesQuery query,
 		CancellationToken cancellationToken = default)
 	{
@@ -45,9 +45,9 @@ internal sealed class GetChannelMessagesHandler(
 			.GetMessagesAttachmentsAsync(query.ChannelId, isDm: false, messageIds, cancellationToken);
 
 		var hydrated = messages
-			.Select(m => MessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]]))
+			.Select(m => ChannelMessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]]))
 			.ToList();
 
-		return Result.Ok<IReadOnlyList<MessageResponse>>(hydrated);
+		return Result.Ok<IReadOnlyList<ChannelMessageResponse>>(hydrated);
 	}
 }

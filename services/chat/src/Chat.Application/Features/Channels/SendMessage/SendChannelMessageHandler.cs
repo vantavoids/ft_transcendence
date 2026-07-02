@@ -10,7 +10,7 @@ using Chat.Domain.Results;
 
 namespace Chat.Application.Features.Channels.SendMessage;
 
-internal sealed class SendMessageHandler(
+internal sealed class SendChannelMessageHandler(
 	ICurrentUser currentUser,
 	IGuildClient guildClient,
 	IMessageRepository repository,
@@ -19,7 +19,7 @@ internal sealed class SendMessageHandler(
 	IClock clock,
 	IEventBus eventBus,
 	IChannelBroadcaster broadcaster)
-	: ICommandHandler<SendMessageCommand, Result<MessageResponse>>
+	: ICommandHandler<SendChannelMessageCommand, Result<ChannelMessageResponse>>
 {
 	// permission bits mirror the Guild Service domain so this stays a pure
 	// bitmask check; see services/guild/src/Guild.Domain/Guild/Permission.cs
@@ -29,8 +29,8 @@ internal sealed class SendMessageHandler(
 	private const int MaxNonceLen = 64;
 	private const int MaxAttachments = 10;
 
-	public async Task<Result<MessageResponse>> HandleAsync(
-		SendMessageCommand command,
+	public async Task<Result<ChannelMessageResponse>> HandleAsync(
+		SendChannelMessageCommand command,
 		CancellationToken cancellationToken = default)
 	{
 		if (command.Nonce is { Length: > MaxNonceLen })
@@ -60,7 +60,7 @@ internal sealed class SendMessageHandler(
 				{
 					var existingAttachments = await attachmentRepository
 						.GetMessageAttachmentsAsync(existing.ContainerId, isDm: false, existing.Id, cancellationToken);
-					return MessageResponse.From(existing, command.Nonce, existingAttachments);
+					return ChannelMessageResponse.From(existing, command.Nonce, existingAttachments);
 				}
 			}
 		}
@@ -93,7 +93,7 @@ internal sealed class SendMessageHandler(
 		var message = messageResult.Value;
 		await repository.AddAsync(message, command.Nonce, attachments, cancellationToken);
 
-		var response = MessageResponse.From(message, command.Nonce, attachments);
+		var response = ChannelMessageResponse.From(message, command.Nonce, attachments);
 
 		await eventBus.PublishAsync(
 			new ChatMessageSent(
