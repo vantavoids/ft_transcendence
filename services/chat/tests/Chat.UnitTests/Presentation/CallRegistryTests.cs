@@ -80,6 +80,29 @@ public sealed class CallRegistryTests
 	}
 
 	[Fact]
+	public void CountsSnapshot_Reflects_Connections_And_Calls()
+	{
+		var (registry, _) = NewRegistry();
+		Assert.Equal((0, 0, 0), registry.CountsSnapshot());
+
+		registry.Connect(Caller);
+		registry.Connect(Callee);
+		Assert.Equal((0, 0, 2), registry.CountsSnapshot());   // two signaling users, no calls
+
+		registry.TryOffer(Offer());
+		Assert.Equal((1, 1, 2), registry.CountsSnapshot());   // one ringing call
+
+		registry.Answer(CallId, Callee);
+		Assert.Equal((1, 0, 2), registry.CountsSnapshot());   // now in progress, not ringing
+
+		registry.End(CallId, Caller);
+		Assert.Equal((0, 0, 2), registry.CountsSnapshot());   // call cleared
+
+		registry.Disconnect(Caller);
+		Assert.Equal((0, 0, 1), registry.CountsSnapshot());   // one signaling user left
+	}
+
+	[Fact]
 	public void ForParticipant_ReturnsCall_OnlyForParticipants()
 	{
 		var (registry, _) = NewRegistry();
