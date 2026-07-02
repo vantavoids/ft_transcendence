@@ -13,7 +13,7 @@ public sealed record DirectMessageResponse(
 	string Id,
 	string ConversationId,
 	string SenderId,
-    string RecipientId,
+	string RecipientId,
 	string? Content,
 	string? ReplyToId,
 	DateTimeOffset? EditedAt,
@@ -23,13 +23,13 @@ public sealed record DirectMessageResponse(
 	string? Nonce)
 {
 	public static DirectMessageResponse From(
-		DirectMessage m,
+		Message m,
 		string? nonce,
 		IReadOnlyList<AttachmentMetadata>? attachments = null) => new(
 		Id: m.Id.ToString(),
-		ConversationId: m.ConversationId.ToString(),
-		SenderId: m.SenderId.ToString(),
-        RecipientId: m.RecipientId.ToString(),
+		ConversationId: m.ContainerId.ToString(),
+		SenderId: m.AuthorId.ToString(),
+		RecipientId: m.RecipientId!.Value.ToString(),
 		Content: m.Content,
 		ReplyToId: m.ReplyToId?.ToString(),
 		EditedAt: m.EditedAt,

@@ -24,14 +24,14 @@ internal sealed class DeleteMessageHandler(
 		CancellationToken cancellationToken = default)
 	{
 		var message = await repository.GetByIdAsync(command.MessageId, cancellationToken);
-		if (message is null || message.IsDeleted)
+		if (message is null || message.IsDeleted || message.IsDirectMessage)
 			return MessageFailures.NotFound;
 
 		var userId = currentUser.UserId;
 
 		if (message.AuthorId != userId)
 		{
-			var membership = await guildClient.GetMembershipAsync(message.ChannelId, userId, cancellationToken);
+			var membership = await guildClient.GetMembershipAsync(message.ContainerId, userId, cancellationToken);
 			if (membership is null || !membership.IsMember)
 				return MessageFailures.NotFound;
 
@@ -46,7 +46,7 @@ internal sealed class DeleteMessageHandler(
 		await repository.SoftDeleteAsync(message, cancellationToken);
 
 		await broadcaster.BroadcastMessageDeletedAsync(
-			message.ChannelId,
+			message.ContainerId,
 			message.Id,
 			cancellationToken);
 

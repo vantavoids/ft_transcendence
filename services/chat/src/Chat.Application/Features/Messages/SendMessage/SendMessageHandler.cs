@@ -52,14 +52,14 @@ internal sealed class SendMessageHandler(
 		// drafts that the first call already consumed, so it must short-circuit here
 		if (command.Nonce is not null)
 		{
-			var existingId = await repository.FindNonceAsync(userId, command.ChannelId, command.Nonce, cancellationToken);
+			var existingId = await repository.FindChannelNonceAsync(userId, command.ChannelId, command.Nonce, cancellationToken);
 			if (existingId is not null)
 			{
 				var existing = await repository.GetByIdAsync(existingId.Value, cancellationToken);
 				if (existing is not null)
 				{
 					var existingAttachments = await attachmentRepository
-						.GetChannelMessageAttachmentsAsync(existing.ChannelId, existing.Id, cancellationToken);
+						.GetMessageAttachmentsAsync(existing.ContainerId, isDm: false, existing.Id, cancellationToken);
 					return MessageResponse.From(existing, command.Nonce, existingAttachments);
 				}
 			}
@@ -67,7 +67,8 @@ internal sealed class SendMessageHandler(
 
 		if (command.ReplyToId is not null)
 		{
-			if (await repository.FindReplyExistsAsync(command.ChannelId, command.ReplyToId.Value, cancellationToken) is null)
+			var replyTarget = await repository.GetByIdAsync(command.ReplyToId.Value, cancellationToken);
+			if (replyTarget is null || replyTarget.IsDeleted || replyTarget.ContainerId != command.ChannelId)
 				return MessageFailures.InvalidReplyTarget;
 		}
 
@@ -78,7 +79,7 @@ internal sealed class SendMessageHandler(
 
 		var messageId = ids.NextId();
 
-		var messageResult = Message.Create(
+		var messageResult = Message.CreateForChannel(
 			id: messageId,
 			channelId: command.ChannelId,
 			authorId: userId,

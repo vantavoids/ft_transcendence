@@ -12,7 +12,7 @@ namespace Chat.Application.Features.Attachments.DownloadAttachment;
 internal sealed class DownloadAttachmentHandler(
 	ICurrentUser currentUser,
 	IAttachmentRepository repository,
-	IDirectMessageRepository directMessageRepository,
+	IMessageRepository messageRepository,
 	IGuildClient guildClient,
 	IObjectStore objectStore)
 	: IQueryHandler<DownloadAttachmentQuery, Result<AttachmentDownload>>
@@ -42,7 +42,7 @@ internal sealed class DownloadAttachmentHandler(
 		AttachmentLocation location,
 		CancellationToken ct)
 	{
-		var channelId = location.ChannelId!.Value;
+		var channelId = location.ContainerId;
 
 		var membership = await guildClient.GetMembershipAsync(channelId, currentUser.UserId, ct);
 		if (membership is null || !membership.IsMember)
@@ -51,8 +51,8 @@ internal sealed class DownloadAttachmentHandler(
 		if ((membership.Permissions & (ReadMessages | Administrator)) == 0)
 			return AttachmentFailures.NotAuthorized;
 
-		var metadata = await repository.GetChannelAttachmentAsync(
-			channelId, location.MessageId, query.Id, ct);
+		var metadata = await repository.GetAttachmentAsync(
+			channelId, isDm: false, location.MessageId, query.Id, ct);
 		if (metadata is null)
 			return AttachmentFailures.NotFound;
 
@@ -64,17 +64,17 @@ internal sealed class DownloadAttachmentHandler(
 		AttachmentLocation location,
 		CancellationToken ct)
 	{
-		var conversationId = location.ConversationId!.Value;
+		var conversationId = location.ContainerId;
 
-		var message = await directMessageRepository.GetByIdAsync(location.MessageId, ct);
+		var message = await messageRepository.GetByIdAsync(location.MessageId, ct);
 		if (message is null)
 			return AttachmentFailures.NotAuthorized;
 
 		var userId = currentUser.UserId;
-		if (message.SenderId != userId && message.RecipientId != userId)
+		if (message.AuthorId != userId && message.RecipientId != userId)
 			return AttachmentFailures.NotAuthorized;
 
-		var metadata = await repository.GetDmAttachmentAsync(conversationId, location.MessageId, query.Id, ct);
+		var metadata = await repository.GetAttachmentAsync(conversationId, isDm: true, location.MessageId, query.Id, ct);
 		if (metadata is null)
 			return AttachmentFailures.NotFound;
 
