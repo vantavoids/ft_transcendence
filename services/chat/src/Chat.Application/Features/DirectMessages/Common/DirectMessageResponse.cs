@@ -1,4 +1,5 @@
 using Chat.Application.Features.Attachments.Common;
+using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 
@@ -20,7 +21,7 @@ public sealed record DirectMessageResponse(
 	DateTimeOffset CreatedAt,
 	IReadOnlyList<AttachmentResponse> Attachments,
 	object[] Reactions,
-	string? Nonce)
+	string? Nonce) : IMessageWireResponse<DirectMessageResponse>
 {
 	public static DirectMessageResponse From(
 		Message m,

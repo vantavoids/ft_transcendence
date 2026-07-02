@@ -38,7 +38,7 @@ public sealed class SendDirectMessageHandlerTests
 		var unicaster = new FakeConversationUnicast();
 
 		var handler = HandlerFactory.CreateCommand<SendDirectMessageCommand, Result<DirectMessageResponse>>(
-			currentUser, repository, attachmentRepository, ids, userClient, clock, eventBus, unicaster);
+			currentUser, repository, attachmentRepository, ids, clock, userClient, eventBus, unicaster);
 
 		return (new Harness(currentUser, repository, attachmentRepository, ids, userClient, clock, eventBus, unicaster), handler);
 	}
