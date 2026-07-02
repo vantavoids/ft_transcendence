@@ -1,5 +1,5 @@
 using Chat.Application.Abstractions;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;

@@ -2,7 +2,7 @@ using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 using Chat.Application.Features.Attachments.Common;
 
-namespace Chat.Application.Features.Messages.Common;
+namespace Chat.Application.Features.Channels.Common;
 
 /// <summary>
 /// wire shape that mirrors the contract's <c>ReceiveMessage</c> event. snowflake
