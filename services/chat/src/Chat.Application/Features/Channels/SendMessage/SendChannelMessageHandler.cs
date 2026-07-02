@@ -1,10 +1,9 @@
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
-using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Application.Contracts;
 using Chat.Application.Features.Channels.Common;
-using Chat.Domain.Attachments;
+using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Messages;
 using Chat.Domain.Results;
 
@@ -12,33 +11,25 @@ namespace Chat.Application.Features.Channels.SendMessage;
 
 internal sealed class SendChannelMessageHandler(
 	ICurrentUser currentUser,
-	IGuildClient guildClient,
 	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
 	ISnowflakeIdGenerator ids,
 	IClock clock,
+	IGuildClient guildClient,
 	IEventBus eventBus,
 	IChannelBroadcaster broadcaster)
-	: ICommandHandler<SendChannelMessageCommand, Result<ChannelMessageResponse>>
+	: SendMessageHandlerBase<SendChannelMessageCommand, ChannelMessageResponse, long>(currentUser, repository, attachmentRepository, ids, clock)
 {
 	// permission bits mirror the Guild Service domain so this stays a pure
 	// bitmask check; see services/guild/src/Guild.Domain/Guild/Permission.cs
 	// for the source of truth on permission numbering
 	private const long SendMessages = 1L << 0;
 	private const long Administrator = 1L << 8;
-	private const int MaxNonceLen = 64;
-	private const int MaxAttachments = 10;
 
-	public async Task<Result<ChannelMessageResponse>> HandleAsync(
-		SendChannelMessageCommand command,
-		CancellationToken cancellationToken = default)
+	// TContext = GuildId, resolved here and needed again for ChatMessageSent
+	protected override async Task<Result<long>> PrecheckAsync(SendChannelMessageCommand command, CancellationToken ct)
 	{
-		if (command.Nonce is { Length: > MaxNonceLen })
-			return MessageFailures.NonceTooLong;
-
-		var userId = currentUser.UserId;
-
-		var membership = await guildClient.GetMembershipAsync(command.ChannelId, userId, cancellationToken);
+		var membership = await guildClient.GetMembershipAsync(command.ChannelId, AuthorId, ct);
 		if (membership is null)
 			return MessageFailures.ChannelNotFound;
 
@@ -48,94 +39,39 @@ internal sealed class SendChannelMessageHandler(
 		if ((membership.Permissions & (SendMessages | Administrator)) == 0)
 			return MessageFailures.MissingSendPermission;
 
-		// nonce dedup runs before draft validation: a retried send re-references
-		// drafts that the first call already consumed, so it must short-circuit here
-		if (command.Nonce is not null)
-		{
-			var existingId = await repository.FindChannelNonceAsync(userId, command.ChannelId, command.Nonce, cancellationToken);
-			if (existingId is not null)
-			{
-				var existing = await repository.GetByIdAsync(existingId.Value, cancellationToken);
-				if (existing is not null)
-				{
-					var existingAttachments = await attachmentRepository
-						.GetMessageAttachmentsAsync(existing.ContainerId, isDm: false, existing.Id, cancellationToken);
-					return ChannelMessageResponse.From(existing, command.Nonce, existingAttachments);
-				}
-			}
-		}
+		return membership.GuildId;
+	}
 
-		if (command.ReplyToId is not null)
-		{
-			var replyTarget = await repository.GetByIdAsync(command.ReplyToId.Value, cancellationToken);
-			if (replyTarget is null || replyTarget.IsDeleted || replyTarget.ContainerId != command.ChannelId)
-				return MessageFailures.InvalidReplyTarget;
-		}
+	protected override Task<long?> FindNonceAsync(SendChannelMessageCommand command, string nonce, CancellationToken ct) =>
+		Repository.FindChannelNonceAsync(AuthorId, command.ChannelId, nonce, ct);
 
-		var attachmentsResult = await ResolveAttachmentsAsync(command.AttachmentIds, userId, cancellationToken);
-		if (attachmentsResult.IsFailure)
-			return attachmentsResult.Error;
-		var attachments = attachmentsResult.Value;
+	protected override Task<long> ResolveContainerIdAsync(SendChannelMessageCommand command, CancellationToken ct) =>
+		Task.FromResult(command.ChannelId);
 
-		var messageId = ids.NextId();
-
-		var messageResult = Message.CreateForChannel(
+	protected override Result<Message> CreateMessage(
+		SendChannelMessageCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now) =>
+		Message.CreateForChannel(
 			id: messageId,
-			channelId: command.ChannelId,
-			authorId: userId,
+			channelId: containerId,
+			authorId: AuthorId,
 			content: command.Content,
 			replyToId: command.ReplyToId,
-			now: clock.UtcNow,
-			hasAttachments: attachments.Count > 0);
-		if (messageResult.IsFailure)
-			return messageResult.Error;
+			now: now,
+			hasAttachments: hasAttachments);
 
-		var message = messageResult.Value;
-		await repository.AddAsync(message, command.Nonce, attachments, cancellationToken);
-
-		var response = ChannelMessageResponse.From(message, command.Nonce, attachments);
-
+	protected override async Task PublishAndNotifyAsync(
+		SendChannelMessageCommand command, long guildId, Message message, ChannelMessageResponse response, CancellationToken ct)
+	{
 		await eventBus.PublishAsync(
 			new ChatMessageSent(
 				ChannelId: command.ChannelId,
-				GuildId: membership.GuildId,
-				AuthorId: userId,
-				MessageId: messageId,
+				GuildId: guildId,
+				AuthorId: AuthorId,
+				MessageId: message.Id,
 				Content: message.Content ?? string.Empty,
 				Mentions: []),
-			cancellationToken);
+			ct);
 
-		await broadcaster.BroadcastMessageAsync(command.ChannelId, response, cancellationToken);
-
-		return response;
-	}
-
-	private async Task<Result<IReadOnlyList<AttachmentMetadata>>> ResolveAttachmentsAsync(
-		IReadOnlyList<long> attachmentIds,
-		long userId,
-		CancellationToken ct)
-	{
-		if (attachmentIds.Count == 0)
-			return Array.Empty<AttachmentMetadata>();
-
-		if (attachmentIds.Count > MaxAttachments)
-			return AttachmentFailures.TooMany;
-
-		var resolved = new List<AttachmentMetadata>(attachmentIds.Count);
-		foreach (var attachmentId in attachmentIds.Distinct())
-		{
-			// each referenced draft must exist, be owned by the caller, and not yet
-			// belong to another message; an expired draft is simply gone (table TTL)
-			var draft = await attachmentRepository.GetDraftAsync(attachmentId, ct);
-			if (draft is null || draft.UploaderId != userId)
-				return AttachmentFailures.InvalidReference;
-
-			if (await attachmentRepository.IsAttachedAsync(attachmentId, ct))
-				return AttachmentFailures.InvalidReference;
-
-			resolved.Add(draft.ToMetadata());
-		}
-
-		return resolved;
+		await broadcaster.BroadcastMessageAsync(command.ChannelId, response, ct);
 	}
 }

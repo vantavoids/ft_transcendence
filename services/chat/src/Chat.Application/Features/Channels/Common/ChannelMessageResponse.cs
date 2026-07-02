@@ -1,6 +1,7 @@
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 using Chat.Application.Features.Attachments.Common;
+using Chat.Application.Features.Messages.SendMessage;
 
 namespace Chat.Application.Features.Channels.Common;
 
@@ -19,7 +20,7 @@ public sealed record ChannelMessageResponse(
 	DateTimeOffset CreatedAt,
 	IReadOnlyList<AttachmentResponse> Attachments,
 	object[] Reactions,
-	string? Nonce)
+	string? Nonce) : IMessageWireResponse<ChannelMessageResponse>
 {
 	public static ChannelMessageResponse From(
 		Message m,
