@@ -4,7 +4,10 @@ using Auth.Infrastructure;
 using Auth.Persistence;
 using Auth.Presentation.Middleware;
 using Auth.Presentation;
+using Auth.Presentation.Observability;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
 using System.Text.Json;
 
@@ -23,6 +26,20 @@ builder.Services.AddApplication()
                 .AddInfrastructure()
                 .AddPersistence()
                 .AddJwtAuthentication();
+
+// metrics for Prometheus to scrape at /metrics. AspNetCore instrumentation emits
+// the semconv http.server.* RED metrics shared across the fleet; Runtime adds
+// GC/threadpool gauges; the Auth.Domain meter adds business gauges (accounts,
+// OAuth adoption, active sessions). see docs/monitoring-metrics.md.
+builder.Services.AddSingleton<AuthMetrics>();
+builder.Services.AddHostedService<AuthMetricsCollector>();
+builder.Services.AddOpenTelemetry()
+                .ConfigureResource(r => r.AddService("auth"))
+                .WithMetrics(m => m
+                    .AddAspNetCoreInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddMeter(AuthMetrics.MeterName)
+                    .AddPrometheusExporter());
 
 builder.Services.AddCarter();
 
@@ -59,6 +76,9 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
         }));
     },
 });
+// Prometheus scrape endpoint (GET /metrics), anonymous + internal-only like /healthz.
+app.MapPrometheusScrapingEndpoint();
+
 var v1 = app.MapGroup("/v1");
 v1.MapCarter();
 
