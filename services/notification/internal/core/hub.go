@@ -14,6 +14,20 @@ func NewHub() (*Hub, error) {
 	return &Hub{subs: make(map[int64][]chan NotificationSSE)}, nil
 }
 
+// stats returns the number of users with at least one open SSE stream and the
+// total number of open streams (a user may have several tabs). cheap read under
+// the shared lock, safe to call from a metrics scrape callback.
+func (h *Hub) Stats() (users, streams int) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	users = len(h.subs)
+	for _, cs := range h.subs {
+		streams += len(cs)
+	}
+	return users, streams
+}
+
 func (h *Hub) Subscribe(userID int64) chan NotificationSSE {
 	ch := make(chan NotificationSSE, 16)
 
