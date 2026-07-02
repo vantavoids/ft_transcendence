@@ -9,7 +9,9 @@ import (
 	"github.com/vantavoids/ft_transcendence/services/gateway/handler"
 	"github.com/vantavoids/ft_transcendence/services/gateway/logs"
 	"github.com/vantavoids/ft_transcendence/services/gateway/middleware"
+	"github.com/vantavoids/ft_transcendence/services/gateway/observability"
 	"github.com/vantavoids/ft_transcendence/services/gateway/ratelimit"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
@@ -77,9 +79,23 @@ func main() {
 
 	//  ─────────────────────────────────────────────
 
+	// metrics: otelhttp wraps the whole chain (outermost) so rate-limit and auth
+	// rejections are counted too; /metrics is served anonymously above it.
+	metricsHandler, err := observability.Setup(map[string]*ratelimit.MemoryStore{
+		"ip":  memoryStoreIP,
+		"uid": memoryStoreUID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	root := http.NewServeMux()
+	root.Handle("GET /metrics", metricsHandler)
+	root.Handle("/", otelhttp.NewHandler(dispatchHandler, "gateway"))
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: dispatchHandler,
+		Handler: root,
 		// General values used before a timeout category
 		// can be attributed to the request in routeCheck()
 		ReadHeaderTimeout: 5 * time.Second,   // max time to read request headers from the client
