@@ -1,6 +1,6 @@
 using Chat.Application.Abstractions;
 using Chat.Application.Contracts;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.FunctionalTests.Infrastructure;
 using Microsoft.AspNetCore.SignalR.Client;
 using Xunit;
@@ -263,13 +263,13 @@ public sealed class JoinChannelTests(ChatApiFactory factory)
 		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserReceive);
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
-		var messageTcs = new TaskCompletionSource<MessageResponse>();
-		conn.On<MessageResponse>("ReceiveMessage", msg => messageTcs.TrySetResult(msg));
+		var messageTcs = new TaskCompletionSource<ChannelMessageResponse>();
+		conn.On<ChannelMessageResponse>("ReceiveMessage", msg => messageTcs.TrySetResult(msg));
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
 
-		var testMessage = new MessageResponse(
+		var testMessage = new ChannelMessageResponse(
 			Id: "42", ChannelId: ChannelId.ToString(), AuthorId: "1",
 			Content: "hello", ReplyToId: null, EditedAt: null,
 			CreatedAt: DateTimeOffset.UtcNow, Attachments: [], Reactions: [], Nonce: null);
@@ -289,11 +289,11 @@ public sealed class JoinChannelTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageResponse>("ReceiveMessage", _ => received = true);
+		conn.On<ChannelMessageResponse>("ReceiveMessage", _ => received = true);
 
 		await conn.StartAsync();
 
-		var testMessage = new MessageResponse(
+		var testMessage = new ChannelMessageResponse(
 			Id: "99", ChannelId: ChannelId.ToString(), AuthorId: "1",
 			Content: "ghost", ReplyToId: null, EditedAt: null,
 			CreatedAt: DateTimeOffset.UtcNow, Attachments: [], Reactions: [], Nonce: null);
@@ -351,13 +351,13 @@ public sealed class LeaveChannelTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageResponse>("ReceiveMessage", _ => received = true);
+		conn.On<ChannelMessageResponse>("ReceiveMessage", _ => received = true);
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
 		await conn.InvokeAsync("LeaveChannel", ChannelId);
 
-		var testMessage = new MessageResponse(
+		var testMessage = new ChannelMessageResponse(
 			Id: "1", ChannelId: ChannelId.ToString(), AuthorId: "1",
 			Content: "after leave", ReplyToId: null, EditedAt: null,
 			CreatedAt: DateTimeOffset.UtcNow, Attachments: [], Reactions: [], Nonce: null);
@@ -521,7 +521,7 @@ public sealed class ChannelEvictionTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageResponse>("ReceiveMessage", _ => received = true);
+		conn.On<ChannelMessageResponse>("ReceiveMessage", _ => received = true);
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
@@ -545,8 +545,8 @@ public sealed class ChannelEvictionTests(ChatApiFactory factory)
 		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserOtherGuild);
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
-		var otherReceived = new TaskCompletionSource<MessageResponse>();
-		conn.On<MessageResponse>("ReceiveMessage", msg =>
+		var otherReceived = new TaskCompletionSource<ChannelMessageResponse>();
+		conn.On<ChannelMessageResponse>("ReceiveMessage", msg =>
 		{
 			if (msg.ChannelId == OtherChannel.ToString())
 				otherReceived.TrySetResult(msg);
@@ -572,8 +572,8 @@ public sealed class ChannelEvictionTests(ChatApiFactory factory)
 		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserRejoinAfter);
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
-		var messageTcs = new TaskCompletionSource<MessageResponse>();
-		conn.On<MessageResponse>("ReceiveMessage", msg => messageTcs.TrySetResult(msg));
+		var messageTcs = new TaskCompletionSource<ChannelMessageResponse>();
+		conn.On<ChannelMessageResponse>("ReceiveMessage", msg => messageTcs.TrySetResult(msg));
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
@@ -598,8 +598,8 @@ public sealed class ChannelEvictionTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var evictedReceived = false;
-		var survivorReceived = new TaskCompletionSource<MessageResponse>();
-		conn.On<MessageResponse>("ReceiveMessage", msg =>
+		var survivorReceived = new TaskCompletionSource<ChannelMessageResponse>();
+		conn.On<ChannelMessageResponse>("ReceiveMessage", msg =>
 		{
 			if (msg.ChannelId == ChannelId.ToString())
 				evictedReceived = true;
@@ -621,7 +621,7 @@ public sealed class ChannelEvictionTests(ChatApiFactory factory)
 		Assert.False(evictedReceived);
 	}
 
-	private static MessageResponse Message(long channelId, string content) =>
+	private static ChannelMessageResponse Message(long channelId, string content) =>
 		new(Id: "1", ChannelId: channelId.ToString(), AuthorId: "1",
 			Content: content, ReplyToId: null, EditedAt: null,
 			CreatedAt: DateTimeOffset.UtcNow, Attachments: [], Reactions: [], Nonce: null);

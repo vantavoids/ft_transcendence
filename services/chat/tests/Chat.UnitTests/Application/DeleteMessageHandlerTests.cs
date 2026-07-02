@@ -17,7 +17,8 @@ public sealed class DeleteMessageHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeGuildClient GuildClient,
 		FakeMessageRepository Repository,
-		FakeChannelBroadcaster Broadcaster);
+		FakeChannelBroadcaster Broadcaster,
+		FakeConversationUnicast Unicaster);
 
 	private static (Harness Harness, ICommandHandler<DeleteMessageCommand, Result> Handler)
 		BuildHandler(long userId = 42)
@@ -26,17 +27,28 @@ public sealed class DeleteMessageHandlerTests
 		var guildClient = new FakeGuildClient();
 		var repository = new FakeMessageRepository();
 		var broadcaster = new FakeChannelBroadcaster();
+		var unicaster = new FakeConversationUnicast();
 
 		var handler = HandlerFactory.CreateCommand<DeleteMessageCommand, Result>(
-			currentUser, guildClient, repository, broadcaster);
+			currentUser, guildClient, repository, broadcaster, unicaster);
 
-		return (new Harness(currentUser, guildClient, repository, broadcaster), handler);
+		return (new Harness(currentUser, guildClient, repository, broadcaster, unicaster), handler);
 	}
 
 	private static Message Seed(FakeMessageRepository repo, long id = 1, long channelId = 100, long authorId = 42, bool isDeleted = false)
 	{
 		var message = Message.Reconstitute(
 			id: id, containerId: channelId, authorId: authorId, recipientId: null,
+			content: "hello", replyToId: null, editedAt: null,
+			isDeleted: isDeleted, createdAt: DateTimeOffset.UtcNow);
+		repo.Seed(message);
+		return message;
+	}
+
+	private static Message SeedDirectMessage(FakeMessageRepository repo, long id, long conversationId, long authorId, long recipientId, bool isDeleted = false)
+	{
+		var message = Message.Reconstitute(
+			id: id, containerId: conversationId, authorId: authorId, recipientId: recipientId,
 			content: "hello", replyToId: null, editedAt: null,
 			isDeleted: isDeleted, createdAt: DateTimeOffset.UtcNow);
 		repo.Seed(message);
@@ -153,5 +165,38 @@ public sealed class DeleteMessageHandlerTests
 		Assert.True(result.Succeeded);
 		Assert.Single(h.Repository.SoftDeleted);
 		Assert.Single(h.Broadcaster.DeletedBroadcasts);
+	}
+
+	[Fact]
+	public async Task DirectMessage_Author_DeletesAndUnicastsToRecipient()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		SeedDirectMessage(h.Repository, id: 1, conversationId: 555, authorId: 42, recipientId: 100);
+
+		var result = await handler.HandleAsync(new DeleteMessageCommand(MessageId: 1));
+
+		Assert.True(result.Succeeded);
+		Assert.Single(h.Repository.SoftDeleted);
+		Assert.Null(h.GuildClient.Result);
+
+		var (recipientId, evt) = Assert.Single(h.Unicaster.DeletedUnicasts);
+		Assert.Equal(100L, recipientId);
+		Assert.Equal("1", evt.MessageId);
+		Assert.Equal("555", evt.ConversationId);
+		Assert.Empty(h.Broadcaster.DeletedBroadcasts);
+	}
+
+	[Fact]
+	public async Task DirectMessage_NonAuthor_ReturnsNotAuthor_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 100);
+		SeedDirectMessage(h.Repository, id: 1, conversationId: 555, authorId: 42, recipientId: 100);
+
+		var result = await handler.HandleAsync(new DeleteMessageCommand(MessageId: 1));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotAuthor, result.Error);
+		Assert.Empty(h.Repository.SoftDeleted);
+		Assert.Empty(h.Unicaster.DeletedUnicasts);
 	}
 }
