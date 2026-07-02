@@ -137,7 +137,8 @@ public sealed class MessagesEndpoint : ICarterModule
 		MapDeleteError(Failure failure) => failure.Code switch
 		{
 			"Message.NotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
-			"Message.MissingManagePermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			"Message.MissingManagePermission" or
+			"Message.NotAuthor" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.NotFound(new ErrorBody(failure.Message)),
 		};
 
