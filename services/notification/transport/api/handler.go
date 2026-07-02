@@ -16,7 +16,7 @@ import (
 
 type Handler struct {
 	orch *core.Orchestrator
-	hub *core.Hub
+	hub  *core.Hub
 }
 
 func NewHandler(svc *core.Orchestrator, hub *core.Hub) (*Handler, error) {
@@ -205,12 +205,16 @@ func sseHandler(hub *core.Hub) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("X-Accel-Buffering", "no")
+		w.WriteHeader(http.StatusOK)
 
 		rc := http.NewResponseController(w)
 		ch := hub.Subscribe(userID)
 		defer hub.Unsubscribe(userID, ch)
 
-		rc.Flush()
+		if err := rc.Flush(); err != nil {
+			return
+		}
+
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 
