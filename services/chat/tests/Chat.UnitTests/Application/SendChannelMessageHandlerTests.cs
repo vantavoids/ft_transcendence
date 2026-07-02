@@ -40,7 +40,7 @@ public sealed class SendChannelMessageHandlerTests
 		var broadcaster = new FakeChannelBroadcaster();
 
 		var handler = HandlerFactory.CreateCommand<SendChannelMessageCommand, Result<ChannelMessageResponse>>(
-			currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster);
+			currentUser, repository, attachmentRepository, ids, clock, guildClient, eventBus, broadcaster);
 
 		return (new Harness(currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster), handler);
 	}

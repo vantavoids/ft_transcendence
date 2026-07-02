@@ -1,10 +1,9 @@
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
-using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Application.Contracts;
 using Chat.Application.Features.DirectMessages.Common;
-using Chat.Domain.Attachments;
+using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Messages;
 using Chat.Domain.Results;
 
@@ -15,118 +14,53 @@ internal sealed class SendDirectMessageHandler(
 	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
 	ISnowflakeIdGenerator ids,
-	IUserClient userClient,
 	IClock clock,
+	IUserClient userClient,
 	IEventBus eventBus,
 	IConversationUnicast unicaster)
-	: ICommandHandler<SendDirectMessageCommand, Result<DirectMessageResponse>>
+	: SendMessageHandlerBase<SendDirectMessageCommand, DirectMessageResponse, NoContext>(currentUser, repository, attachmentRepository, ids, clock)
 {
-	private const int MaxNonceLen = 64;
-	private const int MaxAttachments = 10;
-
-	public async Task<Result<DirectMessageResponse>> HandleAsync(
-		SendDirectMessageCommand command,
-		CancellationToken cancellationToken = default)
+	protected override async Task<Result<NoContext>> PrecheckAsync(SendDirectMessageCommand command, CancellationToken ct)
 	{
-		if (command.Nonce is { Length: > MaxNonceLen })
-			return MessageFailures.NonceTooLong;
-
-		var userId = currentUser.UserId;
-		var relationship = await userClient.GetUsersRelationship(userId, command.RecipientId, cancellationToken);
+		var relationship = await userClient.GetUsersRelationship(AuthorId, command.RecipientId, ct);
 		if (relationship is null)
 			return MessageFailures.RecipientNotFound;
 
-		if (relationship.Status is "blocked_by_them" or "blocked_by_me")
-			return MessageFailures.RecipientBlocked;
+		return relationship.Status is "blocked_by_them" or "blocked_by_me"
+			? MessageFailures.RecipientBlocked
+			: new NoContext();
+	}
 
-		if (command.Nonce is not null)
-		{
-			var existingId = await repository.FindDmNonceAsync(userId, command.RecipientId, command.Nonce, cancellationToken);
-			if (existingId is not null)
-			{
-				var existing = await repository.GetByIdAsync(existingId.Value, cancellationToken);
-				if (existing is not null)
-				{
-					var existingAttachments = await attachmentRepository
-						.GetMessageAttachmentsAsync(existing.ContainerId, isDm: true, existing.Id, cancellationToken);
-					return DirectMessageResponse.From(existing, command.Nonce, existingAttachments);
-				}
-			}
-		}
+	protected override Task<long?> FindNonceAsync(SendDirectMessageCommand command, string nonce, CancellationToken ct) =>
+		Repository.FindDmNonceAsync(AuthorId, command.RecipientId, nonce, ct);
 
-		var attachmentsResult = await ResolveAttachmentsAsync(command.AttachmentIds, userId, cancellationToken);
-		if (attachmentsResult.IsFailure)
-			return attachmentsResult.Error;
-		var attachments = attachmentsResult.Value;
+	protected override Task<long> ResolveContainerIdAsync(SendDirectMessageCommand command, CancellationToken ct) =>
+		Repository.GetOrCreateConversationAsync(AuthorId, command.RecipientId, Ids.NextId(), ct);
 
-		var messageId = ids.NextId();
-		var conversationId =
-			await repository.GetOrCreateConversationAsync(userId, command.RecipientId, ids.NextId(), cancellationToken);
-
-		if (command.ReplyToId is not null)
-		{
-			var replyTarget = await repository.GetByIdAsync(command.ReplyToId.Value, cancellationToken);
-			if (replyTarget is null || replyTarget.IsDeleted || replyTarget.ContainerId != conversationId)
-				return MessageFailures.InvalidReplyTarget;
-		}
-
-		var messageResult = Message.CreateForDirectMessage(
+	protected override Result<Message> CreateMessage(
+		SendDirectMessageCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now) =>
+		Message.CreateForDirectMessage(
 			id: messageId,
-			conversationId: conversationId,
-			senderId: userId,
+			conversationId: containerId,
+			senderId: AuthorId,
 			recipientId: command.RecipientId,
 			content: command.Content,
 			replyToId: command.ReplyToId,
-			now: clock.UtcNow,
-			hasAttachments: attachments.Count > 0);
-		if (messageResult.IsFailure)
-			return messageResult.Error;
+			now: now,
+			hasAttachments: hasAttachments);
 
-		var message = messageResult.Value;
-		await repository.AddAsync(message, command.Nonce, attachments, cancellationToken);
-
-		var response = DirectMessageResponse.From(message, command.Nonce, attachments);
-
+	protected override async Task PublishAndNotifyAsync(
+		SendDirectMessageCommand command, NoContext context, Message message, DirectMessageResponse response, CancellationToken ct)
+	{
 		await eventBus.PublishAsync(
 			new ChatDmSent(
-				ConversationId: conversationId,
-				MessageId: messageId,
-				SenderId: userId,
+				ConversationId: message.ContainerId,
+				MessageId: message.Id,
+				SenderId: AuthorId,
 				RecipientId: command.RecipientId,
 				Content: message.Content!),
-			cancellationToken);
+			ct);
 
-		await unicaster.UnicastMessageAsync(command.RecipientId, response, cancellationToken);
-
-		return response;
-	}
-
-	private async Task<Result<IReadOnlyList<AttachmentMetadata>>> ResolveAttachmentsAsync(
-		IReadOnlyList<long> attachmentIds,
-		long userId,
-		CancellationToken ct)
-	{
-		if (attachmentIds.Count == 0)
-			return Array.Empty<AttachmentMetadata>();
-
-		if (attachmentIds.Count > MaxAttachments)
-			return AttachmentFailures.TooMany;
-
-		var resolved = new List<AttachmentMetadata>(attachmentIds.Count);
-		foreach (var attachmentId in attachmentIds.Distinct())
-		{
-			// each referenced draft must exist, be owned by the caller, and not yet
-			// belong to another message; an expired draft is simply gone (table TTL)
-			var draft = await attachmentRepository.GetDraftAsync(attachmentId, ct);
-			if (draft is null || draft.UploaderId != userId)
-				return AttachmentFailures.InvalidReference;
-
-			if (await attachmentRepository.IsAttachedAsync(attachmentId, ct))
-				return AttachmentFailures.InvalidReference;
-
-			resolved.Add(draft.ToMetadata());
-		}
-
-		return resolved;
+		await unicaster.UnicastMessageAsync(command.RecipientId, response, ct);
 	}
 }
