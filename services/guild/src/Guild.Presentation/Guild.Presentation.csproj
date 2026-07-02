@@ -16,6 +16,10 @@
              must stay on 2.x: AspNetCore.OpenApi 10.x targets Microsoft.OpenApi 2.x, and 3.x
              makes IOpenApiMediaType.Example read-only, breaking its source generator. -->
         <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+        <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.16.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
         <!-- Needed by dotnet-ef for migrations generation -->
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
