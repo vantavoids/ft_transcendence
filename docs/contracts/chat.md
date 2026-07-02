@@ -507,6 +507,37 @@ Remove the caller's own reaction. Removing a reaction the caller did not place i
 
 ---
 
+## Internal Endpoints
+
+### GET /internal/users/{user_id}/data-export
+
+The user's Chat-owned data for a GDPR self-serve export: the messages they authored, in channels and DMs. Called by the User Service's public data-export aggregator, which fans out to every service and stitches the results.
+
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://chat:8080/internal/users/{user_id}/data-export`).
+
+**Response `200`:**
+```json
+{
+  "user_id": "123",
+  "channel_messages": [
+    { "channel_id": "77", "message_id": "9001", "content": "gg", "created_at": "2026-06-01T12:00:00Z", "edited_at": null }
+  ],
+  "direct_messages": [
+    { "conversation_id": "88", "partner_id": "456", "message_id": "9002", "content": "hey", "created_at": "2026-06-02T09:30:00Z", "edited_at": null }
+  ]
+}
+```
+
+**How it's queried.** Scylla partitions `messages` by `channel_id` and `direct_messages` by `conversation_id`, so "all messages by author" is not a direct query. Instead the export uses the per-user index tables to find the partitions the user touched, then filters each to the user's own rows:
+- `channel_read_states` (`PK ((user_id), channel_id)`) → for each channel, read `messages[channel_id]` where `author_id = user`.
+- `user_conversations` (`PK ((user_id), partner_id)`) → for each conversation, read `direct_messages[conversation_id]` where `sender_id = user`.
+
+These are bounded, partition-keyed reads (no cluster-wide scan). Soft-deleted messages (`is_deleted = true`) are excluded.
+
+**Scope.** Only the user's **own messages** - the crown-jewel GDPR data (Discord's export is likewise mostly your messages). Ids stay raw: Chat doesn't own channel or user names (Guild and User do), so the aggregator resolves them when stitching. Coverage of channel messages depends on the user having a `channel_read_states` cursor for the channel (created on activity); a user with no messages returns `200` with empty arrays.
+
+---
+
 ## SignalR Hub - `/hubs/chat`
 
 Connect with the access token:

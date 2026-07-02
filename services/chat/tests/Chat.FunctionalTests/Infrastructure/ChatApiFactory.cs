@@ -39,6 +39,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	public FakeUserClient UserClient { get; } = new();
 	public FakeMessageRepository MessageRepository { get; } = new();
 	public FakeAttachmentRepository AttachmentRepository { get; } = new();
+	public FakeDataExportRepository DataExportRepository { get; } = new();
 	public FakeObjectStore ObjectStore { get; } = new();
 	public FakeEventBus EventBus { get; } = new();
 	public FakeChannelBroadcaster Broadcaster { get; } = new();
@@ -192,6 +193,10 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			// swap in the in-memory fake for the message handlers that depend on it
 			services.RemoveAll<IAttachmentRepository>();
 			services.AddSingleton<IAttachmentRepository>(AttachmentRepository);
+
+			// the real DataExportRepository needs ISession (stripped above)
+			services.RemoveAll<IDataExportRepository>();
+			services.AddSingleton<IDataExportRepository>(DataExportRepository);
 
 			// the real MinioObjectStore would dial MinIO; serve attachment blobs
 			// from memory instead so the upload/download endpoints stay hermetic
