@@ -50,61 +50,48 @@ internal sealed class AttachmentRepository(ISession session, AttachmentStatement
 		if (row is null)
 			return null;
 
+		var isDm = row.GetValue<bool>("is_dm");
+		var containerId = isDm
+			? row.GetValue<long>("conversation_id")
+			: row.GetValue<long>("channel_id");
+
 		return new AttachmentLocation(
-			IsDm: row.GetValue<bool>("is_dm"),
-			ChannelId: row.GetValue<long?>("channel_id"),
-			ConversationId: row.GetValue<long?>("conversation_id"),
+			IsDm: isDm,
+			ContainerId: containerId,
 			MessageId: row.GetValue<long>("message_id"));
 	}
 
-	public async Task<AttachmentMetadata?> GetChannelAttachmentAsync(long channelId, long messageId, long id, CancellationToken ct)
+	public async Task<AttachmentMetadata?> GetAttachmentAsync(long containerId, bool isDm, long messageId, long id, CancellationToken ct)
 	{
-		var stmt = await statements.SelectChannelAttachment.Value;
-		var row = (await session.ExecuteAsync(stmt.Bind(channelId, messageId, id))).FirstOrDefault();
+		var stmt = isDm
+			? await statements.SelectDmAttachment.Value
+			: await statements.SelectChannelAttachment.Value;
+
+		var row = (await session.ExecuteAsync(stmt.Bind(containerId, messageId, id))).FirstOrDefault();
 		return row is null ? null : MapMetadata(row);
 	}
 
-	public async Task<IReadOnlyList<AttachmentMetadata>> GetChannelMessageAttachmentsAsync(long channelId, long messageId, CancellationToken ct)
+	public async Task<IReadOnlyList<AttachmentMetadata>> GetMessageAttachmentsAsync(long containerId, bool isDm, long messageId, CancellationToken ct)
 	{
-		var stmt = await statements.SelectChannelMessageAttachments.Value;
-		var rows = await session.ExecuteAsync(stmt.Bind(channelId, messageId));
+		var stmt = isDm
+			? await statements.SelectDmMessageAttachments.Value
+			: await statements.SelectChannelMessageAttachments.Value;
+
+		var rows = await session.ExecuteAsync(stmt.Bind(containerId, messageId));
 		return rows.Select(MapMetadata).ToList();
 	}
 
-	public async Task<ILookup<long, AttachmentMetadata>> GetChannelMessagesAttachmentsAsync(
-		long channelId, IReadOnlyList<long> messageIds, CancellationToken ct)
+	public async Task<ILookup<long, AttachmentMetadata>> GetMessagesAttachmentsAsync(
+		long containerId, bool isDm, IReadOnlyList<long> messageIds, CancellationToken ct)
 	{
 		if (messageIds.Count == 0)
 			return Enumerable.Empty<AttachmentMetadata>().ToLookup(_ => 0L);
 
-		var stmt = await statements.SelectChannelMessagesAttachments.Value;
-		var rows = await session.ExecuteAsync(stmt.Bind(channelId, messageIds.ToArray()));
+		var stmt = isDm
+			? await statements.SelectDmMessagesAttachments.Value
+			: await statements.SelectChannelMessagesAttachments.Value;
 
-		return rows.ToLookup(row => row.GetValue<long>("message_id"), MapMetadata);
-	}
-
-	public async Task<AttachmentMetadata?> GetDmAttachmentAsync(long conversationId, long messageId, long id, CancellationToken ct)
-	{
-		var stmt = await statements.SelectDmAttachment.Value;
-		var row = (await session.ExecuteAsync(stmt.Bind(conversationId, messageId, id))).FirstOrDefault();
-		return row is null ? null : MapMetadata(row);
-	}
-
-	public async Task<IReadOnlyList<AttachmentMetadata>> GetDmMessageAttachmentsAsync(long conversationId, long messageId, CancellationToken ct)
-	{
-		var stmt = await statements.SelectDmMessageAttachments.Value;
-		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, messageId));
-		return rows.Select(MapMetadata).ToList();
-	}
-
-	public async Task<ILookup<long, AttachmentMetadata>> GetDmMessagesAttachmentsAsync(
-		long conversationId, IReadOnlyList<long> messageIds, CancellationToken ct)
-	{
-		if (messageIds.Count == 0)
-			return Enumerable.Empty<AttachmentMetadata>().ToLookup(_ => 0L);
-
-		var stmt = await statements.SelectDmMessagesAttachments.Value;
-		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, messageIds.ToArray()));
+		var rows = await session.ExecuteAsync(stmt.Bind(containerId, messageIds.ToArray()));
 
 		return rows.ToLookup(row => row.GetValue<long>("message_id"), MapMetadata);
 	}
