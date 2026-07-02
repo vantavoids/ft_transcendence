@@ -45,6 +45,14 @@ func NewClient(store *MemoryStore) *Client {
 	}
 }
 
+// size returns how many clients the store is currently tracking (across the
+// unchecked and checked buckets). cheap read under the lock, for the metrics gauge.
+func (store *MemoryStore) Size() int {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	return len(store.unchecked) + len(store.checked)
+}
+
 func (store *MemoryStore) Allow(identity string) bool {
 
 	store.mu.Lock()
