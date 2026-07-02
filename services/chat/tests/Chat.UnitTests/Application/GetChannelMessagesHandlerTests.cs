@@ -40,7 +40,7 @@ public sealed class GetChannelMessagesHandlerTests
 	private static Message SeedMessage(FakeMessageRepository repo, long id, long channelId, DateTimeOffset createdAt, bool isDeleted = false)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: 99,
+			id: id, containerId: channelId, authorId: 99, recipientId: null,
 			content: "hello", replyToId: null, editedAt: null,
 			isDeleted: isDeleted, createdAt: createdAt);
 		repo.Seed(message);

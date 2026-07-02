@@ -29,7 +29,7 @@ public sealed class AttachmentsEndpointTests(ChatApiFactory factory)
 		factory.GuildClient.Result = null;
 		factory.AttachmentRepository.Reset();
 		factory.ObjectStore.Reset();
-		factory.DirectMessageRepository.Reset();
+		factory.MessageRepository.Reset();
 		return Task.CompletedTask;
 	}
 
@@ -233,11 +233,11 @@ public sealed class AttachmentsEndpointTests(ChatApiFactory factory)
 			new AttachmentMetadata(attachmentId, url, filename, PngBytes.Length, mimeType));
 		factory.ObjectStore.Seed(attachmentId.ToString(), PngBytes);
 
-		var message = DirectMessage.Reconstitute(
-			id: messageId, conversationId: conversationId, senderId: senderId, recipientId: recipientId,
-			replyToId: null, content: "has an attachment", isDeleted: false, editedAt: null,
+		var message = Message.Reconstitute(
+			id: messageId, containerId: conversationId, authorId: senderId, recipientId: recipientId,
+			content: "has an attachment", replyToId: null, editedAt: null, isDeleted: false,
 			createdAt: DateTimeOffset.UtcNow);
-		factory.DirectMessageRepository.Seed(message);
+		factory.MessageRepository.Seed(message);
 	}
 
 	private async Task<long> UploadAsync(HttpClient client, string filename, string contentType)

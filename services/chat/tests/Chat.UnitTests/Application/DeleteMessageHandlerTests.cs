@@ -36,7 +36,7 @@ public sealed class DeleteMessageHandlerTests
 	private static Message Seed(FakeMessageRepository repo, long id = 1, long channelId = 100, long authorId = 42, bool isDeleted = false)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: authorId,
+			id: id, containerId: channelId, authorId: authorId, recipientId: null,
 			content: "hello", replyToId: null, editedAt: null,
 			isDeleted: isDeleted, createdAt: DateTimeOffset.UtcNow);
 		repo.Seed(message);
