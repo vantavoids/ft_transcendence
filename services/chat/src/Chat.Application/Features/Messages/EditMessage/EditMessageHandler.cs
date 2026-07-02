@@ -2,6 +2,7 @@ using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
+using Chat.Application.Features.Channels.Common;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.Messages.Common;
 using Chat.Domain.Messages;

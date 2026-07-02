@@ -1,4 +1,4 @@
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Application.Features.DirectMessages.Common;
 
 namespace Chat.Presentation.Hubs;
