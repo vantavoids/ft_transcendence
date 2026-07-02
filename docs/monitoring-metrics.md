@@ -50,6 +50,18 @@ NOT part of the cross-language contract (their names differ by runtime):
 - Go: the Go collector (goroutines, GC, heap (vive la stack))
 - Rust: process/runtime metrics as available
 
+Services may also expose **domain (business) gauges** via a custom `Meter`, again
+per-service and not part of the cross-language contract. Guild does this with a
+`Guild.Domain` meter and a background collector: `guild_guilds`, `guild_members`,
+`guild_channels`, `guild_roles`, `guild_invites_active`, `guild_bans`. The counts
+are polled off the scrape path (an `IHostedService` every ~20s writes a snapshot;
+the observable gauges just read it), so a scrape never triggers a DB query. Keep
+these low-cardinality: totals only, never a per-entity id label.
+
+Note: the `MassTransit` meter does **not** work on MassTransit 8.x (its metrics
+are the legacy prometheus-net package, not the `Meter` API); event-side counters,
+if wanted, need a custom meter.
+
 ## Per-language implementation
 
 | Service(s) | Language | Libraries |

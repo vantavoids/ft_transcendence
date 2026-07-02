@@ -31,4 +31,17 @@ public sealed class MetricsEndpointTests(GuildApiFactory factory) : IClassFixtur
 		Assert.Contains("# TYPE", body);
 		Assert.Contains("http_server_request_duration_seconds", body);
 	}
+
+	[Fact]
+	public async Task Metrics_Expose_Domain_Business_Gauges()
+	{
+		var client = factory.CreateClient();
+
+		var body = await (await client.GetAsync("/metrics")).Content.ReadAsStringAsync();
+
+		// observable gauges fire on scrape, so they surface regardless of collector timing
+		Assert.Contains("guild_guilds", body);
+		Assert.Contains("guild_members", body);
+		Assert.Contains("guild_invites_active", body);
+	}
 }

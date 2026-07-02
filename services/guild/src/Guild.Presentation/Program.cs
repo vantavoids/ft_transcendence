@@ -9,6 +9,7 @@ using Guild.Presentation.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Guild.Presentation.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
@@ -26,12 +27,16 @@ builder.Services.AddHealthChecks()
 
 // metrics for Prometheus to scrape at /metrics. AspNetCore instrumentation emits
 // the semconv http.server.* RED metrics shared across the fleet; Runtime adds
-// GC/threadpool gauges. see docs/monitoring-metrics.md for the cross-service contract.
+// GC/threadpool gauges; the Guild.Domain meter adds business gauges (guild/member/
+// channel/role/invite/ban totals). see docs/monitoring-metrics.md for the contract.
+builder.Services.AddSingleton<GuildMetrics>();
+builder.Services.AddHostedService<GuildMetricsCollector>();
 builder.Services.AddOpenTelemetry()
 	.ConfigureResource(r => r.AddService("guild"))
 	.WithMetrics(m => m
 		.AddAspNetCoreInstrumentation()
 		.AddRuntimeInstrumentation()
+		.AddMeter(GuildMetrics.MeterName)
 		.AddPrometheusExporter());
 
 builder.Services.AddApplication()
