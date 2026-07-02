@@ -1,4 +1,4 @@
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.FunctionalTests.Infrastructure;
 using Microsoft.AspNetCore.SignalR.Client;
 using Xunit;
@@ -43,13 +43,13 @@ public sealed class EditMessageBroadcastTests(ChatApiFactory factory)
 		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserSubscriber);
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
-		var tcs = new TaskCompletionSource<MessageEditedEvent>();
-		conn.On<MessageEditedEvent>("MessageEdited", evt => tcs.TrySetResult(evt));
+		var tcs = new TaskCompletionSource<ChannelMessageEditedEvent>();
+		conn.On<ChannelMessageEditedEvent>("MessageEdited", evt => tcs.TrySetResult(evt));
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
 
-		var sentEvt = new MessageEditedEvent(
+		var sentEvt = new ChannelMessageEditedEvent(
 			Id: "42",
 			ChannelId: ChannelId.ToString(),
 			Content: "edited content",
@@ -73,13 +73,13 @@ public sealed class EditMessageBroadcastTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageEditedEvent>("MessageEdited", _ => received = true);
+		conn.On<ChannelMessageEditedEvent>("MessageEdited", _ => received = true);
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
 
 		await factory.SimulateMessageEditedAsync(ChannelId,
-			new MessageEditedEvent("1", ChannelId.ToString(), "x", DateTimeOffset.UtcNow));
+			new ChannelMessageEditedEvent("1", ChannelId.ToString(), "x", DateTimeOffset.UtcNow));
 
 		await Task.Delay(300);
 		Assert.True(received);
@@ -93,13 +93,13 @@ public sealed class EditMessageBroadcastTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageEditedEvent>("MessageEdited", _ => received = true);
+		conn.On<ChannelMessageEditedEvent>("MessageEdited", _ => received = true);
 
 		await conn.StartAsync();
 		// intentionally no JoinChannel
 
 		await factory.SimulateMessageEditedAsync(ChannelId,
-			new MessageEditedEvent("1", ChannelId.ToString(), "x", DateTimeOffset.UtcNow));
+			new ChannelMessageEditedEvent("1", ChannelId.ToString(), "x", DateTimeOffset.UtcNow));
 
 		await Task.Delay(300);
 		Assert.False(received);
@@ -138,8 +138,8 @@ public sealed class DeleteMessageBroadcastTests(ChatApiFactory factory)
 		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserSubscriber);
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
-		var tcs = new TaskCompletionSource<MessageDeletedEvent>();
-		conn.On<MessageDeletedEvent>("MessageDeleted", evt => tcs.TrySetResult(evt));
+		var tcs = new TaskCompletionSource<ChannelMessageDeletedEvent>();
+		conn.On<ChannelMessageDeletedEvent>("MessageDeleted", evt => tcs.TrySetResult(evt));
 
 		await conn.StartAsync();
 		await conn.InvokeAsync("JoinChannel", ChannelId);
@@ -159,7 +159,7 @@ public sealed class DeleteMessageBroadcastTests(ChatApiFactory factory)
 		await using var conn = HubConnectionHelper.Build(factory, token);
 
 		var received = false;
-		conn.On<MessageDeletedEvent>("MessageDeleted", _ => received = true);
+		conn.On<ChannelMessageDeletedEvent>("MessageDeleted", _ => received = true);
 
 		await conn.StartAsync();
 		// intentionally no JoinChannel

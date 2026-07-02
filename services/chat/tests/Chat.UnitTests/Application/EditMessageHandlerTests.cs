@@ -14,7 +14,8 @@ public sealed class EditMessageHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeMessageRepository Repository,
 		FakeClock Clock,
-		FakeChannelBroadcaster Broadcaster);
+		FakeChannelBroadcaster Broadcaster,
+		FakeConversationUnicast Unicaster);
 
 	private static (Harness Harness, ICommandHandler<EditMessageCommand, Result<EditMessageResponse>> Handler)
 		BuildHandler(long userId = 42)
@@ -23,11 +24,12 @@ public sealed class EditMessageHandlerTests
 		var repository = new FakeMessageRepository();
 		var clock = new FakeClock();
 		var broadcaster = new FakeChannelBroadcaster();
+		var unicaster = new FakeConversationUnicast();
 
 		var handler = HandlerFactory.CreateCommand<EditMessageCommand, Result<EditMessageResponse>>(
-			currentUser, repository, clock, broadcaster);
+			currentUser, repository, clock, broadcaster, unicaster);
 
-		return (new Harness(currentUser, repository, clock, broadcaster), handler);
+		return (new Harness(currentUser, repository, clock, broadcaster, unicaster), handler);
 	}
 
 	private static Message SeedMessage(FakeMessageRepository repo, long id = 1, long channelId = 100, long authorId = 42) =>
@@ -40,6 +42,22 @@ public sealed class EditMessageHandlerTests
 			containerId: channelId,
 			authorId: authorId,
 			recipientId: null,
+			content: "original content",
+			replyToId: null,
+			editedAt: null,
+			isDeleted: isDeleted,
+			createdAt: DateTimeOffset.UtcNow);
+		repo.Seed(message);
+		return message;
+	}
+
+	private static Message SeedDirectMessage(FakeMessageRepository repo, long id, long conversationId, long authorId, long recipientId, bool isDeleted = false)
+	{
+		var message = Message.Reconstitute(
+			id: id,
+			containerId: conversationId,
+			authorId: authorId,
+			recipientId: recipientId,
 			content: "original content",
 			replyToId: null,
 			editedAt: null,
@@ -139,5 +157,42 @@ public sealed class EditMessageHandlerTests
 		Assert.Equal("1", evt.Id);
 		Assert.Equal("100", evt.ChannelId);
 		Assert.Equal("updated content", evt.Content);
+		Assert.Empty(h.Unicaster.EditedUnicasts);
+	}
+
+	[Fact]
+	public async Task DirectMessage_NotAuthor_ReturnsNotAuthor_NoSideEffects()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		SeedDirectMessage(h.Repository, id: 1, conversationId: 555, authorId: 99, recipientId: 42);
+
+		var result = await handler.HandleAsync(new EditMessageCommand(MessageId: 1, Content: "new content"));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotAuthor, result.Error);
+		Assert.Empty(h.Repository.Updated);
+		Assert.Empty(h.Unicaster.EditedUnicasts);
+	}
+
+	[Fact]
+	public async Task DirectMessage_HappyPath_UpdatesRepo_UnicastsToRecipient_ReturnsResponse()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		SeedDirectMessage(h.Repository, id: 1, conversationId: 555, authorId: 42, recipientId: 100);
+
+		var result = await handler.HandleAsync(new EditMessageCommand(MessageId: 1, Content: "updated content"));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal("updated content", result.Value.Content);
+
+		var updated = Assert.Single(h.Repository.Updated);
+		Assert.Equal(1L, updated.Id);
+
+		var (recipientId, evt) = Assert.Single(h.Unicaster.EditedUnicasts);
+		Assert.Equal(100L, recipientId);
+		Assert.Equal("1", evt.Id);
+		Assert.Equal("555", evt.ConversationId);
+		Assert.Equal("updated content", evt.Content);
+		Assert.Empty(h.Broadcaster.EditedBroadcasts);
 	}
 }
