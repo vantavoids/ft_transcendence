@@ -32,8 +32,6 @@ public static class DependencyInjection
 
 		services.AddSingleton<MessageStatements>();
 		services.AddScoped<IMessageRepository, MessageRepository>();
-		services.AddSingleton<DirectMessageStatements>();
-		services.AddScoped<IDirectMessageRepository, DirectMessageRepository>();
 		services.AddSingleton<AttachmentStatements>();
 		services.AddScoped<IAttachmentRepository, AttachmentRepository>();
 		return services;
