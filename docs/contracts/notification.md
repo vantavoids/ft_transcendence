@@ -106,7 +106,7 @@ Fast badge counter for the authenticated user. Returns just the count without pa
 
 `count` excludes dismissed notifications (`dismissed_at IS NOT NULL`) and read notifications (`read_at IS NOT NULL`). Backed by a partial index on `notifications (user_id) WHERE read_at IS NULL AND dismissed_at IS NULL` so the query stays O(rows-the-user-has-unread), not O(rows-the-user-has-total).
 
-The count is also pushed via SignalR (`NotificationReceived` and `NotificationRead` events update client-side state), so most navbar updates happen without polling this endpoint; it is used on initial load and as a reconciliation fallback.
+The count is also kept fresh in real time by the SSE stream (see below): a pushed notification bumps it and the client decrements it on read/dismiss, so most navbar updates happen without polling this endpoint; it is used on initial load and as a reconciliation fallback.
 
 ---
 
@@ -139,30 +139,31 @@ Dismiss a notification. Soft-delete: the row stays in DB with `dismissed_at` set
 
 ---
 
-## SignalR - Real-time delivery
+## Real-time delivery - Server-Sent Events (SSE)
 
-The Notification Service pushes real-time alerts via SignalR (either its own hub or shared with Chat Service - implementation detail). When a notification is created for a user who is currently connected, the service immediately pushes it:
+Real-time alerts are pushed over a long-lived **Server-Sent Events** stream that the client opens with an `EventSource`.
 
-**Server → Client event: `ReceiveNotification`**
+### GET /notifications/events
 
-The payload is identical to a single element of the `GET /notifications` response (minus `user_id`, which is implicit from the connection).
+An authenticated SSE stream (`Content-Type: text/event-stream`). While the stream is open, every notification created for the user is pushed immediately as a **named** SSE event (`event: ReceiveNotification`) whose `data:` line is a single JSON object:
 
 ```json
 {
-  "target": "ReceiveNotification",
-  "arguments": [{
-    "id": "<snowflake>",
-    "type": "mention",
-    "actor_id": "<snowflake>",
-    "source_id": "<snowflake>",
-    "payload": { "channel_id": "<snowflake>", "guild_id": "<snowflake>", "preview": "..." },
-    "read": false,
-    "created_at": "2026-03-09T12:00:00Z"
-  }]
+  "id": "<snowflake>",
+  "type": "mention",
+  "actor_id": "<snowflake>",
+  "source_id": "<snowflake>",
+  "payload": { "channel_id": "<snowflake>", "guild_id": "<snowflake>", "preview": "..." },
+  "read": false,
+  "created_at": "2026-03-09T12:00:00Z"
 }
 ```
 
-If the user is not connected, the notification row stays in DB and is fetched on next login via `GET /notifications?read=false`.
+`actor_id` and `source_id` are nullable. The shape mirrors one element of the `GET /notifications` response (minus `user_id`, which is implicit from the connection). Because the event is named, clients subscribe with `EventSource.addEventListener('ReceiveNotification', ...)`, not the default `message` handler. The stream also emits a `: ping` comment heartbeat every 15s so idle connections survive proxy read timeouts.
+
+The notification row is always persisted **before** the push, so a notification missed while the stream is closed (or dropped for a slow client) is never lost: it is recovered on (re)connect via `GET /notifications?read=false`. There is no `Last-Event-ID` replay, so clients should reconcile with that fetch each time the stream (re)opens.
+
+> **Auth over EventSource:** browsers cannot attach an `Authorization` header to an `EventSource`, so the access token is passed as a query parameter: `GET /notifications/events?access_token=<jwt>`.
 
 ---
 
