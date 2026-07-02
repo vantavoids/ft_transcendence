@@ -17,7 +17,7 @@ internal sealed class DownloadAttachmentHandler(
 	IObjectStore objectStore)
 	: IQueryHandler<DownloadAttachmentQuery, Result<AttachmentDownload>>
 {
-	// mirrors the Guild Service permission bitmask; see SendMessageHandler
+	// mirrors the Guild Service permission bitmask; see SendChannelMessageHandler
 	private const long ReadMessages = 1L << 1;
 	private const long Administrator = 1L << 8;
 
