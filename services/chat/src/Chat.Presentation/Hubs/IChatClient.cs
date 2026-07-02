@@ -11,6 +11,9 @@ public interface IChatClient
 	Task MessageEdited(MessageEditedEvent evt);
 	Task MessageDeleted(MessageDeletedEvent evt);
 
+	Task DirectMessageEdited(DirectMessageEditedEvent evt);
+	Task DirectMessageDeleted(DirectMessageDeletedEvent evt);
+
 	Task TypingStarted(string userId, string scope, string id, DateTimeOffset expiresAt);
 
 	Task GuildJoined(string guildId, string guildName);
