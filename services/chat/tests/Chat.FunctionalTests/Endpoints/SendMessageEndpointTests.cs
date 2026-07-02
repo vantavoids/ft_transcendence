@@ -73,7 +73,7 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 
 		var saved = Assert.Single(factory.SavedMessages);
 		Assert.Equal(messageId, saved.Id);
-		Assert.Equal(100L, saved.ChannelId);
+		Assert.Equal(100L, saved.ContainerId);
 		Assert.Equal(42L, saved.AuthorId);
 
 		var evt = Assert.Single(factory.EventBus.PublishedOf<ChatMessageSent>());
@@ -181,7 +181,7 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 	{
 		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
 		var target = Message.Reconstitute(
-			id: 7, channelId: 200, authorId: 1, content: "original",
+			id: 7, containerId: 200, authorId: 1, recipientId: null, content: "original",
 			replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow);
 		factory.MessageRepository.Seed(target);
 		var client = BuildClient(userId: 42);
@@ -198,7 +198,7 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 	{
 		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
 		var target = Message.Reconstitute(
-			id: 7, channelId: 100, authorId: 1, content: "original",
+			id: 7, containerId: 100, authorId: 1, recipientId: null, content: "original",
 			replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow);
 		factory.MessageRepository.Seed(target);
 		var client = BuildClient(userId: 42);

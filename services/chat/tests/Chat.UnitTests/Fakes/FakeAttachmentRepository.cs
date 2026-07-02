@@ -40,8 +40,7 @@ public sealed class FakeAttachmentRepository : IAttachmentRepository
 	public void SeedChannelAttachment(long channelId, long messageId, AttachmentMetadata metadata)
 	{
 		_attached.Add(metadata.Id);
-		_locations[metadata.Id] = new AttachmentLocation(
-			IsDm: false, ChannelId: channelId, ConversationId: null, MessageId: messageId);
+		_locations[metadata.Id] = new AttachmentLocation(IsDm: false, ContainerId: channelId, MessageId: messageId);
 
 		if (!_byMessage.TryGetValue((channelId, messageId), out var list))
 			_byMessage[(channelId, messageId)] = list = [];
@@ -56,8 +55,7 @@ public sealed class FakeAttachmentRepository : IAttachmentRepository
 	public void SeedDmAttachment(long conversationId, long messageId, AttachmentMetadata metadata)
 	{
 		_attached.Add(metadata.Id);
-		_locations[metadata.Id] = new AttachmentLocation(
-			IsDm: true, ChannelId: null, ConversationId: conversationId, MessageId: messageId);
+		_locations[metadata.Id] = new AttachmentLocation(IsDm: true, ContainerId: conversationId, MessageId: messageId);
 
 		if (!_byDmMessage.TryGetValue((conversationId, messageId), out var list))
 			_byDmMessage[(conversationId, messageId)] = list = [];
@@ -79,53 +77,36 @@ public sealed class FakeAttachmentRepository : IAttachmentRepository
 	public Task<AttachmentLocation?> GetLocationAsync(long id, CancellationToken ct)
 		=> Task.FromResult(_locations.GetValueOrDefault(id));
 
-	public Task<AttachmentMetadata?> GetChannelAttachmentAsync(long channelId, long messageId, long id, CancellationToken ct)
+	public Task<AttachmentMetadata?> GetAttachmentAsync(long containerId, bool isDm, long messageId, long id, CancellationToken ct)
 	{
-		var match = _byMessage.GetValueOrDefault((channelId, messageId))?
-			.FirstOrDefault(a => a.Id == id);
+		var match = !isDm
+			? _byMessage.GetValueOrDefault((containerId, messageId))?.FirstOrDefault(a => a.Id == id)
+			: _byDmMessage.GetValueOrDefault((containerId, messageId))?.FirstOrDefault(a => a.Id == id);
 		return Task.FromResult(match);
 	}
 
-	public Task<IReadOnlyList<AttachmentMetadata>> GetChannelMessageAttachmentsAsync(long channelId, long messageId, CancellationToken ct)
+	public Task<IReadOnlyList<AttachmentMetadata>> GetMessageAttachmentsAsync(long containerId, bool isDm, long messageId, CancellationToken ct)
 	{
-		IReadOnlyList<AttachmentMetadata> result =
-			_byMessage.GetValueOrDefault((channelId, messageId)) ?? [];
+		IReadOnlyList<AttachmentMetadata> result = !isDm
+			? _byMessage.GetValueOrDefault((containerId, messageId)) ?? []
+			: _byDmMessage.GetValueOrDefault((containerId, messageId)) ?? [];
 		return Task.FromResult(result);
 	}
 
-	public Task<ILookup<long, AttachmentMetadata>> GetChannelMessagesAttachmentsAsync(
-		long channelId, IReadOnlyList<long> messageIds, CancellationToken ct)
+	public Task<ILookup<long, AttachmentMetadata>> GetMessagesAttachmentsAsync(
+		long containerId, bool isDm, IReadOnlyList<long> messageIds, CancellationToken ct)
 	{
 		var wanted = messageIds.ToHashSet();
-		var lookup = _byMessage
-			.Where(e => e.Key.ChannelId == channelId && wanted.Contains(e.Key.MessageId))
-			.SelectMany(e => e.Value.Select(m => (e.Key.MessageId, Metadata: m)))
-			.ToLookup(x => x.MessageId, x => x.Metadata);
-		return Task.FromResult(lookup);
-	}
 
-	public Task<AttachmentMetadata?> GetDmAttachmentAsync(long conversationId, long messageId, long id, CancellationToken ct)
-	{
-		var match = _byDmMessage.GetValueOrDefault((conversationId, messageId))?
-			.FirstOrDefault(a => a.Id == id);
-		return Task.FromResult(match);
-	}
-
-	public Task<IReadOnlyList<AttachmentMetadata>> GetDmMessageAttachmentsAsync(long conversationId, long messageId, CancellationToken ct)
-	{
-		IReadOnlyList<AttachmentMetadata> result =
-			_byDmMessage.GetValueOrDefault((conversationId, messageId)) ?? [];
-		return Task.FromResult(result);
-	}
-
-	public Task<ILookup<long, AttachmentMetadata>> GetDmMessagesAttachmentsAsync(
-		long conversationId, IReadOnlyList<long> messageIds, CancellationToken ct)
-	{
-		var wanted = messageIds.ToHashSet();
-		var lookup = _byDmMessage
-			.Where(e => e.Key.ConversationId == conversationId && wanted.Contains(e.Key.MessageId))
-			.SelectMany(e => e.Value.Select(m => (e.Key.MessageId, Metadata: m)))
-			.ToLookup(x => x.MessageId, x => x.Metadata);
+		var lookup = !isDm
+			? _byMessage
+				.Where(e => e.Key.ChannelId == containerId && wanted.Contains(e.Key.MessageId))
+				.SelectMany(e => e.Value.Select(m => (e.Key.MessageId, Metadata: m)))
+				.ToLookup(x => x.MessageId, x => x.Metadata)
+			: _byDmMessage
+				.Where(e => e.Key.ConversationId == containerId && wanted.Contains(e.Key.MessageId))
+				.SelectMany(e => e.Value.Select(m => (e.Key.MessageId, Metadata: m)))
+				.ToLookup(x => x.MessageId, x => x.Metadata);
 		return Task.FromResult(lookup);
 	}
 }

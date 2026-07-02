@@ -45,7 +45,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 	private static void SeedMessage(ChatApiFactory f, long id, long channelId, DateTimeOffset? createdAt = null, bool isDeleted = false)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: 99,
+			id: id, containerId: channelId, authorId: 99, recipientId: null,
 			content: "hello", replyToId: null, editedAt: null,
 			isDeleted: isDeleted, createdAt: createdAt ?? PastDate);
 		f.MessageRepository.Seed(message);
@@ -277,7 +277,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		factory.GuildClient.Result = new Chat.Application.Abstractions.ChannelMembership(
 			IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
 		var edited = Message.Reconstitute(
-			id: 1, channelId: 100, authorId: 99,
+			id: 1, containerId: 100, authorId: 99, recipientId: null,
 			content: "edited", replyToId: null,
 			editedAt: PastDate.AddMinutes(-5),
 			isDeleted: false, createdAt: PastDate.AddMinutes(-10));

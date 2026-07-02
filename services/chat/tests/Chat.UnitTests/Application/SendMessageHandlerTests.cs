@@ -126,7 +126,7 @@ public sealed class SendMessageHandlerTests
 
 		// repo persisted the new message (alongside the seeded reply target)
 		var saved = Assert.Single(h.Repository.Saved, m => m.Id == responseId);
-		Assert.Equal(100L, saved.ChannelId);
+		Assert.Equal(100L, saved.ContainerId);
 		Assert.Equal(42L, saved.AuthorId);
 
 		// event published with the right MessageId / GuildId / AuthorId
@@ -234,7 +234,7 @@ public sealed class SendMessageHandlerTests
 	private static void SeedReplyTarget(FakeMessageRepository repo, long id, long channelId, bool isDeleted = false)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: 1, content: "original",
+			id: id, containerId: channelId, authorId: 1, recipientId: null, content: "original",
 			replyToId: null, editedAt: null, isDeleted: isDeleted,
 			createdAt: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 		repo.Seed(message);

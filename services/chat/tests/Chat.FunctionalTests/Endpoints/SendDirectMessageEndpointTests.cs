@@ -20,7 +20,7 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 
 	public Task InitializeAsync()
 	{
-		factory.DirectMessageRepository.Reset();
+		factory.MessageRepository.Reset();
 		factory.EventBus.Reset();
 		factory.ConversationUnicast.Reset();
 		factory.UserClient.Reset();
@@ -74,8 +74,8 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 
 		var saved = Assert.Single(factory.SavedDirectMessages);
 		Assert.Equal(messageId, saved.Id);
-		Assert.Equal(conversationId, saved.ConversationId);
-		Assert.Equal(42L, saved.SenderId);
+		Assert.Equal(conversationId, saved.ContainerId);
+		Assert.Equal(42L, saved.AuthorId);
 		Assert.Equal(100L, saved.RecipientId);
 
 		var evt = Assert.Single(factory.EventBus.PublishedOf<ChatDmSent>());
