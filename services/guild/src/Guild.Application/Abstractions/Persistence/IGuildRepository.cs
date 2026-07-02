@@ -47,6 +47,14 @@ public interface IGuildRepository
 	Task<IReadOnlyList<MemberPage>> PageMembersAsync(
 		long guildId, long? afterUserId, int limit, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// the user's Guild-owned data for a GDPR export: guilds they own and the
+	/// guilds they belong to (with their nickname and role names). human-readable
+	/// names, not ids; excludes moderation and internal-config rows (bans,
+	/// permission overwrites) which are not the subject's own intelligible data.
+	/// </summary>
+	Task<UserGuildDataExport> GetUserDataExportAsync(long userId, CancellationToken cancellationToken = default);
+
 	void Add(GuildEntity guild);
 	void Update(GuildEntity guild);
 	void Remove(GuildEntity guild);
@@ -74,3 +82,16 @@ public sealed record MyGuildSummary(
 	long OwnerId,
 	int MemberCount,
 	DateTimeOffset JoinedAt);
+
+/// <summary>a user's Guild-owned data for a GDPR export.</summary>
+public sealed record UserGuildDataExport(
+	IReadOnlyList<ExportedGuild> OwnedGuilds,
+	IReadOnlyList<ExportedMembership> Memberships);
+
+public sealed record ExportedGuild(string Name, DateTimeOffset CreatedAt);
+
+public sealed record ExportedMembership(
+	string GuildName,
+	string? Nickname,
+	DateTimeOffset JoinedAt,
+	IReadOnlyList<string> Roles);
