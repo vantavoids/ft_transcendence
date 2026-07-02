@@ -56,6 +56,21 @@ public sealed class CallRegistry(
 			return _connected.ContainsKey(userId);
 	}
 
+	// point-in-time counts for metrics, taken under a single lock: total calls
+	// tracked, of which ringing (unanswered), and users connected to the
+	// signaling hub.
+	public (int Active, int Ringing, int SignalingUsers) CountsSnapshot()
+	{
+		lock (_gate)
+		{
+			var ringing = 0;
+			foreach (var entry in _byCall.Values)
+				if (entry.Ringing)
+					ringing++;
+			return (_byCall.Count, ringing, _connected.Count);
+		}
+	}
+
 	// ringing calls where the user is the callee, delivered as IncomingCall when
 	// they (re)connect to the signaling hub.
 	public IReadOnlyList<CallInfo> PendingFor(long calleeId)

@@ -23,6 +23,12 @@ public sealed class UserConnectionTracker
 
 	private readonly ConcurrentDictionary<long, UserState> _users = new();
 
+	// number of users with at least one open connection (presence gauge). a user
+	// is only kept in _users while it holds a connection, so this is the online
+	// count. ConcurrentDictionary.Count briefly takes the map's internal locks,
+	// which is fine for an infrequent scrape.
+	public int OnlineUserCount => _users.Count;
+
 	// returns true if this is the user's first connection.
 	public bool TrackConnected(long userId, string connectionId)
 	{

@@ -7,10 +7,13 @@ using Chat.Infrastructure;
 using Chat.Persistence;
 using Chat.Presentation.Hubs;
 using Chat.Presentation.Hubs.Signaling;
+using Chat.Presentation.Observability;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +33,19 @@ builder.Services.AddApplication()
 builder.Services.AddSingleton<UserConnectionTracker>();
 builder.Services.AddSingleton<CallRegistry>();
 builder.Services.Configure<SignalingOptions>(builder.Configuration.GetSection(SignalingOptions.SectionName));
+
+// metrics for Prometheus to scrape at /metrics. AspNetCore emits the semconv
+// http.server.* RED metrics shared across the fleet; Runtime adds GC/threadpool
+// gauges; the Chat.Domain meter adds real-time gauges (hub presence, live calls)
+// read straight off in-memory state. see docs/monitoring-metrics.md.
+builder.Services.AddSingleton<ChatMetrics>();
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(r => r.AddService("chat"))
+	.WithMetrics(m => m
+		.AddAspNetCoreInstrumentation()
+		.AddRuntimeInstrumentation()
+		.AddMeter(ChatMetrics.MeterName)
+		.AddPrometheusExporter());
 builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
 builder.Services.AddScoped<IUserBroadcaster, SignalRUserBroadcaster>();
 builder.Services.AddCarter();
@@ -68,6 +84,10 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// force ChatMetrics construction so its observable gauges register; nothing else
+// resolves it (Guild pulls its metrics in via a hosted collector, Chat has none).
+_ = app.Services.GetRequiredService<ChatMetrics>();
+
 if (app.Environment.IsDevelopment())
 {
 	app.MapOpenApi();
@@ -94,6 +114,9 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
 		}));
 	},
 });
+// Prometheus scrape endpoint (GET /metrics), anonymous + internal-only like /healthz.
+app.MapPrometheusScrapingEndpoint();
+
 var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
 app.MapHub<ChatHub>("/v1/hubs/chat");
