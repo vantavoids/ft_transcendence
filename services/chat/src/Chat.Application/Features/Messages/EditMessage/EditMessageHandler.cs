@@ -42,5 +42,5 @@ internal sealed class EditMessageHandler(
 	private Task NotifyEditedAsync(Message message, CancellationToken ct) =>
 		message.IsDirectMessage
 			? unicaster.UnicastMessageEditedAsync(message.RecipientId!.Value, DirectMessageEditedEvent.From(message), ct)
-			: broadcaster.BroadcastMessageEditedAsync(message.ContainerId, MessageEditedEvent.From(message), ct);
+			: broadcaster.BroadcastMessageEditedAsync(message.ContainerId, ChannelMessageEditedEvent.From(message), ct);
 }

@@ -9,7 +9,7 @@ namespace Chat.Application.Features.Channels.Common;
 /// IDs are quoted strings so JS clients can hold them without precision loss.
 /// reactions are an empty array on freshly-created messages
 /// </summary>
-public sealed record MessageResponse(
+public sealed record ChannelMessageResponse(
 	string Id,
 	string ChannelId,
 	string AuthorId,
@@ -21,7 +21,7 @@ public sealed record MessageResponse(
 	object[] Reactions,
 	string? Nonce)
 {
-	public static MessageResponse From(
+	public static ChannelMessageResponse From(
 		Message m,
 		string? nonce,
 		IReadOnlyList<AttachmentMetadata>? attachments = null) => new(

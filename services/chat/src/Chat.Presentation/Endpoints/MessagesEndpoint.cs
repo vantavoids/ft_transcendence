@@ -25,14 +25,14 @@ public sealed class MessagesEndpoint : ICarterModule
 	}
 
 	private static async Task<Results<
-		Ok<IReadOnlyList<MessageResponse>>,
+		Ok<IReadOnlyList<ChannelMessageResponse>>,
 		JsonHttpResult<ErrorBody>,
 		NotFound<ErrorBody>>>
 	GetChannelHistoryAsync(
 		long channelId,
 		DateTimeOffset? before_time,
 		int? limit,
-		IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>> handler,
+		IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>> handler,
 		CancellationToken cancellationToken)
 	{
 		var clampedLimit = Math.Clamp(limit ?? 50, 1, 100);
@@ -46,18 +46,18 @@ public sealed class MessagesEndpoint : ICarterModule
 	}
 
 	private static async Task<Results<
-		Created<MessageResponse>,
+		Created<ChannelMessageResponse>,
 		BadRequest<ErrorBody>,
 		JsonHttpResult<ErrorBody>,
 		NotFound<ErrorBody>>>
 	SendAsync(
 		long channelId,
-		SendMessageRequest request,
-		ICommandHandler<SendMessageCommand, Result<MessageResponse>> handler,
+		SendChannelMessageRequest request,
+		ICommandHandler<SendChannelMessageCommand, Result<ChannelMessageResponse>> handler,
 		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(
-			new SendMessageCommand(
+			new SendChannelMessageCommand(
 				channelId,
 				request.Content,
 				request.ReplyToId,
@@ -108,7 +108,7 @@ public sealed class MessagesEndpoint : ICarterModule
 			: MapDeleteError(result.Error);
 	}
 
-	private static Results<Created<MessageResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+	private static Results<Created<ChannelMessageResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
 		MapSendError(Failure failure) => failure.Code switch
 		{
 			"Message.ChannelNotFound" or
@@ -127,7 +127,7 @@ public sealed class MessagesEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
-	private static Results<Ok<IReadOnlyList<MessageResponse>>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+	private static Results<Ok<IReadOnlyList<ChannelMessageResponse>>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
 		MapGetChannelHistoryError(Failure failure) => failure.Code switch
 		{
 			"Message.ChannelNotFound" => TypedResults.NotFound(new ErrorBody(failure.Message)),
@@ -143,7 +143,7 @@ public sealed class MessagesEndpoint : ICarterModule
 			_ => TypedResults.NotFound(new ErrorBody(failure.Message)),
 		};
 
-	private sealed record SendMessageRequest(
+	private sealed record SendChannelMessageRequest(
 		string? Content,
 		long? ReplyToId,
 		IReadOnlyList<long>? AttachmentIds,
