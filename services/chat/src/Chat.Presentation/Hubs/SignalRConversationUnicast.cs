@@ -16,4 +16,10 @@ internal sealed class SignalRConversationUnicast(IHubContext<ChatHub, IChatClien
 			.User(recipientId.ToString())
 			.ReceiveDirectMessage(message);
 	}
+
+	public Task UnicastMessageEditedAsync(long recipientId, DirectMessageEditedEvent evt, CancellationToken ct) =>
+		hub.Clients.User(recipientId.ToString()).DirectMessageEdited(evt);
+
+	public Task UnicastMessageDeletedAsync(long recipientId, DirectMessageDeletedEvent evt, CancellationToken ct) =>
+		hub.Clients.User(recipientId.ToString()).DirectMessageDeleted(evt);
 }
