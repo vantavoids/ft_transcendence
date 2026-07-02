@@ -81,23 +81,23 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 
 		return failure.Code switch
 		{
-			"DirectMessage.RecipientNotFound" or
-			"DirectMessage.ConversationNotFound" or
+			"Message.RecipientNotFound" or
+			"Message.ConversationNotFound" or
 			"Attachment.InvalidReference" => TypedResults.NotFound(body),
 
-			"DirectMessage.RecipientBlocked" => TypedResults.Json(
+			"Message.RecipientBlocked" => TypedResults.Json(
 				body,
 				statusCode: StatusCodes.Status403Forbidden),
 
-			// "DirectMessage.ContentRequired"
-			// "DirectMessage.ContentTooLong"
-			// "DirectMessage.InvalidId"
-			// "DirectMessage.InvalidConversationId"
-			// "DirectMessage.InvalidSenderId"
-			// "DirectMessage.InvalidRecipientId"
-			// "DirectMessage.InvalidReplyTarget"
-			// "DirectMessage.CannotMessageSelf"
-			// "DirectMessage.NonceTooLong"
+			// "Message.ContentRequired"
+			// "Message.ContentTooLong"
+			// "Message.InvalidId"
+			// "Message.InvalidConversationId"
+			// "Message.InvalidAuthorId"
+			// "Message.InvalidRecipientId"
+			// "Message.InvalidReplyTarget"
+			// "Message.CannotMessageSelf"
+			// "Message.NonceTooLong"
 			// "Attachment.TooMany"
 			_ => TypedResults.BadRequest(body)
 		};
