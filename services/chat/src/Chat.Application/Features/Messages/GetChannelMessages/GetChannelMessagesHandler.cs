@@ -42,7 +42,7 @@ internal sealed class GetChannelMessagesHandler(
 		// any message that has none
 		var messageIds = messages.Select(m => m.Id).ToList();
 		var attachmentsByMessage = await attachmentRepository
-			.GetChannelMessagesAttachmentsAsync(query.ChannelId, messageIds, cancellationToken);
+			.GetMessagesAttachmentsAsync(query.ChannelId, isDm: false, messageIds, cancellationToken);
 
 		var hydrated = messages
 			.Select(m => MessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]]))

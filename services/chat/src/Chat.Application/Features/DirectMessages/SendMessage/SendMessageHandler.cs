@@ -12,7 +12,7 @@ namespace Chat.Application.Features.DirectMessages.SendMessage;
 
 internal sealed class SendDirectMessageHandler(
 	ICurrentUser currentUser,
-	IDirectMessageRepository repository,
+	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
 	ISnowflakeIdGenerator ids,
 	IUserClient userClient,
@@ -29,26 +29,26 @@ internal sealed class SendDirectMessageHandler(
 		CancellationToken cancellationToken = default)
 	{
 		if (command.Nonce is { Length: > MaxNonceLen })
-			return DirectMessageFailures.NonceTooLong;
+			return MessageFailures.NonceTooLong;
 
 		var userId = currentUser.UserId;
 		var relationship = await userClient.GetUsersRelationship(userId, command.RecipientId, cancellationToken);
 		if (relationship is null)
-			return DirectMessageFailures.RecipientNotFound;
+			return MessageFailures.RecipientNotFound;
 
 		if (relationship.Status is "blocked_by_them" or "blocked_by_me")
-			return DirectMessageFailures.RecipientBlocked;
+			return MessageFailures.RecipientBlocked;
 
 		if (command.Nonce is not null)
 		{
-			var existingId = await repository.FindNonceAsync(userId, command.RecipientId, command.Nonce, cancellationToken);
+			var existingId = await repository.FindDmNonceAsync(userId, command.RecipientId, command.Nonce, cancellationToken);
 			if (existingId is not null)
 			{
 				var existing = await repository.GetByIdAsync(existingId.Value, cancellationToken);
 				if (existing is not null)
 				{
 					var existingAttachments = await attachmentRepository
-						.GetDmMessageAttachmentsAsync(existing.ConversationId, existing.Id, cancellationToken);
+						.GetMessageAttachmentsAsync(existing.ContainerId, isDm: true, existing.Id, cancellationToken);
 					return DirectMessageResponse.From(existing, command.Nonce, existingAttachments);
 				}
 			}
@@ -65,11 +65,12 @@ internal sealed class SendDirectMessageHandler(
 
 		if (command.ReplyToId is not null)
 		{
-			if (await repository.FindReplyExistsAsync(conversationId, command.ReplyToId.Value, cancellationToken) is null)
-				return DirectMessageFailures.InvalidReplyTarget;
+			var replyTarget = await repository.GetByIdAsync(command.ReplyToId.Value, cancellationToken);
+			if (replyTarget is null || replyTarget.IsDeleted || replyTarget.ContainerId != conversationId)
+				return MessageFailures.InvalidReplyTarget;
 		}
 
-		var messageResult = DirectMessage.Create(
+		var messageResult = Message.CreateForDirectMessage(
 			id: messageId,
 			conversationId: conversationId,
 			senderId: userId,

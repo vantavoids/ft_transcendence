@@ -19,7 +19,7 @@ internal sealed class EditMessageHandler(
 		CancellationToken cancellationToken = default)
 	{
 		var message = await repository.GetByIdAsync(command.MessageId, cancellationToken);
-		if (message is null || message.IsDeleted)
+		if (message is null || message.IsDeleted || message.IsDirectMessage)
 			return MessageFailures.NotFound;
 
 		if (message.AuthorId != currentUser.UserId)
@@ -32,7 +32,7 @@ internal sealed class EditMessageHandler(
 		await repository.UpdateContentAsync(message, cancellationToken);
 
 		var evt = MessageEditedEvent.From(message);
-		await broadcaster.BroadcastMessageEditedAsync(message.ChannelId, evt, cancellationToken);
+		await broadcaster.BroadcastMessageEditedAsync(message.ContainerId, evt, cancellationToken);
 
 		return EditMessageResponse.From(message);
 	}

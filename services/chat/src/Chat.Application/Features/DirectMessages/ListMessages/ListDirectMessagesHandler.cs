@@ -9,7 +9,7 @@ namespace Chat.Application.Features.DirectMessages.ListMessages;
 
 internal sealed class ListDirectMessagesHandler(
 	ICurrentUser currentUser,
-	IDirectMessageRepository repository,
+	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
 	IClock clock)
 	: IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>>
@@ -21,10 +21,10 @@ internal sealed class ListDirectMessagesHandler(
 		var userId = currentUser.UserId;
 
 		if (query.RecipientId <= 0)
-			return DirectMessageFailures.InvalidRecipientId;
+			return MessageFailures.InvalidRecipientId;
 
 		if (query.RecipientId == userId)
-			return DirectMessageFailures.CannotMessageSelf;
+			return MessageFailures.CannotMessageSelf;
 
 		var limit = Math.Clamp(query.Limit, 1, 100);
 
@@ -36,7 +36,7 @@ internal sealed class ListDirectMessagesHandler(
 		if (conversationId is null)
 			return Array.Empty<DirectMessageResponse>();
 
-		var messages = await repository.ListAsync(
+		var messages = await repository.GetDirectMessagesAsync(
 			conversationId.Value,
 			query.BeforeTime ?? clock.UtcNow,
 			limit,
@@ -47,7 +47,7 @@ internal sealed class ListDirectMessagesHandler(
 		// any message that has none
 		var messageIds = messages.Select(m => m.Id).ToList();
 		var attachmentsByMessage = await attachmentRepository
-			.GetDmMessagesAttachmentsAsync(conversationId.Value, messageIds, cancellationToken);
+			.GetMessagesAttachmentsAsync(conversationId.Value, isDm: true, messageIds, cancellationToken);
 
 		return messages
 			.Select(msg => DirectMessageResponse.From(msg, null, [.. attachmentsByMessage[msg.Id]]))
