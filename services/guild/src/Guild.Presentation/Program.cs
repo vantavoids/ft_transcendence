@@ -9,6 +9,8 @@ using Guild.Presentation.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +23,16 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
 	.AddPersistenceHealthChecks();
+
+// metrics for Prometheus to scrape at /metrics. AspNetCore instrumentation emits
+// the semconv http.server.* RED metrics shared across the fleet; Runtime adds
+// GC/threadpool gauges. see docs/monitoring-metrics.md for the cross-service contract.
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(r => r.AddService("guild"))
+	.WithMetrics(m => m
+		.AddAspNetCoreInstrumentation()
+		.AddRuntimeInstrumentation()
+		.AddPrometheusExporter());
 
 builder.Services.AddApplication()
 	.AddInfrastructure<GuildDbContext>()
@@ -131,6 +143,11 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
 		}));
 	},
 });
+
+// Prometheus scrape endpoint (GET /metrics). anonymous + internal-only: the
+// gateway only forwards /api/{service}/vN/..., so /metrics is reachable solely
+// over the docker network, like /healthz.
+app.MapPrometheusScrapingEndpoint();
 
 var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
