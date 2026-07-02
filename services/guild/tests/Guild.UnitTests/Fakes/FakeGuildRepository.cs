@@ -92,6 +92,30 @@ internal sealed class FakeGuildRepository : IGuildRepository
 		return Task.FromResult(guild.Members.Any(m => m.UserId == userId));
 	}
 
+	public Task<UserGuildDataExport> GetUserDataExportAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		var ownedGuilds = _store.Values
+			.Where(g => g.OwnerId == userId)
+			.OrderBy(g => g.CreatedAt)
+			.Select(g => new ExportedGuild(g.Name, g.CreatedAt))
+			.ToList();
+
+		var memberships = _store.Values
+			.Where(g => g.Members.Any(m => m.UserId == userId))
+			.Select(g => new ExportedMembership(
+				g.Name,
+				g.Members.First(m => m.UserId == userId).Nickname,
+				g.Members.First(m => m.UserId == userId).JoinedAt,
+				g.MemberRoles
+					.Where(mr => mr.UserId == userId)
+					.Join(g.Roles, mr => mr.RoleId, r => r.Id, (mr, r) => r.Name)
+					.ToList()))
+			.OrderBy(x => x.JoinedAt)
+			.ToList();
+
+		return Task.FromResult(new UserGuildDataExport(ownedGuilds, memberships));
+	}
+
 	public void Add(GuildEntity guild)
 	{
 		_store[guild.Id] = guild;

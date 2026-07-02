@@ -131,6 +131,54 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.AnyAsync(m => m.GuildId == guildId && m.UserId == userId, cancellationToken);
 	}
 
+	public async Task<UserGuildDataExport> GetUserDataExportAsync(long userId, CancellationToken cancellationToken = default)
+	{
+		var ownedGuilds = await context.Guilds
+			.AsNoTracking()
+			.Where(g => g.OwnerId == userId)
+			.OrderBy(g => g.CreatedAt)
+			.Select(g => new ExportedGuild(g.Name, g.CreatedAt))
+			.ToListAsync(cancellationToken);
+
+		// memberships joined to the guild for its (human-readable) name
+		var memberships = await context.Members
+			.AsNoTracking()
+			.Where(m => m.UserId == userId)
+			.Join(
+				context.Guilds,
+				m => m.GuildId,
+				g => g.Id,
+				(m, g) => new { m.GuildId, GuildName = g.Name, m.Nickname, m.JoinedAt })
+			.OrderBy(x => x.JoinedAt)
+			.ToListAsync(cancellationToken);
+
+		if (memberships.Count == 0)
+			return new UserGuildDataExport(ownedGuilds, []);
+
+		// role names for this user across their guilds, resolved via a second
+		// bounded query and grouped by guild in memory (same idiom as PageMembers)
+		var guildIds = memberships.Select(x => x.GuildId).ToList();
+		var assignments = await context.MemberRoles
+			.AsNoTracking()
+			.Where(mr => mr.UserId == userId && guildIds.Contains(mr.GuildId))
+			.Join(context.Roles, mr => mr.RoleId, r => r.Id, (mr, r) => new { mr.GuildId, RoleName = r.Name })
+			.ToListAsync(cancellationToken);
+
+		var rolesByGuild = assignments
+			.GroupBy(a => a.GuildId)
+			.ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(a => a.RoleName).ToList());
+
+		var exported = memberships
+			.Select(x => new ExportedMembership(
+				x.GuildName,
+				x.Nickname,
+				x.JoinedAt,
+				rolesByGuild.TryGetValue(x.GuildId, out var roles) ? roles : []))
+			.ToList();
+
+		return new UserGuildDataExport(ownedGuilds, exported);
+	}
+
 	public async Task PurgeMembershipForUserAsync(long userId, CancellationToken cancellationToken = default)
 	{
 		await context.MemberRoles

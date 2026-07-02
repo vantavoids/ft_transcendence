@@ -950,6 +950,33 @@ Returns `{ "count": 0 }` (not 404) when the user owns no guilds, so callers don'
 
 ---
 
+### GET /internal/users/{user_id}/data-export
+
+The user's Guild-owned data for a GDPR self-serve export. Called by the User Service's public data-export aggregator, which fans out to every service and stitches the results into one bundle.
+
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://guild:8080/internal/users/{user_id}/data-export`).
+
+**Response `200`:**
+```json
+{
+  "user_id": "123",
+  "owned_guilds": [
+    { "name": "My Server", "created_at": "2026-06-01T12:00:00Z" }
+  ],
+  "memberships": [
+    { "guild_name": "Cool Guild", "nickname": "yan", "joined_at": "2026-06-02T09:30:00Z", "roles": ["Admin"] }
+  ]
+}
+```
+
+**Scope.** Deliberately limited to intelligible, subject-centric data: guilds the user **owns** and guilds they **belong to** (with their chosen nickname and their role **names**, not ids). It intentionally excludes:
+- **Bans** against the user - moderation records whose `reason` is a moderator's free-text about the subject (third-party input); GDPR Art. 15(4) balances access against others' rights, and the self-serve export need not be exhaustive. Also matches Discord, which doesn't surface "servers you're banned from" in its data package.
+- **Channel permission overwrites** - internal per-channel allow/deny bitmasks, not meaningfully the subject's own data.
+
+Ids are resolved to names so the export is intelligible (Art. 12). An unknown user, or one with no guild data, returns `200` with empty arrays (a GDPR export, not a lookup).
+
+---
+
 ### GET /internal/channels/{channel_id}/membership
 
 Check if a user is a member of the guild that owns this channel, and get their effective permissions. Called by Chat Service over internal HTTP before allowing a message to be sent.
