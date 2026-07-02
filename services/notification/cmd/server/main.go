@@ -10,6 +10,7 @@ import (
 	pgxpool "github.com/jackc/pgx/v5/pgxpool"
 	database "github.com/vantavoids/ft_transcendence/services/notification/db/sqlc"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
+	observability "github.com/vantavoids/ft_transcendence/services/notification/internal/observability"
 	snowflake "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/snowflake"
 	tunnel "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/tunnel"
 	api "github.com/vantavoids/ft_transcendence/services/notification/transport/api"
@@ -80,10 +81,16 @@ func main() {
 
 	core.RunCleanupLoop(ctx, orch)
 
+	// ─── Metrics ───
+	metricsHandler, err := observability.Setup(pool, hub)
+	if err != nil {
+		log.Fatalf("Unable to set up metrics: %s", err)
+	}
+
 	// ─── Server HTTP ───
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           handler.Routes(jwtSecret),
+		Handler:           handler.Routes(jwtSecret, metricsHandler),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      20 * time.Second,
