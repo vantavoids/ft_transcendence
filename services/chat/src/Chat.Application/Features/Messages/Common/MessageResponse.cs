@@ -26,7 +26,7 @@ public sealed record MessageResponse(
 		string? nonce,
 		IReadOnlyList<AttachmentMetadata>? attachments = null) => new(
 		Id: m.Id.ToString(),
-		ChannelId: m.ChannelId.ToString(),
+		ChannelId: m.ContainerId.ToString(),
 		AuthorId: m.AuthorId.ToString(),
 		Content: m.Content,
 		ReplyToId: m.ReplyToId?.ToString(),
