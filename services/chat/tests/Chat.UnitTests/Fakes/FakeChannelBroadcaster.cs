@@ -1,16 +1,16 @@
 using Chat.Application.Abstractions;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 
 namespace Chat.UnitTests.Fakes;
 
 public sealed class FakeChannelBroadcaster : IChannelBroadcaster
 {
-	private readonly List<(long ChannelId, MessageResponse Message)> _broadcasts = [];
-	private readonly List<(long ChannelId, MessageEditedEvent Evt)> _editedBroadcasts = [];
+	private readonly List<(long ChannelId, ChannelMessageResponse Message)> _broadcasts = [];
+	private readonly List<(long ChannelId, ChannelMessageEditedEvent Evt)> _editedBroadcasts = [];
 	private readonly List<(long ChannelId, long MessageId)> _deletedBroadcasts = [];
 
-	public IReadOnlyList<(long ChannelId, MessageResponse Message)> Broadcasts => _broadcasts;
-	public IReadOnlyList<(long ChannelId, MessageEditedEvent Evt)> EditedBroadcasts => _editedBroadcasts;
+	public IReadOnlyList<(long ChannelId, ChannelMessageResponse Message)> Broadcasts => _broadcasts;
+	public IReadOnlyList<(long ChannelId, ChannelMessageEditedEvent Evt)> EditedBroadcasts => _editedBroadcasts;
 	public IReadOnlyList<(long ChannelId, long MessageId)> DeletedBroadcasts => _deletedBroadcasts;
 
 	public void Reset()
@@ -20,13 +20,13 @@ public sealed class FakeChannelBroadcaster : IChannelBroadcaster
 		_deletedBroadcasts.Clear();
 	}
 
-	public Task BroadcastMessageAsync(long channelId, MessageResponse message, CancellationToken ct)
+	public Task BroadcastMessageAsync(long channelId, ChannelMessageResponse message, CancellationToken ct)
 	{
 		_broadcasts.Add((channelId, message));
 		return Task.CompletedTask;
 	}
 
-	public Task BroadcastMessageEditedAsync(long channelId, MessageEditedEvent evt, CancellationToken ct)
+	public Task BroadcastMessageEditedAsync(long channelId, ChannelMessageEditedEvent evt, CancellationToken ct)
 	{
 		_editedBroadcasts.Add((channelId, evt));
 		return Task.CompletedTask;

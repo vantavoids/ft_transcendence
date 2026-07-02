@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Domain.Messages;
 using Chat.FunctionalTests.Infrastructure;
 using Xunit;
@@ -107,7 +107,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.NotNull(messages);
 		Assert.Equal(2, messages.Count);
 		Assert.DoesNotContain(messages, m => m.Id == "3");
@@ -128,7 +128,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync($"/v1/channels/100/messages?before_time={beforeTimeStr}");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.NotNull(messages);
 		Assert.Equal(2, messages.Count);
 		Assert.DoesNotContain(messages, m => m.Id == "3");
@@ -159,7 +159,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Empty(messages!);
 	}
 
@@ -176,7 +176,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Equal(50, messages!.Count);
 	}
 
@@ -192,7 +192,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 
 		var response = await client.GetAsync("/v1/channels/100/messages?limit=10");
 
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Equal(10, messages!.Count);
 	}
 
@@ -211,7 +211,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync($"/v1/channels/100/messages?limit={limitValue}");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Single(messages!);
 	}
 
@@ -228,7 +228,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync("/v1/channels/100/messages?limit=200");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Equal(100, messages!.Count);
 	}
 
@@ -246,7 +246,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 		var response = await client.GetAsync($"/v1/channels/100/messages?before_time={farPast}");
 
 		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Empty(messages!);
 	}
 
@@ -263,7 +263,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.Equal(3, messages!.Count);
 		Assert.Equal("3", messages[0].Id);
 		Assert.Equal("2", messages[1].Id);
@@ -286,7 +286,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		var msg = Assert.Single(messages!);
 		Assert.NotNull(msg.EditedAt);
 	}
@@ -302,7 +302,7 @@ public sealed class GetChannelMessagesEndpointTests(ChatApiFactory factory)
 
 		var response = await client.GetAsync("/v1/channels/100/messages");
 
-		var messages = await response.Content.ReadFromJsonAsync<List<MessageResponse>>(JsonOptions);
+		var messages = await response.Content.ReadFromJsonAsync<List<ChannelMessageResponse>>(JsonOptions);
 		Assert.All(messages!, m => Assert.Null(m.Nonce));
 	}
 }

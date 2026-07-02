@@ -1,7 +1,7 @@
 using Cassandra;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Persistence;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Presentation.Hubs;
 using Chat.Domain.Messages;
 using Chat.UnitTests.Fakes;
@@ -70,7 +70,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	// Bypasses FakeChannelBroadcaster (which is a no-op for SignalR) and pushes
 	// events directly into the hub group via IHubContext. Use to verify that a
 	// subscriber in the group receives the correct hub invocation.
-	public async Task SimulateMessageEditedAsync(long channelId, MessageEditedEvent evt)
+	public async Task SimulateMessageEditedAsync(long channelId, ChannelMessageEditedEvent evt)
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").MessageEdited(evt);
@@ -80,7 +80,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").MessageDeleted(
-			new MessageDeletedEvent(messageId.ToString(), channelId.ToString()));
+			new ChannelMessageDeletedEvent(messageId.ToString(), channelId.ToString()));
 	}
 
 	// Directly calls the real SignalRUserBroadcaster (not a fake) so that
@@ -122,7 +122,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	// Bypasses IChannelBroadcaster (replaced by a fake) and pushes a message
 	// directly into the SignalR channel group. Use to verify that a connected
 	// client receives ReceiveMessage after JoinChannel.
-	public async Task SimulateChannelMessageAsync(long channelId, MessageResponse message)
+	public async Task SimulateChannelMessageAsync(long channelId, ChannelMessageResponse message)
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").ReceiveMessage(message);

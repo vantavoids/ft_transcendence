@@ -1,7 +1,7 @@
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Messaging;
-using Chat.Application.Features.Messages.Common;
-using Chat.Application.Features.Messages.GetChannelMessages;
+using Chat.Application.Features.Channels.Common;
+using Chat.Application.Features.Channels.GetChannelMessages;
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 using Chat.Domain.Results;
@@ -22,7 +22,7 @@ public sealed class GetChannelMessagesHandlerTests
 		FakeAttachmentRepository AttachmentRepository,
 		FakeClock Clock);
 
-	private static (Harness Harness, IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>> Handler)
+	private static (Harness Harness, IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>> Handler)
 		BuildHandler(long userId = 42)
 	{
 		var currentUser = new FakeCurrentUser { UserId = userId };
@@ -31,7 +31,7 @@ public sealed class GetChannelMessagesHandlerTests
 		var attachmentRepository = new FakeAttachmentRepository();
 		var clock = new FakeClock();
 
-		var handler = HandlerFactory.CreateQuery<GetChannelMessagesQuery, Result<IReadOnlyList<MessageResponse>>>(
+		var handler = HandlerFactory.CreateQuery<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>>(
 			currentUser, guildClient, repository, attachmentRepository, clock);
 
 		return (new Harness(currentUser, guildClient, repository, attachmentRepository, clock), handler);
