@@ -12,7 +12,7 @@ public sealed class DirectMessageTests
     [Fact]
     public void Create_HappyPath_PopulatesProperties()
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1001,
             conversationId: 42,
             senderId: 7,
@@ -23,8 +23,8 @@ public sealed class DirectMessageTests
         Assert.True(result.Succeeded);
         var message = result.Value;
         Assert.Equal(1001L, message.Id);
-        Assert.Equal(42L, message.ConversationId);
-        Assert.Equal(7L, message.SenderId);
+        Assert.Equal(42L, message.ContainerId);
+        Assert.Equal(7L, message.AuthorId);
         Assert.Equal(8L, message.RecipientId);
         Assert.Equal("hello world", message.Content);
         Assert.Null(message.ReplyToId);
@@ -36,7 +36,7 @@ public sealed class DirectMessageTests
     [Fact]
     public void Create_WithReplyToId_PersistsReplyToId()
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1001, conversationId: 42, senderId: 7, recipientId: 8,
             content: "reply", replyToId: 999, now: Now);
         Assert.True(result.Succeeded);
@@ -50,29 +50,29 @@ public sealed class DirectMessageTests
     [InlineData("\t\n")]
     public void Create_BlankContent_ReturnsContentRequired(string? content)
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: 1, recipientId: 2,
             content: content, replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.ContentRequired, result.Error);
+        Assert.Equal(MessageFailures.ContentRequired, result.Error);
     }
 
     [Fact]
     public void Create_ContentTooLong_ReturnsContentTooLong()
     {
-        var content = new string('x', DirectMessage.MaxContentLen + 1);
-        var result = DirectMessage.Create(
+        var content = new string('x', Message.MaxContentLen + 1);
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: 1, recipientId: 2,
             content: content, replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.ContentTooLong, result.Error);
+        Assert.Equal(MessageFailures.ContentTooLong, result.Error);
     }
 
     [Fact]
     public void Create_ContentExactlyAtMax_Succeeds()
     {
-        var content = new string('x', DirectMessage.MaxContentLen);
-        var result = DirectMessage.Create(
+        var content = new string('x', Message.MaxContentLen);
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: 1, recipientId: 2,
             content: content, replyToId: null, now: Now);
         Assert.True(result.Succeeded);
@@ -83,11 +83,11 @@ public sealed class DirectMessageTests
     [InlineData(-1)]
     public void Create_NonPositiveId_ReturnsInvalidId(long id)
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: id, conversationId: 1, senderId: 1, recipientId: 2,
             content: "hi", replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.InvalidId, result.Error);
+        Assert.Equal(MessageFailures.InvalidId, result.Error);
     }
 
     [Theory]
@@ -95,11 +95,11 @@ public sealed class DirectMessageTests
     [InlineData(-1)]
     public void Create_NonPositiveConversationId_ReturnsInvalidConversationId(long conversationId)
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: conversationId, senderId: 1, recipientId: 2,
             content: "hi", replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.InvalidConversationId, result.Error);
+        Assert.Equal(MessageFailures.InvalidConversationId, result.Error);
     }
 
     [Theory]
@@ -107,11 +107,11 @@ public sealed class DirectMessageTests
     [InlineData(-1)]
     public void Create_NonPositiveSenderId_ReturnsInvalidSenderId(long senderId)
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: senderId, recipientId: 2,
             content: "hi", replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.InvalidSenderId, result.Error);
+        Assert.Equal(MessageFailures.InvalidAuthorId, result.Error);
     }
 
     [Theory]
@@ -119,20 +119,20 @@ public sealed class DirectMessageTests
     [InlineData(-1)]
     public void Create_NonPositiveRecipientId_ReturnsInvalidRecipientId(long recipientId)
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: 1, recipientId: recipientId,
             content: "hi", replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.InvalidRecipientId, result.Error);
+        Assert.Equal(MessageFailures.InvalidRecipientId, result.Error);
     }
 
     [Fact]
     public void Create_SenderEqualsRecipient_ReturnsCannotMessageSelf()
     {
-        var result = DirectMessage.Create(
+        var result = Message.CreateForDirectMessage(
             id: 1, conversationId: 1, senderId: 5, recipientId: 5,
             content: "hi", replyToId: null, now: Now);
         Assert.True(result.IsFailure);
-        Assert.Equal(DirectMessageFailures.CannotMessageSelf, result.Error);
+        Assert.Equal(MessageFailures.CannotMessageSelf, result.Error);
     }
 }

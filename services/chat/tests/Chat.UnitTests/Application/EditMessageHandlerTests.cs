@@ -37,8 +37,9 @@ public sealed class EditMessageHandlerTests
 	{
 		var message = Message.Reconstitute(
 			id: id,
-			channelId: channelId,
+			containerId: channelId,
 			authorId: authorId,
+			recipientId: null,
 			content: "original content",
 			replyToId: null,
 			editedAt: null,

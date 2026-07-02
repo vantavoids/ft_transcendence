@@ -44,11 +44,10 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	public FakeChannelBroadcaster Broadcaster { get; } = new();
 	public FakeClock Clock { get; } = new();
 	public FakeIdGenerator IdGenerator { get; } = new();
-	public FakeDirectMessageRepository DirectMessageRepository { get; } = new();
 	public FakeConversationUnicast ConversationUnicast { get; } = new();
 
-	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved;
-	public IReadOnlyList<DirectMessage> SavedDirectMessages => DirectMessageRepository.Saved;
+	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved.Where(m => !m.IsDirectMessage).ToList();
+	public IReadOnlyList<Message> SavedDirectMessages => MessageRepository.Saved.Where(m => m.IsDirectMessage).ToList();
 
 	public void WithMembership(long channelId, long userId, long guildId, long permissions)
 	{
@@ -200,8 +199,6 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			// from memory instead so the upload/download endpoints stay hermetic
 			services.RemoveAll<IObjectStore>();
 			services.AddSingleton<IObjectStore>(ObjectStore);
-			services.RemoveAll<IDirectMessageRepository>();
-			services.AddSingleton<IDirectMessageRepository>(DirectMessageRepository);
 
 			services.RemoveAll<IChannelBroadcaster>();
 			services.AddSingleton<IChannelBroadcaster>(Broadcaster);

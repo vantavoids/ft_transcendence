@@ -12,7 +12,7 @@ public sealed class MessageTests
 	[Fact]
 	public void Create_HappyPath_PopulatesProperties()
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1001,
 			channelId: 42,
 			authorId: 7,
@@ -24,7 +24,7 @@ public sealed class MessageTests
 		var message = result.Value;
 
 		Assert.Equal(1001L, message.Id);
-		Assert.Equal(42L, message.ChannelId);
+		Assert.Equal(42L, message.ContainerId);
 		Assert.Equal(7L, message.AuthorId);
 		Assert.Equal("hello world", message.Content);
 		Assert.Null(message.ReplyToId);
@@ -36,7 +36,7 @@ public sealed class MessageTests
 	[Fact]
 	public void Create_WithReplyToId_PersistsReplyToId()
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1001, channelId: 42, authorId: 7,
 			content: "reply", replyToId: 999, now: Now);
 
@@ -51,7 +51,7 @@ public sealed class MessageTests
 	[InlineData("\t\n")]
 	public void Create_BlankContent_ReturnsContentRequired(string? content)
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1, channelId: 1, authorId: 1,
 			content: content, replyToId: null, now: Now);
 
@@ -64,7 +64,7 @@ public sealed class MessageTests
 	{
 		var content = new string('x', Message.MaxContentLen + 1);
 
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1, channelId: 1, authorId: 1,
 			content: content, replyToId: null, now: Now);
 
@@ -77,7 +77,7 @@ public sealed class MessageTests
 	{
 		var content = new string('x', Message.MaxContentLen);
 
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1, channelId: 1, authorId: 1,
 			content: content, replyToId: null, now: Now);
 
@@ -89,7 +89,7 @@ public sealed class MessageTests
 	[InlineData(-1)]
 	public void Create_NonPositiveId_ReturnsInvalidId(long id)
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: id, channelId: 1, authorId: 1,
 			content: "hi", replyToId: null, now: Now);
 
@@ -102,7 +102,7 @@ public sealed class MessageTests
 	[InlineData(-1)]
 	public void Create_NonPositiveChannelId_ReturnsInvalidChannelId(long channelId)
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1, channelId: channelId, authorId: 1,
 			content: "hi", replyToId: null, now: Now);
 
@@ -115,7 +115,7 @@ public sealed class MessageTests
 	[InlineData(-1)]
 	public void Create_NonPositiveAuthorId_ReturnsInvalidAuthorId(long authorId)
 	{
-		var result = Message.Create(
+		var result = Message.CreateForChannel(
 			id: 1, channelId: 1, authorId: authorId,
 			content: "hi", replyToId: null, now: Now);
 

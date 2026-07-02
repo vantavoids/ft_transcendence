@@ -4,6 +4,7 @@ using Chat.Application.Contracts;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.DirectMessages.SendMessage;
 using Chat.Domain.Attachments;
+using Chat.Domain.Messages;
 using Chat.Domain.Results;
 using Chat.UnitTests.Fakes;
 using Xunit;
@@ -14,7 +15,7 @@ public sealed class SendDirectMessageHandlerTests
 {
 	private sealed record Harness(
 		FakeCurrentUser CurrentUser,
-		FakeDirectMessageRepository Repository,
+		FakeMessageRepository Repository,
 		FakeAttachmentRepository AttachmentRepository,
 		FakeIdGenerator IdGenerator,
 		FakeUserClient UserClient,
@@ -27,7 +28,7 @@ public sealed class SendDirectMessageHandlerTests
 		BuildHandler(long userId = 42, long recipientId = 100)
 	{
 		var currentUser = new FakeCurrentUser { UserId = userId };
-		var repository = new FakeDirectMessageRepository();
+		var repository = new FakeMessageRepository();
 		var attachmentRepository = new FakeAttachmentRepository();
 		var ids = new FakeIdGenerator();
 		var userClient = new FakeUserClient();
@@ -54,10 +55,10 @@ public sealed class SendDirectMessageHandlerTests
 		var response = result.Value;
 
 		var saved = Assert.Single(h.Repository.Saved);
-		Assert.Equal(42L, saved.SenderId);
+		Assert.Equal(42L, saved.AuthorId);
 		Assert.Equal(100L, saved.RecipientId);
 		Assert.Equal("hello", saved.Content);
-		Assert.True(saved.ConversationId > 0);
+		Assert.True(saved.ContainerId > 0);
 
 		Assert.True(long.TryParse(response.Id, out var responseId));
 		Assert.Equal(responseId, saved.Id);
@@ -66,7 +67,7 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.Equal(42L, evt.SenderId);
 		Assert.Equal(100L, evt.RecipientId);
 		Assert.Equal(saved.Id, evt.MessageId);
-		Assert.Equal(saved.ConversationId, evt.ConversationId);
+		Assert.Equal(saved.ContainerId, evt.ConversationId);
 		Assert.Equal("hello", evt.Content);
 
 		var (recipientId, unicastMessage) = Assert.Single(h.Unicaster.Unicasts);
@@ -85,7 +86,7 @@ public sealed class SendDirectMessageHandlerTests
 
 		Assert.True(result.Succeeded);
 		var saved = Assert.Single(h.Repository.Saved);
-		Assert.Equal(555L, saved.ConversationId);                     // réutilisé, pas régénéré
+		Assert.Equal(555L, saved.ContainerId);                     // réutilisé, pas régénéré
 		Assert.Equal(555L, Assert.Single(h.EventBus.PublishedOf<ChatDmSent>()).ConversationId);
 	}
 
@@ -98,7 +99,7 @@ public sealed class SendDirectMessageHandlerTests
 			new SendDirectMessageCommand(RecipientId: 100, Content: "hi", ReplyToId: null, AttachmentIds: [], Nonce: new string('x', 65)));
 
 		Assert.True(result.IsFailure);
-		Assert.Equal(DirectMessageFailures.NonceTooLong, result.Error);
+		Assert.Equal(MessageFailures.NonceTooLong, result.Error);
 		Assert.Empty(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Unicaster.Unicasts);
@@ -166,7 +167,7 @@ public sealed class SendDirectMessageHandlerTests
 			new SendDirectMessageCommand(RecipientId: 100, Content: "   ", ReplyToId: null, AttachmentIds: [], Nonce: null));
 
 		Assert.True(result.IsFailure);
-		Assert.Equal(DirectMessageFailures.ContentRequired, result.Error);
+		Assert.Equal(MessageFailures.ContentRequired, result.Error);
 		Assert.Empty(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Unicaster.Unicasts);
@@ -187,7 +188,7 @@ public sealed class SendDirectMessageHandlerTests
 					Nonce: null));
 
 		Assert.True(result.IsFailure);
-		Assert.Equal(DirectMessageFailures.InvalidReplyTarget, result.Error);
+		Assert.Equal(MessageFailures.InvalidReplyTarget, result.Error);
 		Assert.Empty(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Unicaster.Unicasts);
@@ -198,7 +199,10 @@ public sealed class SendDirectMessageHandlerTests
 	{
 		var (h, handler) = BuildHandler(userId: 42);
 		h.Repository.WithConversation(42, 100, conversationId: 555);
-		h.Repository.WithReply(conversationId: 555, replyToId: 999);
+		h.Repository.Seed(Message.Reconstitute(
+			id: 999, containerId: 555, authorId: 100, recipientId: 42,
+			content: "original", replyToId: null, editedAt: null, isDeleted: false,
+			createdAt: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero)));
 
 		var result = await handler.HandleAsync(
 				new SendDirectMessageCommand(
@@ -210,9 +214,8 @@ public sealed class SendDirectMessageHandlerTests
 
 		Assert.True(result.Succeeded);
 
-		var saved = Assert.Single(h.Repository.Saved);
-		Assert.Equal(999L, saved.ReplyToId);
-		Assert.Equal(555L, saved.ConversationId);
+		var saved = Assert.Single(h.Repository.Saved, m => m.ReplyToId == 999L);
+		Assert.Equal(555L, saved.ContainerId);
 	}
 
 	private static DraftAttachment SeedDraft(FakeAttachmentRepository repo, long id, long uploaderId)
@@ -331,7 +334,7 @@ public sealed class SendDirectMessageHandlerTests
 		// with the message in the same batch; the fakes are decoupled, so mirror
 		// that persisted state by hand before exercising the dedup rehydration path
 		var saved = Assert.Single(h.Repository.Saved);
-		h.AttachmentRepository.SeedDmAttachment(saved.ConversationId, saved.Id, draft.ToMetadata());
+		h.AttachmentRepository.SeedDmAttachment(saved.ContainerId, saved.Id, draft.ToMetadata());
 
 		var second = await handler.HandleAsync(new SendDirectMessageCommand(
 			RecipientId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "n1"));

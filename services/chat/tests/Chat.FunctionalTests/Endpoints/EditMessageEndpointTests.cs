@@ -38,7 +38,7 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 	private static Message SeedMessage(ChatApiFactory f, long id, long channelId, long authorId)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: authorId,
+			id: id, containerId: channelId, authorId: authorId, recipientId: null,
 			content: "original", replyToId: null, editedAt: null,
 			isDeleted: false, createdAt: DateTimeOffset.UtcNow);
 		f.MessageRepository.Seed(message);
@@ -143,7 +143,7 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 	public async Task Patch_AlreadyDeletedMessage_Returns404()
 	{
 		var deleted = Message.Reconstitute(
-			id: 1, channelId: 100, authorId: 42,
+			id: 1, containerId: 100, authorId: 42, recipientId: null,
 			content: null, replyToId: null, editedAt: null,
 			isDeleted: true, createdAt: DateTimeOffset.UtcNow);
 		factory.MessageRepository.Seed(deleted);
