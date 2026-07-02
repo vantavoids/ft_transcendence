@@ -70,12 +70,16 @@ public sealed class CallRegistry(
 	// ---- call lifecycle ----
 
 	// registers a ringing call. returns false (user_busy) if either participant is
-	// already in a call, which keeps the one-call-per-user invariant intact.
+	// already in a call, which keeps the one-call-per-user invariant intact. a
+	// call_id already in use is also rejected: the id is client-supplied, so a
+	// collision would otherwise overwrite the live call and strand its participants.
 	public bool TryOffer(CallInfo info)
 	{
 		lock (_gate)
 		{
-			if (_userCall.ContainsKey(info.CallerId) || _userCall.ContainsKey(info.CalleeId))
+			if (_userCall.ContainsKey(info.CallerId)
+				|| _userCall.ContainsKey(info.CalleeId)
+				|| _byCall.ContainsKey(info.CallId))
 				return false;
 
 			var entry = new Entry { Info = info };
@@ -155,10 +159,11 @@ public sealed class CallRegistry(
 
 		if (timedOut is not null)
 		{
-			logger.LogInformation("Call {CallId}: unanswered after {Seconds}s, failing both parties",
+			// per docs/contracts/chat.md, an unanswered call fails the caller only;
+			// the callee's ringing UI times out client-side.
+			logger.LogInformation("Call {CallId}: unanswered after {Seconds}s, failing the caller",
 				timedOut.CallId, _answerTimeout.TotalSeconds);
-			_ = hub.Clients
-				.Users([timedOut.CallerId.ToString(), timedOut.CalleeId.ToString()])
+			_ = hub.Clients.User(timedOut.CallerId.ToString())
 				.CallFailed(new CallFailedEvent(timedOut.CallId.ToString(), "timeout"));
 		}
 	}

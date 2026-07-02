@@ -37,6 +37,20 @@ public sealed class CallRegistryTests
 	}
 
 	[Fact]
+	public void TryOffer_RejectsDuplicateCallId()
+	{
+		var (registry, _) = NewRegistry();
+		Assert.True(registry.TryOffer(Offer())); // call 900: Caller -> Callee
+
+		// a free pair reusing the same (client-supplied) call_id must be rejected,
+		// not overwrite the live call and strand its participants
+		Assert.False(registry.TryOffer(new CallInfo(CallId, Third, 4, "audio", "x")));
+
+		// the original call is intact: its real caller can still end it
+		Assert.NotNull(registry.End(CallId, Caller));
+	}
+
+	[Fact]
 	public void Answer_ByCallee_ReturnsCall_NonCalleeOrUnknown_ReturnsNull()
 	{
 		var (registry, _) = NewRegistry();
@@ -106,7 +120,7 @@ public sealed class CallRegistryTests
 	}
 
 	[Fact]
-	public async Task Timeout_Fires_CallFailed_ToBothParties_WhenUnanswered()
+	public async Task Timeout_Fires_CallFailed_ToCaller_WhenUnanswered()
 	{
 		var (registry, hub) = NewRegistry(timeoutSeconds: 1);
 		registry.TryOffer(Offer());
@@ -114,11 +128,9 @@ public sealed class CallRegistryTests
 		var failed = await hub.WaitForCallFailedAsync(TimeSpan.FromSeconds(4));
 
 		Assert.NotNull(failed);
-		Assert.Equal("timeout", failed!.Value.Evt.Reason);
+		Assert.Equal(Caller.ToString(), failed!.Value.UserId); // caller only, per contract
 		Assert.Equal(CallId.ToString(), failed.Value.Evt.CallId);
-		var sent = hub.Snapshot();
-		Assert.Contains(sent, s => s.UserId == Caller.ToString() && s.Evt.Reason == "timeout");
-		Assert.Contains(sent, s => s.UserId == Callee.ToString() && s.Evt.Reason == "timeout");
+		Assert.Equal("timeout", failed.Value.Evt.Reason);
 		// state cleared: the caller can offer again
 		Assert.True(registry.TryOffer(new CallInfo(905, Caller, Third, "audio", "x")));
 	}
@@ -156,12 +168,6 @@ public sealed class CallRegistryTests
 			return null;
 		}
 
-		public IReadOnlyList<(string UserId, CallFailedEvent Evt)> Snapshot()
-		{
-			lock (_lock)
-				return [.. _sent];
-		}
-
 		private void Record(string userId, CallFailedEvent evt)
 		{
 			lock (_lock)
@@ -178,22 +184,7 @@ public sealed class CallRegistryTests
 			public ISignalingClient Group(string g) => throw new NotSupportedException();
 			public ISignalingClient GroupExcept(string g, IReadOnlyList<string> e) => throw new NotSupportedException();
 			public ISignalingClient Groups(IReadOnlyList<string> g) => throw new NotSupportedException();
-			public ISignalingClient Users(IReadOnlyList<string> u) => new MultiClient(owner, u);
-		}
-
-		private sealed class MultiClient(RecordingSignalingHub owner, IReadOnlyList<string> userIds) : ISignalingClient
-		{
-			public Task CallFailed(CallFailedEvent evt)
-			{
-				foreach (var id in userIds)
-					owner.Record(id, evt);
-				return Task.CompletedTask;
-			}
-			public Task IncomingCall(IncomingCallEvent evt) => Task.CompletedTask;
-			public Task CallAnswered(CallAnsweredEvent evt) => Task.CompletedTask;
-			public Task CallRejected(CallIdEvent evt) => Task.CompletedTask;
-			public Task CallHungUp(CallIdEvent evt) => Task.CompletedTask;
-			public Task IceCandidate(IceCandidateEvent evt) => Task.CompletedTask;
+			public ISignalingClient Users(IReadOnlyList<string> u) => throw new NotSupportedException();
 		}
 
 		private sealed class Client(RecordingSignalingHub owner, string userId) : ISignalingClient
