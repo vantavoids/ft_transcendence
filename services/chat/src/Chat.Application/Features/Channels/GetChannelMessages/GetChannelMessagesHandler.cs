@@ -2,10 +2,10 @@ using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Domain.Results;
 
-namespace Chat.Application.Features.Messages.GetChannelMessages;
+namespace Chat.Application.Features.Channels.GetChannelMessages;
 
 internal sealed class GetChannelMessagesHandler(
 	ICurrentUser currentUser,

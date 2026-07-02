@@ -1,8 +1,8 @@
 using Chat.Application.Abstractions.Messaging;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Domain.Results;
 
-namespace Chat.Application.Features.Messages.SendMessage;
+namespace Chat.Application.Features.Channels.SendMessage;
 
 public sealed record SendMessageCommand(
 	long ChannelId,

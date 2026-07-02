@@ -3,12 +3,12 @@ using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Application.Contracts;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
 using Chat.Domain.Results;
 
-namespace Chat.Application.Features.Messages.SendMessage;
+namespace Chat.Application.Features.Channels.SendMessage;
 
 internal sealed class SendMessageHandler(
 	ICurrentUser currentUser,

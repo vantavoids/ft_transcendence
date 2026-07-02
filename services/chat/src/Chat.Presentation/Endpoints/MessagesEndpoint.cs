@@ -1,10 +1,11 @@
 using Carter;
 using Chat.Application.Abstractions.Messaging;
+using Chat.Application.Features.Channels.Common;
+using Chat.Application.Features.Channels.GetChannelMessages;
+using Chat.Application.Features.Channels.SendMessage;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.DeleteMessage;
 using Chat.Application.Features.Messages.EditMessage;
-using Chat.Application.Features.Messages.GetChannelMessages;
-using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Http.HttpResults;
 

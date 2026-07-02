@@ -1,4 +1,4 @@
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 
 namespace Chat.Application.Abstractions;
 
