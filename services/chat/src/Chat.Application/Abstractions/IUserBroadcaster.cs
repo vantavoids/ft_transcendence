@@ -11,18 +11,26 @@ public interface IUserBroadcaster
 	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
 
 	/// <summary>
+	/// purge every connection of <paramref name="userId"/> from the SignalR
+	/// groups of all channels they had joined.
+	/// </summary>
+	/// <returns>The number of channels subscriptions purged.</returns>
+	Task<int> EvictUserFromActiveChannels(long userId, CancellationToken ct);
+
+	/// <summary>
 	/// purges every connection of <paramref name="userId"/> from the SignalR
 	/// groups of all channels they had joined under <paramref name="guildId"/>.
 	/// used when a member is kicked/banned or leaves a guild so they stop
 	/// receiving channel broadcasts even if their client never unsubscribes.
-	/// returns the number of channel subscriptions purged.
 	/// </summary>
+	/// <returns>The number of channels subscriptions purged.</returns>
 	Task<int> EvictFromGuildChannelsAsync(long userId, long guildId, CancellationToken ct);
 
 	/// <summary>
 	/// purges every connection of <paramref name="userId"/> from the SignalR
 	/// group of a single channel. used when read access to one channel is
-	/// revoked without leaving the guild. returns the number of connections purged.
+	/// revoked without leaving the guild.
 	/// </summary>
+	/// <returns>The number of connections purged.</returns>
 	Task<int> EvictFromChannelAsync(long userId, long channelId, CancellationToken ct);
 }
