@@ -245,6 +245,12 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 		return row.GetValue<long>("conversation_id");
 	}
 
+	public async Task DeleteConversationAsync(long userId, CancellationToken ct)
+	{
+		var stmt = await statements.DeleteConversation.Value;
+		await session.ExecuteAsync(stmt.Bind(userId));
+	}
+
 	private static string? BuildPreview(string? content)
 	{
 		if (string.IsNullOrWhiteSpace(content))

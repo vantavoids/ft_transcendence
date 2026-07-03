@@ -37,4 +37,6 @@ public interface IMessageRepository
 	/// the winner is returned.
 	/// </summary>
 	Task<long> GetOrCreateConversationAsync(long senderId, long recipientId, long candidateId, CancellationToken ct);
+
+	Task DeleteConversationAsync(long userId, CancellationToken ct);
 }
