@@ -54,8 +54,8 @@ func extract(r *http.Request) string {
 			return strings.TrimSpace(token)
 		}
 	}
-
-	return ""
+	
+	return r.URL.Query().Get("access_token")
 }
 
 func check(jwtToken string, secret string) (int64, error) {
