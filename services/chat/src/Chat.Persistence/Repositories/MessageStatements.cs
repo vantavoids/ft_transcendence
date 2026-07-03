@@ -90,6 +90,8 @@ internal sealed class MessageStatements(ISession session)
 		"(user_id, partner_id, conversation_id, last_message_at, last_preview, is_archived) " +
 		"VALUES (?, ?, ?, ?, ?, false)"));
 
+	public Lazy<Task<PreparedStatement>> DeleteConversation { get; } = new(() => session.PrepareAsync("DELETE FROM user_conversations WHERE user_id = ?"));
+
 	// Conditional insert used by GetOrCreateConversationAsync to atomically decide
 	// the conversation_id on the very first message between two users.
 	// On a failed condition, Cassandra returns the current row's values (including
