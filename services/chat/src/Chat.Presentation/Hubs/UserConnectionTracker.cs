@@ -85,6 +85,24 @@ public sealed class UserConnectionTracker
 		}
 	}
 
+	// snapshot of every (connection, channel) the user has joined. pure read: the
+	// caller removes these from their SignalR groups and then calls TrackChannelLeft,
+	// so a mid-way failure can be safely retried.
+	public IReadOnlyList<(string ConnectionId, long ChannelId)> UserConnections(long userId)
+	{
+		if (!_users.TryGetValue(userId, out var state))
+			return [];
+
+		var matches = new List<(string, long)>();
+		lock (state)
+		{
+			foreach (var (connectionId, channels) in state.Connections)
+				foreach (var (channelId, _) in channels)
+						matches.Add((connectionId, channelId));
+		}
+		return matches;
+	}
+
 	// snapshot of every (connection, channel) the user has joined under the given
 	// guild. pure read: the caller removes these from their SignalR groups and
 	// then calls TrackChannelLeft, so a mid-way failure can be safely retried.
