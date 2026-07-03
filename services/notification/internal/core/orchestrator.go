@@ -76,7 +76,7 @@ func (o *Orchestrator) Create(ctx context.Context, in CreateInput) error {
 	}
 	log.Printf("notification created: id=%d type=%s user=%d", id, in.Type, in.UserID)
 
-	o.hub.Push(id, ToSSE(n))
+	o.hub.Push(in.UserID, ToSSE(n))
 	return nil
 }
 
