@@ -37,6 +37,17 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 				return failure.FailPermanent
 			}
 
+			// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
+			// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
+			blocked, err := orch.UserTunnel.IsBlockedBy(ctx, uid, ev.AuthorID)
+			if err != nil {
+				return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
+			}
+			if blocked {
+				log.Printf("notification canceled: %d is blocked by %d", uid, ev.AuthorID)
+				return nil
+			}
+
 			gOk, err := orch.IsMuted(ctx, uid, "guild", ev.GuildID)
 			if err != nil {
 				return failure.FailPermanent
@@ -72,6 +83,16 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
+		blocked, err := orch.UserTunnel.IsBlockedBy(ctx, ev.RecipientID, ev.SenderID)
+		if err != nil {
+			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
+		}
+		if blocked {
+			log.Printf("notification canceled: %d is blocked by %d", ev.RecipientID, ev.SenderID)
+			return nil
+		}
+
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.RecipientID,
 			Type:     TypeDM,
@@ -88,6 +109,16 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
+		blocked, err := orch.UserTunnel.IsBlockedBy(ctx, ev.AddresseeID, ev.RequesterID)
+		if err != nil {
+			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
+		}
+		if blocked {
+			log.Printf("notification canceled: %d is blocked by %d", ev.AddresseeID, ev.RequesterID)
+			return nil
+		}
+
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.AddresseeID,
 			Type:     TypeFriendRequest,
@@ -101,6 +132,8 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
+		// TODO: does guild invite is sent throught dm ?
 
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.InvitedUserID,
@@ -142,6 +175,16 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
+
+		blocked, err := orch.UserTunnel.IsBlockedBy(ctx, ev.CalleeID, ev.CallerID)
+		if err != nil {
+			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
+		}
+		if blocked {
+			log.Printf("notification canceled: %d is blocked by %d", ev.CalleeID, ev.CallerID)
+			return nil
+		}
+
 		return orch.CreateNotif(ctx, core.CreateInput{
 			UserID:   ev.CalleeID,
 			Type:     TypeIncomingCall,

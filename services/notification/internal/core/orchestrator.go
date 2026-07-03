@@ -22,11 +22,11 @@ type Orchestrator struct {
 	hub     *Hub
 
 	snowflake  *snowflake.Generator
-	userTunnel RelationshipChecker
+	UserTunnel RelationshipChecker
 }
 
 func NewOrchestrator(db *pgxpool.Pool, hub *Hub, queries *database.Queries, sflk *snowflake.Generator, userClient RelationshipChecker) (*Orchestrator, error) {
-	return &Orchestrator{db: db, queries: queries, hub: hub, snowflake: sflk, userTunnel: userClient}, nil
+	return &Orchestrator{db: db, queries: queries, hub: hub, snowflake: sflk, UserTunnel: userClient}, nil
 }
 
 type CreateInput struct {
@@ -42,19 +42,6 @@ type RelationshipChecker interface {
 }
 
 func (o *Orchestrator) CreateNotif(ctx context.Context, in CreateInput) error {
-
-	// TODO: Should fail/open or fail/close when IsBlockedBy (user service down)
-	// this means that the event has to retry until user service is up again, this can soft lock all events because we are running on only one worker
-	if in.ActorID != nil {
-		blocked, err := o.userTunnel.IsBlockedBy(ctx, in.UserID, *in.ActorID)
-		if err != nil {
-			return fmt.Errorf("user client: %w: %s", failure.FailTemporary, err)
-		}
-		if blocked {
-			log.Printf("notification canceled: %d is blocked by %d", in.UserID, *in.ActorID)
-			return nil
-		}
-	}
 
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
