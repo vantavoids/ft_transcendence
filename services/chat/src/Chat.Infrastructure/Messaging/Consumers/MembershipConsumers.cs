@@ -1,4 +1,5 @@
 using Chat.Application.Abstractions;
+using Chat.Application.Abstractions.Persistence;
 using Chat.Infrastructure.Messaging.Contracts;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -7,8 +8,7 @@ namespace Chat.Infrastructure.Messaging.Consumers;
 
 public sealed class GuildMemberJoinedConsumer(
 	IUserBroadcaster broadcaster,
-	ILogger<GuildMemberJoinedConsumer> logger)
-	: IConsumer<GuildMemberJoined>
+	ILogger<GuildMemberJoinedConsumer> logger): IConsumer<GuildMemberJoined>
 {
 	public async Task Consume(ConsumeContext<GuildMemberJoined> context)
 	{
@@ -28,8 +28,7 @@ public sealed class GuildMemberJoinedConsumer(
 
 public sealed class GuildMemberLeftConsumer(
 	IUserBroadcaster broadcaster,
-	ILogger<GuildMemberLeftConsumer> logger)
-	: IConsumer<GuildMemberLeft>
+	ILogger<GuildMemberLeftConsumer> logger): IConsumer<GuildMemberLeft>
 {
 	public async Task Consume(ConsumeContext<GuildMemberLeft> context)
 	{
@@ -54,13 +53,38 @@ public sealed class GuildMemberLeftConsumer(
 	}
 }
 
-public sealed class UserLoggedOutConsumer(ILogger<UserLoggedOutConsumer> logger)
-	: IConsumer<UserLoggedOut>
+public sealed class UserLoggedOutConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<UserLoggedOutConsumer> logger): IConsumer<UserLoggedOut>
 {
-	public Task Consume(ConsumeContext<UserLoggedOut> context)
+	public async Task Consume(ConsumeContext<UserLoggedOut> context)
 	{
 		var msg = context.Message;
-		logger.LogDebug("user.logged_out consumed: user_id={UserId}", msg.UserId);
-		return Task.CompletedTask;
+
+		var evicted = await broadcaster.EvictUserFromActiveChannels(msg.UserId, context.CancellationToken);
+		
+		logger.LogDebug(
+			"user.logged_out consumed: user_id={UserId} evicted_subscriptions={Evicted}"
+			, msg.UserId, evicted);
+	}
+}
+
+public sealed class UserDeletedConsumer(
+	IUserBroadcaster broadcaster,
+	IMessageRepository message,
+	ILogger<UserDeletedConsumer> logger): IConsumer<UserDeleted>
+{
+	public async Task Consume(ConsumeContext<UserDeleted> context)
+	{
+		var msg = context.Message;
+
+		var evicted = await broadcaster.EvictUserFromActiveChannels(msg.UserId, context.CancellationToken);
+
+		await message.DeleteConversationAsync(msg.UserId, context.CancellationToken);
+		// TODO: delete channel_read_states, and dm_unread_counts
+
+		logger.LogDebug(
+			"user.deleted consumed: user_id={UserId} evicted_subscriptions={Evicted}"
+			, msg.UserId, evicted);
 	}
 }

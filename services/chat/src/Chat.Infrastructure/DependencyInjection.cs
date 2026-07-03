@@ -55,6 +55,7 @@ public static class DependencyInjection
 			x.AddConsumer<GuildMemberJoinedConsumer>();
 			x.AddConsumer<GuildMemberLeftConsumer>();
 			x.AddConsumer<UserLoggedOutConsumer>();
+			x.AddConsumer<UserDeletedConsumer>();
 
 			x.UsingRabbitMq((ctx, cfg) =>
 			{
