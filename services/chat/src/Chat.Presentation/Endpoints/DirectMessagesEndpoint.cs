@@ -3,6 +3,7 @@ using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.DirectMessages.SendMessage;
 using Chat.Application.Features.DirectMessages.ListMessages;
+using Chat.Application.Features.DirectMessages.ListConversations;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -12,9 +13,12 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 {
 	public void AddRoutes(IEndpointRouteBuilder app)
 	{
-		var group = app.MapGroup("/dms/{userId:long}/messages").WithTags("Direct Messages");
-		group.MapPost("/", SendAsync);
-		group.MapGet("/", ListAsync);
+		var messagesGroup = app.MapGroup("/dms/{userId:long}/messages").WithTags("Direct Messages");
+		messagesGroup.MapPost("/", SendAsync);
+		messagesGroup.MapGet("/", ListAsync);
+
+		var conversationsGroup = app.MapGroup("/dms").WithTags("Direct Messages");
+		conversationsGroup.MapGet("/", ListConversationsAsync);
 	}
 
 	private static async Task<Results<
@@ -69,6 +73,18 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 		return result.Succeeded
 			? TypedResults.Ok(result.Value)
 			: MapListError(result.Error);
+	}
+
+	private static async Task<Ok<IReadOnlyList<DmConversationResponse>>> ListConversationsAsync(
+		bool? include_archived,
+		IQueryHandler<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new ListDmConversationsQuery(include_archived ?? false),
+			cancellationToken);
+
+		return TypedResults.Ok(result.Value);
 	}
 
 	private static Results<

@@ -1,6 +1,7 @@
 using Cassandra;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Domain.Attachments;
+using Chat.Domain.Conversations;
 using Chat.Domain.Messages;
 
 namespace Chat.Persistence.Repositories;
@@ -249,6 +250,24 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 	{
 		var stmt = await statements.DeleteConversation.Value;
 		await session.ExecuteAsync(stmt.Bind(userId));
+	}
+
+	public async Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct)
+	{
+		var stmt = await statements.SelectConversationsByUser.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(userId));
+
+		// last_message_at can be null between GetOrCreateConversationAsync
+		// creating the row and the first message's AddAsync populating it; such
+		// a conversation has no message to preview yet, so it is not listed
+		return rows
+			.Where(row => row.GetValue<DateTime?>("last_message_at") is not null)
+			.Select(row => new DmConversation(
+				PartnerId: row.GetValue<long>("partner_id"),
+				LastMessageAt: new DateTimeOffset(row.GetValue<DateTime>("last_message_at"), TimeSpan.Zero),
+				LastPreview: row.GetValue<string?>("last_preview"),
+				IsArchived: row.GetValue<bool>("is_archived")))
+			.ToList();
 	}
 
 	private static string? BuildPreview(string? content)

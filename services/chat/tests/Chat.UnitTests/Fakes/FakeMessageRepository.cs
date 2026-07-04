@@ -1,5 +1,6 @@
 using Chat.Application.Abstractions.Persistence;
 using Chat.Domain.Attachments;
+using Chat.Domain.Conversations;
 using Chat.Domain.Messages;
 
 namespace Chat.UnitTests.Fakes;
@@ -12,6 +13,7 @@ public sealed class FakeMessageRepository : IMessageRepository
 	private readonly Dictionary<(long, long), long> _conversations = [];
 	private readonly Dictionary<long, IReadOnlyList<AttachmentMetadata>> _attachments = [];
 	private readonly List<long> _deletedConversationsFor = [];
+	private readonly Dictionary<(long UserId, long PartnerId), DmConversation> _conversationSummaries = [];
 
 	public IReadOnlyList<Message> Saved => _saved;
 	public IReadOnlyList<long> DeletedConversationsFor => _deletedConversationsFor;
@@ -24,6 +26,10 @@ public sealed class FakeMessageRepository : IMessageRepository
 	public void WithConversation(long userA, long userB, long conversationId) =>
 		_conversations[Pair(userA, userB)] = conversationId;
 
+	/// <summary>seeds userId's own row for the userId/partnerId DM thread (asymmetric, mirrors user_conversations)</summary>
+	public void WithConversationSummary(long userId, DmConversation conversation) =>
+		_conversationSummaries[(userId, conversation.PartnerId)] = conversation;
+
 	public void Reset()
 	{
 		_saved.Clear();
@@ -32,6 +38,7 @@ public sealed class FakeMessageRepository : IMessageRepository
 		_conversations.Clear();
 		_attachments.Clear();
 		_deletedConversationsFor.Clear();
+		_conversationSummaries.Clear();
 		Updated.Clear();
 		SoftDeleted.Clear();
 	}
@@ -120,6 +127,16 @@ public sealed class FakeMessageRepository : IMessageRepository
 	{
 		_deletedConversationsFor.Add(userId);
 		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct)
+	{
+		var result = _conversationSummaries
+			.Where(kv => kv.Key.UserId == userId)
+			.Select(kv => kv.Value)
+			.ToList();
+
+		return Task.FromResult<IReadOnlyList<DmConversation>>(result);
 	}
 
 	public void Seed(Message message) => _saved.Add(message);

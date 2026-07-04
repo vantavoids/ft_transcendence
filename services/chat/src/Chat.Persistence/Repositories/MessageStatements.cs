@@ -101,6 +101,9 @@ internal sealed class MessageStatements(ISession session)
 		"(user_id, partner_id, conversation_id, last_message_at, last_preview, is_archived) " +
 		"VALUES (?, ?, ?, null, null, false) IF NOT EXISTS"));
 
+	public Lazy<Task<PreparedStatement>> SelectConversationsByUser { get; } = new(() => session.PrepareAsync(
+		"SELECT partner_id, last_message_at, last_preview, is_archived FROM user_conversations WHERE user_id = ?"));
+
 
 	/* ### Attachements ### */
 
