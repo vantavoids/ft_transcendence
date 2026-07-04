@@ -10,8 +10,8 @@ import (
 )
 
 type Payload struct {
-	Muted      bool      `json:"muted"`
-	MutedUntil time.Time `json:"muted_until"`
+	Muted      bool       `json:"muted"`
+	MutedUntil *time.Time `json:"muted_until"`
 }
 
 // PUT /notifications/preferences/{scope_type}/{scope_id}
@@ -36,19 +36,24 @@ func upsertPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 		}
 
 		var body Payload
-		err = json.NewDecoder(r.Body).Decode(&body)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			writeJSON(w, http.StatusBadRequest, errorBody("invalid request body"))
 			return
 		}
 
-		orch.UpsertPrefs(r.Context(), core.UpsertInput{
+		pref, err := orch.UpsertPrefs(r.Context(), core.UpsertInput{
 			UserID:     userID,
 			ScopeType:  scopeType,
 			ScopeID:    scopeID,
 			Muted:      body.Muted,
 			MutedUntil: body.MutedUntil,
 		})
+		if err != nil {
+			writeError(w, r, err)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, core.ToPreferenceDTO(pref))
 	}
 }
 
@@ -71,6 +76,7 @@ func listPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 		for i, n := range rows {
 			dtos[i] = core.ToPreferenceDTO(n)
 		}
+
 		writeJSON(w, http.StatusOK, dtos)
 	}
 }
