@@ -6,14 +6,19 @@ services:
     build:
       context: ${PWD}/services/gateway
       dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:8080:8080"
+    # API over a unix socket shared with nginx, no TCP; :9090 is bridge-only for Prometheus.
+    expose:
+      - "9090"
+    volumes:
+      - gateway_socket:/run/gateway:z
     env_file: ${PWD}/services/gateway/.env
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      GATEWAY_SOCKET: /run/gateway/gateway.sock
+      GATEWAY_METRICS_PORT: "9090"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:$$GATEWAY_PORT/healthz"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,3 +34,7 @@ services:
         condition: service_healthy
       user:
         condition: service_healthy
+
+volumes:
+  gateway_socket:
+

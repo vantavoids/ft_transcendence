@@ -3,10 +3,7 @@ services:
     container_name: frontend
     image: frontend
     pull_policy: never
-    # published on loopback only so host-net nginx can proxy it at / ; not
-    # reachable off-host (nginx is the sole LAN-facing ingress).
-    ports:
-      - "127.0.0.1:3000:3000"
+    # no host port: reached only through nginx over the unix socket below.
     build:
       context: ${PWD}/frontend
       dockerfile: Dockerfile
@@ -18,3 +15,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # Next.js can't listen on a unix socket, so this bridges nginx's socket to the
+  # frontend's TCP port; the frontend itself has no host-published port (HTTPS-only).
+  frontend-socket:
+    container_name: frontend-socket
+    image: docker.io/alpine/socat
+    command: UNIX-LISTEN:/run/frontend/frontend.sock,fork,mode=0666 TCP:frontend:3000
+    volumes:
+      - frontend_socket:/run/frontend:z
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  frontend_socket:

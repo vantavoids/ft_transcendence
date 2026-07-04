@@ -8,12 +8,13 @@ import (
 )
 
 type Config struct {
-	Dev       bool
-	Debug     bool
-	Port      string
-	JWTSecret string
-	Limits    Limits
-	Services  Services
+	Dev         bool
+	Debug       bool
+	SocketPath  string
+	MetricsPort string
+	JWTSecret   string
+	Limits      Limits
+	Services    Services
 }
 
 type Limits struct {
@@ -83,12 +84,13 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Dev:       dev,
-		Debug:     debug,
-		Port:      envOrDefaultStr("GATEWAY_PORT", "8080"),
-		JWTSecret: secret,
-		Limits:    limits,
-		Services:  services,
+		Dev:         dev,
+		Debug:       debug,
+		SocketPath:  envOrDefaultStr("GATEWAY_SOCKET", "/run/gateway/gateway.sock"),
+		MetricsPort: envOrDefaultStr("GATEWAY_METRICS_PORT", "9090"),
+		JWTSecret:   secret,
+		Limits:      limits,
+		Services:    services,
 	}, nil
 }
 

@@ -102,16 +102,17 @@ local_resource(
 local_resource(
     'nginx',
     serve_cmd=container_serve(DOCKER, FLAGS, 'nginx',
-        # host networking so nginx reaches each backend on the host loopback
-        # (127.0.0.1:<port>, matching infra/nginx/nginx.conf) and sees the real
-        # client IP for the gateway's rate limiter.
+        # host networking so nginx sees the real client IP for the gateway rate
+        # limiter; app backends (gateway, frontend) are reached over unix sockets.
         '--network host ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
         '-v $(pwd)/certs:/etc/nginx/certs:ro ' +
+        '-v gateway_socket:/run/gateway ' +
+        '-v frontend_socket:/run/frontend ' +
         'docker.io/nginx:alpine'
     ),
-    resource_deps=['cert-gen', 'dev-network', 'gateway', 'frontend'],
+    resource_deps=['cert-gen', 'dev-network', 'gateway', 'frontend', 'frontend-socket'],
     labels=['infra'],
     links=['https://localhost:1443', 'https://localhost:1443/docs'],
 )
