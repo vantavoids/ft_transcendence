@@ -11,8 +11,10 @@ public sealed class FakeMessageRepository : IMessageRepository
 	private readonly Dictionary<(long SenderId, long RecipientId, string Nonce), long> _dmNonces = [];
 	private readonly Dictionary<(long, long), long> _conversations = [];
 	private readonly Dictionary<long, IReadOnlyList<AttachmentMetadata>> _attachments = [];
+	private readonly List<long> _deletedConversationsFor = [];
 
 	public IReadOnlyList<Message> Saved => _saved;
+	public IReadOnlyList<long> DeletedConversationsFor => _deletedConversationsFor;
 
 	/// <summary>attachments persisted alongside each message, keyed by message id</summary>
 	public IReadOnlyDictionary<long, IReadOnlyList<AttachmentMetadata>> SavedAttachments => _attachments;
@@ -29,6 +31,7 @@ public sealed class FakeMessageRepository : IMessageRepository
 		_dmNonces.Clear();
 		_conversations.Clear();
 		_attachments.Clear();
+		_deletedConversationsFor.Clear();
 		Updated.Clear();
 		SoftDeleted.Clear();
 	}
@@ -111,6 +114,12 @@ public sealed class FakeMessageRepository : IMessageRepository
 			_conversations[pair] = id = candidateId;
 
 		return Task.FromResult(id);
+	}
+
+	public Task DeleteConversationAsync(long userId, CancellationToken ct)
+	{
+		_deletedConversationsFor.Add(userId);
+		return Task.CompletedTask;
 	}
 
 	public void Seed(Message message) => _saved.Add(message);
