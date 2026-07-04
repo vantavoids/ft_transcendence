@@ -191,7 +191,7 @@ Permanently delete the authenticated user's account.
 The service:
 1. Soft-deletes the `users_auth` row (sets `deleted_at`), which automatically frees the email for re-registration (the unique index on email is filtered by `deleted_at IS NULL`).
 2. Revokes the active refresh token (`refresh_token_revoked = TRUE`).
-3. Publishes `user.deleted { user_id }` to RabbitMQ. Every other service is responsible for cascading its own cleanup (see consumers below).
+3. Publishes `user.deleted { user_id, email }` to RabbitMQ. Every other service is responsible for cascading its own cleanup (see consumers below).
 
 **Response `204`:** No content. The access token currently held by the caller continues to validate locally at the API Gateway until its 15-minute TTL elapses, but no new tokens can be issued.
 
@@ -248,7 +248,36 @@ OAuth callback - exchanges the authorization code for tokens, creates or logs in
 
 ---
 
-## JWT Claims
+## Internal Endpoints
+
+Reachable only over the docker network. The API Gateway forwards `/api/{service}/vN/...`; `/internal/...` has no version segment and is not routed. No `Authorization` header required.
+
+### GET /internal/users/{user_id}/data-export
+
+The user's Auth-owned data for a GDPR self-serve export. Called by the User Service's public data-export aggregator, which fans out to every service and stitches the results into one bundle.
+
+**Auth required:** None. Not reachable through the API Gateway. Callers reach this directly over the docker network (e.g. `http://auth:8080/internal/users/{user_id}/data-export`).
+
+**Response `200`:**
+```json
+{
+  "user_id": "123",
+  "email": "user@example.com",
+  "email_verified": true,
+  "oauth_provider": "google",
+  "oauth_id": "108120xxxxxxxxxxxxx",
+  "created_at": "2026-01-15T09:00:00Z"
+}
+```
+
+Auth's export is the account's identity and sign-in method: the email it was registered with, whether that email is verified, the linked OAuth provider (resolved from the `oauth_provider` enum to a name: `github` / `google` / `42`), the user's account id **at that provider**, and when the account was created. `email` is `null` for OAuth-only accounts; `oauth_provider` and `oauth_id` are `null` for email/password-only accounts.
+
+**Scope.** The **credential secrets are never exported**: `password_hash`, `refresh_token_hash`, and the rest of the refresh-token fields are excluded by design (exporting a hash serves the subject nothing and widens the blast radius of a leaked bundle). Internal lifecycle columns (`updated_at`, `deleted_at`) are also omitted as not meaningfully the subject's own data. An unknown user returns `200` with `null` fields (a GDPR export, not a lookup); the aggregator treats that as no Auth data.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `user_id` is not a positive snowflake |
 
 Access tokens include:
 ```json
@@ -270,5 +299,5 @@ Access tokens include:
 |-------|---------|---------|
 | `user.registered` | `{ user_id, email }` | Successful register (email or OAuth) |
 | `user.logged_out` | `{ user_id }` | Successful logout |
-| `user.deleted` | `{ user_id }` | Account deletion via `DELETE /auth/me` |
+| `user.deleted` | `{ user_id, email }` | Account deletion via `DELETE /auth/me`. `email` is included so Notification can send the `account_deleted` confirmation (the row is gone by consume time; may be `null` for OAuth-only accounts with no stored email). |
 
