@@ -26,7 +26,7 @@ local_resource(
     'rabbitmq',
     serve_cmd=container_serve(DOCKER, FLAGS, 'rabbitmq',
         '--network ft_transcendence ' +
-        '-p 5672:5672 -p 15672:15672 -p 15692:15692 ' +
+        '-p 127.0.0.1:5672:5672 -p 127.0.0.1:15672:15672 -p 127.0.0.1:15692:15692 ' +
         '-e RABBITMQ_DEFAULT_USER=' + MQ_USER + ' ' +
         '-e RABBITMQ_DEFAULT_PASS=' + MQ_PASS + ' ' +
         '-v $(pwd)/infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro ' +
@@ -46,7 +46,7 @@ local_resource(
     # matching compose.yaml (avoids the podman one-shot --requires deadlock).
     serve_cmd=container_serve(DOCKER, FLAGS, 'minio',
         '--network ft_transcendence ' +
-        '-p 9000:9000 -p 9001:9001 ' +
+        '-p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 ' +
         '-e MINIO_ROOT_USER=' + MINIO_KEY + ' ' +
         '-e MINIO_ROOT_PASSWORD=' + MINIO_SECRET + ' ' +
         '-e MINIO_BUCKET=' + MINIO_BUCKET + ' ' +
