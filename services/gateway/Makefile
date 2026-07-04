@@ -8,6 +8,16 @@ RESET  = \033[0m
 TARGET = gateway_binary
 SRCS = $(shell find . -name '*.go')
 
+# container engine: podman preferred, docker fallback; override with ENGINE=docker
+ENGINE ?= $(shell if command -v podman >/dev/null 2>&1; then echo podman; elif command -v docker >/dev/null 2>&1; then echo docker; fi)
+ifeq ($(ENGINE),docker)
+    COMPOSE := docker compose
+    DOCKER  := docker
+else
+    COMPOSE := podman-compose
+    DOCKER  := podman
+endif
+
 all: build
 
 run: $(TARGET)
@@ -41,12 +51,12 @@ clean:
 fclean: clean
 
 up:
-	docker compose up -d
+	$(COMPOSE) up -d
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 ps:
-	docker ps -a
+	$(DOCKER) ps -a
 
 .PHONY: all build run re clean fclean up down ps
