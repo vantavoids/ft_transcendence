@@ -185,17 +185,22 @@ type UpsertInput struct {
 	ScopeType  string
 	ScopeID    int64
 	Muted      bool
-	MutedUntil time.Time
+	MutedUntil *time.Time
 }
 
 func (o *Orchestrator) UpsertPrefs(ctx context.Context, u UpsertInput) (database.NotificationPreference, error) {
+
+	mutedUntil := pgtype.Timestamptz{}
+	if u.MutedUntil != nil {
+		mutedUntil = pgtype.Timestamptz{Time: *u.MutedUntil, Valid: true}
+	}
 
 	p, err := o.queries.UpsertNotificationPreference(ctx, database.UpsertNotificationPreferenceParams{
 		UserID:     u.UserID,
 		ScopeType:  u.ScopeType,
 		ScopeID:    u.ScopeID,
 		Muted:      u.Muted,
-		MutedUntil: pgtype.Timestamptz{Time: u.MutedUntil, Valid: !u.MutedUntil.IsZero()},
+		MutedUntil: mutedUntil,
 	})
 	if err != nil {
 		return p, err

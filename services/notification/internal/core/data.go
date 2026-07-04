@@ -112,16 +112,17 @@ type PreferenceDTO struct {
 	ScopeType  PreferenceScopeType `json:"scope_type"`
 	ScopeID    string              `json:"scope_id"`
 	Muted      bool                `json:"muted"`
-	MutedUntil time.Time           `json:"muted_until"`
+	MutedUntil *time.Time          `json:"muted_until,omitempty"`
 }
 
 func ToPreferenceDTO(pref database.NotificationPreference) PreferenceDTO {
-	scopeId := strconv.FormatInt(pref.ScopeID, 10)
-
-	return PreferenceDTO{
-		ScopeType:  PreferenceScopeType(pref.ScopeType),
-		ScopeID:    scopeId,
-		Muted:      pref.Muted,
-		MutedUntil: pref.MutedUntil.Time,
+	dto := PreferenceDTO{
+		ScopeType: PreferenceScopeType(pref.ScopeType),
+		ScopeID:   strconv.FormatInt(pref.ScopeID, 10),
+		Muted:     pref.Muted,
 	}
+	if pref.MutedUntil.Valid {
+		dto.MutedUntil = &pref.MutedUntil.Time
+	}
+	return dto
 }
