@@ -3,6 +3,8 @@ services:
     container_name: frontend
     image: frontend
     pull_policy: never
+    # published on loopback only so host-net nginx can proxy it at / ; not
+    # reachable off-host (nginx is the sole LAN-facing ingress).
     ports:
       - "127.0.0.1:3000:3000"
     build:

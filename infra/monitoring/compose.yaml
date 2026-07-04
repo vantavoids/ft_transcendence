@@ -17,8 +17,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=15d
-    ports:
-      - "127.0.0.1:9090:9090"
+    # no host port: Grafana queries it over the compose network as prometheus:9090.
     volumes:
       - ${PWD}/infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
       - prometheus_data:/prometheus
@@ -41,14 +40,14 @@ services:
     container_name: grafana
     image: docker.io/grafana/grafana:11.3.0
     restart: unless-stopped
+    # published on loopback only so host-net nginx can proxy it at /grafana; not
+    # reachable off-host.
     ports:
       - "127.0.0.1:3001:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      # reachable only through nginx TLS at /grafana (1443 is nginx's fixed entry
-      # port); the loopback 3001 port below is just the proxy hop, like 8080/3000.
       GF_SERVER_ROOT_URL: https://localhost:1443/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:

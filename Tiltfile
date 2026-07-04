@@ -36,7 +36,8 @@ local_resource(
     ),
     resource_deps=['dev-network'],
     labels=['infra'],
-    links=['http://localhost:15672'],
+    # management UI serves under /rabbitmq (management.path_prefix in rabbitmq.conf)
+    links=['http://localhost:15672/rabbitmq'],
 )
 
 local_resource(
@@ -52,13 +53,17 @@ local_resource(
         '-e MINIO_USER_BUCKET=' + MINIO_USER_BUCKET + ' ' +
         '-e MINIO_GUILD_BUCKET=' + MINIO_GUILD_BUCKET + ' ' +
         '-e MINIO_PROMETHEUS_AUTH_TYPE=public ' +
+        # console is served through nginx at /minio (matches compose); this points
+        # the console at that base so its assets/redirects resolve there. Note this
+        # makes direct :9001 console access break, so the link below is the nginx one.
+        '-e MINIO_BROWSER_REDIRECT_URL=' + BASE_URL + '/minio ' +
         '-v minio_data:/data ' +
         '-v $(pwd)/infra/minio/entrypoint.sh:/usr/local/bin/minio-entrypoint.sh:ro ' +
         '--entrypoint sh docker.io/minio/minio /usr/local/bin/minio-entrypoint.sh'
     ),
     resource_deps=['dev-network'],
     labels=['infra'],
-    links=['http://localhost:9001'],
+    links=[BASE_URL + '/minio'],
 )
 
 local_resource(
@@ -97,6 +102,9 @@ local_resource(
 local_resource(
     'nginx',
     serve_cmd=container_serve(DOCKER, FLAGS, 'nginx',
+        # host networking so nginx reaches each backend on the host loopback
+        # (127.0.0.1:<port>, matching infra/nginx/nginx.conf) and sees the real
+        # client IP for the gateway's rate limiter.
         '--network host ' +
         '-v $(pwd)/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro ' +
         '-v $(pwd)/infra/nginx/docs.html:/etc/nginx/docs.html:ro ' +
