@@ -28,20 +28,22 @@ scrape_configs:
     static_configs:
       - targets: ["chat-db:9180"]
 
-  # disabled until the services expose /metrics (#90, part of the per-service
-  # OpenTelemetry epic #227). re-enable per service as each instrumentation lands,
-  # otherwise these six sit permanently DOWN. live app liveness is already covered
-  # by the healthz blackbox job below.
-  # - job_name: services
-  #   metrics_path: /metrics
-  #   static_configs:
-  #     - targets:
-  #         - auth:8080
-  #         - user:8080
-  #         - guild:8080
-  #         - chat:8080
-  #         - notification:8080
-  #         - gateway:8080
+  - job_name: services
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["auth:8080"]
+        labels: { service: auth }
+      - targets: ["guild:8080"]
+        labels: { service: guild }
+      - targets: ["chat:8080"]
+        labels: { service: chat }
+      - targets: ["notification:8080"]
+        labels: { service: notification }
+      - targets: ["gateway:8080"]
+        labels: { service: gateway }
+      # user (#229) not instrumented yet
+      # - targets: ["user:8080"]
+      #   labels: { service: user }
 
   # black-box liveness via each service's existing /healthz, probed through the
   # blackbox exporter. the probe URL is carried in __param_target and the real
