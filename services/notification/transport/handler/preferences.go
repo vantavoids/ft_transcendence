@@ -41,6 +41,17 @@ func upsertPreferenceHandler(orch *core.Orchestrator) http.HandlerFunc {
 			return
 		}
 
+		if body.MutedUntil != nil {
+			if !body.Muted {
+				writeJSON(w, http.StatusBadRequest, errorBody("invalid muted_until requires muted=true"))
+				return
+			}
+			if body.MutedUntil.Before(time.Now()) {
+				writeJSON(w, http.StatusBadRequest, errorBody("invalid muted_until must be in the future"))
+				return
+			}
+		}
+
 		pref, err := orch.UpsertPrefs(r.Context(), core.UpsertInput{
 			UserID:     userID,
 			ScopeType:  scopeType,
