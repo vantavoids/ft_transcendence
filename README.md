@@ -536,15 +536,16 @@ The data and real-time layers had their own traps. ScyllaDB partitions messages 
 
 ### `jramiro` - API Gateway / Secret Management / Frontend / Monitoring
 
-- Implemented the API Gateway in Go end-to-end: local JWT verification via `golang-jwt` (no per-request hop to Auth on the hot path), two stacked rate-limiting layers (per-IP and per-UID, backed by an in-memory store with TTL eviction), schema-aware route table that fetches the current OpenAPI of each downstream service to validate incoming requests, timeout middleware, `/metrics` passthrough for Prometheus scraping, healthcheck endpoint, and the `/api/{service}/vN/...` reverse-proxy convention that the rest of the frontend depends on
-- Fixed the gateway schema-retrieval logic bug (`#130`) that was masking validation failures on services with multiple route prefixes
-- Built the `tools/secretman` Go CLI for SOPS-encrypted per-service env files: ensure / encrypt / decrypt / refresh workflows, age-binary extraction and pinning, age key bootstrapping for new contributors with their public key auto-registered in `.sops.yaml` (with a `# user@hostname` authored comment), archive + checksum helpers for distributing encrypted bundles, plaintext-path masking in user-facing output, and a BetterLeaks pre-commit hook installer that catches plaintext-secret commits before they leave the workstation
-- Maintained the Tiltfile network and port wiring across services (`#162`) so `tilt up` brings everything up without port conflicts on contributors' machines
-- Co-developed the frontend with tstephan on Next.js 16 (App Router, React Server Components, design system, Tailwind, lucide-react), shipping pages and components that consume the design system tokens rather than reinventing styling
-- Partnered with yandry on the monitoring stack: helped wire each service's OpenTelemetry metric exporter, configured Prometheus scrape targets, contributed Grafana dashboards and alerting rules
-- Built the "Download my data" and "Delete my account" GDPR frontend flows with tstephan, including the confirmation modal and the streaming JSON download
+### `jramiro` - Art Direction / Frontend Wireframes / API Gateway / Secret Management / Infra Support / Terms of Service
 
-**Challenges:** TBD
+- Led the frontend art direction and produced the first wireframes for the main views, which served as the visual and UX baseline for later implementation
+- Implemented the **API Gateway** service in Go, including `/api/{service}/vN/...` routing, local JWT validation, dual rate limiting (per-IP and per-UID), OpenAPI-based request validation, and timeout middleware
+- Designed and built **`tools/secretman`** for encrypted secret workflows with SOPS: ensure/encrypt/decrypt/refresh flows, age key bootstrap for new contributors, `.sops.yaml` updates, archive + checksum helpers, sensitive output masking, and pre-commit leak-prevention hook setup
+- Provided targeted infrastructure support with **Yandry**
+- Drafted and integrated the project's **Terms of Service**
+
+**Challenges:** 
+- Life
 
 ---
 
