@@ -12,20 +12,22 @@ services:
   nginx:
     container_name: nginx
     image: docker.io/nginx:alpine
-    # nginx is the sole LAN-facing ingress. Host networking so it sees the real
-    # client IP (the gateway's per-IP rate limiting depends on it; a bridged nginx
-    # masquerades every client to one address). It reaches each backend over the
-    # host loopback (127.0.0.1:<port>), and every one of those ports is published
-    # to 127.0.0.1 only, so nothing but nginx (1080/1443) is on 0.0.0.0.
+    # sole LAN-facing ingress; host networking so it sees the real client IP for
+    # the gateway rate limiter. App backends (gateway, frontend) are reached over
+    # unix sockets, not host ports; only admin UIs stay on 127.0.0.1 loopback.
     network_mode: host
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro,z
       - ./certs:/etc/nginx/certs:ro,z
+      - gateway_socket:/run/gateway:z
+      - frontend_socket:/run/frontend:z
     depends_on:
       gateway:
         condition: service_healthy
       frontend:
         condition: service_healthy
+      frontend-socket:
+        condition: service_started
 
   rabbitmq:
     container_name: rabbitmq
@@ -110,3 +112,4 @@ services:
 volumes:
   rabbitmq_data:
   minio_data:
+  gateway_socket:

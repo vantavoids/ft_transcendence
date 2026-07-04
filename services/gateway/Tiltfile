@@ -12,7 +12,7 @@ local_resource(
     serve_cmd=container_serve(DOCKER, FLAGS, 'gateway',
         '--network ft_transcendence ' +
         '--env-file .env ' +
-		'-p 127.0.0.1:8080:8080 ' +
+        '-v gateway_socket:/run/gateway ' +
         '-e JWT_SECRET=' + JWT_SECRET + ' ' +
         '-e GATEWAY_DEV=true ' +
         '-v $(pwd):/app ' +

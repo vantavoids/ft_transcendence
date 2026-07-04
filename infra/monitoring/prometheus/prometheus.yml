@@ -39,7 +39,7 @@ scrape_configs:
         labels: { service: chat }
       - targets: ["notification:8080"]
         labels: { service: notification }
-      - targets: ["gateway:8080"]
+      - targets: ["gateway:9090"]
         labels: { service: gateway }
       # user (#229) not instrumented yet
       # - targets: ["user:8080"]
@@ -63,7 +63,7 @@ scrape_configs:
         labels: { service: chat }
       - targets: ["http://notification:8080/healthz"]
         labels: { service: notification }
-      - targets: ["http://gateway:8080/healthz"]
+      - targets: ["http://gateway:9090/healthz"]
         labels: { service: gateway }
     relabel_configs:
       - source_labels: [__address__]

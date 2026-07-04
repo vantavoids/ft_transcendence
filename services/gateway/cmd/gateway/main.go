@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/vantavoids/ft_transcendence/services/gateway/config"
@@ -89,12 +92,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// metrics/healthz over TCP for Prometheus, bridge-only (not host-reachable).
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("GET /metrics", metricsHandler)
+	metricsMux.HandleFunc("/healthz", handler.Healthcheck())
+	go func() {
+		log.Printf("metrics + healthz on :%s (TCP)", cfg.MetricsPort)
+		log.Fatal(http.ListenAndServe(":"+cfg.MetricsPort, metricsMux))
+	}()
+
 	root := http.NewServeMux()
-	root.Handle("GET /metrics", metricsHandler)
 	root.Handle("/", otelhttp.NewHandler(dispatchHandler, "gateway"))
 
 	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
 		Handler: root,
 		// General values used before a timeout category
 		// can be attributed to the request in routeCheck()
@@ -114,5 +124,21 @@ func main() {
 		}
 	}()
 
-	log.Fatal(srv.ListenAndServe())
+	// unix socket: no TCP port, only nginx (shared volume) can connect.
+	socketPath := cfg.SocketPath
+	if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
+		log.Fatal(err)
+	}
+	os.Remove(socketPath) // clean up stale socket from a previous run
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := os.Chmod(socketPath, 0666); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("gateway listening on unix socket %s", socketPath)
+	log.Fatal(srv.Serve(listener))
 }
+

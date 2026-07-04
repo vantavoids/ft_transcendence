@@ -10,7 +10,6 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e WATCHPACK_POLLING=true ' +
-        '-p 127.0.0.1:3000:3000 ' +
         '-v $(pwd)/app:/app/app ' +
         '-v $(pwd)/src:/app/src ' +
         '-v $(pwd)/public:/app/public ' +
@@ -22,5 +21,18 @@ local_resource(
     ),
     deps=['Dockerfile.dev', 'package.json'],
     resource_deps=['dev-network'],
+    labels=['frontend'],
+)
+
+# Next.js can't listen on a unix socket, so socat bridges nginx's socket to it;
+# the frontend has no host-published port (reached only through nginx).
+local_resource(
+    'frontend-socket',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'frontend-socket',
+        '--network ft_transcendence ' +
+        '-v frontend_socket:/run/frontend ' +
+        'docker.io/alpine/socat UNIX-LISTEN:/run/frontend/frontend.sock,fork,mode=0666 TCP:frontend:3000'
+    ),
+    resource_deps=['frontend'],
     labels=['frontend'],
 )
