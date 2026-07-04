@@ -1,4 +1,5 @@
 using Chat.Presentation.Hubs;
+using Chat.UnitTests.Fakes;
 using Xunit;
 
 namespace Chat.UnitTests.Presentation;
@@ -136,5 +137,50 @@ public sealed class UserConnectionTrackerTests
 		var tracker = new UserConnectionTracker();
 
 		Assert.Empty(tracker.ConnectionsInGuild(User, Guild));
+	}
+
+	[Fact]
+	public void UserContexts_ReturnsOneContextPerConnection()
+	{
+		var tracker = new UserConnectionTracker();
+		var ctx1 = new FakeHubCallerContext();
+		var ctx2 = new FakeHubCallerContext();
+		tracker.TrackConnected(User, "c1", ctx1);
+		tracker.TrackConnected(User, "c2", ctx2);
+
+		var contexts = tracker.UserContexts(User);
+
+		Assert.Equal(2, contexts.Count);
+		Assert.Contains(ctx1, contexts);
+		Assert.Contains(ctx2, contexts);
+	}
+
+	[Fact]
+	public void UserContexts_ConnectionTrackedWithoutContext_IsSkipped()
+	{
+		var tracker = new UserConnectionTracker();
+		tracker.TrackConnected(User, "c1");
+
+		Assert.Empty(tracker.UserContexts(User));
+	}
+
+	[Fact]
+	public void UserContexts_AfterDisconnect_NoLongerReturnsThatConnection()
+	{
+		var tracker = new UserConnectionTracker();
+		var ctx = new FakeHubCallerContext();
+		tracker.TrackConnected(User, "c1", ctx);
+
+		tracker.TrackDisconnected(User, "c1");
+
+		Assert.Empty(tracker.UserContexts(User));
+	}
+
+	[Fact]
+	public void UserContexts_UnknownUser_ReturnsEmpty()
+	{
+		var tracker = new UserConnectionTracker();
+
+		Assert.Empty(tracker.UserContexts(User));
 	}
 }
