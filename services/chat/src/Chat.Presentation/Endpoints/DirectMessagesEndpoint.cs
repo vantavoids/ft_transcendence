@@ -1,5 +1,6 @@
 using Carter;
 using Chat.Application.Abstractions.Messaging;
+using Chat.Application.Features.DirectMessages.ArchiveConversation;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.DirectMessages.SendMessage;
 using Chat.Application.Features.DirectMessages.ListMessages;
@@ -19,6 +20,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 
 		var conversationsGroup = app.MapGroup("/dms").WithTags("Direct Messages");
 		conversationsGroup.MapGet("/", ListConversationsAsync);
+		conversationsGroup.MapDelete("/{userId:long}", ArchiveAsync);
 	}
 
 	private static async Task<Results<
@@ -48,7 +50,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 				result.Value);
 		}
 
-		return MapError(result.Error);
+		return MapSendError(result.Error);
 	}
 
 	private static async Task<Results<
@@ -57,11 +59,11 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 		JsonHttpResult<ErrorBody>,
 		NotFound<ErrorBody>>>
 	ListAsync(
-			long userId,
-			DateTimeOffset? before_time,
-			int? limit,
-			IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
-			CancellationToken cancellationToken)
+		long userId,
+		DateTimeOffset? before_time,
+		int? limit,
+		IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
+		CancellationToken cancellationToken)
 	{
 		var result = await handler.HandleAsync(
 				new ListDirectMessagesQuery(
@@ -85,6 +87,18 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			cancellationToken);
 
 		return TypedResults.Ok(result.Value);
+	}
+
+	private static async Task<Results<NoContent, NotFound<ErrorBody>>> ArchiveAsync(
+		long userId,
+		ICommandHandler<ArchiveConversationCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new ArchiveConversationCommand(userId), cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.NoContent()
+			: TypedResults.NotFound(new ErrorBody(result.Error.Message));
 	}
 
 	private static Results<
@@ -115,7 +129,7 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 		BadRequest<ErrorBody>,
 		JsonHttpResult<ErrorBody>,
 		NotFound<ErrorBody>>
-	MapError(Failure failure)
+	MapSendError(Failure failure)
 	{
 		var body = new ErrorBody(failure.Message);
 
