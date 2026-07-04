@@ -1,4 +1,5 @@
 using Chat.Domain.Attachments;
+using Chat.Domain.Conversations;
 using Chat.Domain.Messages;
 
 namespace Chat.Application.Abstractions.Persistence;
@@ -39,4 +40,7 @@ public interface IMessageRepository
 	Task<long> GetOrCreateConversationAsync(long senderId, long recipientId, long candidateId, CancellationToken ct);
 
 	Task DeleteConversationAsync(long userId, CancellationToken ct);
+
+	/// <summary>every DM thread for this user, from their own user_conversations partition</summary>
+	Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct);
 }
