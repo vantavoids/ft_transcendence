@@ -101,7 +101,7 @@ secrets-refresh: ## Re-encrypt secrets with the current recipients
 
 dev: check-env ## Start the Tilt hot-reload dev environment
 	@echo "$(call ann,Cyan) Starting the Tilt dev environment (hot-reload). Go do wonders, we believe in you (we don't have a choice)"
-	@tilt up
+	@ENGINE="$(ENGINE)" tilt up
 
 check-env:
 	@for f in $(ENV_FILES); do \

@@ -1,4 +1,11 @@
 def detect_engine():
+    # an explicit ENGINE override (e.g. `ENGINE=docker make dev`) wins over
+    # autodetection, mirroring the Makefile's ENGINE variable.
+    override = os.getenv('ENGINE', '')
+    if override == 'podman' or override == 'docker':
+        return override
+    if override != '':
+        fail("ENGINE must be 'podman' or 'docker', got: '" + override + "'")
     result = str(local(
         'if which podman >/dev/null 2>&1; then echo podman; ' +
         'elif which docker >/dev/null 2>&1; then echo docker; fi',
