@@ -104,6 +104,9 @@ internal sealed class MessageStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectConversationsByUser { get; } = new(() => session.PrepareAsync(
 		"SELECT partner_id, last_message_at, last_preview, is_archived FROM user_conversations WHERE user_id = ?"));
 
+	public Lazy<Task<PreparedStatement>> ArchiveConversation { get; } = new(() => session.PrepareAsync(
+		"UPDATE user_conversations SET is_archived = true WHERE user_id = ? AND partner_id = ?"));
+
 
 	/* ### Attachements ### */
 

@@ -43,4 +43,7 @@ public interface IMessageRepository
 
 	/// <summary>every DM thread for this user, from their own user_conversations partition</summary>
 	Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct);
+
+	/// <summary>flips is_archived = true for the caller's row only; does not touch the partner's row</summary>
+	Task ArchiveConversationAsync(long userId, long partnerId, CancellationToken ct);
 }

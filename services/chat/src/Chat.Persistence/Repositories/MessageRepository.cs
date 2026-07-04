@@ -270,6 +270,12 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 			.ToList();
 	}
 
+	public async Task ArchiveConversationAsync(long userId, long partnerId, CancellationToken ct)
+	{
+		var stmt = await statements.ArchiveConversation.Value;
+		await session.ExecuteAsync(stmt.Bind(userId, partnerId));
+	}
+
 	private static string? BuildPreview(string? content)
 	{
 		if (string.IsNullOrWhiteSpace(content))

@@ -139,6 +139,14 @@ public sealed class FakeMessageRepository : IMessageRepository
 		return Task.FromResult<IReadOnlyList<DmConversation>>(result);
 	}
 
+	public Task ArchiveConversationAsync(long userId, long partnerId, CancellationToken ct)
+	{
+		if (_conversationSummaries.TryGetValue((userId, partnerId), out var conversation))
+			_conversationSummaries[(userId, partnerId)] = conversation with { IsArchived = true };
+
+		return Task.CompletedTask;
+	}
+
 	public void Seed(Message message) => _saved.Add(message);
 
 	public List<Message> Updated { get; } = [];
