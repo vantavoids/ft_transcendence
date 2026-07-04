@@ -1021,7 +1021,7 @@ Check if a user is a member of the guild that owns this channel, and get their e
 
 | Event | Payload | Action |
 |-------|---------|--------|
-| `user.deleted` | `{ user_id }` | GDPR erasure cascade. Deletes every row whose subject (or sole artifact) is the user: `guild_members` and `member_roles` (`user_id`), `guild_bans` (`user_id`, bans against them), `guild_invites` (`created_by`, their invite codes), and `channel_permission_overwrites` (`target_id` where `target_type = 'user'`, their per-channel overwrites). Additionally scrubs `guild_bans.banned_by` to `null` for bans the user *issued* against others: the ban stays in force, only the moderator reference is erased. Auth has already enforced (via 409 on `DELETE /auth/me`) that the user owns no guilds, so no ownership transfer is needed here. |
+| `user.deleted` | `{ user_id, email }` | GDPR erasure cascade (Guild ignores `email`). Deletes every row whose subject (or sole artifact) is the user: `guild_members` and `member_roles` (`user_id`), `guild_bans` (`user_id`, bans against them), `guild_invites` (`created_by`, their invite codes), and `channel_permission_overwrites` (`target_id` where `target_type = 'user'`, their per-channel overwrites). Additionally scrubs `guild_bans.banned_by` to `null` for bans the user *issued* against others: the ban stays in force, only the moderator reference is erased. Auth has already enforced (via 409 on `DELETE /auth/me`) that the user owns no guilds, so no ownership transfer is needed here. |
 
 Published by Auth on `Auth.Application.Contracts:UserDeleted` (exchange `user.deleted`, snake_case payload). The consumer's steps are idempotent bulk statements, so redelivery is safe.
 

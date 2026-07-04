@@ -84,3 +84,37 @@ CREATE TABLE user_blocks (
 
 -- fast check: "has user X blocked me?" (needed before sending a DM)
 CREATE INDEX idx_user_blocks_blocked ON user_blocks (blocked_id);
+
+-- -----------------------------------------------------------------------
+-- GDPR data-export jobs
+--
+-- Backs POST /users/me/data-export (the aggregator). One row per requested
+-- export. The aggregator fans out to every service's internal data-export
+-- leg, stitches one JSON bundle, uploads it to the `exports` object-storage
+-- bucket, and generates a presigned download URL published in data.export_ready.
+--
+-- status lifecycle: pending -> ready | failed
+-- object_key / expires_at are populated once the bundle is stored (status = ready).
+-- -----------------------------------------------------------------------
+
+CREATE TYPE data_export_status AS ENUM ('pending', 'ready', 'failed');
+
+CREATE TABLE data_exports (
+    id          BIGINT              PRIMARY KEY,   -- Snowflake; also the export_id on the wire
+    user_id     BIGINT              NOT NULL REFERENCES users_profile (id) ON DELETE CASCADE,
+    status      data_export_status  NOT NULL DEFAULT 'pending',
+    -- object-storage key of the stored bundle, e.g. 'exports/{user_id}/{id}.json'.
+    -- NULL until the bundle is uploaded (status = ready).
+    object_key  VARCHAR(512),
+    -- expiry of the presigned download URL (SigV4 caps presigned lifetime at 7 days)
+    expires_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+-- rate limit: at most one in-flight (pending) export per user
+CREATE UNIQUE INDEX unique_pending_export_per_user ON data_exports (user_id)
+    WHERE status = 'pending';
+
+-- status polling / list a user's exports, newest first
+CREATE INDEX idx_data_exports_user ON data_exports (user_id, created_at DESC);
