@@ -11,11 +11,13 @@ public interface IUserBroadcaster
 	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
 
 	/// <summary>
-	/// purge every connection of <paramref name="userId"/> from the SignalR
-	/// groups of all channels they had joined.
+	/// force-terminates every active connection of <paramref name="userId"/> at
+	/// the transport level, regardless of client cooperation. used for
+	/// user.logged_out/user.deleted so a stale or malicious client can't keep
+	/// receiving pushes (e.g. DMs) after the session has ended.
 	/// </summary>
-	/// <returns>The number of channels subscriptions purged.</returns>
-	Task<int> EvictUserFromActiveChannels(long userId, CancellationToken ct);
+	/// <returns>The number of connections aborted.</returns>
+	Task<int> DisconnectUserAsync(long userId, CancellationToken ct);
 
 	/// <summary>
 	/// purges every connection of <paramref name="userId"/> from the SignalR
