@@ -61,11 +61,11 @@ public sealed class UserLoggedOutConsumer(
 	{
 		var msg = context.Message;
 
-		var evicted = await broadcaster.EvictUserFromActiveChannels(msg.UserId, context.CancellationToken);
-		
+		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
+
 		logger.LogDebug(
-			"user.logged_out consumed: user_id={UserId} evicted_subscriptions={Evicted}"
-			, msg.UserId, evicted);
+			"user.logged_out consumed: user_id={UserId} disconnected_connections={Disconnected}"
+			, msg.UserId, disconnected);
 	}
 }
 
@@ -78,13 +78,13 @@ public sealed class UserDeletedConsumer(
 	{
 		var msg = context.Message;
 
-		var evicted = await broadcaster.EvictUserFromActiveChannels(msg.UserId, context.CancellationToken);
+		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
 
 		await message.DeleteConversationAsync(msg.UserId, context.CancellationToken);
-		// TODO: delete channel_read_states, and dm_unread_counts
+		// TODO: delete channel_read_states, and dm_unread_counts once the read-state feature lands
 
 		logger.LogDebug(
-			"user.deleted consumed: user_id={UserId} evicted_subscriptions={Evicted}"
-			, msg.UserId, evicted);
+			"user.deleted consumed: user_id={UserId} disconnected_connections={Disconnected}"
+			, msg.UserId, disconnected);
 	}
 }
