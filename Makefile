@@ -27,6 +27,21 @@ ENV_FILES := .env \
 
 SECRETMANAGER_DIR := tools/secretman
 
+# each env file paired with the name of its encrypted counterpart under
+# infra/secretman/secrets/<name>.env.crypt. the names are irregular (root <- .env,
+# front <- frontend/.env), so map them explicitly. check-env warns on key drift
+# between an env file and its secret (SOPS keeps the keys in plaintext).
+SECRETS_DIR := infra/secretman/secrets
+ENV_CRYPT_PAIRS := \
+    .env:root \
+    frontend/.env:front \
+    services/auth/.env:auth \
+    services/chat/.env:chat \
+    services/gateway/.env:gateway \
+    services/guild/.env:guild \
+    services/notification/.env:notification \
+    services/user/.env:user
+
 get_color = $(if $(filter Purple,$(1)),$(shell tput setaf 5),$(if $(filter Red,$(1)),$(shell tput setaf 1),$(if $(filter Cyan,$(1)),$(shell tput setaf 6),$(if $(filter Blue,$(1)),$(shell tput setaf 4),$(if $(filter Yellow,$(1)),$(shell tput setaf 3),$(if $(filter Green,$(1)),$(shell tput setaf 2),$(shell tput sgr0)))))))
 ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$(1))]$(call get_color,Off)
 
@@ -114,6 +129,28 @@ check-env:
 			exit 1; \
 		fi; \
 	done
+	@drift=''; \
+	for pair in $(ENV_CRYPT_PAIRS); do \
+		f=$${pair%%:*}; crypt="$(SECRETS_DIR)/$${pair##*:}.env.crypt"; \
+		{ [ -f "$$f" ] && [ -f "$$crypt" ]; } || continue; \
+		ekf=$$(mktemp); ckf=$$(mktemp); \
+		grep -E '^[A-Za-z_][A-Za-z_0-9]*=' "$$f" | sed 's/=.*//' | sort -u > "$$ekf"; \
+		awk -F'"' '/^\t"/{print $$2}' "$$crypt" | grep -vx sops | sort -u > "$$ckf"; \
+		missing=$$(comm -13 "$$ekf" "$$ckf"); \
+		extra=$$(comm -23 "$$ekf" "$$ckf"); \
+		rm -f "$$ekf" "$$ckf"; \
+		if [ -n "$$missing" ] || [ -n "$$extra" ]; then \
+			drift=1; \
+			echo "$(call ann,Yellow) $$f wandered off from its secret ($$crypt). The keys don't line up:"; \
+			[ -n "$$missing" ] && echo "    only in the secret: $$(echo $$missing | tr '\n' ' ')"; \
+			[ -n "$$extra" ] && echo "    only in the env: $$(echo $$extra | tr '\n' ' ')"; \
+		fi; \
+	done; \
+	if [ -n "$$drift" ]; then \
+		printf "$(call ann,Yellow) your envs and secrets are living separate lives (secrets-encrypt / secrets-decrypt to reconcile). Send it anyway? [y/N] "; \
+		read ans; \
+		case "$$ans" in [yY]|[yY][eE][sS]) : ;; *) echo "$(call ann,Red) Aborting. Go patch things up with your secrets first :)"; exit 1;; esac; \
+	fi
 
 _build:
 	@echo "$(call ann,Cyan) Building all service images. Turning caffeine and regret into Docker layers."
