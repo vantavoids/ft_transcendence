@@ -124,7 +124,7 @@ local_resource(
     serve_cmd=container_serve(DOCKER, FLAGS, 'prometheus',
         '--network ft_transcendence ' +
         '-p 127.0.0.1:9090:9090 ' +
-        '-v $(pwd)/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro ' +
+        '-v $(pwd)/infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro ' +
         '-v prometheus_data:/prometheus ' +
         'docker.io/prom/prometheus:v2.55.1 ' +
         '--config.file=/etc/prometheus/prometheus.yml ' +
@@ -140,7 +140,7 @@ local_resource(
     'blackbox-exporter',
     serve_cmd=container_serve(DOCKER, FLAGS, 'blackbox-exporter',
         '--network ft_transcendence ' +
-        '-v $(pwd)/infra/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro ' +
+        '-v $(pwd)/infra/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro ' +
         'quay.io/prometheus/blackbox-exporter:v0.25.0'
     ),
     resource_deps=['dev-network'],
@@ -159,8 +159,8 @@ local_resource(
         # reachable only through nginx TLS at /grafana (3001 is the proxy hop)
         '-e GF_SERVER_ROOT_URL=https://localhost:1443/grafana/ ' +
         '-e GF_SERVER_SERVE_FROM_SUB_PATH=true ' +
-        '-v $(pwd)/infra/grafana/provisioning:/etc/grafana/provisioning:ro ' +
-        '-v $(pwd)/infra/grafana/dashboards:/var/lib/grafana/dashboards:ro ' +
+        '-v $(pwd)/infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro ' +
+        '-v $(pwd)/infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro ' +
         '-v grafana_data:/var/lib/grafana ' +
         'docker.io/grafana/grafana:11.3.0'
     ),
