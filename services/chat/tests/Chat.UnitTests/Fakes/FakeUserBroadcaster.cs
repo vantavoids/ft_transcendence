@@ -8,11 +8,13 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 	private readonly List<(long UserId, long GuildId)> _leftCalls = [];
 	private readonly List<(long UserId, long GuildId)> _evictGuildCalls = [];
 	private readonly List<(long UserId, long ChannelId)> _evictChannelCalls = [];
+	private readonly List<long> _disconnectCalls = [];
 
 	public IReadOnlyList<(long UserId, long GuildId, string GuildName)> JoinCalls => _joinCalls;
 	public IReadOnlyList<(long UserId, long GuildId)> LeftCalls => _leftCalls;
 	public IReadOnlyList<(long UserId, long GuildId)> EvictGuildCalls => _evictGuildCalls;
 	public IReadOnlyList<(long UserId, long ChannelId)> EvictChannelCalls => _evictChannelCalls;
+	public IReadOnlyList<long> DisconnectCalls => _disconnectCalls;
 
 	public Task BroadcastGuildJoinedAsync(long userId, long guildId, string guildName, CancellationToken ct)
 	{
@@ -39,6 +41,12 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 	public Task<int> EvictFromChannelAsync(long userId, long channelId, CancellationToken ct)
 	{
 		_evictChannelCalls.Add((userId, channelId));
+		return Task.FromResult(EvictedCount);
+	}
+
+	public Task<int> DisconnectUserAsync(long userId, CancellationToken ct)
+	{
+		_disconnectCalls.Add(userId);
 		return Task.FromResult(EvictedCount);
 	}
 }
