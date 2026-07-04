@@ -259,5 +259,5 @@ func (o *Orchestrator) DeleteUserNotifs(ctx context.Context, userID int64) error
 		return err
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
