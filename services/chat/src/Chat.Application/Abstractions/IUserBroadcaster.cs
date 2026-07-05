@@ -1,3 +1,6 @@
+using Chat.Application.Features.Channels.Common;
+using Chat.Application.Features.DirectMessages.Common;
+
 namespace Chat.Application.Abstractions;
 
 /// <summary>
@@ -9,6 +12,9 @@ public interface IUserBroadcaster
 {
 	Task BroadcastGuildJoinedAsync(long userId, long guildId, string guildName, CancellationToken ct);
 	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
+
+	Task BroadcastChannelReadStateUpdatedAsync(long userId, ChannelReadStateResponse response, CancellationToken ct);
+	Task BroadcastDmReadStateUpdatedAsync(long userId, DmReadStateResponse response, CancellationToken ct);
 
 	/// <summary>
 	/// force-terminates every active connection of <paramref name="userId"/> at

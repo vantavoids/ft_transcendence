@@ -11,7 +11,8 @@ internal sealed class UpdateChannelReadStateHandler(
 	ICurrentUser currentUser,
 	IGuildClient guildClient,
 	IMessageRepository messageRepository,
-	IReadStateRepository readStates)
+	IReadStateRepository readStates,
+	IUserBroadcaster broadcaster)
 	: ICommandHandler<UpdateChannelReadStateCommand, Result<ChannelReadStateResponse>>
 {
 	private const long ReadMessages = 1L << 1;
@@ -45,7 +46,11 @@ internal sealed class UpdateChannelReadStateHandler(
 		var unreadCount = await readStates.CountChannelMessagesAfterAsync(
 			command.ChannelId, state.LastReadAt!.Value, cancellationToken);
 
-		return new ChannelReadStateResponse(
+		var response = new ChannelReadStateResponse(
 			command.ChannelId.ToString(), state.LastReadMessageId?.ToString(), unreadCount);
+
+		await broadcaster.BroadcastChannelReadStateUpdatedAsync(userId, response, cancellationToken);
+
+		return response;
 	}
 }

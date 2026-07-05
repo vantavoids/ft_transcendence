@@ -16,6 +16,9 @@ public interface IChatClient
 
 	Task TypingStarted(string userId, string scope, string id, DateTimeOffset expiresAt);
 
+	Task ReadStateUpdated(ChannelReadStateResponse response);
+	Task DmReadStateUpdated(DmReadStateResponse response);
+
 	Task GuildJoined(string guildId, string guildName);
 	Task GuildLeft(string guildId);
 	Task Error(string code, string message);
