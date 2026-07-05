@@ -17,7 +17,8 @@ public sealed class UpdateChannelReadStateHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeGuildClient GuildClient,
 		FakeMessageRepository Repository,
-		FakeReadStateRepository ReadStates);
+		FakeReadStateRepository ReadStates,
+		FakeUserBroadcaster Broadcaster);
 
 	private static (Harness Harness, ICommandHandler<UpdateChannelReadStateCommand, Result<ChannelReadStateResponse>> Handler)
 		BuildHandler(long userId = 42)
@@ -26,11 +27,12 @@ public sealed class UpdateChannelReadStateHandlerTests
 		var guildClient = new FakeGuildClient();
 		var repository = new FakeMessageRepository();
 		var readStates = new FakeReadStateRepository();
+		var broadcaster = new FakeUserBroadcaster();
 
 		var handler = HandlerFactory.CreateCommand<UpdateChannelReadStateCommand, Result<ChannelReadStateResponse>>(
-			currentUser, guildClient, repository, readStates);
+			currentUser, guildClient, repository, readStates, broadcaster);
 
-		return (new Harness(currentUser, guildClient, repository, readStates), handler);
+		return (new Harness(currentUser, guildClient, repository, readStates, broadcaster), handler);
 	}
 
 	private static Message SeedMessage(FakeMessageRepository repo, long id, long channelId, DateTimeOffset createdAt)
@@ -118,6 +120,10 @@ public sealed class UpdateChannelReadStateHandlerTests
 		Assert.Equal("100", result.Value.ChannelId);
 		Assert.Equal("1", result.Value.LastReadMessageId);
 		Assert.Equal(0, result.Value.UnreadCount);
+
+		var (broadcastUserId, broadcastResponse) = Assert.Single(h.Broadcaster.ReadStateCalls);
+		Assert.Equal(42L, broadcastUserId);
+		Assert.Same(result.Value, broadcastResponse);
 	}
 
 	[Fact]

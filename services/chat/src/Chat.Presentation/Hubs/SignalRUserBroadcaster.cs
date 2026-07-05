@@ -1,4 +1,6 @@
 using Chat.Application.Abstractions;
+using Chat.Application.Features.Channels.Common;
+using Chat.Application.Features.DirectMessages.Common;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;
@@ -29,6 +31,12 @@ internal sealed class SignalRUserBroadcaster(
 
 		return Task.FromResult(contexts.Count);
 	}
+
+	public Task BroadcastChannelReadStateUpdatedAsync(long userId, ChannelReadStateResponse response, CancellationToken ct) =>
+		hub.Clients.User(userId.ToString()).ReadStateUpdated(response);
+
+	public Task BroadcastDmReadStateUpdatedAsync(long userId, DmReadStateResponse response, CancellationToken ct) =>
+		hub.Clients.User(userId.ToString()).DmReadStateUpdated(response);
 
 	public async Task<int> EvictFromGuildChannelsAsync(long userId, long guildId, CancellationToken ct)
 	{

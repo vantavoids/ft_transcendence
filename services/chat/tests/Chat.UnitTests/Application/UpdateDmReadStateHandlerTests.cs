@@ -10,7 +10,11 @@ namespace Chat.UnitTests.Application;
 
 public sealed class UpdateDmReadStateHandlerTests
 {
-	private sealed record Harness(FakeCurrentUser CurrentUser, FakeMessageRepository Repository, FakeReadStateRepository ReadStates);
+	private sealed record Harness(
+		FakeCurrentUser CurrentUser,
+		FakeMessageRepository Repository,
+		FakeReadStateRepository ReadStates,
+		FakeUserBroadcaster Broadcaster);
 
 	private static (Harness Harness, ICommandHandler<UpdateDmReadStateCommand, Result<DmReadStateResponse>> Handler)
 		BuildHandler(long userId = 42)
@@ -18,11 +22,12 @@ public sealed class UpdateDmReadStateHandlerTests
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var repository = new FakeMessageRepository();
 		var readStates = new FakeReadStateRepository();
+		var broadcaster = new FakeUserBroadcaster();
 
 		var handler = HandlerFactory.CreateCommand<UpdateDmReadStateCommand, Result<DmReadStateResponse>>(
-			currentUser, repository, readStates);
+			currentUser, repository, readStates, broadcaster);
 
-		return (new Harness(currentUser, repository, readStates), handler);
+		return (new Harness(currentUser, repository, readStates, broadcaster), handler);
 	}
 
 	[Fact]
@@ -81,6 +86,10 @@ public sealed class UpdateDmReadStateHandlerTests
 		Assert.Equal("1", result.Value.LastReadMessageId);
 		Assert.Equal(0, result.Value.UnreadCount);
 		Assert.Single(h.ReadStates.ResetDmUnreadCounts, (42L, 100L));
+
+		var (broadcastUserId, broadcastResponse) = Assert.Single(h.Broadcaster.DmReadStateCalls);
+		Assert.Equal(42L, broadcastUserId);
+		Assert.Same(result.Value, broadcastResponse);
 	}
 
 	[Fact]

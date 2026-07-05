@@ -1,3 +1,4 @@
+using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
@@ -9,7 +10,8 @@ namespace Chat.Application.Features.DirectMessages.UpdateReadState;
 internal sealed class UpdateDmReadStateHandler(
 	ICurrentUser currentUser,
 	IMessageRepository messageRepository,
-	IReadStateRepository readStates)
+	IReadStateRepository readStates,
+	IUserBroadcaster broadcaster)
 	: ICommandHandler<UpdateDmReadStateCommand, Result<DmReadStateResponse>>
 {
 	public async Task<Result<DmReadStateResponse>> HandleAsync(
@@ -37,6 +39,10 @@ internal sealed class UpdateDmReadStateHandler(
 		// call is idempotent and the badge should always read 0 after a successful read
 		await readStates.ResetDmUnreadCountAsync(userId, command.PartnerId, cancellationToken);
 
-		return new DmReadStateResponse(command.PartnerId.ToString(), state.LastReadMessageId?.ToString(), UnreadCount: 0);
+		var response = new DmReadStateResponse(command.PartnerId.ToString(), state.LastReadMessageId?.ToString(), UnreadCount: 0);
+
+		await broadcaster.BroadcastDmReadStateUpdatedAsync(userId, response, cancellationToken);
+
+		return response;
 	}
 }
