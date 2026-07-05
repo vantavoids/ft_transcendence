@@ -35,8 +35,9 @@ internal sealed class UpdateDmReadStateHandler(
 		var state = await readStates.UpsertIfNewerAsync(
 			userId, command.PartnerId, isDm: true, command.MessageId, message.CreatedAt, cancellationToken);
 
-		// resets unconditionally, even on a no-op (older/equal message_id): the
-		// call is idempotent and the badge should always read 0 after a successful read
+		// unlike the channel side, this is a whole-conversation reset, not a
+		// precise "messages after cursor" recount: dm_unread_counts is a monotonic
+		// counter (increment on send, reset on read)
 		await readStates.ResetDmUnreadCountAsync(userId, command.PartnerId, cancellationToken);
 
 		var response = new DmReadStateResponse(command.PartnerId.ToString(), state.LastReadMessageId?.ToString(), UnreadCount: 0);
