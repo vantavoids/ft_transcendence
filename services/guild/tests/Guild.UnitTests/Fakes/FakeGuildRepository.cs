@@ -50,6 +50,16 @@ internal sealed class FakeGuildRepository : IGuildRepository
 		return Task.FromResult<IReadOnlyList<MyGuildSummary>>(summaries);
 	}
 
+	public Task<IReadOnlyList<long>> ListGuildIdsForMemberAsync(
+		long userId, CancellationToken cancellationToken = default)
+	{
+		IReadOnlyList<long> ids = _store.Values
+			.Where(g => g.Members.Any(m => m.UserId == userId))
+			.Select(g => g.Id)
+			.ToList();
+		return Task.FromResult(ids);
+	}
+
 	public Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default)
 	{
 		return Task.FromResult(_store.TryGetValue(guildId, out var guild) ? guild.Members.Count : 0);
