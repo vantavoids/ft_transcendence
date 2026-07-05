@@ -10,7 +10,6 @@ import (
 
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // GET /notifications
