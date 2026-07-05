@@ -412,6 +412,8 @@ Advance the caller's read cursor for a channel to a specific message. Idempotent
 
 Mark a DM conversation as read up to a specific message. Mirrors `PUT /channels/{id}/read` for channels; the implicit alternative (auto-reset on `GET /dms/{user_id}/messages`) is rejected because infinite-scroll into older history shouldn't reset unread, and other devices need an explicit signal to update their badge.
 
+Unlike the channel side, this is a whole-conversation reset rather than a precise "messages after cursor" recount: `dm_unread_counts` is a monotonic counter (incremented on send, reset on read), not a value that can express "read up to message 10 of 15, 5 still unread." Marking any `message_id` as read - even one older than the most recent message - zeroes the badge for the whole conversation. `unread_count` in the response below is therefore always `0` on success.
+
 **Request body:**
 ```json
 {
