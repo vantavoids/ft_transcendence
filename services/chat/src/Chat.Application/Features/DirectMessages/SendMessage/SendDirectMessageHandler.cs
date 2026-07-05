@@ -13,6 +13,7 @@ internal sealed class SendDirectMessageHandler(
 	ICurrentUser currentUser,
 	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
+	IReadStateRepository readStates,
 	ISnowflakeIdGenerator ids,
 	IClock clock,
 	IUserClient userClient,
@@ -62,6 +63,8 @@ internal sealed class SendDirectMessageHandler(
 	protected override async Task PublishAndNotifyAsync(
 		SendDirectMessageCommand command, NoContext context, Message message, DirectMessageResponse response, CancellationToken ct)
 	{
+		await readStates.IncrementDmUnreadCountAsync(command.RecipientId, AuthorId, ct);
+
 		await eventBus.PublishAsync(
 			new ChatDmSent(
 				ConversationId: message.ContainerId,
