@@ -1006,6 +1006,33 @@ Check if a user is a member of the guild that owns this channel, and get their e
 
 ---
 
+### GET /internal/users/{user_id}/channels
+
+Every channel the user can see, across every guild they belong to. Called by Chat Service to back `GET /channels/read-states` in one round-trip instead of walking `GET /guilds/me` -> `GET /guilds/{id}/channels` -> per-channel membership.
+
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://guild:8080/internal/users/{user_id}/channels`).
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "<snowflake>",
+    "guild_id": "<snowflake>",
+    "category_id": "<snowflake|null>",
+    "name": "general",
+    "type": "text",
+    "topic": null,
+    "position": 0,
+    "is_nsfw": false,
+    "slowmode_seconds": 0
+  }
+]
+```
+
+Same shape as `GET /guilds/{id}/channels`. A channel is included when the user's effective permissions on it include `READ_MESSAGES` (owner and `ADMINISTRATOR` short-circuit to all bits, per-channel overwrites applied - same resolution as `GET /internal/channels/{channel_id}/membership`). Returns `[]` (not 404) for a guild-less or unknown user. Order is unspecified.
+
+---
+
 ## RabbitMQ Events Published
 
 | Event | Payload | Trigger |
