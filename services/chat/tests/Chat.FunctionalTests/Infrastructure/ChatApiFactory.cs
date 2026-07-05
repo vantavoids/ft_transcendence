@@ -46,6 +46,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	public FakeClock Clock { get; } = new();
 	public FakeIdGenerator IdGenerator { get; } = new();
 	public FakeConversationUnicast ConversationUnicast { get; } = new();
+	public FakeReadStateRepository ReadStateRepository { get; } = new();
 
 	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved.Where(m => !m.IsDirectMessage).ToList();
 	public IReadOnlyList<Message> SavedDirectMessages => MessageRepository.Saved.Where(m => m.IsDirectMessage).ToList();
@@ -216,6 +217,9 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 
 			services.RemoveAll<ISnowflakeIdGenerator>();
 			services.AddSingleton<ISnowflakeIdGenerator>(IdGenerator);
+
+			services.RemoveAll<IReadStateRepository>();
+			services.AddSingleton<IReadStateRepository>(ReadStateRepository);
 		});
 	}
 
