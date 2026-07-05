@@ -17,6 +17,7 @@ public sealed class SendDirectMessageHandlerTests
 		FakeCurrentUser CurrentUser,
 		FakeMessageRepository Repository,
 		FakeAttachmentRepository AttachmentRepository,
+		FakeReadStateRepository ReadStates,
 		FakeIdGenerator IdGenerator,
 		FakeUserClient UserClient,
 		FakeClock Clock,
@@ -37,11 +38,12 @@ public sealed class SendDirectMessageHandlerTests
 		var clock = new FakeClock();
 		var eventBus = new FakeEventBus();
 		var unicaster = new FakeConversationUnicast();
+		var readStates = new FakeReadStateRepository();
 
 		var handler = HandlerFactory.CreateCommand<SendDirectMessageCommand, Result<DirectMessageResponse>>(
-			currentUser, repository, attachmentRepository, ids, clock, userClient, eventBus, unicaster);
+			currentUser, repository, attachmentRepository, readStates, ids, clock, userClient, eventBus, unicaster);
 
-		return (new Harness(currentUser, repository, attachmentRepository, ids, userClient, clock, eventBus, unicaster), handler);
+		return (new Harness(currentUser, repository, attachmentRepository, readStates, ids, userClient, clock, eventBus, unicaster), handler);
 	}
 
 	[Fact]
@@ -73,6 +75,9 @@ public sealed class SendDirectMessageHandlerTests
 
 		var unicastMessage = Assert.Single(h.Unicaster.Unicasts);
 		Assert.Same(response, unicastMessage);
+
+		var incremented = Assert.Single(h.ReadStates.IncrementedDmUnreadCounts);
+		Assert.Equal((100L, 42L), incremented);
 	}
 
 	[Fact]
@@ -138,6 +143,7 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.Single(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Unicaster.Unicasts);
+		Assert.Single(h.ReadStates.IncrementedDmUnreadCounts); // dedup hit must not double-increment
 	}
 
 	[Fact]
