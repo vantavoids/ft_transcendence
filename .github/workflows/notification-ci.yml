@@ -1,0 +1,109 @@
+name: notification ci
+
+# fires only on notification-touching changes (and on edits to this workflow itself, so
+# a misconfigured file gets caught on its own PR). other services will get their
+# own per-path workflow files as their owners land them
+on:
+  pull_request:
+    paths:
+      - 'services/notification/**'
+      - '.github/workflows/notification-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/notification/**'
+      - '.github/workflows/notification-ci.yml'
+    # release tags trigger the workflow regardless of path filters so the publish
+    # job can attach a :v1.2.3 tag to the image. naming uses notification-vX.Y.Z so
+    # per-service tags don't collide once other services publish on tag too
+    tags:
+      - 'notification-v*'
+
+# cancel an in-flight run when a newer push lands on the same PR/branch; saves
+# minutes on rapid-fire pushes (especially since we run those on github's doodoo workers)
+concurrency:
+  group: notification-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "nothing to do here, zzz..."
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      # only the production image is gated. Dockerfile.dev is dev-loop only;
+      # breakage there doesn't block a deploy and isn't worth CI time. cache
+      # scope matches the publish job below so main reuses warm layers
+      - name: build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/notification
+          file: services/notification/Dockerfile
+          push: false
+          cache-from: type=gha,scope=notification-Dockerfile
+          cache-to: type=gha,scope=notification-Dockerfile,mode=max
+
+  publish:
+    name: publish notification -> ghcr
+    runs-on: ubuntu-latest
+    # ship from main pushes (rolling :latest, :sha-<short>) and from notification-v*
+    # tag pushes (semver tags). PRs never publish: no secret leakage, no clutter
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/notification-v'))
+    needs: [test, docker]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      # GITHUB_TOKEN is auto-issued per run and scoped to this repo only; no
+      # PAT or secret management required for publishing to ghcr
+      - name: login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # tag matrix:
+      #   main pushes     -> :latest (moving) + :sha-<short> (immutable per commit)
+      #   notification-vX.Y.Z tag -> :vX.Y.Z + :X + :X.Y (so deploys can pin to 1, 1.2, or 1.2.3)
+      - name: image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/notification
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=sha-,enable={{is_default_branch}}
+            type=match,pattern=notification-v(\d+\.\d+\.\d+),group=1
+            type=match,pattern=notification-v(\d+\.\d+)\.\d+,group=1
+            type=match,pattern=notification-v(\d+)\.\d+\.\d+,group=1
+
+      - name: build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: services/notification
+          file: services/notification/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # share cache scope with the docker validation job above so a main-
+          # branch run picks up warm layers from the matrix run that just ran
+          cache-from: type=gha,scope=notification-Dockerfile
+          cache-to: type=gha,scope=notification-Dockerfile,mode=max
