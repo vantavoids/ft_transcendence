@@ -17,4 +17,10 @@ internal sealed class SignalRChannelBroadcaster(IHubContext<ChatHub, IChatClient
 		hub.Clients.Group($"channel:{channelId}").MessageDeleted(new ChannelMessageDeletedEvent(
 			MessageId: messageId.ToString(),
 			ChannelId: channelId.ToString()));
+
+	public Task BroadcastReactionAddedAsync(long channelId, ReactionAddedEvent evt, CancellationToken ct) =>
+		hub.Clients.Group($"channel:{channelId}").ReactionAdded(evt);
+
+	public Task BroadcastReactionRemovedAsync(long channelId, ReactionRemovedEvent evt, CancellationToken ct) =>
+		hub.Clients.Group($"channel:{channelId}").ReactionRemoved(evt);
 }
