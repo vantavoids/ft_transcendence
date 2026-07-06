@@ -49,7 +49,9 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 
 	private static async Task<Results<
 		Ok<IReadOnlyList<DirectMessageResponse>>,
-	BadRequest<ErrorBody>>>
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
 		ListAsync(
 				long userId,
 				DateTimeOffset? before_time,
@@ -64,11 +66,33 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 						BeforeTime: before_time),
 					cancellationToken);
 
-			if (result.Succeeded)
-				return TypedResults.Ok(result.Value);
-
-			return TypedResults.BadRequest(new ErrorBody(result.Error.Message));
+			return result.Succeeded
+				? TypedResults.Ok(result.Value)
+				: MapListError(result.Error);
 		}
+
+	private static Results<
+		Ok<IReadOnlyList<DirectMessageResponse>>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>
+	MapListError(Failure failure)
+	{
+		var body = new ErrorBody(failure.Message);
+
+		return failure.Code switch
+		{
+			"Message.ConversationNotFound" => TypedResults.NotFound(body),
+
+			"Message.RecipientBlocked" => TypedResults.Json(
+				body,
+				statusCode: StatusCodes.Status403Forbidden),
+
+			// "Message.InvalidRecipientId"
+			// "Message.CannotMessageSelf"
+			_ => TypedResults.BadRequest(body)
+		};
+	}
 
 	private static Results<
 		Created<DirectMessageResponse>,

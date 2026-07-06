@@ -191,18 +191,13 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 	}
 
 	[Fact]
-	public async Task Get_HistoryWithoutConversation_ReturnsEmptyList()
+	public async Task Get_HistoryWithoutConversation_Returns404()
 	{
 		var client = BuildClient(userId: 42);
 
 		var response = await client.GetAsync("/v1/dms/999/messages?limit=50");
 
-		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-		var messages = await response.Content.ReadFromJsonAsync<List<DirectMessageBody>>(JsonOptions);
-
-		Assert.NotNull(messages);
-		Assert.Empty(messages!);
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 	}
 
 	[Fact]
