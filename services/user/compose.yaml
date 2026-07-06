@@ -6,7 +6,7 @@ services:
     volumes:
       - user_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user", "-d", "user"]
+      test: ["CMD-SHELL", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,16 +27,9 @@ services:
       retries: 5
       start_period: 30s
     environment:
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_USER_BUCKET}
+      NODE_ENV: production
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       user-db:
-        condition: service_healthy
-      minio:
         condition: service_healthy
 
 volumes:
