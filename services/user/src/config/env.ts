@@ -6,6 +6,7 @@ export interface ValidatedEnv {
   PORT: number;
   APP_ENV: AppEnv;
   DATABASE_URL: string;
+  JWT_SECRET: string;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -32,5 +33,6 @@ export function validateEnv(env: EnvInput): ValidatedEnv {
     PORT: port,
     APP_ENV: appEnvRaw as AppEnv,
     DATABASE_URL: required('DATABASE_URL', env.DATABASE_URL),
+    JWT_SECRET: required('JWT_SECRET', env.JWT_SECRET),
   };
 }
