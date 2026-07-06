@@ -34,7 +34,7 @@ internal sealed class ListDirectMessagesHandler(
 			cancellationToken);
 
 		if (conversationId is null)
-			return Array.Empty<DirectMessageResponse>();
+			return MessageFailures.ConversationNotFound;
 
 		var messages = await repository.GetDirectMessagesAsync(
 			conversationId.Value,
