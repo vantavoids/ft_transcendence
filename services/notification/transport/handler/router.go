@@ -39,6 +39,7 @@ func (h *Handler) Routes(secret string, metricsHandler http.Handler) http.Handle
 	// healthz + metrics are anonymous: probed/scraped over the docker network,
 	// never through the gateway (which only forwards /api/{service}/vN/...).
 	root := http.NewServeMux()
+	root.HandleFunc("GET /internal/users/{user_id}/data-export", exportHandler(h.orch))
 	root.HandleFunc("GET /healthz", healthzHandler)
 	root.Handle("GET /metrics", metricsHandler)
 	root.Handle("/", authed)
