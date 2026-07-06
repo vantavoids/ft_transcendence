@@ -45,6 +45,9 @@ internal sealed class SendChannelMessageHandler(
 	protected override Task<long?> FindNonceAsync(SendChannelMessageCommand command, string nonce, CancellationToken ct) =>
 		Repository.FindChannelNonceAsync(AuthorId, command.ChannelId, nonce, ct);
 
+	protected override Task<long?> FindExistingContainerIdAsync(SendChannelMessageCommand command, CancellationToken ct) =>
+		Task.FromResult<long?>(command.ChannelId);
+
 	protected override Task<long> ResolveContainerIdAsync(SendChannelMessageCommand command, CancellationToken ct) =>
 		Task.FromResult(command.ChannelId);
 
