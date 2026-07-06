@@ -141,7 +141,7 @@ Deleted messages (`is_deleted = true` in the schema) are filtered out of the res
 
 ### PATCH /messages/{id}
 
-Edit a message. Only the author can edit their own messages.
+Edit a message, channel or DM alike. Only the author can edit their own message — no moderator override for either kind, matching `DELETE`'s author check but without its `MANAGE_MESSAGES` escape hatch.
 
 **Request body:**
 ```json
@@ -165,23 +165,23 @@ Edit a message. Only the author can edit their own messages.
 | 403 | Not the author |
 | 404 | Message not found |
 
-**Side effects:** Broadcasts `MessageEdited` event to all clients in the SignalR channel group.
+**Side effects:** Broadcasts `MessageEdited` to the SignalR channel group for a channel message; sends `DirectMessageEdited` to both participants' personal groups for a DM.
 
 ---
 
 ### DELETE /messages/{id}
 
-Delete a message. Author or member with `MANAGE_MESSAGES` permission.
+Delete a message. For a channel message: author or member with `MANAGE_MESSAGES` permission. For a DM: **author only** — DMs have no moderation concept, so the recipient can never delete a message sent to them.
 
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Not the author and lacks `MANAGE_MESSAGES` |
+| 403 | Not the author and lacks `MANAGE_MESSAGES` (channel), or not the author (DM) |
 | 404 | Message not found |
 
-**Side effects:** Broadcasts `MessageDeleted { message_id, channel_id }` to the SignalR channel group.
+**Side effects:** Broadcasts `MessageDeleted { message_id, channel_id }` to the SignalR channel group for a channel message; sends `DirectMessageDeleted { message_id, conversation_id }` to both participants' personal groups for a DM.
 
 ---
 
@@ -679,6 +679,40 @@ Broadcast (for channels) or sent (for DMs) when another user calls `Typing`. The
   "arguments": [{
     "message_id": "<snowflake>",
     "channel_id": "<snowflake>"
+  }]
+}
+```
+
+---
+
+#### DirectMessageEdited
+
+Sent to both participants' personal SignalR groups when a DM is edited.
+
+```json
+{
+  "target": "DirectMessageEdited",
+  "arguments": [{
+    "id": "<snowflake>",
+    "conversation_id": "<snowflake>",
+    "content": "et la p'tite update du message là mhmmm",
+    "edited_at": "2026-03-09T12:05:00Z"
+  }]
+}
+```
+
+---
+
+#### DirectMessageDeleted
+
+Sent to both participants' personal SignalR groups when a DM is deleted.
+
+```json
+{
+  "target": "DirectMessageDeleted",
+  "arguments": [{
+    "message_id": "<snowflake>",
+    "conversation_id": "<snowflake>"
   }]
 }
 ```
