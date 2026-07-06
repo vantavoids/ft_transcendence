@@ -162,6 +162,7 @@ Edit a message, channel or DM alike. Only the author can edit their own message 
 **Errors:**
 | Status | Reason |
 |--------|--------|
+| 400 | `content` empty, or longer than 4000 characters |
 | 403 | Not the author |
 | 404 | Message not found |
 
@@ -291,6 +292,7 @@ Deleted DMs are filtered out (same rule as channel messages).
 **Errors:**
 | Status | Reason |
 |--------|--------|
+| 400 | `user_id` is not a positive snowflake, or equals the caller's own id |
 | 404 | No DM conversation found |
 
 ---
