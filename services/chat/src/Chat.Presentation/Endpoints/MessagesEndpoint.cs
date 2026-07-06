@@ -15,11 +15,11 @@ public sealed class MessagesEndpoint : ICarterModule
 {
 	public void AddRoutes(IEndpointRouteBuilder endpoints)
 	{
-		var channelGroup = endpoints.MapGroup("/channels/{channelId:long}/messages");
+		var channelGroup = endpoints.MapGroup("/channels/{channelId:long}/messages").WithTags("Channel Messages");
 		channelGroup.MapGet("/", GetChannelHistoryAsync);
 		channelGroup.MapPost("/", SendAsync);
 
-		var messageGroup = endpoints.MapGroup("/messages");
+		var messageGroup = endpoints.MapGroup("/messages").WithTags("Messages");
 		messageGroup.MapPatch("/{messageId:long}", EditAsync);
 		messageGroup.MapDelete("/{messageId:long}", DeleteAsync);
 	}
