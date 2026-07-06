@@ -61,7 +61,7 @@ internal sealed class SendDirectMessageHandler(
 				MessageId: message.Id,
 				SenderId: AuthorId,
 				RecipientId: command.RecipientId,
-				Content: message.Content!),
+				Content: message.Content ?? string.Empty),
 			ct);
 
 		await unicaster.UnicastMessageAsync(response, ct);
