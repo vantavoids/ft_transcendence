@@ -106,6 +106,37 @@ public sealed class UpdateChannelReadStateHandlerTests
 	}
 
 	[Fact]
+	public async Task DeletedMessage_ReturnsNotFound()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+		h.Repository.Seed(Message.Reconstitute(
+			id: 1, containerId: 100, authorId: 99, recipientId: null,
+			content: null, replyToId: null, editedAt: null, isDeleted: true, createdAt: DateTimeOffset.UtcNow));
+
+		var result = await handler.HandleAsync(new UpdateChannelReadStateCommand(ChannelId: 100, MessageId: 1));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotFound, result.Error);
+	}
+
+	[Fact]
+	public async Task DmMessageId_ReturnsNotFound()
+	{
+		var (h, handler) = BuildHandler();
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+		// same numeric id as the channel, but it's a DM message - IsDirectMessage must reject it
+		h.Repository.Seed(Message.Reconstitute(
+			id: 1, containerId: 100, authorId: 99, recipientId: 7,
+			content: "hi", replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow));
+
+		var result = await handler.HandleAsync(new UpdateChannelReadStateCommand(ChannelId: 100, MessageId: 1));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotFound, result.Error);
+	}
+
+	[Fact]
 	public async Task HappyPath_AdvancesCursor_ReturnsZeroUnread()
 	{
 		var (h, handler) = BuildHandler(userId: 42);
@@ -127,6 +158,36 @@ public sealed class UpdateChannelReadStateHandlerTests
 	}
 
 	[Fact]
+	public async Task HappyPath_UnreadCount_ReflectsRepositoryCount()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+		var anchor = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+		SeedMessage(h.Repository, id: 1, channelId: 100, createdAt: anchor);
+		h.ReadStates.ChannelMessageCountsAfter[100] = 5; // 5 messages arrived after this one
+
+		var result = await handler.HandleAsync(new UpdateChannelReadStateCommand(ChannelId: 100, MessageId: 1));
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(5, result.Value.UnreadCount);
+	}
+
+	[Fact]
+	public async Task HappyPath_CountsMessagesAfter_TheTargetMessagesOwnTimestamp_NotWallClockTime()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+		var messageCreatedAt = new DateTimeOffset(2020, 1, 1, 12, 0, 0, TimeSpan.Zero); // long before "now"
+		SeedMessage(h.Repository, id: 1, channelId: 100, createdAt: messageCreatedAt);
+
+		await handler.HandleAsync(new UpdateChannelReadStateCommand(ChannelId: 100, MessageId: 1));
+
+		var call = Assert.Single(h.ReadStates.CountCalls);
+		Assert.Equal(100L, call.ChannelId);
+		Assert.Equal(messageCreatedAt, call.After);
+	}
+
+	[Fact]
 	public async Task OlderMessageId_IsNoOp_KeepsNewerCursor()
 	{
 		var (h, handler) = BuildHandler(userId: 42);
@@ -142,5 +203,8 @@ public sealed class UpdateChannelReadStateHandlerTests
 		var second = await handler.HandleAsync(new UpdateChannelReadStateCommand(ChannelId: 100, MessageId: 1));
 		Assert.True(second.Succeeded);
 		Assert.Equal("2", second.Value.LastReadMessageId); // unchanged, message 1 is older
+
+		// still broadcasts on a no-op: other devices get a harmless resync
+		Assert.Equal(2, h.Broadcaster.ReadStateCalls.Count);
 	}
 }

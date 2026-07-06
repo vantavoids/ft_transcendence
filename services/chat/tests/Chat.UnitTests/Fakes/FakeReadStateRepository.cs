@@ -13,6 +13,9 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 	public List<(long UserId, long PartnerId)> IncrementedDmUnreadCounts { get; } = [];
 	public List<(long UserId, long PartnerId)> ResetDmUnreadCounts { get; } = [];
 
+	/// <summary>records every CountChannelMessagesAfterAsync call so tests can assert the exact cursor passed in</summary>
+	public List<(long ChannelId, DateTimeOffset After)> CountCalls { get; } = [];
+
 	public void SeedChannelReadState(long userId, ReadState state) =>
 		_states[(userId, state.ContainerId, false)] = state;
 
@@ -22,6 +25,7 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 		ChannelMessageCountsAfter.Clear();
 		IncrementedDmUnreadCounts.Clear();
 		ResetDmUnreadCounts.Clear();
+		CountCalls.Clear();
 	}
 
 	public Task<ReadState> UpsertIfNewerAsync(
@@ -45,8 +49,11 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 		return Task.FromResult(states);
 	}
 
-	public Task<int> CountChannelMessagesAfterAsync(long channelId, DateTimeOffset after, CancellationToken ct) =>
-		Task.FromResult(ChannelMessageCountsAfter.GetValueOrDefault(channelId, 0));
+	public Task<int> CountChannelMessagesAfterAsync(long channelId, DateTimeOffset after, CancellationToken ct)
+	{
+		CountCalls.Add((channelId, after));
+		return Task.FromResult(ChannelMessageCountsAfter.GetValueOrDefault(channelId, 0));
+	}
 
 	public Task ResetDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct)
 	{

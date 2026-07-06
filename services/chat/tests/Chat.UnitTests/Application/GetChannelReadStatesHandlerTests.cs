@@ -58,9 +58,9 @@ public sealed class GetChannelReadStatesHandlerTests
 	{
 		var (h, handler) = BuildHandler(userId: 42);
 		h.GuildClient.VisibleChannelIds = [100];
+		var lastReadAt = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 		h.ReadStates.SeedChannelReadState(42, new ReadState(
-			ContainerId: 100, IsDm: false, LastReadMessageId: 5,
-			LastReadAt: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero)));
+			ContainerId: 100, IsDm: false, LastReadMessageId: 5, LastReadAt: lastReadAt));
 		h.ReadStates.ChannelMessageCountsAfter[100] = 2;
 
 		var result = await handler.HandleAsync(new GetChannelReadStatesQuery());
@@ -70,6 +70,22 @@ public sealed class GetChannelReadStatesHandlerTests
 		Assert.Equal("100", entry.ChannelId);
 		Assert.Equal("5", entry.LastReadMessageId);
 		Assert.Equal(2, entry.UnreadCount);
+
+		// must count from the stored cursor, not the "never read" epoch sentinel
+		var call = Assert.Single(h.ReadStates.CountCalls);
+		Assert.Equal(lastReadAt, call.After);
+	}
+
+	[Fact]
+	public async Task ChannelWithNoReadStateRow_CountsFromUnixEpoch()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.VisibleChannelIds = [100];
+
+		await handler.HandleAsync(new GetChannelReadStatesQuery());
+
+		var call = Assert.Single(h.ReadStates.CountCalls);
+		Assert.Equal(DateTimeOffset.UnixEpoch, call.After);
 	}
 
 	[Fact]
@@ -84,5 +100,30 @@ public sealed class GetChannelReadStatesHandlerTests
 		Assert.Equal(2, result.Value.Count);
 		Assert.Contains(result.Value, r => r.ChannelId == "100");
 		Assert.Contains(result.Value, r => r.ChannelId == "200");
+	}
+
+	[Fact]
+	public async Task MixedChannels_OneWithRow_OneWithout_EachComputedIndependently()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.VisibleChannelIds = [100, 200];
+		h.ReadStates.SeedChannelReadState(42, new ReadState(
+			ContainerId: 100, IsDm: false, LastReadMessageId: 5,
+			LastReadAt: new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero)));
+		h.ReadStates.ChannelMessageCountsAfter[100] = 1;
+		h.ReadStates.ChannelMessageCountsAfter[200] = 9;
+
+		var result = await handler.HandleAsync(new GetChannelReadStatesQuery());
+
+		Assert.True(result.Succeeded);
+		Assert.Equal(2, result.Value.Count);
+
+		var withRow = result.Value.Single(r => r.ChannelId == "100");
+		Assert.Equal("5", withRow.LastReadMessageId);
+		Assert.Equal(1, withRow.UnreadCount);
+
+		var withoutRow = result.Value.Single(r => r.ChannelId == "200");
+		Assert.Null(withoutRow.LastReadMessageId);
+		Assert.Equal(9, withoutRow.UnreadCount);
 	}
 }
