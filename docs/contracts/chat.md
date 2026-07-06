@@ -179,8 +179,8 @@ Delete a message. For a channel message: author or member with `MANAGE_MESSAGES`
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Not the author and lacks `MANAGE_MESSAGES` (channel), or not the author (DM) |
-| 404 | Message not found |
+| 403 | Caller is a guild member but not the author and lacks `MANAGE_MESSAGES` (channel), or not the author (DM) |
+| 404 | Message not found, **or** (channel message) caller isn't a member of the guild that owns the channel at all — same info-hiding rule as `GET /channels/{channel_id}/messages` |
 
 **Side effects:** Broadcasts `MessageDeleted { message_id, channel_id }` to the SignalR channel group for a channel message; sends `DirectMessageDeleted { message_id, conversation_id }` to both participants' personal groups for a DM.
 
