@@ -17,7 +17,6 @@ public sealed record DirectMessageResponse(
 	string RecipientId,
 	string? Content,
 	string? ReplyToId,
-	DateTimeOffset? EditedAt,
 	DateTimeOffset CreatedAt,
 	IReadOnlyList<AttachmentResponse> Attachments,
 	object[] Reactions,
@@ -33,7 +32,6 @@ public sealed record DirectMessageResponse(
 		RecipientId: m.RecipientId!.Value.ToString(),
 		Content: m.Content,
 		ReplyToId: m.ReplyToId?.ToString(),
-		EditedAt: m.EditedAt,
 		CreatedAt: m.CreatedAt,
 		Attachments: attachments is null or { Count: 0 }
 			? []

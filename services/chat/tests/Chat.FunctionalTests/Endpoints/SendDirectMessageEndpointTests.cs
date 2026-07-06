@@ -287,7 +287,6 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 			string RecipientId,
 			string? Content,
 			string? ReplyToId,
-			DateTimeOffset? EditedAt,
 			DateTimeOffset CreatedAt,
 			IReadOnlyList<AttachmentBody> Attachments,
 			string? Nonce);
