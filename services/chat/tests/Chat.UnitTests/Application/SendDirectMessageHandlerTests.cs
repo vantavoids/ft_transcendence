@@ -70,8 +70,7 @@ public sealed class SendDirectMessageHandlerTests
 		Assert.Equal(saved.ContainerId, evt.ConversationId);
 		Assert.Equal("hello", evt.Content);
 
-		var (recipientId, unicastMessage) = Assert.Single(h.Unicaster.Unicasts);
-		Assert.Equal(100L, recipientId);
+		var unicastMessage = Assert.Single(h.Unicaster.Unicasts);
 		Assert.Same(response, unicastMessage);
 	}
 

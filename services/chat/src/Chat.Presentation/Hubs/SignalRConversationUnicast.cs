@@ -7,19 +7,16 @@ namespace Chat.Presentation.Hubs;
 internal sealed class SignalRConversationUnicast(IHubContext<ChatHub, IChatClient> hub)
 	: IConversationUnicast
 {
-	public Task UnicastMessageAsync(
-		long recipientId,
-		DirectMessageResponse message,
-		CancellationToken ct)
+	public Task UnicastMessageAsync(DirectMessageResponse message, CancellationToken ct)
 	{
 		return hub.Clients
-			.User(recipientId.ToString())
+			.Users([message.SenderId, message.RecipientId])
 			.ReceiveDirectMessage(message);
 	}
 
-	public Task UnicastMessageEditedAsync(long recipientId, DirectMessageEditedEvent evt, CancellationToken ct) =>
-		hub.Clients.User(recipientId.ToString()).DirectMessageEdited(evt);
+	public Task UnicastMessageEditedAsync(long senderId, long recipientId, DirectMessageEditedEvent evt, CancellationToken ct) =>
+		hub.Clients.Users([senderId.ToString(), recipientId.ToString()]).DirectMessageEdited(evt);
 
-	public Task UnicastMessageDeletedAsync(long recipientId, DirectMessageDeletedEvent evt, CancellationToken ct) =>
-		hub.Clients.User(recipientId.ToString()).DirectMessageDeleted(evt);
+	public Task UnicastMessageDeletedAsync(long senderId, long recipientId, DirectMessageDeletedEvent evt, CancellationToken ct) =>
+		hub.Clients.Users([senderId.ToString(), recipientId.ToString()]).DirectMessageDeleted(evt);
 }

@@ -162,7 +162,8 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 		Assert.Null(factory.GuildClient.Result);
 
-		var (recipientId, evt) = Assert.Single(factory.ConversationUnicast.DeletedUnicasts);
+		var (senderId, recipientId, evt) = Assert.Single(factory.ConversationUnicast.DeletedUnicasts);
+		Assert.Equal(42L, senderId);
 		Assert.Equal(100L, recipientId);
 		Assert.Equal("1", evt.MessageId);
 		Assert.Equal("555", evt.ConversationId);

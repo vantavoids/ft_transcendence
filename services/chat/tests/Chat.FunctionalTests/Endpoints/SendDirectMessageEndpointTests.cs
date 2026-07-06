@@ -84,8 +84,7 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		Assert.Equal(42L, evt.SenderId);
 		Assert.Equal(100L, evt.RecipientId);
 
-		var (recipientId, unicastMessage) = Assert.Single(factory.ConversationUnicast.Unicasts);
-		Assert.Equal(100L, recipientId);
+		var unicastMessage = Assert.Single(factory.ConversationUnicast.Unicasts);
 		Assert.Equal(body.Id, unicastMessage.Id);
 		Assert.Equal("dm-nonce-1", unicastMessage.Nonce);
 	}
