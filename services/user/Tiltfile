@@ -1,5 +1,7 @@
 load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
+root_env = read_dotenv('../../.env')
+
 DOCKER = detect_engine()
 FLAGS  = run_flags(DOCKER)
 
@@ -22,6 +24,7 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +
+        '-e JWT_SECRET=' + root_env.get('JWT_SECRET', '') + ' ' +
         '-v $(pwd)/src:/app/src ' +
         '-v $(pwd)/package.json:/app/package.json ' +
         '-v $(pwd)/tsconfig.json:/app/tsconfig.json ' +
