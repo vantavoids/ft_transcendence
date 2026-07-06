@@ -102,6 +102,21 @@ public sealed class UpdateChannelReadStateEndpointTests(ChatApiFactory factory)
 	}
 
 	[Fact]
+	public async Task Put_DeletedMessage_Returns404()
+	{
+		factory.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+		var deleted = Message.Reconstitute(
+			id: 1, containerId: 100, authorId: 99, recipientId: null,
+			content: null, replyToId: null, editedAt: null, isDeleted: true, createdAt: PastDate);
+		factory.MessageRepository.Seed(deleted);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PutAsJsonAsync("/v1/channels/100/read", new { message_id = 1 });
+
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+	}
+
+	[Fact]
 	public async Task Put_HappyPath_Returns200_AdvancesCursor()
 	{
 		factory.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);

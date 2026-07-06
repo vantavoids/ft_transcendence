@@ -70,6 +70,38 @@ public sealed class UpdateDmReadStateHandlerTests
 	}
 
 	[Fact]
+	public async Task DeletedMessage_ReturnsNotFound()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.Repository.WithConversation(42, 100, conversationId: 555);
+		h.Repository.Seed(Message.Reconstitute(
+			id: 1, containerId: 555, authorId: 100, recipientId: 42,
+			content: null, replyToId: null, editedAt: null, isDeleted: true, createdAt: DateTimeOffset.UtcNow));
+
+		var result = await handler.HandleAsync(new UpdateDmReadStateCommand(PartnerId: 100, MessageId: 1));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotFound, result.Error);
+	}
+
+	[Fact]
+	public async Task ChannelMessageId_ReturnsNotFound()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.Repository.WithConversation(42, 100, conversationId: 555);
+		// same numeric id as the conversation, but it's a channel message - the
+		// !IsDirectMessage guard must reject it regardless of the id match
+		h.Repository.Seed(Message.Reconstitute(
+			id: 1, containerId: 555, authorId: 100, recipientId: null,
+			content: "hi", replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow));
+
+		var result = await handler.HandleAsync(new UpdateDmReadStateCommand(PartnerId: 100, MessageId: 1));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal(MessageFailures.NotFound, result.Error);
+	}
+
+	[Fact]
 	public async Task HappyPath_AdvancesCursor_ResetsUnread_ReturnsZero()
 	{
 		var (h, handler) = BuildHandler(userId: 42);
@@ -113,5 +145,6 @@ public sealed class UpdateDmReadStateHandlerTests
 		Assert.True(second.Succeeded);
 		Assert.Equal("2", second.Value.LastReadMessageId); // unchanged, message 1 is older
 		Assert.Equal(2, h.ReadStates.ResetDmUnreadCounts.Count); // still resets on every successful call
+		Assert.Equal(2, h.Broadcaster.DmReadStateCalls.Count); // still broadcasts on every successful call
 	}
 }
