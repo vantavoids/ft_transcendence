@@ -1,5 +1,6 @@
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
+using Chat.Domain.Reactions;
 using Chat.Application.Features.Attachments.Common;
 using Chat.Application.Features.Messages.SendMessage;
 
@@ -19,13 +20,14 @@ public sealed record ChannelMessageResponse(
 	DateTimeOffset? EditedAt,
 	DateTimeOffset CreatedAt,
 	IReadOnlyList<AttachmentResponse> Attachments,
-	object[] Reactions,
+	IReadOnlyList<ReactionResponse> Reactions,
 	string? Nonce) : IMessageWireResponse<ChannelMessageResponse>
 {
 	public static ChannelMessageResponse From(
 		Message m,
 		string? nonce,
-		IReadOnlyList<AttachmentMetadata>? attachments = null) => new(
+		IReadOnlyList<AttachmentMetadata>? attachments = null,
+		IReadOnlyList<ReactionSummary>? reactions = null) => new(
 		Id: m.Id.ToString(),
 		ChannelId: m.ContainerId.ToString(),
 		AuthorId: m.AuthorId.ToString(),
@@ -36,6 +38,8 @@ public sealed record ChannelMessageResponse(
 		Attachments: attachments is null or { Count: 0 }
 			? []
 			: attachments.Select(AttachmentResponse.From).ToArray(),
-		Reactions: [],
+		Reactions: reactions is null or { Count: 0 }
+			? []
+			: reactions.Select(ReactionResponse.From).ToArray(),
 		Nonce: nonce);
 }

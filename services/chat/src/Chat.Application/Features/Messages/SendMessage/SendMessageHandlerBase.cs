@@ -4,6 +4,7 @@ using Chat.Application.Abstractions.Messaging;
 using Chat.Application.Abstractions.Persistence;
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
+using Chat.Domain.Reactions;
 using Chat.Domain.Results;
 
 namespace Chat.Application.Features.Messages.SendMessage;
@@ -57,7 +58,8 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 					return TResponse.From(
 						existing, command.Nonce,
 						await attachmentRepository.GetMessageAttachmentsAsync(existing.ContainerId,
-							existing.IsDirectMessage, existing.Id, cancellationToken));
+							existing.IsDirectMessage, existing.Id, cancellationToken),
+						await ResolveReactionsAsync(existing, cancellationToken));
 				}
 				// else: fall through, this nonce is no longer bound to a live message, send for real
 			}
@@ -85,7 +87,7 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 		var message = messageResult.Value;
 		await Repository.AddAsync(message, command.Nonce, attachments, cancellationToken);
 
-		var response = TResponse.From(message, command.Nonce, attachments);
+		var response = TResponse.From(message, command.Nonce, attachments, null);
 
 		await PublishAndNotifyAsync(command, context, message, response, cancellationToken);
 
@@ -105,6 +107,9 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 	protected abstract Task<long?> FindExistingContainerIdAsync(TCommand command, CancellationToken ct);
 
 	protected abstract Task<long> ResolveContainerIdAsync(TCommand command, CancellationToken ct);
+
+	/// <summary>hydrates reactions for the nonce-replay path only, where <paramref name="existing"/> may have accrued some since the original send</summary>
+	protected abstract Task<IReadOnlyList<ReactionSummary>?> ResolveReactionsAsync(Message existing, CancellationToken ct);
 
 	protected abstract Result<Message> CreateMessage(TCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now);
 
