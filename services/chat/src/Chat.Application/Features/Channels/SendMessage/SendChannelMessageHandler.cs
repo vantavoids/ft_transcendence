@@ -5,6 +5,7 @@ using Chat.Application.Contracts;
 using Chat.Application.Features.Channels.Common;
 using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Messages;
+using Chat.Domain.Reactions;
 using Chat.Domain.Results;
 
 namespace Chat.Application.Features.Channels.SendMessage;
@@ -17,7 +18,8 @@ internal sealed class SendChannelMessageHandler(
 	IClock clock,
 	IGuildClient guildClient,
 	IEventBus eventBus,
-	IChannelBroadcaster broadcaster)
+	IChannelBroadcaster broadcaster,
+	IReactionRepository reactionRepository)
 	: SendMessageHandlerBase<SendChannelMessageCommand, ChannelMessageResponse, long>(currentUser, repository, attachmentRepository, ids, clock)
 {
 	// permission bits mirror the Guild Service domain so this stays a pure
@@ -50,6 +52,11 @@ internal sealed class SendChannelMessageHandler(
 
 	protected override Task<long> ResolveContainerIdAsync(SendChannelMessageCommand command, CancellationToken ct) =>
 		Task.FromResult(command.ChannelId);
+
+	// on a nonce replay, the existing message may have accrued reactions since
+	// the original send, so hydrate them for real instead of always returning []
+	protected override async Task<IReadOnlyList<ReactionSummary>?> ResolveReactionsAsync(Message existing, CancellationToken ct) =>
+		await reactionRepository.GetMessageReactionsAsync(existing.ContainerId, existing.Id, AuthorId, ct);
 
 	protected override Result<Message> CreateMessage(
 		SendChannelMessageCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now) =>

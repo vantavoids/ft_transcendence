@@ -5,6 +5,7 @@ using Chat.Application.Contracts;
 using Chat.Application.Features.DirectMessages.Common;
 using Chat.Application.Features.Messages.SendMessage;
 using Chat.Domain.Messages;
+using Chat.Domain.Reactions;
 using Chat.Domain.Results;
 
 namespace Chat.Application.Features.DirectMessages.SendMessage;
@@ -47,6 +48,10 @@ internal sealed class SendDirectMessageHandler(
 
 	protected override Task<long> ResolveContainerIdAsync(SendDirectMessageCommand command, CancellationToken ct) =>
 		Repository.GetOrCreateConversationAsync(AuthorId, command.RecipientId, Ids.NextId(), ct);
+
+	// DMs never carry reactions per the contract
+	protected override Task<IReadOnlyList<ReactionSummary>?> ResolveReactionsAsync(Message existing, CancellationToken ct) =>
+		Task.FromResult<IReadOnlyList<ReactionSummary>?>(null);
 
 	protected override Result<Message> CreateMessage(
 		SendDirectMessageCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now) =>

@@ -1,5 +1,6 @@
 using Chat.Domain.Attachments;
 using Chat.Domain.Messages;
+using Chat.Domain.Reactions;
 
 namespace Chat.Application.Features.Messages.SendMessage;
 
@@ -10,5 +11,9 @@ namespace Chat.Application.Features.Messages.SendMessage;
 /// </summary>
 public interface IMessageWireResponse<out TSelf> where TSelf : IMessageWireResponse<TSelf>
 {
-	static abstract TSelf From(Message m, string? nonce, IReadOnlyList<AttachmentMetadata>? attachments);
+	static abstract TSelf From(
+		Message m,
+		string? nonce,
+		IReadOnlyList<AttachmentMetadata>? attachments,
+		IReadOnlyList<ReactionSummary>? reactions);
 }
