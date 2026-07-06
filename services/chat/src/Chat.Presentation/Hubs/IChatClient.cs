@@ -11,6 +11,9 @@ public interface IChatClient
 	Task MessageEdited(ChannelMessageEditedEvent evt);
 	Task MessageDeleted(ChannelMessageDeletedEvent evt);
 
+	Task ReactionAdded(ReactionAddedEvent evt);
+	Task ReactionRemoved(ReactionRemovedEvent evt);
+
 	Task DirectMessageEdited(DirectMessageEditedEvent evt);
 	Task DirectMessageDeleted(DirectMessageDeletedEvent evt);
 
