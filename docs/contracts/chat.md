@@ -81,7 +81,7 @@ Send a message to a channel. Returns the canonical persisted message synchronous
 The nonce is a client-supplied string that the server treats as opaque. Its purpose is threefold:
 
 1. **Optimistic UI reconciliation.** The sender places a local message bubble keyed by nonce, then replaces it when either the `201` response or the `ReceiveMessage` broadcast arrives (whichever wins the race).
-2. **Idempotency.** If the same `(author_id, channel_id, nonce)` triple is seen again within **10 minutes**, the server returns the originally persisted message (same `id`, `created_at`) instead of writing a new row. Lets clients safely retry on network failure. Outside that window the nonce is forgotten and a repeat call would create a new message.
+2. **Idempotency.** If the same `(author_id, channel_id, nonce)` triple is seen again within **10 minutes**, the server returns the originally persisted message (same `id`, `created_at`) instead of writing a new row. Lets clients safely retry on network failure. Outside that window the nonce is forgotten and a repeat call would create a new message. For a channel message, this replayed response carries the message's *current* `reactions[]` (it may have accrued some since the original send) rather than the `[]` a truly new message gets.
 3. **Send-status feedback.** The sender can show "failed, retry" if neither the `201` nor a matching `ReceiveMessage` arrives within a UI timeout.
 
 Omitting `nonce` opts out of all three: the response and broadcast carry `"nonce": null`, and retries will create duplicate messages.
