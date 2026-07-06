@@ -11,17 +11,17 @@ Delivery order is dependency-first.
 
 ## Phase 1 - Contract and runtime shell
 
-- [ ] Replace the Rust runtime with a NestJS application
-  - [ ] add `package.json`, `tsconfig.json`, and build scripts
-  - [ ] add the Nest bootstrap, app module, and global validation
-  - [ ] expose `GET /healthz`
-- [ ] Align the database bootstrap with the target schema
-  - [ ] replace the legacy UUID init SQL with the `BIGINT`/Snowflake schema
-  - [ ] keep `users_profile`, `friendships`, and `user_blocks` as the initial tables
-- [ ] Update the service image and local dev plumbing
-  - [ ] replace the Rust Dockerfiles with Node.js builds
-  - [ ] update Tilt and compose to start the Nest app
-  - [ ] refresh ignore files and lockfile generation
+- [x] Replace the Rust runtime with a NestJS application
+  - [x] add `package.json`, `tsconfig.json`, and build scripts
+  - [x] add the Nest bootstrap, app module, and global validation
+  - [x] expose `GET /healthz`
+- [x] Align the database bootstrap with the target schema
+  - [x] replace the legacy UUID init SQL with the `BIGINT`/Snowflake schema
+  - [x] keep `users_profile`, `friendships`, and `user_blocks` as the initial tables
+- [x] Update the service image and local dev plumbing
+  - [x] replace the Rust Dockerfiles with Node.js builds
+  - [x] update Tilt and compose to start the Nest app
+  - [x] refresh ignore files and lockfile generation
 
 ## Phase 2 - Internal endpoints
 
@@ -35,9 +35,9 @@ Delivery order is dependency-first.
 
 ## Phase 3 - Public profile surface
 
-- [ ] Implement `GET /users/me`
+- [x] Implement `GET /users/me`
 - [x] Implement `GET /users/{id}`
-- [ ] Implement `PATCH /users/{id}`
+- [x] Implement `PATCH /users/{id}`
 - [ ] Implement `GET /users`
 - [ ] Implement `GET /users/search`
 

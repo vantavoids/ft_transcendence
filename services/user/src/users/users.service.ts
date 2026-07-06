@@ -25,6 +25,12 @@ export interface RelationshipResponse {
   since: string | null;
 }
 
+export interface UpdateUserProfileInput {
+  display_name?: string;
+  bio?: string;
+  status?: UserProfileResponse['status'];
+}
+
 interface UserProfileRow {
   id: string;
   username: string;
@@ -69,6 +75,57 @@ export class UsersService {
         LIMIT 1
       `,
       [userId],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return this.toProfileResponse(row);
+  }
+
+  async updateInternalProfile(
+    userId: string,
+    changes: UpdateUserProfileInput,
+  ): Promise<UserProfileResponse | null> {
+    const result = await this.database.client.query<UserProfileRow>(
+      `
+        WITH current_profile AS (
+          SELECT status
+          FROM users_profile
+          WHERE id = $1::bigint
+          LIMIT 1
+        )
+        UPDATE users_profile AS profile
+        SET
+          display_name = COALESCE($2, profile.display_name),
+          bio = COALESCE($3, profile.bio),
+          status = COALESCE($4, profile.status),
+          last_seen_at = CASE
+            WHEN COALESCE($4, profile.status) = 'offline'
+              AND (SELECT status FROM current_profile) IS DISTINCT FROM 'offline'
+            THEN NOW()
+            ELSE profile.last_seen_at
+          END,
+          updated_at = NOW()
+        WHERE profile.id = $1::bigint
+        RETURNING
+          profile.id::text,
+          profile.username,
+          profile.display_name,
+          profile.avatar_url,
+          profile.banner_url,
+          profile.status,
+          profile.bio,
+          profile.last_seen_at
+      `,
+      [
+        userId,
+        changes.display_name ?? null,
+        changes.bio ?? null,
+        changes.status ?? null,
+      ],
     );
 
     const row = result.rows[0];
