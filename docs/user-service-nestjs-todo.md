@@ -25,18 +25,18 @@ Delivery order is dependency-first.
 
 ## Phase 2 - Internal endpoints
 
-- [ ] Implement `GET /internal/users/{user_id}`
-  - [ ] return the public profile shape
-  - [ ] return `404` when the profile does not exist
-- [ ] Implement `GET /internal/users/{user_id}/relationship-with/{other_user_id}`
-  - [ ] resolve block state first
-  - [ ] resolve friendship state second
-  - [ ] return the documented `status` / `since` payload
+- [x] Implement `GET /internal/users/{user_id}`
+  - [x] return the public profile shape
+  - [x] return `404` when the profile does not exist
+- [x] Implement `GET /internal/users/{user_id}/relationship-with/{other_user_id}`
+  - [x] resolve block state first
+  - [x] resolve friendship state second
+  - [x] return the documented `status` / `since` payload
 
 ## Phase 3 - Public profile surface
 
 - [ ] Implement `GET /users/me`
-- [ ] Implement `GET /users/{id}`
+- [x] Implement `GET /users/{id}`
 - [ ] Implement `PATCH /users/{id}`
 - [ ] Implement `GET /users`
 - [ ] Implement `GET /users/search`
@@ -52,4 +52,3 @@ Delivery order is dependency-first.
 - [ ] Implement avatar upload / delete
 - [ ] Implement banner upload / delete
 - [ ] Add storage integration for profile media
-
