@@ -34,6 +34,9 @@ internal sealed class SendDirectMessageHandler(
 	protected override Task<long?> FindNonceAsync(SendDirectMessageCommand command, string nonce, CancellationToken ct) =>
 		Repository.FindDmNonceAsync(AuthorId, command.RecipientId, nonce, ct);
 
+	protected override Task<long?> FindExistingContainerIdAsync(SendDirectMessageCommand command, CancellationToken ct) =>
+		Repository.FindConversationAsync(AuthorId, command.RecipientId, ct);
+
 	protected override Task<long> ResolveContainerIdAsync(SendDirectMessageCommand command, CancellationToken ct) =>
 		Repository.GetOrCreateConversationAsync(AuthorId, command.RecipientId, Ids.NextId(), ct);
 
