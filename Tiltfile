@@ -67,6 +67,19 @@ local_resource(
 )
 
 local_resource(
+    'mailhog',
+    serve_cmd=container_serve(DOCKER, FLAGS, 'mailhog',
+        '--network ft_transcendence ' +
+        '-p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 ' +
+        '-e MH_UI_WEB_PATH=mailhog ' +
+        'docker.io/mailhog/mailhog:v1.0.1'
+    ),
+    resource_deps=['dev-network'],
+    labels=['infra'],
+    links=[BASE_URL + '/mailhog'],
+)
+
+local_resource(
     'coturn',
     # STUN/TURN for WebRTC. Host networking (like nginx) so the relay UDP range
     # and 3478/5349 bind directly. Realm + long-term user come from the root .env;
