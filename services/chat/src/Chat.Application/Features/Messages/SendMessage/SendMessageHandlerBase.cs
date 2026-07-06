@@ -52,10 +52,14 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 			{
 				var existing = await Repository.GetByIdAsync(existingId.Value, cancellationToken);
 
-				if (existing is not null)
+				if (existing is not null && !existing.IsDeleted)
+				{
 					return TResponse.From(
 						existing, command.Nonce,
-						await attachmentRepository.GetMessageAttachmentsAsync(existing.ContainerId, existing.IsDirectMessage, existing.Id, cancellationToken));
+						await attachmentRepository.GetMessageAttachmentsAsync(existing.ContainerId,
+							existing.IsDirectMessage, existing.Id, cancellationToken));
+				}
+				// else: fall through, this nonce is no longer bound to a live message, send for real
 			}
 		}
 
