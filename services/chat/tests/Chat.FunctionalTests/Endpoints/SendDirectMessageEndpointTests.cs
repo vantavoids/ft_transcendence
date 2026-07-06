@@ -27,6 +27,7 @@ public sealed class SendDirectMessageEndpointTests(ChatApiFactory factory)
 		// every test in this file sends as user 42; seed the relationship pairs
 		// it exercises so the handler's blocked-check passes by default
 		factory.UserClient.Setup(42, 100, new UsersRelationship("accepted", null));
+		factory.UserClient.Setup(100, 42, new UsersRelationship("accepted", null));
 		factory.UserClient.Setup(42, 42, new UsersRelationship("accepted", null));
 		return Task.CompletedTask;
 	}

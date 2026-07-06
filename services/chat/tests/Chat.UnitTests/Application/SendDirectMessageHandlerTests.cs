@@ -33,6 +33,7 @@ public sealed class SendDirectMessageHandlerTests
 		var ids = new FakeIdGenerator();
 		var userClient = new FakeUserClient();
 		userClient.Setup(userId, recipientId, new UsersRelationship("none", null));
+		userClient.Setup(recipientId, userId, new UsersRelationship("none", null));
 		var clock = new FakeClock();
 		var eventBus = new FakeEventBus();
 		var unicaster = new FakeConversationUnicast();
