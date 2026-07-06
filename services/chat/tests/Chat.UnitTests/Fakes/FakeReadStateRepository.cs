@@ -16,6 +16,14 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 	public void SeedChannelReadState(long userId, ReadState state) =>
 		_states[(userId, state.ContainerId, false)] = state;
 
+	public void Reset()
+	{
+		_states.Clear();
+		ChannelMessageCountsAfter.Clear();
+		IncrementedDmUnreadCounts.Clear();
+		ResetDmUnreadCounts.Clear();
+	}
+
 	public Task<ReadState> UpsertIfNewerAsync(
 		long userId, long containerId, bool isDm, long messageId, DateTimeOffset readAt, CancellationToken ct)
 	{
