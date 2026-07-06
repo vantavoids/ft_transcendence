@@ -2,13 +2,15 @@
 .gitignore
 **/.DS_Store
 
-# Rust build artifacts
-target
-**/target
+# Node build artifacts
+dist
+node_modules
+coverage
 
-# Cargo registry/git caches
-**/.cargo
-**/Cargo.toml.bak
+# Package manager caches
+.npm
+.pnpm-store
+.yarn
 
 # Env / secrets
 .env
@@ -20,4 +22,3 @@ target
 
 # Tests / coverage / logs
 **/*.log
-coverage

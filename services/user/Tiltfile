@@ -1,9 +1,5 @@
 load('../../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
-root_env     = read_dotenv('../../.env')
-MINIO_KEY    = root_env.get('MINIO_ACCESS_KEY', 'minioadmin')
-MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
-MINIO_BUCKET = root_env.get('MINIO_USER_BUCKET', 'user-avatars')
 DOCKER = detect_engine()
 FLAGS  = run_flags(DOCKER)
 
@@ -26,14 +22,13 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +
-        '-e MINIO_ENDPOINT=http://minio:9000 ' +
-        '-e MINIO_ACCESS_KEY=' + MINIO_KEY + ' ' +
-        '-e MINIO_SECRET_KEY=' + MINIO_SECRET + ' ' +
-        '-e MINIO_BUCKET=' + MINIO_BUCKET + ' ' +
         '-v $(pwd)/src:/app/src ' +
-        'user-service cargo watch --poll -x run'
+        '-v $(pwd)/package.json:/app/package.json ' +
+        '-v $(pwd)/tsconfig.json:/app/tsconfig.json ' +
+        '-v $(pwd)/tsconfig.build.json:/app/tsconfig.build.json ' +
+        'user-service npm run start:dev'
     ),
-    deps=['Dockerfile.dev', 'Cargo.toml', 'Cargo.lock'],
-    resource_deps=['user-db', 'rabbitmq', 'minio'],
+    deps=['Dockerfile.dev', 'Dockerfile', 'package.json', 'tsconfig.json', 'tsconfig.build.json'],
+    resource_deps=['user-db'],
     labels=['user'],
 )
