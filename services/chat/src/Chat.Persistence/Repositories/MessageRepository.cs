@@ -159,7 +159,7 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 		var stmt = await statements.SelectDirectMessagesByConversation.Value;
 		var rows = await session.ExecuteAsync(stmt.Bind(conversationId, beforeTime.UtcDateTime, limit));
 
-		return rows.Select(ReconstituteDirectMessage).ToList();
+		return rows.Select(ReconstituteDirectMessage).Where(dm => !dm.IsDeleted).ToList();
 	}
 
 	public async Task<Message?> GetByIdAsync(long messageId, CancellationToken ct)
