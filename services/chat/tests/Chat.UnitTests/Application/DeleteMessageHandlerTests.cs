@@ -179,7 +179,8 @@ public sealed class DeleteMessageHandlerTests
 		Assert.Single(h.Repository.SoftDeleted);
 		Assert.Null(h.GuildClient.Result);
 
-		var (recipientId, evt) = Assert.Single(h.Unicaster.DeletedUnicasts);
+		var (senderId, recipientId, evt) = Assert.Single(h.Unicaster.DeletedUnicasts);
+		Assert.Equal(42L, senderId);
 		Assert.Equal(100L, recipientId);
 		Assert.Equal("1", evt.MessageId);
 		Assert.Equal("555", evt.ConversationId);
