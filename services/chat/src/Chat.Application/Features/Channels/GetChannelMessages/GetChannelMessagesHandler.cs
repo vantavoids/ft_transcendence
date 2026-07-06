@@ -12,6 +12,7 @@ internal sealed class GetChannelMessagesHandler(
 	IGuildClient guildClient,
 	IMessageRepository repository,
 	IAttachmentRepository attachmentRepository,
+	IReactionRepository reactionRepository,
 	IClock clock)
 	: IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>>
 {
@@ -43,9 +44,11 @@ internal sealed class GetChannelMessagesHandler(
 		var messageIds = messages.Select(m => m.Id).ToList();
 		var attachmentsByMessage = await attachmentRepository
 			.GetMessagesAttachmentsAsync(query.ChannelId, isDm: false, messageIds, cancellationToken);
+		var reactionsByMessage = await reactionRepository
+			.GetMessagesReactionsAsync(query.ChannelId, messageIds, userId, cancellationToken);
 
 		var hydrated = messages
-			.Select(m => ChannelMessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]]))
+			.Select(m => ChannelMessageResponse.From(m, null, [.. attachmentsByMessage[m.Id]], [.. reactionsByMessage[m.Id]]))
 			.ToList();
 
 		return Result.Ok<IReadOnlyList<ChannelMessageResponse>>(hydrated);
