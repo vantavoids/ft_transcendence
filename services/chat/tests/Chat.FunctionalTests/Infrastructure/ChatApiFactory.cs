@@ -86,6 +86,18 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			new ChannelMessageDeletedEvent(messageId.ToString(), channelId.ToString()));
 	}
 
+	public async Task SimulateReactionAddedAsync(long channelId, ReactionAddedEvent evt)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").ReactionAdded(evt);
+	}
+
+	public async Task SimulateReactionRemovedAsync(long channelId, ReactionRemovedEvent evt)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").ReactionRemoved(evt);
+	}
+
 	// Directly calls the real SignalRUserBroadcaster (not a fake) so that
 	// connected hub clients receive GuildJoined/GuildLeft invocations.
 	// MassTransit is stripped in tests, so consumers cannot be triggered via

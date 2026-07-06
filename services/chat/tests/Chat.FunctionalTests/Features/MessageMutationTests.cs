@@ -170,3 +170,126 @@ public sealed class DeleteMessageBroadcastTests(ChatApiFactory factory)
 		Assert.False(received);
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hub broadcast reception — ReactionAdded / ReactionRemoved
+// ─────────────────────────────────────────────────────────────────────────────
+
+public sealed class ReactionBroadcastTests(ChatApiFactory factory)
+	: IClassFixture<ChatApiFactory>, IAsyncLifetime
+{
+	private const long ReadMessages = 1L << 1;
+	private const long GuildId      = 999;
+	private const long ChannelId    = 300;
+
+	private const long UserSubscriber    = 7_001;
+	private const long UserNonSubscriber = 7_002;
+
+	public Task InitializeAsync()
+	{
+		factory.GuildClient.Result = null;
+		factory.MessageRepository.Reset();
+		factory.Broadcaster.Reset();
+		return Task.CompletedTask;
+	}
+
+	public Task DisposeAsync() => Task.CompletedTask;
+
+	[Fact]
+	public async Task ReactionAdded_SubscriberInGroup_ReceivesEventWithCorrectPayload()
+	{
+		factory.WithMembershipFor(ChannelId, UserSubscriber, GuildId, ReadMessages);
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserSubscriber);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var tcs = new TaskCompletionSource<ReactionAddedEvent>();
+		conn.On<ReactionAddedEvent>("ReactionAdded", evt => tcs.TrySetResult(evt));
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+
+		var sentEvt = new ReactionAddedEvent(
+			MessageId: "42",
+			ChannelId: ChannelId.ToString(),
+			UserId: "99",
+			Emoji: "👍",
+			Count: 3);
+
+		await factory.SimulateReactionAddedAsync(ChannelId, sentEvt);
+
+		var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		Assert.Equal("42", received.MessageId);
+		Assert.Equal(ChannelId.ToString(), received.ChannelId);
+		Assert.Equal("99", received.UserId);
+		Assert.Equal("👍", received.Emoji);
+		Assert.Equal(3, received.Count);
+	}
+
+	[Fact]
+	public async Task ReactionAdded_NonSubscriber_DoesNotReceive()
+	{
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserNonSubscriber);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var received = false;
+		conn.On<ReactionAddedEvent>("ReactionAdded", _ => received = true);
+
+		await conn.StartAsync();
+		// intentionally no JoinChannel
+
+		await factory.SimulateReactionAddedAsync(ChannelId,
+			new ReactionAddedEvent("1", ChannelId.ToString(), "99", "👍", 1));
+
+		await Task.Delay(300);
+		Assert.False(received);
+	}
+
+	[Fact]
+	public async Task ReactionRemoved_SubscriberInGroup_ReceivesEventWithCorrectPayload()
+	{
+		factory.WithMembershipFor(ChannelId, UserSubscriber, GuildId, ReadMessages);
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserSubscriber);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var tcs = new TaskCompletionSource<ReactionRemovedEvent>();
+		conn.On<ReactionRemovedEvent>("ReactionRemoved", evt => tcs.TrySetResult(evt));
+
+		await conn.StartAsync();
+		await conn.InvokeAsync("JoinChannel", ChannelId);
+
+		var sentEvt = new ReactionRemovedEvent(
+			MessageId: "42",
+			ChannelId: ChannelId.ToString(),
+			UserId: "99",
+			Emoji: "👍",
+			Count: 2);
+
+		await factory.SimulateReactionRemovedAsync(ChannelId, sentEvt);
+
+		var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		Assert.Equal("42", received.MessageId);
+		Assert.Equal(ChannelId.ToString(), received.ChannelId);
+		Assert.Equal("99", received.UserId);
+		Assert.Equal("👍", received.Emoji);
+		Assert.Equal(2, received.Count);
+	}
+
+	[Fact]
+	public async Task ReactionRemoved_NonSubscriber_DoesNotReceive()
+	{
+		var token = TestTokens.Issue(ChatApiFactory.JwtSecret, UserNonSubscriber);
+		await using var conn = HubConnectionHelper.Build(factory, token);
+
+		var received = false;
+		conn.On<ReactionRemovedEvent>("ReactionRemoved", _ => received = true);
+
+		await conn.StartAsync();
+		// intentionally no JoinChannel
+
+		await factory.SimulateReactionRemovedAsync(ChannelId,
+			new ReactionRemovedEvent("1", ChannelId.ToString(), "99", "👍", 0));
+
+		await Task.Delay(300);
+		Assert.False(received);
+	}
+}
