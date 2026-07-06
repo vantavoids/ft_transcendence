@@ -24,7 +24,8 @@ public sealed class SendChannelMessageHandlerTests
 		FakeIdGenerator IdGenerator,
 		FakeClock Clock,
 		FakeEventBus EventBus,
-		FakeChannelBroadcaster Broadcaster);
+		FakeChannelBroadcaster Broadcaster,
+		FakeReactionRepository ReactionRepository);
 
 	private static (Harness Harness,
 		Chat.Application.Abstractions.Messaging.ICommandHandler<SendChannelMessageCommand, Result<ChannelMessageResponse>> Handler)
@@ -38,11 +39,12 @@ public sealed class SendChannelMessageHandlerTests
 		var clock = new FakeClock();
 		var eventBus = new FakeEventBus();
 		var broadcaster = new FakeChannelBroadcaster();
+		var reactionRepository = new FakeReactionRepository();
 
 		var handler = HandlerFactory.CreateCommand<SendChannelMessageCommand, Result<ChannelMessageResponse>>(
-			currentUser, repository, attachmentRepository, ids, clock, guildClient, eventBus, broadcaster);
+			currentUser, repository, attachmentRepository, ids, clock, guildClient, eventBus, broadcaster, reactionRepository);
 
-		return (new Harness(currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster), handler);
+		return (new Harness(currentUser, guildClient, repository, attachmentRepository, ids, clock, eventBus, broadcaster, reactionRepository), handler);
 	}
 
 	[Fact]
@@ -197,6 +199,30 @@ public sealed class SendChannelMessageHandlerTests
 		Assert.Single(h.Repository.Saved);
 		Assert.Empty(h.EventBus.Published);
 		Assert.Empty(h.Broadcaster.Broadcasts);
+	}
+
+	[Fact]
+	public async Task NonceDedupHit_WithAccruedReactions_HydratesRealReactions()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+
+		var first = await handler.HandleAsync(new SendChannelMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "my-nonce"));
+		Assert.True(first.Succeeded);
+		Assert.Empty(first.Value.Reactions);
+
+		// another user reacted to the message after the original send, before the client retried
+		var saved = Assert.Single(h.Repository.Saved);
+		h.ReactionRepository.Seed(saved.ContainerId, saved.Id, "👍", userId: 7);
+
+		var second = await handler.HandleAsync(new SendChannelMessageCommand(ChannelId: 100, Content: "hello", ReplyToId: null, AttachmentIds: [], Nonce: "my-nonce"));
+
+		Assert.True(second.Succeeded);
+		Assert.Equal(first.Value.Id, second.Value.Id);
+		var reaction = Assert.Single(second.Value.Reactions);
+		Assert.Equal("👍", reaction.Emoji);
+		Assert.Equal(1, reaction.Count);
+		Assert.False(reaction.MeReacted);
 	}
 
 	[Fact]
