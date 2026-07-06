@@ -20,6 +20,7 @@ public sealed class GetChannelMessagesHandlerTests
 		FakeGuildClient GuildClient,
 		FakeMessageRepository Repository,
 		FakeAttachmentRepository AttachmentRepository,
+		FakeReactionRepository ReactionRepository,
 		FakeClock Clock);
 
 	private static (Harness Harness, IQueryHandler<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>> Handler)
@@ -29,12 +30,13 @@ public sealed class GetChannelMessagesHandlerTests
 		var guildClient = new FakeGuildClient();
 		var repository = new FakeMessageRepository();
 		var attachmentRepository = new FakeAttachmentRepository();
+		var reactionRepository = new FakeReactionRepository();
 		var clock = new FakeClock();
 
 		var handler = HandlerFactory.CreateQuery<GetChannelMessagesQuery, Result<IReadOnlyList<ChannelMessageResponse>>>(
-			currentUser, guildClient, repository, attachmentRepository, clock);
+			currentUser, guildClient, repository, attachmentRepository, reactionRepository, clock);
 
-		return (new Harness(currentUser, guildClient, repository, attachmentRepository, clock), handler);
+		return (new Harness(currentUser, guildClient, repository, attachmentRepository, reactionRepository, clock), handler);
 	}
 
 	private static Message SeedMessage(FakeMessageRepository repo, long id, long channelId, DateTimeOffset createdAt, bool isDeleted = false)
@@ -142,6 +144,37 @@ public sealed class GetChannelMessagesHandlerTests
 		// the other message hydrates to an empty list, not null
 		var withoutAttachment = Assert.Single(result.Value, m => m.Id == "1");
 		Assert.Empty(withoutAttachment.Attachments);
+	}
+
+	[Fact]
+	public async Task HydratesReactions_PerMessage_WithMeReactedForCaller()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+
+		var anchor = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+		SeedMessage(h.Repository, id: 1, channelId: 100, createdAt: anchor.AddMinutes(-10));
+		SeedMessage(h.Repository, id: 2, channelId: 100, createdAt: anchor.AddMinutes(-5));
+
+		// message 1: the caller reacted; message 2: someone else reacted, caller didn't
+		h.ReactionRepository.Seed(channelId: 100, messageId: 1, emoji: "👍", userId: 42);
+		h.ReactionRepository.Seed(channelId: 100, messageId: 2, emoji: "🔥", userId: 7);
+
+		var result = await handler.HandleAsync(new GetChannelMessagesQuery(ChannelId: 100, BeforeTime: anchor, Limit: 50));
+
+		Assert.True(result.Succeeded);
+
+		var withMyReaction = Assert.Single(result.Value, m => m.Id == "1");
+		var reaction1 = Assert.Single(withMyReaction.Reactions);
+		Assert.Equal("👍", reaction1.Emoji);
+		Assert.Equal(1, reaction1.Count);
+		Assert.True(reaction1.MeReacted);
+
+		var withOthersReaction = Assert.Single(result.Value, m => m.Id == "2");
+		var reaction2 = Assert.Single(withOthersReaction.Reactions);
+		Assert.Equal("🔥", reaction2.Emoji);
+		Assert.Equal(1, reaction2.Count);
+		Assert.False(reaction2.MeReacted);
 	}
 
 	[Fact]
