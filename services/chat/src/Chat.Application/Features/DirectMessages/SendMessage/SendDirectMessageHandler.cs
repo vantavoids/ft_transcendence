@@ -22,11 +22,18 @@ internal sealed class SendDirectMessageHandler(
 {
 	protected override async Task<Result<NoContext>> PrecheckAsync(SendDirectMessageCommand command, CancellationToken ct)
 	{
-		var relationship = await userClient.GetUsersRelationship(AuthorId, command.RecipientId, ct);
-		if (relationship is null)
+		// per contract, checked one direction each way rather than trusting a
+		// single call's reciprocal status
+		var asAuthorTask = userClient.GetUsersRelationship(AuthorId, command.RecipientId, ct);
+		var asRecipientTask = userClient.GetUsersRelationship(command.RecipientId, AuthorId, ct);
+
+		var asAuthor = await asAuthorTask;
+		var asRecipient = await asRecipientTask;
+		if (asAuthor is null || asRecipient is null)
 			return MessageFailures.RecipientNotFound;
 
-		return relationship.Status is "blocked_by_them" or "blocked_by_me"
+		return asAuthor.Status is "blocked_by_them" or "blocked_by_me"
+			|| asRecipient.Status is "blocked_by_them" or "blocked_by_me"
 			? MessageFailures.RecipientBlocked
 			: new NoContext();
 	}
