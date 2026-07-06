@@ -59,16 +59,20 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 			}
 		}
 
-		var containerId = await ResolveContainerIdAsync(command, cancellationToken);
-
-		if (command.ReplyToId is not null
-			&& !await ReplyTargetExistsAsync(containerId, command.ReplyToId.Value, cancellationToken))
-			return MessageFailures.InvalidReplyTarget;
-
 		var attachmentsResult = await ResolveAttachmentsAsync(command.AttachmentIds, AuthorId, cancellationToken);
 		if (attachmentsResult.IsFailure)
 			return attachmentsResult.Error;
 		var attachments = attachmentsResult.Value;
+
+		// read-only: never creates a container, so a validation failure below never
+		// leaves an empty conversation behind
+		var existingContainerId = await FindExistingContainerIdAsync(command, cancellationToken);
+
+		if (command.ReplyToId is not null
+			&& (existingContainerId is null || !await ReplyTargetExistsAsync(existingContainerId.Value, command.ReplyToId.Value, cancellationToken)))
+			return MessageFailures.InvalidReplyTarget;
+
+		var containerId = existingContainerId ?? await ResolveContainerIdAsync(command, cancellationToken);
 
 		var messageResult = CreateMessage(command, containerId, Ids.NextId(), attachments.Count > 0, clock.UtcNow);
 		if (messageResult.IsFailure)
@@ -89,7 +93,13 @@ internal abstract class SendMessageHandlerBase<TCommand, TResponse, TContext>(
 
 	protected abstract Task<long?> FindNonceAsync(TCommand command, string nonce, CancellationToken ct);
 
-	/// <summary>the channel id (already known) or the DM conversation id (resolved/created here)</summary>
+	/// <summary>
+	/// read-only: the channel id (already known) or the DM conversation id if one already
+	/// exists between the two users. Must never create anything - <see cref="ResolveContainerIdAsync"/>
+	/// is what creates the container, and only runs once this returns null.
+	/// </summary>
+	protected abstract Task<long?> FindExistingContainerIdAsync(TCommand command, CancellationToken ct);
+
 	protected abstract Task<long> ResolveContainerIdAsync(TCommand command, CancellationToken ct);
 
 	protected abstract Result<Message> CreateMessage(TCommand command, long containerId, long messageId, bool hasAttachments, DateTimeOffset now);
