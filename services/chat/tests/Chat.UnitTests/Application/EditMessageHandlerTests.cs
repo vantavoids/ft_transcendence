@@ -188,7 +188,8 @@ public sealed class EditMessageHandlerTests
 		var updated = Assert.Single(h.Repository.Updated);
 		Assert.Equal(1L, updated.Id);
 
-		var (recipientId, evt) = Assert.Single(h.Unicaster.EditedUnicasts);
+		var (senderId, recipientId, evt) = Assert.Single(h.Unicaster.EditedUnicasts);
+		Assert.Equal(42L, senderId);
 		Assert.Equal(100L, recipientId);
 		Assert.Equal("1", evt.Id);
 		Assert.Equal("555", evt.ConversationId);

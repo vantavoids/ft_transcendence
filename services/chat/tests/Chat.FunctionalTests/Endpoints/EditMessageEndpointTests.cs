@@ -199,7 +199,8 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 		Assert.NotNull(body);
 		Assert.Equal("updated dm content", body.Content);
 
-		var (recipientId, evt) = Assert.Single(factory.ConversationUnicast.EditedUnicasts);
+		var (senderId, recipientId, evt) = Assert.Single(factory.ConversationUnicast.EditedUnicasts);
+		Assert.Equal(42L, senderId);
 		Assert.Equal(100L, recipientId);
 		Assert.Equal("1", evt.Id);
 		Assert.Equal("555", evt.ConversationId);

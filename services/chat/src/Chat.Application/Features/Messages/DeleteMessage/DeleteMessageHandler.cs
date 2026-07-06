@@ -64,6 +64,6 @@ internal sealed class DeleteMessageHandler(
 
 	private Task NotifyDeletedAsync(Message message, CancellationToken ct) =>
 		message.IsDirectMessage
-			? unicaster.UnicastMessageDeletedAsync(message.RecipientId!.Value, DirectMessageDeletedEvent.From(message), ct)
+			? unicaster.UnicastMessageDeletedAsync(message.AuthorId, message.RecipientId!.Value, DirectMessageDeletedEvent.From(message), ct)
 			: broadcaster.BroadcastMessageDeletedAsync(message.ContainerId, message.Id, ct);
 }
