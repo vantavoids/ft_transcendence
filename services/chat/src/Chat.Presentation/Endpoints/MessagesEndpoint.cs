@@ -6,6 +6,8 @@ using Chat.Application.Features.Channels.SendMessage;
 using Chat.Application.Features.Messages.Common;
 using Chat.Application.Features.Messages.DeleteMessage;
 using Chat.Application.Features.Messages.EditMessage;
+using Chat.Application.Features.Reactions.AddReaction;
+using Chat.Application.Features.Reactions.RemoveReaction;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -19,9 +21,11 @@ public sealed class MessagesEndpoint : ICarterModule
 		channelGroup.MapGet("/", GetChannelHistoryAsync);
 		channelGroup.MapPost("/", SendAsync);
 
-		var messageGroup = endpoints.MapGroup("/messages").WithTags("Messages");
-		messageGroup.MapPatch("/{messageId:long}", EditAsync);
-		messageGroup.MapDelete("/{messageId:long}", DeleteAsync);
+		var messageGroup = endpoints.MapGroup("/messages/{messageId:long}");
+		messageGroup.MapPatch("/", EditAsync);
+		messageGroup.MapDelete("/", DeleteAsync);
+		messageGroup.MapPut("/reactions/{emoji}", AddReactionAsync);
+		messageGroup.MapDelete("/reactions/{emoji}", RemoveReactionAsync);
 	}
 
 	private static async Task<Results<
@@ -127,6 +131,42 @@ public sealed class MessagesEndpoint : ICarterModule
 			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
+	private static async Task<Results<
+		Ok<ReactionResponse>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	AddReactionAsync(
+		long messageId,
+		string emoji,
+		ICommandHandler<AddReactionCommand, Result<ReactionResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new AddReactionCommand(messageId, emoji), cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapReactionError(result.Error);
+	}
+
+	private static async Task<Results<
+		Ok<ReactionResponse>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	RemoveReactionAsync(
+		long messageId,
+		string emoji,
+		ICommandHandler<RemoveReactionCommand, Result<ReactionResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new RemoveReactionCommand(messageId, emoji), cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapReactionError(result.Error);
+	}
+
 	private static Results<Ok<IReadOnlyList<ChannelMessageResponse>>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
 		MapGetChannelHistoryError(Failure failure) => failure.Code switch
 		{
@@ -141,6 +181,17 @@ public sealed class MessagesEndpoint : ICarterModule
 			"Message.MissingManagePermission" or
 			"Message.NotAuthor" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
 			_ => TypedResults.NotFound(new ErrorBody(failure.Message)),
+		};
+
+	private static Results<Ok<ReactionResponse>, BadRequest<ErrorBody>, JsonHttpResult<ErrorBody>, NotFound<ErrorBody>>
+		MapReactionError(Failure failure) => failure.Code switch
+		{
+			"Message.NotFound" or
+			"Reaction.IsDirectMessage" => TypedResults.NotFound(new ErrorBody(failure.Message)),
+			"Message.MissingReadPermission" => TypedResults.Json(new ErrorBody(failure.Message), statusCode: StatusCodes.Status403Forbidden),
+			// "Reaction.EmojiRequired"
+			// "Reaction.EmojiTooLong"
+			_ => TypedResults.BadRequest(new ErrorBody(failure.Message)),
 		};
 
 	private sealed record SendChannelMessageRequest(
