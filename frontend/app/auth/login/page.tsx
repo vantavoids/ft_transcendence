@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { login } from '../../../src/shared/api/auth';
-import { createFakeSession } from '../../../src/shared/lib/session';
+import { establishSession } from '../../../src/shared/lib/session';
+import { describeLoginError } from '../../../src/shared/lib/auth-errors';
 import { validateLoginForm, type LoginFormErrors } from '../../../src/shared/lib/validators/auth';
 
 export default function LoginPage() {
@@ -15,10 +16,10 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(formData: FormData) {
-    const username = String(formData.get('username') ?? '');
+    const email = String(formData.get('email') ?? '');
     const password = String(formData.get('password') ?? '');
 
-    const nextErrors = validateLoginForm({ username, password });
+    const nextErrors = validateLoginForm({ email, password });
     setErrors(nextErrors);
     setServerError('');
 
@@ -28,11 +29,11 @@ export default function LoginPage() {
 
     try {
       setIsSubmitting(true);
-      await login({ username: username.trim(), password });
-      createFakeSession(username.trim());
+      const { access_token, user_id } = await login({ email: email.trim(), password });
+      establishSession(access_token, user_id);
       router.push('/chat');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Login failed.');
+      setServerError(describeLoginError(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -47,16 +48,18 @@ export default function LoginPage() {
     >
       <form action={handleSubmit} className="grid gap-4">
         <div className="grid gap-2">
-          <label htmlFor="username" className="text-sm font-semibold text-white/70">
-            Username
+          <label htmlFor="email" className="text-sm font-semibold text-white/70">
+            Email
           </label>
           <input
-            id="username"
-            name="username"
-            placeholder="username"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="all@42.fr"
             className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
-          {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
+          {errors.email ? <p className="text-sm text-pink">{errors.email}</p> : null}
         </div>
         <div className="grid gap-2">
           <label htmlFor="password" className="text-sm font-semibold text-white/70">
@@ -66,6 +69,7 @@ export default function LoginPage() {
             id="password"
             name="password"
             type="password"
+            autoComplete="current-password"
             placeholder="password"
             className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
