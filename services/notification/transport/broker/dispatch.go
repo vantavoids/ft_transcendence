@@ -202,6 +202,9 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		}
 		return orch.DeleteUserNotifs(ctx, ev.UserID)
 
+	case "data.export_ready":
+		return nil
+
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)
 		return nil
