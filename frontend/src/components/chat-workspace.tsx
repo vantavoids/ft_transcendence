@@ -30,7 +30,8 @@ import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
 import { directMessages } from './mocks/dm-mocks';
 import { initialMessages } from './mocks/message-mocks';
-import { clearFakeSession, SESSION_USERNAME_KEY } from '../shared/lib/session';
+import { clearSession } from '../shared/lib/session';
+import { logout } from '../shared/api/auth';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
@@ -87,7 +88,7 @@ export function ChatWorkspace() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
-  const [username, setUsername] = useState('cartoone');
+  const [username] = useState('cartoone');
   const [isHydrated, setIsHydrated] = useState(false);
   const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
@@ -100,11 +101,7 @@ export function ChatWorkspace() {
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
 
   useEffect(() => {
-    const storedUsername = window.localStorage.getItem(SESSION_USERNAME_KEY);
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-
+    // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
     const storedChannel = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
     const storedDm = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
@@ -325,8 +322,13 @@ export function ChatWorkspace() {
     });
   }
 
-  function handleDisconnect() {
-    clearFakeSession();
+  async function handleDisconnect() {
+    try {
+      await logout();
+    } catch {
+      // best-effort revoke; clear the local session regardless
+    }
+    clearSession();
     router.push('/auth/login');
     router.refresh();
   }
