@@ -110,11 +110,4 @@ public sealed class ArchiveConversationEndpointTests(ChatApiFactory factory)
 		var conversation = Assert.Single(listWithArchivedBody!);
 		Assert.True(conversation.IsArchived);
 	}
-
-	private sealed record DmConversationBody(
-		string PartnerId,
-		string? LastPreview,
-		DateTimeOffset LastMessageAt,
-		int UnreadCount,
-		bool IsArchived);
 }
