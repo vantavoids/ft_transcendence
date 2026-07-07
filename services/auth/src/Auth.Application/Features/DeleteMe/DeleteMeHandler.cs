@@ -31,7 +31,7 @@ internal sealed class DeleteMeHandler(
         user.RevokeRefreshToken(clock.UtcNow);
 
         await userRepository.SaveChangesAsync(cancellationToken);
-        await eventBus.PublishAsync(new UserDeleted(command.UserId), cancellationToken);
+        await eventBus.PublishAsync(new UserDeleted(command.UserId, user.Email?.Value), cancellationToken);
 
         return Result.Ok();
     }

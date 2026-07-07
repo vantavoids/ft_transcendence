@@ -33,6 +33,17 @@ public sealed class DeleteMeHandlerTests
         return user;
     }
 
+    private async Task<AuthUser> SeedOAuthUser()
+    {
+        var user = AuthUser.CreateOAuthUser(
+            id: _idGenerator.NextId(),
+            oauthProvider: OAuthProvider.FortyTwo,
+            oauthId: "42-123",
+            now: _clock.UtcNow).Value;
+        await _repo.AddAsync(user);
+        return user;
+    }
+
     private async Task<AuthUser> SeedEmailUserWithRefreshToken()
     {
         var now  = _clock.UtcNow;
@@ -110,12 +121,24 @@ public sealed class DeleteMeHandlerTests
     }
 
     [Fact]
-    public async Task ValidUser_PublishesUserDeleted()
+    public async Task ValidUser_PublishesUserDeleted_WithEmail()
     {
         var user = await SeedEmailUser();
         await Handle(user.Id);
 
         var evt = Assert.Single(_eventBus.Published.OfType<UserDeleted>());
         Assert.Equal(user.Id, evt.UserId);
+        Assert.Equal("user@example.com", evt.Email);
+    }
+
+    [Fact]
+    public async Task OAuthOnlyUser_PublishesUserDeleted_WithNullEmail()
+    {
+        var user = await SeedOAuthUser();
+        await Handle(user.Id);
+
+        var evt = Assert.Single(_eventBus.Published.OfType<UserDeleted>());
+        Assert.Equal(user.Id, evt.UserId);
+        Assert.Null(evt.Email);
     }
 }
