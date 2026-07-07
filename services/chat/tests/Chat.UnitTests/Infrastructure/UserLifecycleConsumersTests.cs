@@ -31,7 +31,7 @@ public sealed class UserLoggedOutConsumerTests
 	}
 
 	[Fact]
-	public async Task Consume_DoesNotTouchMessageStorage()
+	public async Task Consume_HasNoMessageRepositoryDependency()
 	{
 		var broadcaster = new FakeUserBroadcaster();
 		await using var provider = new ServiceCollection()
