@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { OAuthHandoff } from '../src/components/oauth-handoff';
 
 export default function HomePage() {
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-12">
+      <OAuthHandoff />
       <div className="w-full rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-12">
         <p className="mono-detail text-aqua">ft_transcendence</p>
         <h1 className="mt-4 max-w-3xl text-5xl font-extrabold tracking-[-0.07em] text-white md:text-7xl">
