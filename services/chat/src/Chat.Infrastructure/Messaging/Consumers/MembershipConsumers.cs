@@ -8,7 +8,8 @@ namespace Chat.Infrastructure.Messaging.Consumers;
 
 public sealed class GuildMemberJoinedConsumer(
 	IUserBroadcaster broadcaster,
-	ILogger<GuildMemberJoinedConsumer> logger): IConsumer<GuildMemberJoined>
+	ILogger<GuildMemberJoinedConsumer> logger)
+	: IConsumer<GuildMemberJoined>
 {
 	public async Task Consume(ConsumeContext<GuildMemberJoined> context)
 	{
@@ -28,7 +29,8 @@ public sealed class GuildMemberJoinedConsumer(
 
 public sealed class GuildMemberLeftConsumer(
 	IUserBroadcaster broadcaster,
-	ILogger<GuildMemberLeftConsumer> logger): IConsumer<GuildMemberLeft>
+	ILogger<GuildMemberLeftConsumer> logger)
+	: IConsumer<GuildMemberLeft>
 {
 	public async Task Consume(ConsumeContext<GuildMemberLeft> context)
 	{
@@ -71,7 +73,7 @@ public sealed class UserLoggedOutConsumer(
 
 public sealed class UserDeletedConsumer(
 	IUserBroadcaster broadcaster,
-	IMessageRepository message,
+	IMessageRepository messages,
 	ILogger<UserDeletedConsumer> logger): IConsumer<UserDeleted>
 {
 	public async Task Consume(ConsumeContext<UserDeleted> context)
@@ -80,7 +82,7 @@ public sealed class UserDeletedConsumer(
 
 		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
 
-		await message.DeleteConversationAsync(msg.UserId, context.CancellationToken);
+		await messages.DeleteConversationAsync(msg.UserId, context.CancellationToken);
 		// TODO: delete channel_read_states, and dm_unread_counts once the read-state feature lands
 
 		logger.LogDebug(

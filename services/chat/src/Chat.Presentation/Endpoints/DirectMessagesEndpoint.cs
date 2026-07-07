@@ -52,24 +52,24 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 		BadRequest<ErrorBody>,
 		JsonHttpResult<ErrorBody>,
 		NotFound<ErrorBody>>>
-		ListAsync(
-				long userId,
-				DateTimeOffset? before_time,
-				int? limit,
-				IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
-				CancellationToken cancellationToken)
-		{
-			var result = await handler.HandleAsync(
-					new ListDirectMessagesQuery(
-						RecipientId: userId,
-						Limit: limit ?? 50,
-						BeforeTime: before_time),
-					cancellationToken);
+	ListAsync(
+			long userId,
+			DateTimeOffset? before_time,
+			int? limit,
+			IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
+			CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+				new ListDirectMessagesQuery(
+					RecipientId: userId,
+					Limit: limit ?? 50,
+					BeforeTime: before_time),
+				cancellationToken);
 
-			return result.Succeeded
-				? TypedResults.Ok(result.Value)
-				: MapListError(result.Error);
-		}
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapListError(result.Error);
+	}
 
 	private static Results<
 		Ok<IReadOnlyList<DirectMessageResponse>>,
