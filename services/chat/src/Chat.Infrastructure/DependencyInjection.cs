@@ -66,11 +66,12 @@ public static class DependencyInjection
 				});
 
 				// docs/contracts are the source of truth and document snake_case
-				// payloads. MassTransit defaults to camelCase via System.Text.Json,
-				// so override the property naming policy to match
+				// payloads with snowflake ids as quoted strings. MassTransit defaults
+				// to camelCase via System.Text.Json, so override the wire format to match
 				cfg.ConfigureJsonSerializerOptions(opts =>
 				{
 					opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+					opts.Converters.Add(new SnowflakeJsonConverter());
 					return opts;
 				});
 
