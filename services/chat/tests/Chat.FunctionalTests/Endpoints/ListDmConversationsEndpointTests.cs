@@ -138,11 +138,11 @@ public sealed class ListDmConversationsEndpointTests(ChatApiFactory factory)
 		var conversation = Assert.Single(body!);
 		Assert.Equal("mine", conversation.LastPreview);
 	}
-
-	private sealed record DmConversationBody(
-		string PartnerId,
-		string? LastPreview,
-		DateTimeOffset LastMessageAt,
-		int UnreadCount,
-		bool IsArchived);
 }
+
+internal sealed record DmConversationBody(
+	string PartnerId,
+	string? LastPreview,
+	DateTimeOffset LastMessageAt,
+	int UnreadCount,
+	bool IsArchived);
