@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
 import { register } from '../../../src/shared/api/auth';
-import { createFakeSession } from '../../../src/shared/lib/session';
+import { establishSession } from '../../../src/shared/lib/session';
+import { describeRegisterError } from '../../../src/shared/lib/auth-errors';
 import {
   validateRegisterForm,
   type RegisterFormErrors
@@ -18,14 +19,10 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(formData: FormData) {
-    const username = String(formData.get('username') ?? '');
+    const email = String(formData.get('email') ?? '');
     const password = String(formData.get('password') ?? '');
     const confirm = String(formData.get('confirm') ?? '');
-    const nextErrors = validateRegisterForm({
-      username,
-      password,
-      confirm
-    });
+    const nextErrors = validateRegisterForm({ email, password, confirm });
 
     setErrors(nextErrors);
     setServerError('');
@@ -36,15 +33,11 @@ export default function RegisterPage() {
 
     try {
       setIsSubmitting(true);
-      await register({
-        username: username.trim(),
-        password,
-        confirm
-      });
-      createFakeSession(username.trim());
+      const { access_token, user_id } = await register({ email: email.trim(), password });
+      establishSession(access_token, user_id);
       router.push('/chat');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Registration failed.');
+      setServerError(describeRegisterError(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -53,22 +46,24 @@ export default function RegisterPage() {
   return (
     <AuthCard
       title="Register"
-      subtitle="Cree ton profil local pour tester le chat et les guildes."
+      subtitle="Cree ton profil pour tester le chat et les guildes."
       alternateHref="/auth/login"
       alternateLabel="Login"
     >
       <form action={handleSubmit} className="grid gap-4">
         <div className="grid gap-2">
-          <label htmlFor="username" className="text-sm font-semibold text-white/70">
-            Username
+          <label htmlFor="email" className="text-sm font-semibold text-white/70">
+            Email
           </label>
           <input
-            id="username"
-            name="username"
-            placeholder="username"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="all@42.fr"
             className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
-          {errors.username ? <p className="text-sm text-pink">{errors.username}</p> : null}
+          {errors.email ? <p className="text-sm text-pink">{errors.email}</p> : null}
         </div>
         <div className="grid gap-2">
           <label htmlFor="password" className="text-sm font-semibold text-white/70">
@@ -78,6 +73,7 @@ export default function RegisterPage() {
             id="password"
             name="password"
             type="password"
+            autoComplete="new-password"
             placeholder="password"
             className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
@@ -91,6 +87,7 @@ export default function RegisterPage() {
             id="confirm"
             name="confirm"
             type="password"
+            autoComplete="new-password"
             placeholder="confirm"
             className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
           />
