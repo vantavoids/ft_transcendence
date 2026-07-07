@@ -28,7 +28,7 @@ public sealed class LoginEndpointTests(AuthApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         var json = await resp.ReadJsonAsync();
-        Assert.NotNull(json["user_id"]?.GetValue<long>());
+        Assert.Matches(@"^\d+$", json["user_id"]!.GetValue<string>());
         Assert.NotEmpty(json["access_token"]!.GetValue<string>());
 
         var setCookie = Assert.Single(
