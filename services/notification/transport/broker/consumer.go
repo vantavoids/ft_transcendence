@@ -27,6 +27,7 @@ var events = []string{
 	"guild.invite_created",
 	"guild.member_joined",
 	"user.deleted",
+	"data.export_ready",
 }
 
 type Consumer struct {
