@@ -77,7 +77,8 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			: MapListError(result.Error);
 	}
 
-	private static async Task<Ok<IReadOnlyList<DmConversationResponse>>> ListConversationsAsync(
+	private static async Task<Results<Ok<IReadOnlyList<DmConversationResponse>>, JsonHttpResult<ErrorBody>>>
+	ListConversationsAsync(
 		bool? include_archived,
 		IQueryHandler<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>> handler,
 		CancellationToken cancellationToken)
@@ -86,7 +87,9 @@ public sealed class DirectMessagesEndpoint : ICarterModule
 			new ListDmConversationsQuery(include_archived ?? false),
 			cancellationToken);
 
-		return TypedResults.Ok(result.Value);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status500InternalServerError);
 	}
 
 	private static async Task<Results<NoContent, NotFound<ErrorBody>>> ArchiveAsync(
