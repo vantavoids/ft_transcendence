@@ -11,15 +11,16 @@ This backlog is ordered by dependency, not by visual priority.
 
 Goal: make the frontend speak the same protocol as the backend services before wiring feature UI.
 
-- [ ] Replace fake auth/session flow with real token handling
-  - [ ] `login` and `register` must call `/auth/login` and `/auth/register` with `email + password`
-  - [ ] persist `access_token` from auth responses
-  - [ ] replace `createFakeSession` with real session bootstrap and logout cleanup
-  - [ ] add refresh-token recovery path on 401 for authenticated requests
-- [ ] Normalize environment and gateway base URLs
-  - [ ] verify the `NEXT_PUBLIC_API_*_URL` values for auth, user, guild, chat, notification
+- [x] Replace fake auth/session flow with real token handling
+  - [x] `login` and `register` must call `/auth/login` and `/auth/register` with `email + password`
+  - [x] persist `access_token` from auth responses
+  - [x] replace `createFakeSession` with real session bootstrap and logout cleanup
+  - [x] add refresh-token recovery path on 401 for authenticated requests
+- [-] Normalize environment and gateway base URLs
+  - [x] verify the `NEXT_PUBLIC_API_*_URL` values for auth, user, guild, chat, notification
+        (collapsed to a single `NEXT_PUBLIC_API_URL`; the gateway routes by `/{service}/v1` under it)
   - [ ] add a shared runtime health check page or dev banner when a service URL is missing
-  - [ ] document the expected gateway paths for each service
+  - [x] document the expected gateway paths for each service (see `.env.example` and `src/shared/api/client.ts`)
 - [ ] Define the canonical frontend DTO layer
   - [ ] map backend snake_case payloads to UI-friendly view models
   - [ ] create one transformation layer per service
@@ -29,22 +30,22 @@ Goal: make the frontend speak the same protocol as the backend services before w
 
 Goal: complete sign-in, sign-up, and account management flows.
 
-- [ ] Login form
-  - [ ] switch the form fields from `username` to `email`
-  - [ ] surface auth errors with backend status mapping
-  - [ ] redirect authenticated users away from `/auth/login` and `/auth/register`
-- [ ] Registration form
-  - [ ] align request body with backend contract
-  - [ ] remove fake account creation logic
-  - [ ] handle email duplication and weak password errors
-- [ ] Account actions
-  - [ ] add `GET /auth/me` consumption for the account menu
-  - [ ] add logout via `POST /auth/logout`
-  - [ ] add delete-account flow with the `409` guild ownership guard
-  - [ ] add `PATCH /auth/me` for email/password changes
-- [ ] OAuth entry points
-  - [ ] add login buttons for `42`, `Google`, and `GitHub`
-  - [ ] handle callback redirects and token handoff
+- [x] Login form
+  - [x] switch the form fields from `username` to `email`
+  - [x] surface auth errors with backend status mapping
+  - [x] redirect authenticated users away from `/auth/login` and `/auth/register` (middleware `proxy.ts`)
+- [x] Registration form
+  - [x] align request body with backend contract
+  - [x] remove fake account creation logic
+  - [x] handle email duplication and weak password errors
+- [x] Account actions
+  - [x] add `GET /auth/me` consumption for the account menu (settings modal)
+  - [x] add logout via `POST /auth/logout`
+  - [x] add delete-account flow with the `409` guild ownership guard
+  - [x] add `PATCH /auth/me` for email/password changes
+- [x] OAuth entry points
+  - [x] add login buttons for `42`, `Google`, and `GitHub` (slugs `fortytwo`, `google`, `github`)
+  - [x] handle callback redirects and token handoff (`/?access_token=...` -> `OAuthHandoff`)
 
 ## Epic 2 - User profile, friends, and social graph
 
