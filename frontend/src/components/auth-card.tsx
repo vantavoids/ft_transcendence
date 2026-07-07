@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import type { ComponentType } from 'react';
+import { API_BASE_URL } from '../shared/config/env';
+import { FortyTwoIcon, GitHubIcon, GoogleIcon } from './icons/brand-icons';
 
 type AuthCardProps = {
   title: 'Login' | 'Register';
@@ -7,6 +10,12 @@ type AuthCardProps = {
   alternateLabel: string;
   children: React.ReactNode;
 };
+
+const OAUTH_PROVIDERS: { slug: string; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { slug: 'fortytwo', label: '42', Icon: FortyTwoIcon },
+  { slug: 'google', label: 'Google', Icon: GoogleIcon },
+  { slug: 'github', label: 'GitHub', Icon: GitHubIcon }
+];
 
 export function AuthCard({ title, subtitle, alternateHref, alternateLabel, children }: AuthCardProps) {
   return (
@@ -29,12 +38,19 @@ export function AuthCard({ title, subtitle, alternateHref, alternateLabel, child
             <p className="mt-2 text-sm leading-6 text-white/45">{subtitle}</p>
           </div>
 
-          <Link
-            href="/auth/oauth/42"
-            className="flex h-11 w-full items-center justify-center rounded-md border border-aqua/30 bg-aqua/10 text-sm font-bold text-aqua transition hover:border-aqua/50 hover:bg-aqua/15 hover:text-white"
-          >
-            Continue with 42 OAuth
-          </Link>
+          <div className="flex justify-center gap-3">
+            {OAUTH_PROVIDERS.map(({ slug, label, Icon }) => (
+              <a
+                key={slug}
+                href={`${API_BASE_URL}/auth/v1/oauth/${slug}`}
+                aria-label={`Continue with ${label}`}
+                title={`Continue with ${label}`}
+                className="flex h-11 w-11 items-center justify-center rounded-md border border-aqua/30 bg-aqua/10 text-aqua transition hover:border-aqua/50 hover:bg-aqua/15 hover:text-white"
+              >
+                <Icon className="h-5 w-5" />
+              </a>
+            ))}
+          </div>
 
           <div className="my-5 flex items-center gap-4 text-white/25">
             <div className="h-px flex-1 bg-white/10" />
