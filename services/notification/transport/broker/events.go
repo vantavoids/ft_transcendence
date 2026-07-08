@@ -157,3 +157,26 @@ func (e UserDeletedEvent) Validate() error {
 	}
 	return nil
 }
+
+type DataExportReadyEvent struct {
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	DownloadURL string `json:"download_url"`
+	ExpiresAt   string `json:"expires_at"`
+}
+
+func (e DataExportReadyEvent) Validate() error {
+	if e.UserID == "" {
+		return fmt.Errorf("data.export_ready: missing user_id")
+	}
+	if e.Email == "" {
+		return fmt.Errorf("data.export_ready: missing email")
+	}
+	if e.DownloadURL == "" {
+		return fmt.Errorf("data.export_ready: missing download_url")
+	}
+	if e.ExpiresAt == "" {
+		return fmt.Errorf("data.export_ready: missing expires_at")
+	}
+	return nil
+}
