@@ -33,6 +33,11 @@ func newClient() (*mail.Client, error) {
 
 func Send(name string, to string, subject string, data any) error {
 
+	text, html, err := render(name, data)
+	if err != nil {
+		return fmt.Errorf("render %s: %w", name, err)
+	}
+
 	msg := mail.NewMsg()
 
 	if err := msg.From(os.Getenv("SMTP_FROM")); err != nil {
@@ -44,6 +49,8 @@ func Send(name string, to string, subject string, data any) error {
 	}
 
 	msg.Subject(subject)
+	msg.SetBodyString(mail.TypeTextPlain, text)
+	msg.AddAlternativeString(mail.TypeTextHTML, html)
 
 	client, err := newClient()
 	if err != nil {
