@@ -8,6 +8,7 @@ import (
 	texttemplate "text/template"
 )
 
+//go:embed templates/*.txt templates/*.html
 var templatesFS embed.FS
 
 var (
