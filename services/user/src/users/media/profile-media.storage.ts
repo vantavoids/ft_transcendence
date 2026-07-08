@@ -55,6 +55,10 @@ export class ProfileMediaStorageService {
 
   async delete(kind: ProfileMediaKind, userId: string, uploadId: string): Promise<void> {
     const key = this.buildKey(kind, userId, uploadId);
+    await this.deleteByKey(key);
+  }
+
+  async deleteByKey(key: string): Promise<void> {
     await this.client.send(
       new DeleteObjectCommand({
         Bucket: this.bucket,

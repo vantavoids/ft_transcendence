@@ -12,6 +12,7 @@ import { RelationshipsRepository } from './repositories/relationships.repository
 import { UsersLookupRepository } from './repositories/users-lookup.repository';
 import { ProfileMediaStorageService } from './media/profile-media.storage';
 import { PublicUsersController } from './public-users.controller';
+import { UserMediaController } from './user-media.controller';
 import { UserSocialController } from './user-social.controller';
 import { UsersService } from './users.service';
 
@@ -19,6 +20,7 @@ import { UsersService } from './users.service';
   controllers: [
     InternalUsersController,
     PublicUsersController,
+    UserMediaController,
     FriendshipsController,
     UserSocialController,
   ],

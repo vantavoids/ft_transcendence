@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
 import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
+import { ProfileMediaStorageService, type ProfileMediaKind, type UploadFile } from './media/profile-media.storage';
 import { BlocksRepository } from './repositories/blocks.repository';
 import { FriendshipsRepository } from './repositories/friendships.repository';
+import { ProfileMediaRepository } from './repositories/profile-media.repository';
 import { ProfilesRepository } from './repositories/profiles.repository';
 import { RelationshipsRepository } from './repositories/relationships.repository';
 import { UsersLookupRepository } from './repositories/users-lookup.repository';
@@ -40,6 +42,8 @@ export class UsersService {
   private readonly usersLookupRepository: UsersLookupRepository,
   private readonly friendshipsRepository: FriendshipsRepository,
   private readonly blocksRepository: BlocksRepository,
+  private readonly profileMediaRepository: ProfileMediaRepository,
+  private readonly profileMediaStorageService: ProfileMediaStorageService,
   private readonly snowflakeIdGenerator: SnowflakeIdGenerator,
   private readonly relationshipEventsPublisher: RelationshipEventsPublisher,
 ) {}
@@ -68,6 +72,123 @@ export class UsersService {
     changes: UpdateUserProfileInput,
   ): Promise<UserProfileResponse | null> {
     return this.profilesRepository.updateProfileById(userId, changes);
+  }
+
+  async uploadAvatar(
+    userId: string,
+    file: UploadFile,
+  ): Promise<string | 'not_found'> {
+    return this.uploadProfileMedia('avatar', userId, file);
+  }
+
+  async deleteAvatar(userId: string): Promise<'deleted' | 'not_found'> {
+    return this.deleteProfileMedia('avatar', userId);
+  }
+
+  private async uploadProfileMedia(
+    kind: ProfileMediaKind,
+    userId: string,
+    file: UploadFile,
+  ): Promise<string | 'not_found'> {
+    const media = await this.profileMediaRepository.getMediaById(userId);
+    if (!media) {
+      return 'not_found';
+    }
+
+    const uploadId = this.snowflakeIdGenerator.nextId();
+    const url = await this.profileMediaStorageService.upload(
+      kind,
+      userId,
+      uploadId,
+      file,
+    );
+
+    const updated = await this.setProfileMediaUrl(kind, userId, url);
+    if (!updated) {
+      void this.profileMediaStorageService
+        .delete(kind, userId, uploadId)
+        .catch(() => undefined);
+      return 'not_found';
+    }
+
+    const previousUrl = this.getCurrentMediaUrl(kind, media);
+    if (previousUrl) {
+      const previousKey = this.profileMediaStorageService.extractKeyFromUrl(
+        previousUrl,
+        kind,
+        userId,
+      );
+      if (previousKey) {
+        void this.profileMediaStorageService
+          .deleteByKey(previousKey)
+          .catch(() => undefined);
+      }
+    }
+
+    return url;
+  }
+
+  private async deleteProfileMedia(
+    kind: ProfileMediaKind,
+    userId: string,
+  ): Promise<'deleted' | 'not_found'> {
+    const media = await this.profileMediaRepository.getMediaById(userId);
+    if (!media) {
+      return 'not_found';
+    }
+
+    const currentUrl = this.getCurrentMediaUrl(kind, media);
+    if (!currentUrl) {
+      return 'not_found';
+    }
+
+    const cleared = await this.clearProfileMediaUrl(kind, userId);
+    if (!cleared) {
+      return 'not_found';
+    }
+
+    const key = this.profileMediaStorageService.extractKeyFromUrl(
+      currentUrl,
+      kind,
+      userId,
+    );
+    if (key) {
+      void this.profileMediaStorageService
+        .deleteByKey(key)
+        .catch(() => undefined);
+    }
+
+    return 'deleted';
+  }
+
+  private async setProfileMediaUrl(
+    kind: ProfileMediaKind,
+    userId: string,
+    url: string,
+  ): Promise<boolean> {
+    if (kind === 'avatar') {
+      return this.profileMediaRepository.setAvatarUrl(userId, url);
+    }
+
+    return this.profileMediaRepository.setBannerUrl(userId, url);
+  }
+
+  private async clearProfileMediaUrl(
+    kind: ProfileMediaKind,
+    userId: string,
+  ): Promise<boolean> {
+    if (kind === 'avatar') {
+      return this.profileMediaRepository.clearAvatarUrl(userId);
+    }
+
+    return this.profileMediaRepository.clearBannerUrl(userId);
+  }
+
+  private getCurrentMediaUrl(
+    kind: ProfileMediaKind,
+    media: { avatar_url: string | null; banner_url: string | null },
+  ): string | null {
+    return kind === 'avatar' ? media.avatar_url : media.banner_url;
   }
 
   async getRelationshipPerspective(
