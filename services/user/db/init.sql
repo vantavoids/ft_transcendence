@@ -54,3 +54,20 @@ CREATE TABLE user_blocks (
 );
 
 CREATE INDEX idx_user_blocks_blocked ON user_blocks (blocked_id);
+
+CREATE TYPE data_export_status AS ENUM ('pending', 'ready', 'failed');
+
+CREATE TABLE data_exports (
+    id          BIGINT              PRIMARY KEY,
+    user_id     BIGINT              NOT NULL REFERENCES users_profile (id) ON DELETE CASCADE,
+    status      data_export_status  NOT NULL DEFAULT 'pending',
+    object_key  VARCHAR(512),
+    expires_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX unique_pending_export_per_user ON data_exports (user_id)
+    WHERE status = 'pending';
+
+CREATE INDEX idx_data_exports_user ON data_exports (user_id, created_at DESC);

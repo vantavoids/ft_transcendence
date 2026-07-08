@@ -29,6 +29,11 @@ local_resource(
         '-e MINIO_ACCESS_KEY=' + root_env.get('MINIO_ACCESS_KEY', 'minioadmin') + ' ' +
         '-e MINIO_SECRET_KEY=' + root_env.get('MINIO_SECRET_KEY', 'minioadmin') + ' ' +
         '-e MINIO_USER_BUCKET=' + root_env.get('MINIO_USER_BUCKET', 'user-avatars') + ' ' +
+        '-e MINIO_EXPORTS_BUCKET=' + root_env.get('MINIO_EXPORTS_BUCKET', 'exports') + ' ' +
+        '-e AUTH_INTERNAL_URL=' + root_env.get('AUTH_INTERNAL_URL', 'http://auth:8080') + ' ' +
+        '-e GUILD_INTERNAL_URL=' + root_env.get('GUILD_INTERNAL_URL', 'http://guild:8080') + ' ' +
+        '-e CHAT_INTERNAL_URL=' + root_env.get('CHAT_INTERNAL_URL', 'http://chat:8080') + ' ' +
+        '-e NOTIFICATION_INTERNAL_URL=' + root_env.get('NOTIFICATION_INTERNAL_URL', 'http://notification:8080') + ' ' +
         '-e RABBITMQ_USER=' + root_env.get('RABBITMQ_USER', 'user') + ' ' +
         '-e RABBITMQ_PASS=' + root_env.get('RABBITMQ_PASS', 'password') + ' ' +
         '-e JWT_SECRET=' + root_env.get('JWT_SECRET', '') + ' ' +

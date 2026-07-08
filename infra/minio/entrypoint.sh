@@ -13,8 +13,8 @@ until mc alias set local "http://127.0.0.1:9000" "$MINIO_ROOT_USER" "$MINIO_ROOT
 	sleep 1
 done
 
-mc mb -p "local/$MINIO_BUCKET" "local/$MINIO_USER_BUCKET" "local/$MINIO_GUILD_BUCKET"
+mc mb -p "local/$MINIO_BUCKET" "local/$MINIO_USER_BUCKET" "local/$MINIO_GUILD_BUCKET" "local/$MINIO_EXPORTS_BUCKET"
 mc anonymous set download "local/$MINIO_USER_BUCKET"
-echo "minio: buckets ready ($MINIO_BUCKET, $MINIO_USER_BUCKET, $MINIO_GUILD_BUCKET)"
+echo "minio: buckets ready ($MINIO_BUCKET, $MINIO_USER_BUCKET, $MINIO_GUILD_BUCKET, $MINIO_EXPORTS_BUCKET)"
 
 wait "$pid"
