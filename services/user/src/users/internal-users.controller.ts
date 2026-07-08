@@ -6,7 +6,12 @@ import {
   Param,
 } from '@nestjs/common';
 import { ParseSnowflakePipe } from '../common/pipes/parse-snowflake.pipe';
-import { RelationshipResponse, UsersService, UserProfileResponse } from './users.service';
+import {
+  RelationshipResponse,
+  UsersService,
+  UserDataExportResponse,
+  UserProfileResponse,
+} from './users.service';
 
 @Controller('internal/users')
 export class InternalUsersController {
@@ -39,5 +44,12 @@ export class InternalUsersController {
     }
 
     return relationship;
+  }
+
+  @Get(':userId/data-export')
+  async getDataExport(
+    @Param('userId', ParseSnowflakePipe) userId: string,
+  ): Promise<UserDataExportResponse> {
+    return this.users.getInternalDataExport(userId);
   }
 }

@@ -73,3 +73,37 @@ export interface FriendRequestSentEvent {
   requester_id: string;
   addressee_id: string;
 }
+
+export type UserDataExportFriendState =
+  | 'accepted'
+  | 'pending_outgoing'
+  | 'pending_incoming';
+
+export interface UserDataExportProfileResponse {
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  banner_url: string | null;
+  bio: string | null;
+  status: UserProfileResponse['status'] | null;
+  last_seen_at: string | null;
+  created_at: string | null;
+}
+
+export interface UserDataExportFriendResponse {
+  username: string;
+  state: UserDataExportFriendState;
+  since: string;
+}
+
+export interface UserDataExportBlockedUserResponse {
+  username: string;
+  blocked_at: string;
+}
+
+export interface UserDataExportResponse {
+  user_id: string;
+  profile: UserDataExportProfileResponse;
+  friends: UserDataExportFriendResponse[];
+  blocked_users: UserDataExportBlockedUserResponse[];
+}

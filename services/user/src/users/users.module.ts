@@ -5,6 +5,7 @@ import { RabbitMqRelationshipEventsPublisher } from './events/rabbitmq-relations
 import { InternalUsersController } from './internal-users.controller';
 import { FriendshipsController } from './friendships.controller';
 import { BlocksRepository } from './repositories/blocks.repository';
+import { DataExportRepository } from './repositories/data-export.repository';
 import { FriendshipsRepository } from './repositories/friendships.repository';
 import { ProfileMediaRepository } from './repositories/profile-media.repository';
 import { ProfilesRepository } from './repositories/profiles.repository';
@@ -36,6 +37,7 @@ import { UsersService } from './users.service';
     UsersLookupRepository,
     FriendshipsRepository,
     BlocksRepository,
+    DataExportRepository,
     ProfileMediaRepository,
     ProfileMediaStorageService,
   ],
