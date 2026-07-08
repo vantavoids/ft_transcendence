@@ -212,7 +212,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			SupportEmail string
 		}{
 			DeletedAt:    time.Now().Format("January 2, 2006 at 15:04 UTC"),
-			SupportEmail: "support@transcendence.com",
+			SupportEmail: "", // TODO: maybe see if we have a support email, for now we have nothing so lets put nothing
 		}
 
 		return email.Send("account_deleted", ev.Email, "Account successfully deleted", data) // if the user deleted his account, we dont need his id because it doesnt exist anymore
