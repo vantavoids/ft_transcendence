@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
-import {
-  NoopRelationshipEventsPublisher,
-  RelationshipEventsPublisher,
-} from './events/relationship-events.publisher';
+import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
+import { RabbitMqRelationshipEventsPublisher } from './events/rabbitmq-relationship-events.publisher';
 import { InternalUsersController } from './internal-users.controller';
 import { FriendshipsController } from './friendships.controller';
 import { BlocksRepository } from './repositories/blocks.repository';
@@ -27,7 +25,7 @@ import { UsersService } from './users.service';
     SnowflakeIdGenerator,
     {
       provide: RelationshipEventsPublisher,
-      useClass: NoopRelationshipEventsPublisher,
+      useClass: RabbitMqRelationshipEventsPublisher,
     },
     ProfilesRepository,
     RelationshipsRepository,

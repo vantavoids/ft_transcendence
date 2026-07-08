@@ -24,6 +24,8 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +
+        '-e RABBITMQ_USER=' + root_env.get('RABBITMQ_USER', 'user') + ' ' +
+        '-e RABBITMQ_PASS=' + root_env.get('RABBITMQ_PASS', 'password') + ' ' +
         '-e JWT_SECRET=' + root_env.get('JWT_SECRET', '') + ' ' +
         '-v $(pwd)/src:/app/src ' +
         '-v $(pwd)/package.json:/app/package.json ' +
