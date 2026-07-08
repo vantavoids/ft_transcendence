@@ -27,6 +27,11 @@ services:
       retries: 5
       start_period: 30s
     environment:
+      BASE_URL: ${BASE_URL}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASS: ${RABBITMQ_PASS}
       JWT_SECRET: ${JWT_SECRET}

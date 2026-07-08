@@ -24,6 +24,11 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e APP_ENV=development ' +
+        '-e BASE_URL=' + root_env.get('BASE_URL', 'https://localhost:1443') + ' ' +
+        '-e MINIO_ENDPOINT=http://minio:9000 ' +
+        '-e MINIO_ACCESS_KEY=' + root_env.get('MINIO_ACCESS_KEY', 'minioadmin') + ' ' +
+        '-e MINIO_SECRET_KEY=' + root_env.get('MINIO_SECRET_KEY', 'minioadmin') + ' ' +
+        '-e MINIO_USER_BUCKET=' + root_env.get('MINIO_USER_BUCKET', 'user-avatars') + ' ' +
         '-e RABBITMQ_USER=' + root_env.get('RABBITMQ_USER', 'user') + ' ' +
         '-e RABBITMQ_PASS=' + root_env.get('RABBITMQ_PASS', 'password') + ' ' +
         '-e JWT_SECRET=' + root_env.get('JWT_SECRET', '') + ' ' +
