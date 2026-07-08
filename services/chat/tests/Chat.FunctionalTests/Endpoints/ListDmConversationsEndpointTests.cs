@@ -20,6 +20,7 @@ public sealed class ListDmConversationsEndpointTests(ChatApiFactory factory)
 	public Task InitializeAsync()
 	{
 		factory.MessageRepository.Reset();
+		factory.ReadStateRepository.Reset();
 		return Task.CompletedTask;
 	}
 
@@ -120,6 +121,26 @@ public sealed class ListDmConversationsEndpointTests(ChatApiFactory factory)
 		Assert.NotNull(body);
 		Assert.Equal(2, body!.Count);
 		Assert.Contains(body, c => c.PartnerId == "200" && c.IsArchived);
+	}
+
+	[Fact]
+	public async Task Get_UnreadCount_ReflectsDmReadStateRepository_PerPartner()
+	{
+		var anchor = DateTimeOffset.UtcNow;
+
+		factory.MessageRepository.WithConversationSummary(42, new DmConversation(
+			PartnerId: 100, LastMessageAt: anchor, LastPreview: "hey", IsArchived: false));
+		factory.MessageRepository.WithConversationSummary(42, new DmConversation(
+			PartnerId: 200, LastMessageAt: anchor, LastPreview: "yo", IsArchived: false));
+		factory.ReadStateRepository.SeedDmUnreadCount(userId: 42, partnerId: 100, count: 5);
+
+		var client = BuildClient(userId: 42);
+		var response = await client.GetAsync("/v1/dms");
+
+		var body = await response.Content.ReadFromJsonAsync<List<DmConversationBody>>(JsonOptions);
+		Assert.NotNull(body);
+		Assert.Equal(5, body!.Single(c => c.PartnerId == "100").UnreadCount);
+		Assert.Equal(0, body!.Single(c => c.PartnerId == "200").UnreadCount);
 	}
 
 	[Fact]

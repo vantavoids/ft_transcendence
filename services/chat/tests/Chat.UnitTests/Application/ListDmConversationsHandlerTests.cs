@@ -10,18 +10,19 @@ namespace Chat.UnitTests.Application;
 
 public sealed class ListDmConversationsHandlerTests
 {
-	private sealed record Harness(FakeCurrentUser CurrentUser, FakeMessageRepository Repository);
+	private sealed record Harness(FakeCurrentUser CurrentUser, FakeMessageRepository Repository, FakeReadStateRepository ReadStates);
 
 	private static (Harness Harness, IQueryHandler<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>> Handler)
 		BuildHandler(long userId = 42)
 	{
 		var currentUser = new FakeCurrentUser { UserId = userId };
 		var repository = new FakeMessageRepository();
+		var readStates = new FakeReadStateRepository();
 
 		var handler = HandlerFactory.CreateQuery<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>>(
-			currentUser, repository);
+			currentUser, repository, readStates);
 
-		return (new Harness(currentUser, repository), handler);
+		return (new Harness(currentUser, repository, readStates), handler);
 	}
 
 	[Fact]
@@ -87,7 +88,7 @@ public sealed class ListDmConversationsHandlerTests
 	}
 
 	[Fact]
-	public async Task UnreadCount_IsAlwaysZero()
+	public async Task UnreadCount_DefaultsToZero_WhenNoCounterRow()
 	{
 		var (h, handler) = BuildHandler();
 
@@ -97,5 +98,22 @@ public sealed class ListDmConversationsHandlerTests
 		var result = await handler.HandleAsync(new ListDmConversationsQuery(IncludeArchived: false));
 
 		Assert.Equal(0, Assert.Single(result.Value).UnreadCount);
+	}
+
+	[Fact]
+	public async Task UnreadCount_IsSourcedFromReadStateRepository_PerPartner()
+	{
+		var (h, handler) = BuildHandler();
+
+		h.Repository.WithConversationSummary(42, new DmConversation(
+			PartnerId: 100, LastMessageAt: DateTimeOffset.UtcNow, LastPreview: "hey", IsArchived: false));
+		h.Repository.WithConversationSummary(42, new DmConversation(
+			PartnerId: 200, LastMessageAt: DateTimeOffset.UtcNow, LastPreview: "yo", IsArchived: false));
+		h.ReadStates.SeedDmUnreadCount(42, partnerId: 100, count: 3);
+
+		var result = await handler.HandleAsync(new ListDmConversationsQuery(IncludeArchived: false));
+
+		Assert.Equal(3, result.Value.Single(c => c.PartnerId == "100").UnreadCount);
+		Assert.Equal(0, result.Value.Single(c => c.PartnerId == "200").UnreadCount);
 	}
 }
