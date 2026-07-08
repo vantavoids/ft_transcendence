@@ -215,10 +215,28 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			SupportEmail: "support@transcendence.com",
 		}
 
-		return email.Send("account_deleted", ev.Email, "Account successfully  deleted", data) // if the user deleted his account, we dont need his id because it doesnt exist anymore
+		return email.Send("account_deleted", ev.Email, "Account successfully deleted", data) // if the user deleted his account, we dont need his id because it doesnt exist anymore
 
 	case "data.export_ready":
-		return nil
+		ev, err := parse[DataExportReadyEvent](d)
+		if err != nil {
+			return err
+		}
+
+		expires, err := time.Parse(time.RFC3339, ev.ExpiresAt)
+		if err != nil {
+			return fmt.Errorf("parse expires_at %q: %w", ev.ExpiresAt, err)
+		}
+
+		data := struct {
+			DownloadURL string
+			ExpiresAt   string
+		}{
+			DownloadURL: ev.DownloadURL,
+			ExpiresAt:   expires.Format("January 2, 2006 at 15:04 UTC"),
+		}
+
+		return email.Send("data_export_ready", ev.Email, "Your data export is ready", data)
 
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)
