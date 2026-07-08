@@ -55,7 +55,7 @@ public sealed class RegisterEndpoint : ICarterModule
                         Expires = clock.UtcNow.AddDays(options.TtlDays)
                     }
                 );
-                return TypedResults.Created($"/users/{r.UserId}", new RegisterResponse(r.UserId, r.AccessToken));
+                return TypedResults.Created($"/users/{r.UserId}", new RegisterResponse(r.UserId.ToString(), r.AccessToken));
             },
             failure => {
                 var errResp = new ErrorResponse(failure.Message);

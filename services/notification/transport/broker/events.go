@@ -144,7 +144,7 @@ func (e CallIncomingEvent) Validate() error {
 }
 
 type UserDeletedEvent struct {
-	UserID int64 `json:"call_id,string"`
+	UserID int64 `json:"user_id,string"`
 }
 
 func (e UserDeletedEvent) Validate() error {

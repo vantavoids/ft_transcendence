@@ -2,6 +2,7 @@ using Carter;
 using Auth.Application;
 using Auth.Infrastructure;
 using Auth.Persistence;
+using Auth.Presentation.Endpoints;
 using Auth.Presentation.Middleware;
 using Auth.Presentation;
 using Auth.Presentation.Observability;
@@ -81,5 +82,10 @@ app.MapPrometheusScrapingEndpoint();
 
 var v1 = app.MapGroup("/v1");
 v1.MapCarter();
+
+// internal endpoints. the API Gateway only forwards /api/{service}/vN/...
+// so /internal/... is unreachable from outside the docker network.
+var internalRoutes = app.MapGroup("/internal").ExcludeFromDescription();
+UserDataExportEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();

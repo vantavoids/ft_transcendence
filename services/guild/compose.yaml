@@ -51,12 +51,9 @@ services:
       RabbitMQ__Password: ${RABBITMQ_PASS}
       Database__Host: guild-db
       Database__Port: 5432
-      Services__UserService: http://user:8080
       BackendConfiguration__BaseUrl: ${BASE_URL}
       BackendConfiguration__BaseApiUrl: ${BASE_API_URL}
       Jwt__SecretKey: ${JWT_SECRET}
-      Snowflake__WorkerId: 2
-      Minio__Endpoint: http://minio:9000
       Minio__AccessKey: ${MINIO_ACCESS_KEY}
       Minio__SecretKey: ${MINIO_SECRET_KEY}
       Minio__Bucket: ${MINIO_GUILD_BUCKET}

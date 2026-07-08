@@ -437,6 +437,86 @@ List all users the authenticated user has blocked.
 
 ---
 
+## Data Export (GDPR)
+
+The public, authenticated side of GDPR self-serve export. This service hosts the **aggregator**: it fans out to every service's internal `data-export` leg, stitches one JSON bundle, stores it in object storage, and publishes `data.export_ready` so the Notification Service can email the user a download link. Both endpoints require `Authorization: Bearer <access_token>`.
+
+### POST /users/me/data-export
+
+Request an export of all your data. Enqueues an async job and returns immediately; the finished bundle is delivered by email (and available via the status endpoint below).
+
+**Response `202`:**
+```json
+{ "export_id": "555", "status": "pending" }
+```
+
+**Rate limit.** One in-flight export per user. If an export is already `pending` for the caller, this returns that existing job (same `202` body) rather than starting a second.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 401 | Missing or invalid access token (enforced at the gateway) |
+
+The endpoint takes no request body, so there is no `400`; an already-`pending` job is returned as the `202` above, not treated as an error.
+
+### GET /users/me/data-export/{export_id}
+
+Poll the status of an export the caller requested. Lets the frontend show progress and offer an in-app download without waiting for the email.
+
+**Response `200`:**
+```json
+{
+  "export_id": "555",
+  "status": "ready",
+  "download_url": "https://minio.example/exports/123/555.json?X-Amz-Signature=...",
+  "expires_at": "2026-07-11T12:00:00Z"
+}
+```
+
+`status` is one of `pending`, `ready`, `failed`. When `ready`, `download_url` and `expires_at` are present (the URL is the same presigned link emailed to the user). When `failed`, both are absent and a short `error` string explains why:
+
+```json
+{ "export_id": "555", "status": "failed", "error": "bundle upload to object storage failed" }
+```
+
+An export only reaches `failed` when the bundle could not be produced or stored at all. A run where some service legs errored but the bundle was still assembled is `ready`, with those per-leg failures recorded in the bundle's `errors` map (see below), not surfaced as a failed status.
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 404 | No such export, or it belongs to another user |
+
+#### How the bundle is built
+
+The aggregator fans out over the docker network to each service's `GET /internal/users/{user_id}/data-export` (Auth, Guild, Chat, Notification) and assembles its own leg (profile / friends / blocks) in-process. Each leg has a short timeout; a leg that fails or times out is recorded under `errors` and the export still ships with whatever succeeded (GDPR Art. 15 favours delivering available data over failing the whole request). The Chat and Notification legs return raw ids (channel, conversation, partner, muted-scope); the aggregator resolves them to names during stitching - usernames from its own profile table, and any guild/channel names via Guild. The Guild and User legs already return names, so they need no post-processing.
+
+**Bundle shape (stored object):**
+```json
+{
+  "export_id": "555",
+  "user_id": "123",
+  "generated_at": "2026-07-04T12:00:00Z",
+  "services": {
+    "auth":         { "email": "..." },
+    "user":         { "profile": { "...": "..." } },
+    "guild":        { "owned_guilds": [], "memberships": [] },
+    "chat":         { "channel_messages": [], "direct_messages": [] },
+    "notification": { "notification_preferences": [] }
+  },
+  "errors": { "chat": "timeout after 5s" }
+}
+```
+
+Each object under `services` is the verbatim `200` response body of that service's `GET /internal/users/{user_id}/data-export` leg (elided above; the full field set for each is documented in that service's own contract). A leg that errored is omitted from `services` and named in `errors` instead.
+
+`errors` maps each failing service's name to a short reason string (e.g. timeout, non-200, unreachable); it is omitted entirely when all five legs succeed. Its presence does not fail the export - the bundle is still stored and delivered, and the status stays `ready`.
+
+**Storage + delivery.** The bundle is written to object storage (a dedicated `exports` bucket) under key `exports/{user_id}/{export_id}.json`. The aggregator generates a **presigned GET URL** for that object and publishes it in `data.export_ready`; the Notification Service emails the link. The presigned URL is a bearer capability, so the key carries the unguessable `export_id` snowflake and the URL is time-limited (SigV4 caps presigned lifetime at 7 days; `expires_at` reflects the chosen TTL). Notification never touches object storage - only User holds the MinIO credentials.
+
+Job state (status, object key, expiry) is tracked in a `data_exports` table in this service's Postgres, which also backs the one-in-flight-per-user rate limit and the status endpoint.
+
+---
+
 ## Internal Endpoints
 
 Reachable only over the docker network. The API Gateway forwards `/api/{service}/vN/...`; `/internal/...` has no version segment and is not routed. No `Authorization` header required.
@@ -478,11 +558,55 @@ Resolve the relationship between two users, from `{user_id}`'s perspective. Same
 
 ---
 
+### GET /internal/users/{user_id}/data-export
+
+The user's User-owned data for a GDPR self-serve export: profile, friends, and the users they have blocked. Called by the public data-export aggregator (also hosted by this service - see the aggregator endpoint), which fans out to every service and stitches the results into one bundle.
+
+**Auth required:** None. Not reachable through the API Gateway. Callers reach this directly over the docker network (e.g. `http://user:8080/internal/users/{user_id}/data-export`).
+
+**Response `200`:**
+```json
+{
+  "user_id": "123",
+  "profile": {
+    "username": "yan",
+    "display_name": "Yan",
+    "avatar_url": "https://cdn.example/avatars/123.png",
+    "banner_url": null,
+    "bio": "hello",
+    "status": "online",
+    "last_seen_at": "2026-07-04T10:00:00Z",
+    "created_at": "2026-01-15T09:05:00Z"
+  },
+  "friends": [
+    { "username": "alice", "state": "accepted", "since": "2026-02-01T12:00:00Z" },
+    { "username": "bob", "state": "pending_outgoing", "since": "2026-06-30T18:00:00Z" }
+  ],
+  "blocked_users": [
+    { "username": "spammer", "blocked_at": "2026-05-01T08:00:00Z" }
+  ]
+}
+```
+
+`friends` covers accepted friendships and pending requests in either direction; `state` uses the same vocabulary as the public spot-check (`accepted`, `pending_outgoing`, `pending_incoming`). `blocked_users` lists the people **this user blocked** (`user_blocks` where `blocker_id` = the subject).
+
+**Ids are resolved to usernames here.** User is the one leg that can do this cheaply: it owns `users_profile` for *every* user, so the other party in a friendship or block resolves to a username with no cross-service call. (Chat and Notification return raw ids and rely on the aggregator, because they don't own the referenced names; Guild, like User, already resolves its own.)
+
+**Scope.** Excludes **blocks made *against* the subject** (`user_blocks` where `blocked_id` = the subject) - that is a third party's action about the user, not the user's own data, mirroring how Guild's export excludes bans against the user (Art. 15(4)). An unknown user returns `200` with an empty profile and empty arrays (a GDPR export, not a lookup).
+
+**Errors:**
+| Status | Reason |
+|--------|--------|
+| 400 | `user_id` is not a positive snowflake |
+
+---
+
 ## RabbitMQ Events Published
 
 | Event | Payload | Trigger |
 |-------|---------|---------|
 | `friend.request_sent` | `{ friendship_id, requester_id, addressee_id }` | Friend request sent |
+| `data.export_ready` | `{ user_id, email, download_url, expires_at }` | An async data-export job finished and the bundle is stored. Consumed by Notification to email the presigned download link. `email` is the recipient address (owned by Auth; the aggregator already holds it from Auth's export leg); `download_url` is a presigned MinIO GET URL; `expires_at` is its expiry. |
 
 ## RabbitMQ Events Consumed
 

@@ -1,6 +1,6 @@
 namespace Auth.Presentation.Contracts.Register;
 
 public sealed record RegisterResponse(
-    long UserId,
+    string UserId,
     string AccessToken
 );

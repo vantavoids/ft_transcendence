@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text.Json;
+using Guild.Application;
 using Guild.Infrastructure.Messaging.Contracts;
 using Xunit;
 
@@ -14,10 +15,8 @@ namespace Guild.UnitTests.Serialization;
 /// </summary>
 public sealed class UserDeletedContractTests
 {
-	private static readonly JsonSerializerOptions SnakeCase = new()
-	{
-		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-	};
+	private static readonly JsonSerializerOptions Wire =
+		GuildSerialization.ApplyEventWireFormat(new());
 
 	[Fact]
 	public void UserDeleted_BindsTo_AuthPublisherUrn()
@@ -34,9 +33,18 @@ public sealed class UserDeletedContractTests
 	}
 
 	[Fact]
-	public void UserDeleted_DeserializesFrom_SnakeCasePayload()
+	public void UserDeleted_DeserializesFrom_StringIdPayload()
 	{
-		var evt = JsonSerializer.Deserialize<UserDeleted>("{\"user_id\":123}", SnakeCase);
+		var evt = JsonSerializer.Deserialize<UserDeleted>("{\"user_id\":\"123\"}", Wire);
+
+		Assert.NotNull(evt);
+		Assert.Equal(123, evt!.UserId);
+	}
+
+	[Fact]
+	public void UserDeleted_DeserializesFrom_LegacyNumberIdPayload()
+	{
+		var evt = JsonSerializer.Deserialize<UserDeleted>("{\"user_id\":123}", Wire);
 
 		Assert.NotNull(evt);
 		Assert.Equal(123, evt!.UserId);
@@ -45,8 +53,8 @@ public sealed class UserDeletedContractTests
 	[Fact]
 	public void UserDeleted_SerializesWith_SnakeCaseField()
 	{
-		var json = JsonSerializer.Serialize(new UserDeleted(123), SnakeCase);
+		var json = JsonSerializer.Serialize(new UserDeleted(123), Wire);
 
-		Assert.Equal("{\"user_id\":123}", json);
+		Assert.Equal("{\"user_id\":\"123\"}", json);
 	}
 }

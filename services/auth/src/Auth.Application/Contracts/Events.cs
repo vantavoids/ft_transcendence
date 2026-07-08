@@ -16,7 +16,7 @@ public sealed record UserLoggedOut(long UserId) : IEvent
     public string EventType => "user.logged_out";
 }
 
-public sealed record UserDeleted(long UserId) : IEvent
+public sealed record UserDeleted(long UserId, string? Email) : IEvent
 {
     public string EventType => "user.deleted";
 }

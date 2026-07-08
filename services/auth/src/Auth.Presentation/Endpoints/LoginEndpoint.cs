@@ -61,7 +61,7 @@ public sealed class LoginEndpoint : ICarterModule
                         Expires = clock.UtcNow.AddDays(options.TtlDays)
                     }
                 );
-                return TypedResults.Ok(new LoginResponse(r.UserId, r.AccessToken));
+                return TypedResults.Ok(new LoginResponse(r.UserId.ToString(), r.AccessToken));
             },
             failure => failure.Code switch
             {

@@ -39,9 +39,11 @@ public static class DependencyInjection
 
                 // contracts document snake_case payloads; MassTransit defaults to
                 // camelCase, so without this consumers read {"user_id":..} and bind nothing.
+                // snowflake ids go out as quoted strings per the docs/contracts ID policy.
                 conf.ConfigureJsonSerializerOptions(opts =>
                 {
                     opts.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+                    opts.Converters.Add(new SnowflakeJsonConverter());
                     return opts;
                 });
 

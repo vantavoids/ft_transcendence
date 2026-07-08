@@ -24,7 +24,7 @@ public sealed class RegisterEndpointTests(AuthApiFactory factory)
         Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
 
         var json = await resp.ReadJsonAsync();
-        Assert.NotNull(json["user_id"]?.GetValue<long>());
+        Assert.Matches(@"^\d+$", json["user_id"]!.GetValue<string>());
         Assert.NotEmpty(json["access_token"]!.GetValue<string>());
 
         var setCookie = Assert.Single(
@@ -41,7 +41,7 @@ public sealed class RegisterEndpointTests(AuthApiFactory factory)
 
         Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
 
-        var userId = (await resp.ReadJsonAsync())["user_id"]!.GetValue<long>();
+        var userId = (await resp.ReadJsonAsync())["user_id"]!.GetValue<string>();
         Assert.Equal($"/users/{userId}", resp.Headers.Location?.OriginalString);
     }
 

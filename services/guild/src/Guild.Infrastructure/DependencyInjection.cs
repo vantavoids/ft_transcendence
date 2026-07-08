@@ -63,16 +63,12 @@ public static class DependencyInjection
 					h.Password(options.Password);
 				});
 
-				// the docs/contracts source of truth specify snake_case payloads.
-				// MassTransit defaults to camelCase via System.Text.Json, so override
-				// the property naming policy so the wire format matches the docs.
+				// the docs/contracts source of truth specify snake_case payloads with
+				// snowflake ids as quoted strings. MassTransit defaults to camelCase
+				// via System.Text.Json, so override the wire format to match the docs.
 				// every other service that publishes or consumes these events must
 				// apply the same policy or deserialisation will fail
-				cfg.ConfigureJsonSerializerOptions(opts =>
-				{
-					opts.PropertyNamingPolicy = GuildSerialization.NamingPolicy;
-					return opts;
-				});
+				cfg.ConfigureJsonSerializerOptions(GuildSerialization.ApplyEventWireFormat);
 
 				cfg.Message<GuildMemberJoined>(m => m.SetEntityName("guild.member_joined"));
 				cfg.Message<GuildMemberLeft>(m => m.SetEntityName("guild.member_left"));
