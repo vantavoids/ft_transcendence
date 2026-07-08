@@ -1,18 +1,28 @@
 import {
   Body,
   Controller,
+  BadRequestException,
   ForbiddenException,
   Get,
   NotFoundException,
   Param,
+  Query,
   Patch,
   UseGuards,
 } from '@nestjs/common';
 import { ParseSnowflakePipe } from '../common/pipes/parse-snowflake.pipe';
 import { CurrentUserId } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UserProfileResponse, UsersService } from './users.service';
+import {
+  UserProfileResponse,
+  UserSummaryResponse,
+  UsersService,
+} from './users.service';
 import { UpdateUserProfileDto } from './update-user-profile.dto';
+import {
+  ListUsersQueryDto,
+  SearchUsersQueryDto,
+} from './users-query.dto';
 
 @Controller('v1/users')
 @UseGuards(JwtAuthGuard)
@@ -27,6 +37,29 @@ export class PublicUsersController {
     }
 
     return profile;
+  }
+
+  @Get()
+  async getUsers(
+    @CurrentUserId() userId: string,
+    @Query() query: ListUsersQueryDto,
+  ): Promise<UserSummaryResponse[]> {
+    const ids = this.parseSnowflakeList(query.ids);
+    return this.users.getUsersByIds(userId, ids);
+  }
+
+  @Get('search')
+  async searchUsers(
+    @CurrentUserId() userId: string,
+    @Query() query: SearchUsersQueryDto,
+  ): Promise<UserSummaryResponse[]> {
+    const searchTerm = query.q.trim();
+    if (searchTerm.length < 2) {
+      throw new BadRequestException('q must be at least 2 characters long');
+    }
+
+    const limit = this.parseSearchLimit(query.limit);
+    return this.users.searchUsers(userId, searchTerm, limit);
   }
 
   @Get(':userId')
@@ -57,5 +90,44 @@ export class PublicUsersController {
     }
 
     return profile;
+  }
+
+  private parseSnowflakeList(value: string | undefined): string[] {
+    if (!value) {
+      throw new BadRequestException('ids query parameter is required');
+    }
+
+    const ids = value
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    if (ids.length === 0) {
+      throw new BadRequestException('ids query parameter is required');
+    }
+
+    for (const id of ids) {
+      if (!/^\d+$/.test(id)) {
+        throw new BadRequestException('ids query parameter must contain snowflakes only');
+      }
+    }
+
+    if (ids.length > 100) {
+      throw new BadRequestException('ids query parameter must not contain more than 100 ids');
+    }
+
+    return ids;
+  }
+
+  private parseSearchLimit(value: number | undefined): number {
+    if (value === undefined) {
+      return 20;
+    }
+
+    if (!Number.isInteger(value) || value < 1 || value > 50) {
+      throw new BadRequestException('limit must be between 1 and 50');
+    }
+
+    return value;
   }
 }
