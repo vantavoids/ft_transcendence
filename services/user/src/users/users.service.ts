@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
 import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
+import { BlocksRepository } from './repositories/blocks.repository';
 import { FriendshipsRepository } from './repositories/friendships.repository';
 import { ProfilesRepository } from './repositories/profiles.repository';
 import { RelationshipsRepository } from './repositories/relationships.repository';
 import { UsersLookupRepository } from './repositories/users-lookup.repository';
 import type {
+  BlockListItemResponse,
   FriendRequestDirection,
   FriendRequestListItemResponse,
   FriendRequestSentEvent,
@@ -37,6 +39,7 @@ export class UsersService {
   private readonly relationshipsRepository: RelationshipsRepository,
   private readonly usersLookupRepository: UsersLookupRepository,
   private readonly friendshipsRepository: FriendshipsRepository,
+  private readonly blocksRepository: BlocksRepository,
   private readonly snowflakeIdGenerator: SnowflakeIdGenerator,
   private readonly relationshipEventsPublisher: RelationshipEventsPublisher,
 ) {}
@@ -133,5 +136,23 @@ export class UsersService {
     callerId: string,
   ): Promise<'not_found' | 'forbidden' | 'deleted'> {
     return this.friendshipsRepository.deleteFriendRequest(friendshipId, callerId);
+  }
+
+  async listBlockedUsers(viewerId: string): Promise<BlockListItemResponse[]> {
+    return this.blocksRepository.listBlockedUsers(viewerId);
+  }
+
+  async blockUser(
+    viewerId: string,
+    blockedId: string,
+  ): Promise<'not_found' | 'conflict' | 'blocked'> {
+    return this.blocksRepository.blockUser(viewerId, blockedId);
+  }
+
+  async unblockUser(
+    viewerId: string,
+    blockedId: string,
+  ): Promise<'not_found' | 'deleted'> {
+    return this.blocksRepository.unblockUser(viewerId, blockedId);
   }
 }
