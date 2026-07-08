@@ -38,8 +38,8 @@ Delivery order is dependency-first.
 - [x] Implement `GET /users/me`
 - [x] Implement `GET /users/{id}`
 - [x] Implement `PATCH /users/{id}`
-- [ ] Implement `GET /users`
-- [ ] Implement `GET /users/search`
+- [x] Implement `GET /users`
+- [x] Implement `GET /users/search`
 
 ## Phase 4 - Social graph
 
