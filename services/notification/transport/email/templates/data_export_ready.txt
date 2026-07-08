@@ -1,0 +1,9 @@
+Hello,
+
+Your data export is ready. You can download it using the link below:
+
+{{.DownloadURL}}
+
+This link will expire on {{.ExpiresAt}}. After that, you will need to request a new export.
+
+If you did not request this export, you can safely ignore this email.
