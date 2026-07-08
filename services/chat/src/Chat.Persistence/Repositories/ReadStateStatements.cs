@@ -18,6 +18,9 @@ internal sealed class ReadStateStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> SelectChannelReadStatesForUser { get; } = new(() => session.PrepareAsync(
 		"SELECT channel_id, last_read_message_id, last_read_at FROM channel_read_states WHERE user_id = ?"));
 
+	public Lazy<Task<PreparedStatement>> DeleteChannelReadStatesForUser { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM channel_read_states WHERE user_id = ?"));
+
 	public Lazy<Task<PreparedStatement>> UpsertChannelReadState { get; } = new(() => session.PrepareAsync(
 		"INSERT INTO channel_read_states (user_id, channel_id, last_read_message_id, last_read_at) " +
 		"VALUES (?, ?, ?, ?)"));
@@ -35,6 +38,9 @@ internal sealed class ReadStateStatements(ISession session)
 		"INSERT INTO dm_read_states (user_id, partner_id, last_read_message_id, last_read_at) " +
 		"VALUES (?, ?, ?, ?)"));
 
+	public Lazy<Task<PreparedStatement>> DeleteDmReadStatesForUser { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM dm_read_states WHERE user_id = ?"));
+
 	/* ### DM unread counter ### */
 
 	public Lazy<Task<PreparedStatement>> IncrementDmUnreadCount { get; } = new(() => session.PrepareAsync(
@@ -43,4 +49,7 @@ internal sealed class ReadStateStatements(ISession session)
 	// counters can only be reset by deleting the row - a missing row reads back as 0
 	public Lazy<Task<PreparedStatement>> ResetDmUnreadCount { get; } = new(() => session.PrepareAsync(
 		"DELETE FROM dm_unread_counts WHERE user_id = ? AND partner_id = ?"));
+
+	public Lazy<Task<PreparedStatement>> DeleteDmUnreadCountsForUser { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM dm_unread_counts WHERE user_id = ?"));
 }
