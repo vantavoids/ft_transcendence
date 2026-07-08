@@ -85,6 +85,17 @@ export class UsersService {
     return this.deleteProfileMedia('avatar', userId);
   }
 
+  async uploadBanner(
+    userId: string,
+    file: UploadFile,
+  ): Promise<string | 'not_found'> {
+    return this.uploadProfileMedia('banner', userId, file);
+  }
+
+  async deleteBanner(userId: string): Promise<'deleted' | 'not_found'> {
+    return this.deleteProfileMedia('banner', userId);
+  }
+
   private async uploadProfileMedia(
     kind: ProfileMediaKind,
     userId: string,

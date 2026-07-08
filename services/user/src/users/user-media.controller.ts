@@ -23,6 +23,11 @@ const avatarUploadPipe = new ParseFilePipeBuilder()
   .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
   .build({ errorHttpStatusCode: HttpStatus.BAD_REQUEST });
 
+const bannerUploadPipe = new ParseFilePipeBuilder()
+  .addFileTypeValidator({ fileType: /^image\/(jpeg|png|webp)$/ })
+  .addMaxSizeValidator({ maxSize: 8 * 1024 * 1024 })
+  .build({ errorHttpStatusCode: HttpStatus.BAD_REQUEST });
+
 @Controller('v1/users')
 @UseGuards(JwtAuthGuard)
 export class UserMediaController {
@@ -56,6 +61,37 @@ export class UserMediaController {
     const result = await this.users.deleteAvatar(userId);
     if (result === 'not_found') {
       throw new NotFoundException('Avatar not found');
+    }
+  }
+
+  @Post(':userId/banner')
+  @UseInterceptors(FileInterceptor('banner'))
+  async uploadBanner(
+    @CurrentUserId() currentUserId: string,
+    @Param('userId', ParseSnowflakePipe) userId: string,
+    @UploadedFile(bannerUploadPipe) file: { buffer: Buffer; mimetype: string },
+  ): Promise<{ banner_url: string }> {
+    this.assertOwnProfile(currentUserId, userId);
+
+    const bannerUrl = await this.users.uploadBanner(userId, file);
+    if (bannerUrl === 'not_found') {
+      throw new NotFoundException('User not found');
+    }
+
+    return { banner_url: bannerUrl };
+  }
+
+  @Delete(':userId/banner')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteBanner(
+    @CurrentUserId() currentUserId: string,
+    @Param('userId', ParseSnowflakePipe) userId: string,
+  ): Promise<void> {
+    this.assertOwnProfile(currentUserId, userId);
+
+    const result = await this.users.deleteBanner(userId);
+    if (result === 'not_found') {
+      throw new NotFoundException('Banner not found');
     }
   }
 
