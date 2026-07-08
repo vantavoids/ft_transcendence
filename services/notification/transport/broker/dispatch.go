@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
+	email "github.com/vantavoids/ft_transcendence/services/notification/transport/email"
 )
 
 const (
@@ -200,7 +202,20 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.DeleteUserNotifs(ctx, ev.UserID)
+
+		if err := orch.DeleteUserNotifs(ctx, ev.UserID); err != nil {
+			return err
+		}
+
+		data := struct {
+			DeletedAt    string
+			SupportEmail string
+		}{
+			DeletedAt:    time.Now().Format("January 2, 2006 at 15:04 UTC"),
+			SupportEmail: "support@transcendence.com",
+		}
+
+		return email.Send("account_deleted", ev.Email, "Account successfully  deleted", data) // if the user deleted his account, we dont need his id because it doesnt exist anymore
 
 	case "data.export_ready":
 		return nil
