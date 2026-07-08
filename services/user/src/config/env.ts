@@ -7,6 +7,11 @@ export interface ValidatedEnv {
   APP_ENV: AppEnv;
   DATABASE_URL: string;
   JWT_SECRET: string;
+  BASE_URL: string;
+  MINIO_ENDPOINT: string;
+  MINIO_ACCESS_KEY: string;
+  MINIO_SECRET_KEY: string;
+  MINIO_USER_BUCKET: string;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -34,5 +39,10 @@ export function validateEnv(env: EnvInput): ValidatedEnv {
     APP_ENV: appEnvRaw as AppEnv,
     DATABASE_URL: required('DATABASE_URL', env.DATABASE_URL),
     JWT_SECRET: required('JWT_SECRET', env.JWT_SECRET),
+    BASE_URL: required('BASE_URL', env.BASE_URL),
+    MINIO_ENDPOINT: required('MINIO_ENDPOINT', env.MINIO_ENDPOINT),
+    MINIO_ACCESS_KEY: required('MINIO_ACCESS_KEY', env.MINIO_ACCESS_KEY),
+    MINIO_SECRET_KEY: required('MINIO_SECRET_KEY', env.MINIO_SECRET_KEY),
+    MINIO_USER_BUCKET: required('MINIO_USER_BUCKET', env.MINIO_USER_BUCKET),
   };
 }

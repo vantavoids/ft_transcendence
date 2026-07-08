@@ -51,4 +51,4 @@ Delivery order is dependency-first.
 
 - [ ] Implement avatar upload / delete
 - [ ] Implement banner upload / delete
-- [ ] Add storage integration for profile media
+- [x] Add storage integration for profile media
