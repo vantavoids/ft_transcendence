@@ -3,6 +3,7 @@ import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
 import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
 import { ProfileMediaStorageService, type ProfileMediaKind, type UploadFile } from './media/profile-media.storage';
 import { BlocksRepository } from './repositories/blocks.repository';
+import { DataExportRepository } from './repositories/data-export.repository';
 import { FriendshipsRepository } from './repositories/friendships.repository';
 import { ProfileMediaRepository } from './repositories/profile-media.repository';
 import { ProfilesRepository } from './repositories/profiles.repository';
@@ -19,6 +20,7 @@ import type {
   UpdateUserProfileInput,
   UserProfileResponse,
   UserSummaryResponse,
+  UserDataExportResponse,
 } from './users.types';
 export {
   type BlockListItemResponse,
@@ -30,6 +32,11 @@ export {
   type RelationshipStatus,
   type RelationshipResponse,
   type UpdateUserProfileInput,
+  type UserDataExportBlockedUserResponse,
+  type UserDataExportFriendResponse,
+  type UserDataExportFriendState,
+  type UserDataExportProfileResponse,
+  type UserDataExportResponse,
   type UserProfileResponse,
   type UserSummaryResponse,
 } from './users.types';
@@ -42,6 +49,7 @@ export class UsersService {
   private readonly usersLookupRepository: UsersLookupRepository,
   private readonly friendshipsRepository: FriendshipsRepository,
   private readonly blocksRepository: BlocksRepository,
+  private readonly dataExportRepository: DataExportRepository,
   private readonly profileMediaRepository: ProfileMediaRepository,
   private readonly profileMediaStorageService: ProfileMediaStorageService,
   private readonly snowflakeIdGenerator: SnowflakeIdGenerator,
@@ -72,6 +80,21 @@ export class UsersService {
     changes: UpdateUserProfileInput,
   ): Promise<UserProfileResponse | null> {
     return this.profilesRepository.updateProfileById(userId, changes);
+  }
+
+  async getInternalDataExport(
+    userId: string,
+  ): Promise<UserDataExportResponse> {
+    const profile = await this.dataExportRepository.getProfileExportById(userId);
+    const friends = await this.dataExportRepository.listFriendExports(userId);
+    const blockedUsers = await this.dataExportRepository.listBlockedExportUsers(userId);
+
+    return {
+      user_id: userId,
+      profile: profile ?? this.emptyDataExportProfile(),
+      friends,
+      blocked_users: blockedUsers,
+    };
   }
 
   async uploadAvatar(
@@ -200,6 +223,19 @@ export class UsersService {
     media: { avatar_url: string | null; banner_url: string | null },
   ): string | null {
     return kind === 'avatar' ? media.avatar_url : media.banner_url;
+  }
+
+  private emptyDataExportProfile(): UserDataExportResponse['profile'] {
+    return {
+      username: null,
+      display_name: null,
+      avatar_url: null,
+      banner_url: null,
+      bio: null,
+      status: null,
+      last_seen_at: null,
+      created_at: null,
+    };
   }
 
   async getRelationshipPerspective(
