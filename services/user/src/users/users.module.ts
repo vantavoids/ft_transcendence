@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
 import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
+import { NoopRelationshipEventsPublisher } from './events/relationship-events.publisher';
 import { RabbitMqRelationshipEventsPublisher } from './events/rabbitmq-relationship-events.publisher';
 import { InternalUsersController } from './internal-users.controller';
+import { DataExportController } from './data-export.controller';
+import { DataExportEventsPublisher, NoopDataExportEventsPublisher, RabbitMqDataExportEventsPublisher } from './data-export.publisher';
+import { DataExportService } from './data-export.service';
+import { DataExportStorageService } from './data-export.storage';
 import { FriendshipsController } from './friendships.controller';
 import { BlocksRepository } from './repositories/blocks.repository';
 import { DataExportRepository } from './repositories/data-export.repository';
@@ -20,6 +26,7 @@ import { UsersService } from './users.service';
 @Module({
   controllers: [
     InternalUsersController,
+    DataExportController,
     PublicUsersController,
     UserMediaController,
     FriendshipsController,
@@ -30,7 +37,11 @@ import { UsersService } from './users.service';
     SnowflakeIdGenerator,
     {
       provide: RelationshipEventsPublisher,
-      useClass: RabbitMqRelationshipEventsPublisher,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        config.get<'development' | 'test' | 'production'>('APP_ENV') === 'test'
+          ? new NoopRelationshipEventsPublisher()
+          : new RabbitMqRelationshipEventsPublisher(),
     },
     ProfilesRepository,
     RelationshipsRepository,
@@ -40,6 +51,16 @@ import { UsersService } from './users.service';
     DataExportRepository,
     ProfileMediaRepository,
     ProfileMediaStorageService,
+    DataExportStorageService,
+    DataExportService,
+    {
+      provide: DataExportEventsPublisher,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        config.get<'development' | 'test' | 'production'>('APP_ENV') === 'test'
+          ? new NoopDataExportEventsPublisher()
+          : new RabbitMqDataExportEventsPublisher(),
+    },
   ],
   exports: [UsersService],
 })

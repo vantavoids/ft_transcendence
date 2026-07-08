@@ -29,6 +29,15 @@ interface ExportBlockedUserRow {
   blocked_at: Date;
 }
 
+interface DataExportJobRow {
+  id: string;
+  status: 'pending' | 'ready' | 'failed';
+  object_key: string | null;
+  expires_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 @Injectable()
 export class DataExportRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -151,5 +160,120 @@ export class DataExportRepository {
       username: row.username,
       blocked_at: row.blocked_at.toISOString(),
     }));
+  }
+
+  async getLatestPendingExport(userId: string): Promise<DataExportJobRow | null> {
+    const result = await this.database.client.query<DataExportJobRow>(
+      `
+        SELECT
+          id::text,
+          status,
+          object_key,
+          expires_at,
+          created_at,
+          updated_at
+        FROM data_exports
+        WHERE user_id = $1::bigint
+          AND status = 'pending'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async createPendingExport(
+    exportId: string,
+    userId: string,
+  ): Promise<DataExportJobRow | 'conflict'> {
+    try {
+      const result = await this.database.client.query<DataExportJobRow>(
+        `
+          INSERT INTO data_exports (id, user_id, status)
+          VALUES ($1::bigint, $2::bigint, 'pending')
+          RETURNING
+            id::text,
+            status,
+            object_key,
+            expires_at,
+            created_at,
+            updated_at
+        `,
+        [exportId, userId],
+      );
+
+      return result.rows[0] ?? 'conflict';
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string }).code === '23505'
+      ) {
+        return 'conflict';
+      }
+
+      throw error;
+    }
+  }
+
+  async getExportById(
+    userId: string,
+    exportId: string,
+  ): Promise<DataExportJobRow | null> {
+    const result = await this.database.client.query<DataExportJobRow>(
+      `
+        SELECT
+          id::text,
+          status,
+          object_key,
+          expires_at,
+          created_at,
+          updated_at
+        FROM data_exports
+        WHERE user_id = $1::bigint
+          AND id = $2::bigint
+        LIMIT 1
+      `,
+      [userId, exportId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async markExportReady(
+    exportId: string,
+    objectKey: string,
+    expiresAt: Date,
+  ): Promise<boolean> {
+    const result = await this.database.client.query(
+      `
+        UPDATE data_exports
+        SET status = 'ready',
+            object_key = $2,
+            expires_at = $3,
+            updated_at = NOW()
+        WHERE id = $1::bigint
+      `,
+      [exportId, objectKey, expiresAt],
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markExportFailed(exportId: string): Promise<boolean> {
+    const result = await this.database.client.query(
+      `
+        UPDATE data_exports
+        SET status = 'failed',
+            updated_at = NOW()
+        WHERE id = $1::bigint
+      `,
+      [exportId],
+    );
+
+    return (result.rowCount ?? 0) > 0;
   }
 }

@@ -10,6 +10,7 @@ MINIO_SECRET = root_env.get('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET = root_env.get('MINIO_BUCKET',       'chat-attachments')
 MINIO_USER_BUCKET  = root_env.get('MINIO_USER_BUCKET',  'user-avatars')
 MINIO_GUILD_BUCKET = root_env.get('MINIO_GUILD_BUCKET', 'guild-icons')
+MINIO_EXPORTS_BUCKET = root_env.get('MINIO_EXPORTS_BUCKET', 'exports')
 TURN_REALM    = root_env.get('TURN_REALM',    'localhost')
 TURN_USERNAME = root_env.get('TURN_USERNAME', 'ft_turn')
 TURN_PASSWORD = root_env.get('TURN_PASSWORD', 'ft_turn')
@@ -52,6 +53,7 @@ local_resource(
         '-e MINIO_BUCKET=' + MINIO_BUCKET + ' ' +
         '-e MINIO_USER_BUCKET=' + MINIO_USER_BUCKET + ' ' +
         '-e MINIO_GUILD_BUCKET=' + MINIO_GUILD_BUCKET + ' ' +
+        '-e MINIO_EXPORTS_BUCKET=' + MINIO_EXPORTS_BUCKET + ' ' +
         '-e MINIO_PROMETHEUS_AUTH_TYPE=public ' +
         # console is served through nginx at /minio (matches compose); this points
         # the console at that base so its assets/redirects resolve there. Note this

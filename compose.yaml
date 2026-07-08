@@ -87,6 +87,7 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}
       MINIO_GUILD_BUCKET: ${MINIO_GUILD_BUCKET}
+      MINIO_EXPORTS_BUCKET: ${MINIO_EXPORTS_BUCKET}
       # lets Prometheus scrape /minio/v2/metrics/* without a bearer token
       MINIO_PROMETHEUS_AUTH_TYPE: public
       # console is exposed only through nginx over HTTPS at /minio; this points the
@@ -103,7 +104,7 @@ services:
       - minio_data:/data
       - ./infra/minio/entrypoint.sh:/usr/local/bin/minio-entrypoint.sh:ro,z
     healthcheck:
-      test: ["CMD", "sh", "-c", "mc ready local && mc stat local/$$MINIO_BUCKET local/$$MINIO_USER_BUCKET local/$$MINIO_GUILD_BUCKET >/dev/null"]
+      test: ["CMD", "sh", "-c", "mc ready local && mc stat local/$$MINIO_BUCKET local/$$MINIO_USER_BUCKET local/$$MINIO_GUILD_BUCKET local/$$MINIO_EXPORTS_BUCKET >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
