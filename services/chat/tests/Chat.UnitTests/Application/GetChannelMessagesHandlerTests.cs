@@ -178,6 +178,25 @@ public sealed class GetChannelMessagesHandlerTests
 	}
 
 	[Fact]
+	public async Task AddThenRemoveReaction_ReturnsNoReactions_NoGhostZeroCountEntry()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 5, Permissions: ReadMessagesPermission);
+
+		var anchor = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+		SeedMessage(h.Repository, id: 1, channelId: 100, createdAt: anchor.AddMinutes(-10));
+
+		await h.ReactionRepository.AddAsync(channelId: 100, messageId: 1, userId: 42, emoji: "👍", now: anchor, ct: default);
+		await h.ReactionRepository.RemoveAsync(channelId: 100, messageId: 1, userId: 42, emoji: "👍", ct: default);
+
+		var result = await handler.HandleAsync(new GetChannelMessagesQuery(ChannelId: 100, BeforeTime: anchor, Limit: 50));
+
+		Assert.True(result.Succeeded);
+		var message = Assert.Single(result.Value, m => m.Id == "1");
+		Assert.Empty(message.Reactions);
+	}
+
+	[Fact]
 	public async Task Administrator_BypassesReadPermissionCheck()
 	{
 		var (h, handler) = BuildHandler();
