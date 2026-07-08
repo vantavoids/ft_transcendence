@@ -50,5 +50,5 @@ Delivery order is dependency-first.
 ## Phase 5 - Media
 
 - [x] Implement avatar upload / delete
-- [ ] Implement banner upload / delete
+- [x] Implement banner upload / delete
 - [x] Add storage integration for profile media
