@@ -43,9 +43,9 @@ Delivery order is dependency-first.
 
 ## Phase 4 - Social graph
 
-- [ ] Implement friend endpoints
-- [ ] Implement block endpoints
-- [ ] Add RabbitMQ events for relationship changes
+- [x] Implement friend endpoints
+- [x] Implement block endpoints
+- [x] Add RabbitMQ events for relationship changes
 
 ## Phase 5 - Media
 
