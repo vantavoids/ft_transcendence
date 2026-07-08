@@ -12,6 +12,7 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 
 	public List<(long UserId, long PartnerId)> IncrementedDmUnreadCounts { get; } = [];
 	public List<(long UserId, long PartnerId)> ResetDmUnreadCounts { get; } = [];
+	public List<long> DeletedAllForUsers { get; } = [];
 
 	/// <summary>records every CountChannelMessagesAfterAsync call so tests can assert the exact cursor passed in</summary>
 	public List<(long ChannelId, DateTimeOffset After)> CountCalls { get; } = [];
@@ -26,6 +27,7 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 		IncrementedDmUnreadCounts.Clear();
 		ResetDmUnreadCounts.Clear();
 		CountCalls.Clear();
+		DeletedAllForUsers.Clear();
 	}
 
 	public Task<ReadState> UpsertIfNewerAsync(
@@ -64,6 +66,14 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 	public Task IncrementDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct)
 	{
 		IncrementedDmUnreadCounts.Add((userId, partnerId));
+		return Task.CompletedTask;
+	}
+
+	public Task DeleteAllForUserAsync(long userId, CancellationToken ct)
+	{
+		DeletedAllForUsers.Add(userId);
+		foreach (var key in _states.Keys.Where(k => k.UserId == userId).ToList())
+			_states.Remove(key);
 		return Task.CompletedTask;
 	}
 }

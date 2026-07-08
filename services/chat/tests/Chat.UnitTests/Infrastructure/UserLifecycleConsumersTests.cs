@@ -57,9 +57,11 @@ public sealed class UserDeletedConsumerTests
 	{
 		var broadcaster = new FakeUserBroadcaster { EvictedCount = 1 };
 		var messages = new FakeMessageRepository();
+		var readStates = new FakeReadStateRepository();
 		await using var provider = new ServiceCollection()
 			.AddSingleton<IUserBroadcaster>(broadcaster)
 			.AddSingleton<IMessageRepository>(messages)
+			.AddSingleton<IReadStateRepository>(readStates)
 			.AddMassTransitTestHarness(x => x.AddConsumer<UserDeletedConsumer>())
 			.BuildServiceProvider(true);
 
@@ -71,6 +73,7 @@ public sealed class UserDeletedConsumerTests
 		Assert.True(await harness.Consumed.Any<UserDeleted>());
 		Assert.Equal(99L, Assert.Single(broadcaster.DisconnectCalls));
 		Assert.Equal(99L, Assert.Single(messages.DeletedConversationsFor));
+		Assert.Equal(99L, Assert.Single(readStates.DeletedAllForUsers));
 	}
 
 	[Fact]
@@ -78,9 +81,11 @@ public sealed class UserDeletedConsumerTests
 	{
 		var broadcaster = new FakeUserBroadcaster();
 		var messages = new FakeMessageRepository();
+		var readStates = new FakeReadStateRepository();
 		await using var provider = new ServiceCollection()
 			.AddSingleton<IUserBroadcaster>(broadcaster)
 			.AddSingleton<IMessageRepository>(messages)
+			.AddSingleton<IReadStateRepository>(readStates)
 			.AddMassTransitTestHarness(x => x.AddConsumer<UserDeletedConsumer>())
 			.BuildServiceProvider(true);
 
@@ -92,5 +97,7 @@ public sealed class UserDeletedConsumerTests
 		Assert.True(await harness.Consumed.Any<UserDeleted>());
 		var deletedFor = Assert.Single(messages.DeletedConversationsFor);
 		Assert.Equal(7L, deletedFor);
+		var deletedReadStatesFor = Assert.Single(readStates.DeletedAllForUsers);
+		Assert.Equal(7L, deletedReadStatesFor);
 	}
 }

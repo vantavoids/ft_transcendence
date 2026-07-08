@@ -67,4 +67,16 @@ internal sealed class ReadStateRepository(ISession session, ReadStateStatements 
 		var stmt = await statements.IncrementDmUnreadCount.Value;
 		await session.ExecuteAsync(stmt.Bind(userId, partnerId));
 	}
+
+	public async Task DeleteAllForUserAsync(long userId, CancellationToken ct)
+	{
+		var channelStmt = await statements.DeleteChannelReadStatesForUser.Value;
+		var dmStmt = await statements.DeleteDmReadStatesForUser.Value;
+		var unreadStmt = await statements.DeleteDmUnreadCountsForUser.Value;
+
+		await Task.WhenAll(
+			session.ExecuteAsync(channelStmt.Bind(userId)),
+			session.ExecuteAsync(dmStmt.Bind(userId)),
+			session.ExecuteAsync(unreadStmt.Bind(userId)));
+	}
 }

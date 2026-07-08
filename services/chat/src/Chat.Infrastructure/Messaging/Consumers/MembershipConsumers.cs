@@ -74,6 +74,7 @@ public sealed class UserLoggedOutConsumer(
 public sealed class UserDeletedConsumer(
 	IUserBroadcaster broadcaster,
 	IMessageRepository messages,
+	IReadStateRepository readStates,
 	ILogger<UserDeletedConsumer> logger): IConsumer<UserDeleted>
 {
 	public async Task Consume(ConsumeContext<UserDeleted> context)
@@ -83,7 +84,7 @@ public sealed class UserDeletedConsumer(
 		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
 
 		await messages.DeleteConversationAsync(msg.UserId, context.CancellationToken);
-		// TODO: delete channel_read_states, and dm_unread_counts once the read-state feature lands
+		await readStates.DeleteAllForUserAsync(msg.UserId, context.CancellationToken);
 
 		logger.LogDebug(
 			"user.deleted consumed: user_id={UserId} disconnected_connections={Disconnected}"

@@ -44,4 +44,10 @@ public interface IReadStateRepository
 
 	/// <summary>Increments the recipient's dm_unread_counts row on a new DM send.</summary>
 	Task IncrementDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct);
+
+	/// <summary>
+	/// Purges every read-cursor row for this user across channel_read_states,
+	/// dm_read_states and dm_unread_counts. Called on account deletion.
+	/// </summary>
+	Task DeleteAllForUserAsync(long userId, CancellationToken ct);
 }
