@@ -53,6 +53,7 @@ internal sealed class ReactionRepository(ISession session, ReactionStatements st
 		var mine = mineRows.Select(r => r.GetValue<string>("emoji")).ToHashSet();
 
 		return countRows
+			.Where(r => r.GetValue<long>("count") > 0)
 			.Select(r =>
 			{
 				var emoji = r.GetValue<string>("emoji");
@@ -78,6 +79,7 @@ internal sealed class ReactionRepository(ISession session, ReactionStatements st
 			.ToHashSet();
 
 		return countRows
+			.Where(r => r.GetValue<long>("count") > 0)
 			.Select(r =>
 			{
 				var messageId = r.GetValue<long>("message_id");

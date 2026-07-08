@@ -45,7 +45,7 @@ public sealed class FakeReactionRepository : IReactionRepository
 		long channelId, long messageId, long currentUserId, CancellationToken ct)
 	{
 		IReadOnlyList<ReactionSummary> result = _reactions
-			.Where(e => e.Key.ChannelId == channelId && e.Key.MessageId == messageId)
+			.Where(e => e.Key.ChannelId == channelId && e.Key.MessageId == messageId && e.Value.Count > 0)
 			.Select(e => new ReactionSummary(e.Key.Emoji, e.Value.Count, e.Value.Contains(currentUserId)))
 			.ToList();
 
@@ -58,7 +58,7 @@ public sealed class FakeReactionRepository : IReactionRepository
 		var wanted = messageIds.ToHashSet();
 
 		var lookup = _reactions
-			.Where(e => e.Key.ChannelId == channelId && wanted.Contains(e.Key.MessageId))
+			.Where(e => e.Key.ChannelId == channelId && wanted.Contains(e.Key.MessageId) && e.Value.Count > 0)
 			.Select(e => (e.Key.MessageId, Summary: new ReactionSummary(e.Key.Emoji, e.Value.Count, e.Value.Contains(currentUserId))))
 			.ToLookup(x => x.MessageId, x => x.Summary);
 
