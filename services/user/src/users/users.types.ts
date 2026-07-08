@@ -35,3 +35,41 @@ export interface UpdateUserProfileInput {
   bio?: string;
   status?: UserProfileResponse['status'];
 }
+
+export interface FriendSummaryResponse {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status: UserProfileResponse['status'];
+  friendship_status: 'accepted';
+}
+
+export type FriendRequestDirection = 'incoming' | 'outgoing' | 'all';
+
+export interface FriendRequestListItemResponse {
+  friendship_id: string;
+  direction: Exclude<FriendRequestDirection, 'all'>;
+  user: UserSummaryResponse;
+  created_at: string;
+}
+
+export interface FriendshipResponse {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: 'pending' | 'accepted' | 'blocked';
+  created_at: string;
+}
+
+export interface BlockListItemResponse {
+  id: string;
+  username: string;
+  blocked_at: string;
+}
+
+export interface FriendRequestSentEvent {
+  friendship_id: string;
+  requester_id: string;
+  addressee_id: string;
+}
