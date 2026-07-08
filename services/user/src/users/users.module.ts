@@ -6,6 +6,7 @@ import {
 } from './events/relationship-events.publisher';
 import { InternalUsersController } from './internal-users.controller';
 import { FriendshipsController } from './friendships.controller';
+import { BlocksRepository } from './repositories/blocks.repository';
 import { FriendshipsRepository } from './repositories/friendships.repository';
 import { ProfilesRepository } from './repositories/profiles.repository';
 import { RelationshipsRepository } from './repositories/relationships.repository';
@@ -32,6 +33,7 @@ import { UsersService } from './users.service';
     RelationshipsRepository,
     UsersLookupRepository,
     FriendshipsRepository,
+    BlocksRepository,
   ],
   exports: [UsersService],
 })

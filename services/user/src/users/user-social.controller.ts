@@ -1,9 +1,13 @@
 import {
   BadRequestException,
   Controller,
+  ConflictException,
+  Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -11,6 +15,7 @@ import { CurrentUserId } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ParseSnowflakePipe } from '../common/pipes/parse-snowflake.pipe';
 import {
+  BlockListItemResponse,
   FriendRequestListItemResponse,
   FriendRequestDirection,
   FriendSummaryResponse,
@@ -61,5 +66,43 @@ export class UserSocialController {
     }
 
     return relationship;
+  }
+
+  @Get('me/blocks')
+  async listBlockedUsers(
+    @CurrentUserId() viewerId: string,
+  ): Promise<BlockListItemResponse[]> {
+    return this.users.listBlockedUsers(viewerId);
+  }
+
+  @Post(':userId/block')
+  @HttpCode(204)
+  async blockUser(
+    @CurrentUserId() viewerId: string,
+    @Param('userId', ParseSnowflakePipe) blockedId: string,
+  ): Promise<void> {
+    if (viewerId === blockedId) {
+      throw new BadRequestException('Cannot block yourself');
+    }
+
+    const result = await this.users.blockUser(viewerId, blockedId);
+    if (result === 'not_found') {
+      throw new NotFoundException('User not found');
+    }
+    if (result === 'conflict') {
+      throw new ConflictException('Already blocking this user');
+    }
+  }
+
+  @Delete(':userId/block')
+  @HttpCode(204)
+  async unblockUser(
+    @CurrentUserId() viewerId: string,
+    @Param('userId', ParseSnowflakePipe) blockedId: string,
+  ): Promise<void> {
+    const result = await this.users.unblockUser(viewerId, blockedId);
+    if (result === 'not_found') {
+      throw new NotFoundException('Block not found');
+    }
   }
 }
