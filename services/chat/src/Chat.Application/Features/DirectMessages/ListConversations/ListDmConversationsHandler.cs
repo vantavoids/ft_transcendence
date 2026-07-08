@@ -8,7 +8,8 @@ namespace Chat.Application.Features.DirectMessages.ListConversations;
 
 internal sealed class ListDmConversationsHandler(
 	ICurrentUser currentUser,
-	IMessageRepository repository)
+	IMessageRepository repository,
+	IReadStateRepository readStates)
 	: IQueryHandler<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>>
 {
 	public async Task<Result<IReadOnlyList<DmConversationResponse>>> HandleAsync(
@@ -18,9 +19,11 @@ internal sealed class ListDmConversationsHandler(
 		var conversations = await repository.GetConversationsAsync(currentUser.UserId, cancellationToken);
 		var filtered = query.IncludeArchived ? conversations : conversations.Where(c => !c.IsArchived);
 
+		var unreadCounts = await readStates.GetDmUnreadCountsForUserAsync(currentUser.UserId, cancellationToken);
+
 		return filtered
 			.OrderByDescending(c => c.LastMessageAt)
-			.Select(DmConversationResponse.From)
+			.Select(c => DmConversationResponse.From(c, unreadCounts.GetValueOrDefault(c.PartnerId, 0)))
 			.ToList();
 	}
 }

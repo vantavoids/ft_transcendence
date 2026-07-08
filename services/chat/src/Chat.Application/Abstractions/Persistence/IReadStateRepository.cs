@@ -45,6 +45,9 @@ public interface IReadStateRepository
 	/// <summary>Increments the recipient's dm_unread_counts row on a new DM send.</summary>
 	Task IncrementDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct);
 
+	/// <summary>Every dm_unread_counts row for this user, keyed by partner id; backs the sidebar's per-conversation badge.</summary>
+	Task<IReadOnlyDictionary<long, int>> GetDmUnreadCountsForUserAsync(long userId, CancellationToken ct);
+
 	/// <summary>
 	/// Purges every read-cursor row for this user across channel_read_states,
 	/// dm_read_states and dm_unread_counts. Called on account deletion.

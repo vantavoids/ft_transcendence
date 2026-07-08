@@ -6,6 +6,7 @@ namespace Chat.UnitTests.Fakes;
 public sealed class FakeReadStateRepository : IReadStateRepository
 {
 	private readonly Dictionary<(long UserId, long ContainerId, bool IsDm), ReadState> _states = [];
+	private readonly Dictionary<(long UserId, long PartnerId), int> _dmUnreadCounts = [];
 
 	/// <summary>lets a test control what CountChannelMessagesAfterAsync returns per channel</summary>
 	public Dictionary<long, int> ChannelMessageCountsAfter { get; } = [];
@@ -20,6 +21,9 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 	public void SeedChannelReadState(long userId, ReadState state) =>
 		_states[(userId, state.ContainerId, false)] = state;
 
+	public void SeedDmUnreadCount(long userId, long partnerId, int count) =>
+		_dmUnreadCounts[(userId, partnerId)] = count;
+
 	public void Reset()
 	{
 		_states.Clear();
@@ -28,6 +32,7 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 		ResetDmUnreadCounts.Clear();
 		CountCalls.Clear();
 		DeletedAllForUsers.Clear();
+		_dmUnreadCounts.Clear();
 	}
 
 	public Task<ReadState> UpsertIfNewerAsync(
@@ -67,6 +72,14 @@ public sealed class FakeReadStateRepository : IReadStateRepository
 	{
 		IncrementedDmUnreadCounts.Add((userId, partnerId));
 		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyDictionary<long, int>> GetDmUnreadCountsForUserAsync(long userId, CancellationToken ct)
+	{
+		IReadOnlyDictionary<long, int> counts = _dmUnreadCounts
+			.Where(kv => kv.Key.UserId == userId)
+			.ToDictionary(kv => kv.Key.PartnerId, kv => kv.Value);
+		return Task.FromResult(counts);
 	}
 
 	public Task DeleteAllForUserAsync(long userId, CancellationToken ct)

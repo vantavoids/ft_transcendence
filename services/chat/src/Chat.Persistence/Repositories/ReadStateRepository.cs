@@ -68,6 +68,16 @@ internal sealed class ReadStateRepository(ISession session, ReadStateStatements 
 		await session.ExecuteAsync(stmt.Bind(userId, partnerId));
 	}
 
+	public async Task<IReadOnlyDictionary<long, int>> GetDmUnreadCountsForUserAsync(long userId, CancellationToken ct)
+	{
+		var stmt = await statements.SelectDmUnreadCountsForUser.Value;
+		var rows = await session.ExecuteAsync(stmt.Bind(userId));
+
+		return rows.ToDictionary(
+			row => row.GetValue<long>("partner_id"),
+			row => (int)row.GetValue<long>("count"));
+	}
+
 	public async Task DeleteAllForUserAsync(long userId, CancellationToken ct)
 	{
 		var channelStmt = await statements.DeleteChannelReadStatesForUser.Value;

@@ -10,11 +10,10 @@ public sealed record DmConversationResponse(
 	int UnreadCount,
 	bool IsArchived)
 {
-	// TODO: wire up unread_count once read-state (#154) lands
-	public static DmConversationResponse From(DmConversation conversation) => new(
+	public static DmConversationResponse From(DmConversation conversation, int unreadCount) => new(
 		PartnerId: conversation.PartnerId.ToString(),
 		LastPreview: conversation.LastPreview,
 		LastMessageAt: conversation.LastMessageAt,
-		UnreadCount: 0,
+		UnreadCount: unreadCount,
 		IsArchived: conversation.IsArchived);
 }

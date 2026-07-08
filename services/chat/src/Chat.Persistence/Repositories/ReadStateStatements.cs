@@ -52,4 +52,7 @@ internal sealed class ReadStateStatements(ISession session)
 
 	public Lazy<Task<PreparedStatement>> DeleteDmUnreadCountsForUser { get; } = new(() => session.PrepareAsync(
 		"DELETE FROM dm_unread_counts WHERE user_id = ?"));
+
+	public Lazy<Task<PreparedStatement>> SelectDmUnreadCountsForUser { get; } = new(() => session.PrepareAsync(
+		"SELECT partner_id, count FROM dm_unread_counts WHERE user_id = ?"));
 }
