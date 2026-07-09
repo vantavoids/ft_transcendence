@@ -97,7 +97,7 @@ export function ChatWorkspace() {
 
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
-  const dmWorkspace = useDmWorkspace();
+  const dmWorkspace = useDmWorkspace(currentUserId);
 
   useEffect(() => {
     return () => {
