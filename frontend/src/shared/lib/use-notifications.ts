@@ -97,8 +97,13 @@ export function useNotifications() {
   });
   const [preferences, setPreferences] = useState<NotificationPreferenceDto[]>([]);
 
+  // bumped on every feed fetch; responses that come back after a newer fetch
+  // started are discarded instead of clobbering the newer results
+  const fetchSeqRef = useRef(0);
+
   const fetchFeed = useCallback(
     async (options?: { silent?: boolean }) => {
+      const seq = ++fetchSeqRef.current;
       if (!options?.silent) {
         setIsLoading(true);
         setError(null);
@@ -108,15 +113,18 @@ export function useNotifications() {
           listNotifications(buildListQuery(filter)),
           getUnreadNotificationCount()
         ]);
+        if (seq !== fetchSeqRef.current) {
+          return;
+        }
         setNotifications(items);
         setHasMore(items.length === PAGE_SIZE);
         setUnreadCount(unread.count);
       } catch {
-        if (!options?.silent) {
+        if (!options?.silent && seq === fetchSeqRef.current) {
           setError('Impossible de charger les notifications.');
         }
       } finally {
-        if (!options?.silent) {
+        if (!options?.silent && seq === fetchSeqRef.current) {
           setIsLoading(false);
         }
       }
@@ -150,16 +158,24 @@ export function useNotifications() {
       return;
     }
 
+    const seq = fetchSeqRef.current;
     setIsLoadingMore(true);
     try {
       const page = await listNotifications({ ...buildListQuery(filter), before: oldest.id });
+      // a filter change refetched the feed while this page was in flight;
+      // its items belong to the previous filter, drop them
+      if (seq !== fetchSeqRef.current) {
+        return;
+      }
       setNotifications((current) => {
         const known = new Set(current.map((notification) => notification.id));
         return [...current, ...page.filter((notification) => !known.has(notification.id))];
       });
       setHasMore(page.length === PAGE_SIZE);
     } catch {
-      setError('Impossible de charger plus de notifications.');
+      if (seq === fetchSeqRef.current) {
+        setError('Impossible de charger plus de notifications.');
+      }
     } finally {
       setIsLoadingMore(false);
     }
