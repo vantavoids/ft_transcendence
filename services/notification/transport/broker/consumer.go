@@ -19,15 +19,21 @@ const (
 	exchangeType = "direct" // direct // topic // fanout
 )
 
-var events = []string{
+// published to the shared `events` direct exchange by the Go/NestJS services
+var directEvents = []string{
+	"friend.request_sent",
+	"data.export_ready",
+}
+
+// published by the .NET services to a per-type fanout exchange named after the
+// event (MassTransit SetEntityName); we bind to each exchange directly.
+var fanoutEvents = []string{
 	"chat.message_sent",
 	"chat.dm_sent",
 	"call.incoming",
-	"friend.request_sent",
 	"guild.invite_created",
 	"guild.member_joined",
 	"user.deleted",
-	"data.export_ready",
 }
 
 type Consumer struct {
@@ -99,16 +105,20 @@ func NewConsumer() (*Consumer, error) {
 		return nil, fmt.Errorf("Queue Declare: %s", err)
 	}
 
-	// Ready to sort only these events into my letterbox
-	for _, key := range events {
-		if err = c.channel.QueueBind(
-			queue.Name,   // name of the queue
-			key,          // bindingKey
-			exchangeName, // sourceExchange
-			false,        // noWait
-			nil,          // arguments
-		); err != nil {
-			return nil, fmt.Errorf("Queue Bind: %s", err)
+	// direct-exchange events keep the routing-key binding on `events`
+	for _, key := range directEvents {
+		if err = c.channel.QueueBind(queue.Name, key, exchangeName, false, nil); err != nil {
+			return nil, fmt.Errorf("Queue Bind (%s): %s", key, err)
+		}
+	}
+
+	// each .NET event has its own durable fanout exchange; bind with no routing key
+	for _, ex := range fanoutEvents {
+		if err = c.channel.ExchangeDeclare(ex, "fanout", true, false, false, false, nil); err != nil {
+			return nil, fmt.Errorf("Exchange Declare (%s): %s", ex, err)
+		}
+		if err = c.channel.QueueBind(queue.Name, "", ex, false, nil); err != nil {
+			return nil, fmt.Errorf("Queue Bind (%s): %s", ex, err)
 		}
 	}
 

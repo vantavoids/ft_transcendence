@@ -26,7 +26,15 @@ const (
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
 func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) error {
-	switch d.RoutingKey {
+	// .NET events arrive via a per-type fanout exchange (empty routing key), so
+	// identify them by the exchange they were published to; the direct-exchange
+	// (Go/NestJS) events carry the event name as the routing key.
+	eventName := d.RoutingKey
+	if eventName == "" {
+		eventName = d.Exchange
+	}
+
+	switch eventName {
 
 	case "chat.message_sent":
 		ev, err := parse[ChatMessageSentEvent](d)
@@ -239,7 +247,7 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		return email.Send("data_export_ready", ev.Email, "Your data export is ready", data)
 
 	default:
-		log.Printf("unknown routing key: %s", d.RoutingKey)
+		log.Printf("unknown event: %s (exchange=%s, routing_key=%s)", eventName, d.Exchange, d.RoutingKey)
 		return nil
 	}
 }
