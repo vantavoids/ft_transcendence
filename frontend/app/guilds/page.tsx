@@ -1,13 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { GuildIcon } from '../../src/components/guild/guild-icon';
+import { GuildBansPanel } from '../../src/components/guild/guild-bans-panel';
 import { GuildCreateForm, GuildJoinForm } from '../../src/components/guild/guild-forms';
+import { GuildInvitesPanel } from '../../src/components/guild/guild-invites-panel';
+import { GuildMembersPanel } from '../../src/components/guild/guild-members-panel';
 import { GuildOverview } from '../../src/components/guild/guild-overview';
 import { useGuilds } from '../../src/shared/guilds/guild-store';
 
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'members', label: 'Members' },
+  { id: 'bans', label: 'Bans' },
+  { id: 'invites', label: 'Invites' }
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
 export default function GuildsPage() {
   const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10">
@@ -60,7 +74,28 @@ export default function GuildsPage() {
 
         <div className="mt-8">
           {selectedGuildId ? (
-            <GuildOverview guildId={selectedGuildId} />
+            <>
+              <div className="mb-5 flex flex-wrap gap-2">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`h-9 rounded-md px-4 text-sm font-bold transition ${
+                      activeTab === tab.id
+                        ? 'bg-aqua/15 text-aqua'
+                        : 'bg-panel text-white/45 hover:text-white'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {activeTab === 'overview' ? <GuildOverview guildId={selectedGuildId} /> : null}
+              {activeTab === 'members' ? <GuildMembersPanel guildId={selectedGuildId} /> : null}
+              {activeTab === 'bans' ? <GuildBansPanel guildId={selectedGuildId} /> : null}
+              {activeTab === 'invites' ? <GuildInvitesPanel guildId={selectedGuildId} /> : null}
+            </>
           ) : isLoading ? (
             <div className="h-48 animate-pulse rounded-[1rem] bg-panel" />
           ) : (
