@@ -12,7 +12,6 @@ import {
   type MyGuildDto
 } from '../api/guild';
 import { getCurrentUser } from '../api/user';
-import { getAccessToken, SESSION_USERNAME_KEY } from '../lib/session';
 
 export const LAST_GUILD_KEY = 'ft_transcendence_last_guild';
 
@@ -56,7 +55,7 @@ function hasSession() {
     return false;
   }
 
-  return Boolean(getAccessToken() ?? window.localStorage.getItem(SESSION_USERNAME_KEY));
+  return Boolean(getAccessToken());
 }
 
 function sortByJoinedAt(guilds: MyGuildDto[]) {
