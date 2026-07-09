@@ -4,7 +4,13 @@ import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { hasDm, type DirectMessage } from '../../components/dm-list';
 import { archiveDirectMessageConversation, listDirectMessages } from '../api/chat';
 import { onChatHubEvent } from '../api/chat-hub';
-import { mapDirectMessageConversation } from '../mappers/chat';
+import {
+  accentForAuthor,
+  authorLabel,
+  formatMessageTimestamp,
+  mapDirectMessageConversation,
+  splitMessageLines
+} from '../mappers/chat';
 
 const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
 
@@ -22,7 +28,7 @@ export type DmWorkspace = {
 // owns the DM conversation list (incl. the archived-view toggle) and the
 // active DM selection/restoration - message history lives in
 // useConversationHistory since it's shared with channels.
-export function useDmWorkspace(): DmWorkspace {
+export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
   const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
   const [showArchivedDms, setShowArchivedDms] = useState(false);
   const [activeDm, setActiveDm] = useState<string | null>(null);
@@ -65,6 +71,44 @@ export function useDmWorkspace(): DmWorkspace {
       );
     });
   }, []);
+
+  // keep the sidebar preview/timestamp/ordering live - previously only
+  // updated optimistically for messages *you* sent, never for incoming ones
+  useEffect(() => {
+    return onChatHubEvent('ReceiveDirectMessage', (event) => {
+      const partnerId = event.sender_id === currentUserId ? event.recipient_id : event.sender_id;
+      const preview = splitMessageLines(event.content ?? '')[0] ?? '';
+      const lastMessageAt = formatMessageTimestamp(event.created_at);
+      const lastActivityAt = Date.parse(event.created_at);
+
+      setDmConversations((current) => {
+        if (current.some((dm) => dm.id === partnerId)) {
+          return current.map((dm) =>
+            dm.id === partnerId
+              ? { ...dm, lastMessage: preview, lastMessageAt, lastActivityAt, isArchived: false }
+              : dm
+          );
+        }
+
+        // first-ever message with this partner - the conversation didn't
+        // exist in our list at all yet, so add it rather than wait for a refresh
+        return [
+          ...current,
+          {
+            id: partnerId,
+            name: authorLabel(partnerId, currentUserId),
+            status: 'offline',
+            accent: accentForAuthor(partnerId),
+            lastMessage: preview,
+            lastMessageAt,
+            lastActivityAt,
+            unreadCount: 0,
+            isArchived: false
+          }
+        ];
+      });
+    });
+  }, [currentUserId]);
 
   function selectDm(dmId: string) {
     setActiveDm(dmId);
