@@ -12,17 +12,18 @@ import {
   type MyGuildDto
 } from '../api/guild';
 import { listChannelReadStates } from '../api/chat';
+import { joinChatChannel, leaveChatChannel, onChatHubEvent, onChatHubReconnected } from '../api/chat-hub';
 
 const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
 const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
 
-function guildIconUrl(guild: MyGuildDto) {
-  if (guild.icon_url) {
-    return guild.icon_url;
+function guildIconUrl(iconUrl: string | null | undefined, name: string) {
+  if (iconUrl) {
+    return iconUrl;
   }
 
-  const initial = encodeURIComponent(guild.name.slice(0, 1).toUpperCase() || 'G');
+  const initial = encodeURIComponent(name.slice(0, 1).toUpperCase() || 'G');
   return `https://placehold.co/160x160/23232b/e8e8ec/png?text=${initial}`;
 }
 
@@ -94,7 +95,11 @@ export function useGuildWorkspace(): GuildWorkspace {
 
         const sorted = [...dtos].sort((a, b) => b.joined_at.localeCompare(a.joined_at));
         setGuilds(
-          sorted.map((guild) => ({ id: guild.id, name: guild.name, iconUrl: guildIconUrl(guild) }))
+          sorted.map((guild) => ({
+            id: guild.id,
+            name: guild.name,
+            iconUrl: guildIconUrl(guild.icon_url, guild.name)
+          }))
         );
 
         const storedGuildId = window.sessionStorage.getItem(LAST_CHAT_GUILD_KEY);
@@ -111,6 +116,33 @@ export function useGuildWorkspace(): GuildWorkspace {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeJoined = onChatHubEvent('GuildJoined', (event) => {
+      setGuilds((current) =>
+        current.some((guild) => guild.id === event.guild_id)
+          ? current
+          : [
+              ...current,
+              {
+                id: event.guild_id,
+                name: event.guild_name,
+                iconUrl: guildIconUrl(null, event.guild_name)
+              }
+            ]
+      );
+    });
+
+    const unsubscribeLeft = onChatHubEvent('GuildLeft', (event) => {
+      setGuilds((current) => current.filter((guild) => guild.id !== event.guild_id));
+      setActiveGuildId((current) => (current === event.guild_id ? null : current));
+    });
+
+    return () => {
+      unsubscribeJoined();
+      unsubscribeLeft();
     };
   }, []);
 
@@ -186,6 +218,38 @@ export function useGuildWorkspace(): GuildWorkspace {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // join/leave the hub group for whichever channel is active.
+  useEffect(() => {
+    if (!activeChannel) {
+      return;
+    }
+
+    const channelId = activeChannel;
+    joinChatChannel(channelId).catch(() => {});
+    // best effort: real-time updates for this channel just won't arrive
+
+    const unsubscribeReconnect = onChatHubReconnected(() => {
+      joinChatChannel(channelId).catch(() => {});
+    });
+
+    return () => {
+      unsubscribeReconnect();
+      leaveChatChannel(channelId).catch(() => {});
+    };
+  }, [activeChannel]);
+
+  useEffect(() => {
+    return onChatHubEvent('ReadStateUpdated', (event) => {
+      setChannelReadStates((current) => ({
+        ...current,
+        [event.channel_id]: {
+          lastReadMessageId: event.last_read_message_id,
+          unreadCount: event.unread_count
+        }
+      }));
+    });
   }, []);
 
   function markChannelReadLocally(channelId: string, messageId: string) {
