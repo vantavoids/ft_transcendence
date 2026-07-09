@@ -174,6 +174,12 @@ export function useNotifications() {
   useEffect(() => {
     preferencesRef.current = preferences;
   }, [preferences]);
+  // mirror of the current notification ids so the push handler can tell a
+  // genuinely new notification from one the reconcile fetch already delivered
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    knownIdsRef.current = new Set(notifications.map((notification) => notification.id));
+  }, [notifications]);
 
   useEffect(() => {
     let disposed = false;
@@ -192,6 +198,13 @@ export function useNotifications() {
       // belt and braces: the server already skips muted inserts, but a mute
       // set in this tab may not have reached it before the push
       if (isSuppressedByMute(notification, preferencesRef.current)) {
+        return;
+      }
+
+      // a push can race the on-open reconcile fetch (the row is persisted
+      // before the push); if the fetch already delivered it, bumping the
+      // badge again would overcount
+      if (knownIdsRef.current.has(notification.id)) {
         return;
       }
 
