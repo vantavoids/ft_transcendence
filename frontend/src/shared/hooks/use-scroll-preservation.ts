@@ -38,7 +38,10 @@ export function useScrollPreservation(
   const conversationScrollPositions = useRef<Record<string, ConversationScrollPosition>>({});
   const pendingScrollBottom = useRef(false);
   const isRestoringScroll = useRef(false);
-  const [isNearBottom, setIsNearBottom] = useState(true);
+  // starts false (not "assume yes") so nothing treats this as a genuine
+  // measurement - e.g. the mark-as-read effect - until updateNearBottomState()
+  // has actually run against the real DOM at least once
+  const [isNearBottom, setIsNearBottom] = useState(false);
 
   const updateNearBottomState = useCallback(() => {
     const viewport = messagesViewportRef.current;
