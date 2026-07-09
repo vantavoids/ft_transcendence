@@ -12,18 +12,8 @@ import {
 } from 'lucide-react';
 import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
-import {
-  DmList,
-  getDmDetails,
-  getDmName,
-  getDmStatusClasses,
-  hasDm
-} from './dm-list';
-import {
-  getGuildMemberByName,
-  GuildMemberList,
-  type GuildMember
-} from './guild-member-list';
+import { DmList, getDmDetails, getDmName, getDmStatusClasses, hasDm } from './dm-list';
+import { getGuildMemberByName, GuildMemberList, type GuildMember } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
@@ -507,7 +497,8 @@ export function ChatWorkspace() {
               id: message.author.toLowerCase(),
               name: message.author,
               role: 'Member',
-              status: message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
+              status:
+                message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
               accent: message.accent,
               activity: 'No recent activity'
             })
@@ -773,10 +764,7 @@ export function ChatWorkspace() {
           </section>
 
           {chatMode === 'guild' && isMemberListOpen ? (
-            <GuildMemberList
-              onToggleVisibility={() => setIsMemberListOpen((current) => !current)}
-              onOpenProfile={setProfileMember}
-            />
+            <GuildMemberList onOpenProfile={setProfileMember} />
           ) : null}
 
           {chatMode === 'dm' && isDmProfileOpen && activeDmProfileMember ? (

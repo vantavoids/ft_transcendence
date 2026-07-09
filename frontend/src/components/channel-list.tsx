@@ -102,8 +102,9 @@ export function ChannelList({
             {selectedGuild?.name ?? 'server_name'}
           </h2>
           <div className="flex shrink-0 items-center gap-3 text-[#8c8c90]">
-            <UserRound className="h-5 w-5" strokeWidth={1.8} />
-            <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
+            <Link href="/guilds" className="transition hover:text-white" aria-label="Manage guild">
+              <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
+            </Link>
           </div>
         </div>
 

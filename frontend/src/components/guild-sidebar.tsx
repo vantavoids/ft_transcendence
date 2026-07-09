@@ -116,7 +116,6 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
           {tooltip.name}
         </div>
       ) : null}
-      <div className="flex justify-center pt-5 text-3xl tracking-[0.4em] text-[#9f9f9f]">...</div>
       {isAddGuildOpen ? <AddGuildModal onClose={() => setIsAddGuildOpen(false)} /> : null}
     </aside>
   );
