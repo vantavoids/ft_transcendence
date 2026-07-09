@@ -83,7 +83,8 @@ func (q *Queries) DeleteUserNotifications(ctx context.Context, userID int64) err
 
 const dismissNotification = `-- name: DismissNotification :execrows
 UPDATE notifications
-SET dismissed_at = NOW()
+SET dismissed_at = NOW(),
+    read_at = COALESCE(read_at, NOW())
 WHERE id = $1 AND user_id = $2
 `
 
@@ -92,6 +93,7 @@ type DismissNotificationParams struct {
 	UserID int64
 }
 
+// dismissing implies the user saw it: mark unread rows read in the same write
 func (q *Queries) DismissNotification(ctx context.Context, arg DismissNotificationParams) (int64, error) {
 	result, err := q.db.Exec(ctx, dismissNotification, arg.ID, arg.UserID)
 	if err != nil {

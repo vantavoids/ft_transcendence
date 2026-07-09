@@ -334,10 +334,11 @@ export function useNotifications() {
       }
 
       if (filter.includeDismissed) {
+        // the server marks dismissed rows read in the same write
         setNotifications((current) =>
           current.map((notification) =>
             notification.id === notificationId
-              ? { ...notification, dismissed_at: new Date().toISOString() }
+              ? { ...notification, read: true, dismissed_at: new Date().toISOString() }
               : notification
           )
         );
