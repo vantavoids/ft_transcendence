@@ -1,60 +1,9 @@
 import type { ChatMessageData } from '../chat-message';
 
-// TODO(api:chat,user): load channel history with GET /chat/channels/{channel_id}/messages
-// and DM history with GET /chat/dms/{user_id}/messages, then hydrate author profiles.
+// TODO(api:chat,user): load DM history with GET /chat/dms/{user_id}/messages,
+// then hydrate author profiles (epic 4 step 4). Channel history is already
+// wired to the real API (epic 4 step 3) - no channel-keyed entries remain here.
 export const initialMessages: Record<string, ChatMessageData[]> = {
-  general: [
-    {
-      id: '1',
-      author: 'um4ss',
-      accent: 'lime',
-      content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
-      timestamp: '20:01'
-    },
-    {
-      id: '2',
-      author: 'add',
-      accent: 'aqua',
-      content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
-      timestamp: '20:03'
-    },
-    {
-      id: '3',
-      author: 'SkyDogzz',
-      accent: 'yellow',
-      content: [
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
-      ],
-      timestamp: '20:08'
-    },
-    {
-      id: '4',
-      author: 'Vanta',
-      accent: 'lavender',
-      content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
-      timestamp: '20:11'
-    }
-  ],
-  idk: [
-    {
-      id: '5',
-      author: 'Cartoone',
-      accent: 'pink',
-      content: ['Canal de test prêt pour les messages locaux.'],
-      timestamp: '20:15'
-    }
-  ],
-  ideas_are_tough: [
-    {
-      id: '6',
-      author: 'um4ss',
-      accent: 'lime',
-      content: ['Brainstorm ici.'],
-      timestamp: '20:17'
-    }
-  ],
   'dm-skydogzz': [
     {
       id: 'dm-skydogzz-1',

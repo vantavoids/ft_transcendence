@@ -10,7 +10,12 @@ import {
   Smile,
   UserRound
 } from 'lucide-react';
-import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
+import {
+  ChatMessage,
+  getAccentClasses,
+  type ChatMessageData,
+  type ReplyPreview
+} from './chat-message';
 import {
   ChannelList,
   getChannelName,
@@ -46,14 +51,18 @@ import {
   type GuildChannelDto,
   type MyGuildDto
 } from '../shared/api/guild';
+import { listChannelMessages } from '../shared/api/chat';
+import { mapChannelMessage } from '../shared/mappers/chat';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
 const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
 const BOTTOM_THRESHOLD_PX = 96;
+const TOP_THRESHOLD_PX = 96;
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
 const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
+const CHANNEL_HISTORY_PAGE_SIZE = 50;
 
 function guildIconUrl(guild: MyGuildDto) {
   if (guild.icon_url) {
@@ -131,6 +140,8 @@ export function ChatWorkspace() {
   const conversationScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
   const pendingScrollBottom = useRef(false);
   const isRestoringScroll = useRef(false);
+  const isFetchingOlderHistory = useRef<Record<string, boolean>>({});
+  const hasMoreChannelHistory = useRef<Record<string, boolean>>({});
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [activeGuildId, setActiveGuildId] = useState<string | null>(null);
@@ -266,6 +277,70 @@ export function ChatWorkspace() {
     };
   }, [activeGuildId]);
 
+  useEffect(() => {
+    if (!activeChannel) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadHistory(channelId: string) {
+      try {
+        const dtos = await listChannelMessages(channelId, { limit: CHANNEL_HISTORY_PAGE_SIZE });
+        if (cancelled) {
+          return;
+        }
+
+        hasMoreChannelHistory.current[channelId] = dtos.length >= CHANNEL_HISTORY_PAGE_SIZE;
+        const mapped = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
+        setMessagesByConversation((current) => ({ ...current, [channelId]: mapped }));
+      } catch {
+        // best effort: leave any previously-loaded history in place
+      }
+    }
+
+    loadHistory(activeChannel);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChannel, currentUserId]);
+
+  async function loadOlderChannelHistory(channelId: string) {
+    if (isFetchingOlderHistory.current[channelId] || hasMoreChannelHistory.current[channelId] === false) {
+      return;
+    }
+
+    const oldestMessage = messagesByConversation[channelId]?.[0];
+    if (!oldestMessage?.createdAt) {
+      return;
+    }
+
+    isFetchingOlderHistory.current[channelId] = true;
+    rememberConversationScrollPosition(channelId);
+
+    try {
+      const dtos = await listChannelMessages(channelId, {
+        before_time: oldestMessage.createdAt,
+        limit: CHANNEL_HISTORY_PAGE_SIZE
+      });
+
+      hasMoreChannelHistory.current[channelId] = dtos.length >= CHANNEL_HISTORY_PAGE_SIZE;
+
+      if (dtos.length > 0) {
+        const olderMessages = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
+        setMessagesByConversation((current) => ({
+          ...current,
+          [channelId]: [...olderMessages, ...(current[channelId] ?? [])]
+        }));
+      }
+    } catch {
+      // best effort: leave existing history in place, retry on the next scroll-to-top
+    } finally {
+      isFetchingOlderHistory.current[channelId] = false;
+    }
+  }
+
   const activeDmDetails =
     chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
   const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
@@ -295,19 +370,27 @@ export function ChatWorkspace() {
         activity: activeDmDetails.lastMessage
       }
     : null;
-  const activeMessageItems = useMemo(
-    () =>
-      activeMessages.map((message, index) => {
-        const previousMessage = activeMessages[index - 1];
-        const isGrouped =
-          previousMessage?.author === message.author &&
-          getMinutesBetween(previousMessage.timestamp, message.timestamp) <=
-            MESSAGE_GROUP_THRESHOLD_MINUTES;
+  const activeMessageItems = useMemo(() => {
+    const messagesById = new Map(activeMessages.map((message) => [message.id, message]));
 
-        return { message, isGrouped };
-      }),
-    [activeMessages]
-  );
+    return activeMessages.map((message, index) => {
+      const previousMessage = activeMessages[index - 1];
+      const isGrouped =
+        previousMessage?.author === message.author &&
+        getMinutesBetween(previousMessage.timestamp, message.timestamp) <=
+          MESSAGE_GROUP_THRESHOLD_MINUTES;
+
+      let replyPreview: ReplyPreview | null = null;
+      if (message.replyToId) {
+        const target = messagesById.get(message.replyToId);
+        replyPreview = target
+          ? { author: target.author, snippet: target.content[0] ?? '' }
+          : { author: '', snippet: 'an earlier message' };
+      }
+
+      return { message, isGrouped, replyPreview };
+    });
+  }, [activeMessages]);
 
   const updateNearBottomState = useCallback(() => {
     const viewport = messagesViewportRef.current;
@@ -417,6 +500,11 @@ export function ChatWorkspace() {
   function handleMessagesScroll() {
     rememberConversationScrollPosition(activeConversationId);
     updateNearBottomState();
+
+    const viewport = messagesViewportRef.current;
+    if (chatMode === 'guild' && activeChannel && viewport && viewport.scrollTop <= TOP_THRESHOLD_PX) {
+      loadOlderChannelHistory(activeChannel);
+    }
   }
 
   function handleJumpToBottom() {
@@ -824,7 +912,7 @@ export function ChatWorkspace() {
                 </div>
               ) : (
                 <div>
-                  {activeMessageItems.map(({ message, isGrouped }) => {
+                  {activeMessageItems.map(({ message, isGrouped, replyPreview }) => {
                     const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
                     const isEditing = editingMessageId === message.id;
 
@@ -832,6 +920,7 @@ export function ChatWorkspace() {
                       <ChatMessage
                         key={message.id}
                         message={message}
+                        replyPreview={replyPreview}
                         isGrouped={isGrouped}
                         isOwnMessage={isOwnMessage}
                         isEditing={isEditing}
