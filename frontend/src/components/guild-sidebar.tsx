@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
 
-type Guild = {
+export type Guild = {
   id: string;
   name: string;
   iconUrl: string;
@@ -14,41 +14,21 @@ type Guild = {
 
 type GuildSidebarProps = {
   activeMode: 'guild' | 'dm';
+  guilds: Guild[];
+  activeGuildId: string | null;
   onOpenDms: () => void;
-  onOpenGuild: () => void;
+  onSelectGuild: (guildId: string) => void;
 };
 
-const initialGuilds: Guild[] = [
-  {
-    id: 'default',
-    name: 'Default guild',
-    iconUrl: 'https://placehold.co/160x160/png?text=G'
-  }
-];
-
-const guildNames = ['Neon Arena', 'Pixel Club', 'Pong Squad', 'Byte House', 'Arcade Hub'];
-const guildColors = ['78dce8', 'a9dc76', 'ffd866', 'ff6188', 'ab9df2'];
-
-function createRandomGuild(): Guild {
-  const name = guildNames[Math.floor(Math.random() * guildNames.length)];
-  const color = guildColors[Math.floor(Math.random() * guildColors.length)];
-  const text = encodeURIComponent(name.slice(0, 1));
-
-  return {
-    id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-    name,
-    iconUrl: `https://placehold.co/160x160/${color}/101014/png?text=${text}`
-  };
-}
-
-export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
+export function GuildSidebar({
+  activeMode,
+  guilds,
+  activeGuildId,
+  onOpenDms,
+  onSelectGuild
+}: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
-  const [guilds, setGuilds] = useState(initialGuilds);
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
-
-  function handleAddGuild() {
-    setGuilds((current) => [...current, createRandomGuild()]);
-  }
 
   function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {
     const sidebarBox = sidebarRef.current?.getBoundingClientRect();
@@ -92,15 +72,15 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
           <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
         </button>
         <div className="mx-1 border-t border-white/10" />
-        {guilds.map((guild, index) => (
+        {guilds.map((guild) => (
           <button
             key={guild.id}
             type="button"
-            onClick={onOpenGuild}
+            onClick={() => onSelectGuild(guild.id)}
             onMouseEnter={(event) => handleShowLabel(guild.name, event)}
             onMouseLeave={() => setTooltip(null)}
             className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
-              index === 0 && activeMode === 'guild'
+              activeMode === 'guild' && guild.id === activeGuildId
                 ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
                 : 'border-frame'
             }`}
@@ -117,10 +97,11 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         ))}
         <button
           type="button"
-          onClick={handleAddGuild}
-          className="flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
+          disabled
+          className="flex h-[4.9rem] shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
           aria-label="Add server"
         >
+          {/*TODO: handle guild Add */}
           <Plus className="h-8 w-8" strokeWidth={1.5} />
         </button>
       </div>

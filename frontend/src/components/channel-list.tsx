@@ -13,7 +13,6 @@ import {
   Settings,
   UserRound
 } from 'lucide-react';
-import { channelCategories } from './mocks/channel-mocks';
 
 export type TextChannel = {
   id: string;
@@ -28,6 +27,7 @@ export type ChannelCategory = {
 
 type ChannelListProps = {
   activeChannel: string;
+  categories: ChannelCategory[];
   mobilePane: 'channels' | 'messages';
   username: string;
   isMicMuted: boolean;
@@ -39,22 +39,17 @@ type ChannelListProps = {
   onSelectChannel: (channelId: string) => void;
 };
 
-export function getChannelName(channelId: string) {
-  return (
-    channelCategories
-      .flatMap((category) => category.channels)
-      .find((channel) => channel.id === channelId)?.name ?? channelId
-  );
+export function getChannelName(channelId: string, channels: TextChannel[]) {
+  return channels.find((channel) => channel.id === channelId)?.name ?? channelId;
 }
 
-export function hasChannel(channelId: string) {
-  return channelCategories.some((category) =>
-    category.channels.some((channel) => channel.id === channelId)
-  );
+export function hasChannel(channelId: string, channels: TextChannel[]) {
+  return channels.some((channel) => channel.id === channelId);
 }
 
 export function ChannelList({
   activeChannel,
+  categories,
   mobilePane,
   username,
   isMicMuted,
@@ -71,16 +66,16 @@ export function ChannelList({
     const term = search.trim().toLowerCase();
 
     if (!term) {
-      return channelCategories;
+      return categories;
     }
 
-    return channelCategories
+    return categories
       .map((category) => ({
         ...category,
         channels: category.channels.filter((channel) => channel.name.toLowerCase().includes(term))
       }))
       .filter((category) => category.channels.length > 0);
-  }, [search]);
+  }, [search, categories]);
 
   return (
     <div

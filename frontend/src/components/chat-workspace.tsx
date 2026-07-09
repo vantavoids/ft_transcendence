@@ -11,7 +11,13 @@ import {
   UserRound
 } from 'lucide-react';
 import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
-import { ChannelList, getChannelName, hasChannel } from './channel-list';
+import {
+  ChannelList,
+  getChannelName,
+  hasChannel,
+  type ChannelCategory,
+  type TextChannel
+} from './channel-list';
 import {
   DmList,
   getDmDetails,
@@ -24,7 +30,7 @@ import {
   GuildMemberList,
   type GuildMember
 } from './guild-member-list';
-import { GuildSidebar } from './guild-sidebar';
+import { GuildSidebar, type Guild } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
@@ -32,12 +38,58 @@ import { directMessages } from './mocks/dm-mocks';
 import { initialMessages } from './mocks/message-mocks';
 import { clearSession } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
+import {
+  listGuildCategories,
+  listGuildChannels,
+  listMyGuilds,
+  type GuildCategoryDto,
+  type GuildChannelDto,
+  type MyGuildDto
+} from '../shared/api/guild';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
+const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
 const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
 const BOTTOM_THRESHOLD_PX = 96;
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
+const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
+
+function guildIconUrl(guild: MyGuildDto) {
+  if (guild.icon_url) {
+    return guild.icon_url;
+  }
+
+  const initial = encodeURIComponent(guild.name.slice(0, 1).toUpperCase() || 'G');
+  return `https://placehold.co/160x160/23232b/e8e8ec/png?text=${initial}`;
+}
+
+function buildChannelCategories(
+  channels: GuildChannelDto[],
+  categories: GuildCategoryDto[]
+): ChannelCategory[] {
+  const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
+
+  const grouped: ChannelCategory[] = sortedCategories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    channels: channels
+      .filter((channel) => channel.category_id === category.id)
+      .sort((a, b) => a.position - b.position)
+      .map((channel) => ({ id: channel.id, name: channel.name }))
+  }));
+
+  const uncategorized = channels
+    .filter((channel) => !channel.category_id)
+    .sort((a, b) => a.position - b.position)
+    .map((channel) => ({ id: channel.id, name: channel.name }));
+
+  if (uncategorized.length > 0) {
+    grouped.push({ id: UNCATEGORIZED_CATEGORY_ID, name: 'Channels', channels: uncategorized });
+  }
+
+  return grouped;
+}
 
 type ChatMode = 'guild' | 'dm';
 
@@ -80,6 +132,10 @@ export function ChatWorkspace() {
   const pendingScrollBottom = useRef(false);
   const isRestoringScroll = useRef(false);
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
+  const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [activeGuildId, setActiveGuildId] = useState<string | null>(null);
+  const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([]);
+  const [channels, setChannels] = useState<TextChannel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [activeDm, setActiveDm] = useState<string | null>(null);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -103,14 +159,90 @@ export function ChatWorkspace() {
   useEffect(() => {
     // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
-    const storedChannel = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
     const storedDm = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
-    setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
     setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
     setIsHydrated(true);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGuilds() {
+      try {
+        const dtos = await listMyGuilds();
+        if (cancelled)
+          return;
+
+        const sorted = [...dtos].sort((a, b) => b.joined_at.localeCompare(a.joined_at));
+        setGuilds(
+          sorted.map((guild) => ({ id: guild.id, name: guild.name, iconUrl: guildIconUrl(guild) }))
+        );
+
+        const storedGuildId = window.sessionStorage.getItem(LAST_CHAT_GUILD_KEY);
+        const initialGuildId = sorted.some((guild) => guild.id === storedGuildId)
+          ? storedGuildId
+          : (sorted[0]?.id ?? null);
+        setActiveGuildId(initialGuildId);
+      } catch {
+        // best effort: leave the sidebar empty if the guild service is unreachable
+      }
+    }
+
+    loadGuilds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeGuildId) {
+      setChannelCategories([]);
+      setChannels([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadChannels(guildId: string) {
+      try {
+        const [channelDtos, categoryDtos] = await Promise.all([
+          listGuildChannels(guildId),
+          listGuildCategories(guildId)
+        ]);
+        if (cancelled) {
+          return;
+        }
+
+        const flatChannels: TextChannel[] = channelDtos.map((channel) => ({
+          id: channel.id,
+          name: channel.name
+        }));
+        setChannelCategories(buildChannelCategories(channelDtos, categoryDtos));
+        setChannels(flatChannels);
+
+        const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
+        const initialChannelId =
+          storedChannelId && hasChannel(storedChannelId, flatChannels)
+            ? storedChannelId
+            : (flatChannels[0]?.id ?? null);
+        setActiveChannel(initialChannelId);
+      } catch {
+        if (!cancelled) {
+          setChannelCategories([]);
+          setChannels([]);
+        }
+      }
+    }
+
+    loadChannels(activeGuildId);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeGuildId]);
 
   const activeDmDetails =
     chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
@@ -121,11 +253,12 @@ export function ChatWorkspace() {
         ? getDmName(activeDmDetails.id, dmConversations)
         : ''
       : activeChannel
-        ? getChannelName(activeChannel)
+        ? getChannelName(activeChannel, channels)
         : '';
-  const activeMessages = activeConversationId
-    ? (messagesByConversation[activeConversationId] ?? [])
-    : [];
+  const activeMessages = useMemo(
+    () => (activeConversationId ? (messagesByConversation[activeConversationId] ?? []) : []),
+    [activeConversationId, messagesByConversation]
+  );
   const activeDraft = activeConversationId
     ? (draftsByConversation[activeConversationId] ?? '')
     : '';
@@ -281,10 +414,12 @@ export function ChatWorkspace() {
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
   }
 
-  function handleOpenGuild() {
+  function handleSelectGuild(guildId: string) {
     rememberConversationScrollPosition(activeConversationId);
     setChatMode('guild');
+    setActiveGuildId(guildId);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
+    window.sessionStorage.setItem(LAST_CHAT_GUILD_KEY, guildId);
   }
 
   function handleSelectChannel(channelId: string) {
@@ -522,8 +657,10 @@ export function ChatWorkspace() {
         <>
           <GuildSidebar
             activeMode={chatMode}
+            guilds={guilds}
+            activeGuildId={activeGuildId}
             onOpenDms={handleOpenDms}
-            onOpenGuild={handleOpenGuild}
+            onSelectGuild={handleSelectGuild}
           />
 
           {chatMode === 'dm' ? (
@@ -543,6 +680,7 @@ export function ChatWorkspace() {
           ) : (
             <ChannelList
               activeChannel={activeChannel ?? ''}
+              categories={channelCategories}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
