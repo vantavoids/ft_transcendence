@@ -73,27 +73,27 @@ Goal: replace all local friend/profile placeholders with real user-service data.
 
 Goal: connect the guild sidebar and guild page to live guild data.
 
-- [ ] Guild sidebar
-  - [ ] fetch `GET /guilds/me` on login
-  - [ ] sort guilds by `joined_at` and preserve selection
-  - [ ] replace the random guild generator with live guild creation
-- [ ] Guild landing page
-  - [ ] show the selected guild details from `GET /guilds/{id}`
-  - [ ] add create-guild form using `POST /guilds`
-  - [ ] add join-guild via invite code using `POST /guilds/{id}/join`
-- [ ] Guild membership list
-  - [ ] fetch `GET /guilds/{id}/members`
-  - [ ] hydrate members via `GET /users?ids=...`
-  - [ ] display nicknames, avatars, roles, and join timestamps
-- [ ] Guild admin actions
-  - [ ] wire nickname edits with `PATCH /guilds/{id}/members/{user_id}`
-  - [ ] wire member kick with `DELETE /guilds/{id}/members/{user_id}`
-  - [ ] wire bans list, ban creation, and unban actions
-  - [ ] wire invite creation, listing, preview, and revoke
-- [ ] Guild settings
-  - [ ] add edit guild settings with `PATCH /guilds/{id}`
-  - [ ] add delete guild with owner-only confirmation
-  - [ ] add roles and categories management UI on top of existing endpoints
+- [x] Guild sidebar
+  - [x] fetch `GET /guilds/me` on login
+  - [x] sort guilds by `joined_at` and preserve selection
+  - [x] replace the random guild generator with live guild creation
+- [x] Guild landing page
+  - [x] show the selected guild details from `GET /guilds/{id}`
+  - [x] add create-guild form using `POST /guilds`
+  - [x] add join-guild via invite code using `POST /guilds/{id}/join`
+- [x] Guild membership list
+  - [x] fetch `GET /guilds/{id}/members`
+  - [x] hydrate members via `GET /users?ids=...`
+  - [x] display nicknames, avatars, roles, and join timestamps
+- [x] Guild admin actions
+  - [x] wire nickname edits with `PATCH /guilds/{id}/members/{user_id}`
+  - [x] wire member kick with `DELETE /guilds/{id}/members/{user_id}`
+  - [x] wire bans list, ban creation, and unban actions
+  - [x] wire invite creation, listing, preview, and revoke
+- [x] Guild settings
+  - [x] add edit guild settings with `PATCH /guilds/{id}`
+  - [x] add delete guild with owner-only confirmation
+  - [x] add roles and categories management UI on top of existing endpoints
 
 ## Epic 4 - Chat history, composer, and realtime transport
 
