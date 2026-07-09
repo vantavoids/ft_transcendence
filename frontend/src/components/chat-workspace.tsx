@@ -158,7 +158,7 @@ export function ChatWorkspace() {
     }
 
     const latestMessage = activeMessages[activeMessages.length - 1];
-    if (!latestMessage?.id) {
+    if (!latestMessage?.id || latestMessage.pending) {
       return;
     }
 
