@@ -3,6 +3,7 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { hasDm, type DirectMessage } from '../../components/dm-list';
 import { archiveDirectMessageConversation, listDirectMessages } from '../api/chat';
+import { onChatHubEvent } from '../api/chat-hub';
 import { mapDirectMessageConversation } from '../mappers/chat';
 
 const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
@@ -54,6 +55,16 @@ export function useDmWorkspace(): DmWorkspace {
       cancelled = true;
     };
   }, [showArchivedDms]);
+
+  useEffect(() => {
+    return onChatHubEvent('DmReadStateUpdated', (event) => {
+      setDmConversations((current) =>
+        current.map((dm) =>
+          dm.id === event.partner_id ? { ...dm, unreadCount: event.unread_count } : dm
+        )
+      );
+    });
+  }, []);
 
   function selectDm(dmId: string) {
     setActiveDm(dmId);
