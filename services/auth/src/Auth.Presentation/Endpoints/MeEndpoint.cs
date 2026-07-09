@@ -5,8 +5,10 @@ using Auth.Application.Features.DeleteMe;
 using Auth.Application.Features.GetMe;
 using Auth.Application.Features.UpdateMe;
 using Auth.Domain.Results;
+using Auth.Infrastructure.Options;
 using Auth.Presentation.Contracts;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 
 namespace Auth.Presentation.Endpoints;
 
@@ -68,13 +70,20 @@ public sealed class MeEndpoint : ICarterModule
     DeleteMe(
         ICurrentUser currentUser,
         ICommandHandler<DeleteMeCommand, Result> handler,
-        CancellationToken cancellationToken)
+        IOptions<RefreshTokenOptions> options,
+        HttpContext ctx)
     {
-        var result = await handler.HandleAsync(new DeleteMeCommand(currentUser.Id), cancellationToken);
+        var result = await handler.HandleAsync(new DeleteMeCommand(currentUser.Id), ctx.RequestAborted);
 
-        return result.Succeeded
-            ? TypedResults.NoContent()
-            : MapDeleteError(result.Error);
+        if (!result.Succeeded)
+            return MapDeleteError(result.Error);
+
+        ctx.Response.Cookies.Delete(options.Value.CookieName, new CookieOptions
+        {
+            Secure   = options.Value.Secure,
+            SameSite = SameSiteMode.Strict,
+        });
+        return TypedResults.NoContent();
     }
 
     private static Results<Ok<GetMeResponse>, UnauthorizedHttpResult, ForbidHttpResult, BadRequest<ErrorResponse>, JsonHttpResult<ErrorResponse>>
