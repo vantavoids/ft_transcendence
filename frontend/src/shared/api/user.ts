@@ -36,6 +36,37 @@ export type FriendshipDto = {
   created_at: string;
 };
 
+export type UserSummaryDto = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string | null;
+  status: UserStatus;
+};
+
+const USERS_BATCH_LIMIT = 100;
+
+export async function getUsersByIds(ids: string[]): Promise<UserSummaryDto[]> {
+  const uniqueIds = Array.from(new Set(ids));
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const chunks: string[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += USERS_BATCH_LIMIT) {
+    chunks.push(uniqueIds.slice(index, index + USERS_BATCH_LIMIT));
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      apiFetch<UserSummaryDto[]>('user', '/users', { query: { ids: chunk.join(',') } })
+    )
+  );
+
+  return results.flat();
+}
+
 export function getCurrentUser() {
   return apiFetch<UserProfileDto>('user', '/users/me');
 }
