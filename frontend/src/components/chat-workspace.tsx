@@ -106,18 +106,17 @@ export function ChatWorkspace() {
       ? getDmName(activeDmDetails?.id ?? '', dmWorkspace.dmConversations)
       : getChannelName(guildWorkspace.activeChannel ?? '', guildWorkspace.channels);
 
-  const { messagesByConversation, setMessagesByConversation, loadOlderChannelHistory } =
-    useConversationHistory(chatMode, activeConversationId, currentUserId);
+  const conversationHistory = useConversationHistory(chatMode, activeConversationId, currentUserId);
 
   const activeMessages = useMemo(
-    () => (activeConversationId ? (messagesByConversation[activeConversationId] ?? []) : []),
-    [activeConversationId, messagesByConversation]
+    () => (activeConversationId ? (conversationHistory.messagesByConversation[activeConversationId] ?? []) : []),
+    [activeConversationId, conversationHistory.messagesByConversation]
   );
 
   const scroll = useScrollPreservation(
     activeConversationId,
     activeMessages,
-    messagesByConversation,
+    conversationHistory.messagesByConversation,
     isHydrated
   );
 
@@ -164,7 +163,7 @@ export function ChatWorkspace() {
     const viewport = scroll.messagesViewportRef.current;
     const activeChannel = guildWorkspace.activeChannel;
     if (chatMode === 'guild' && activeChannel && viewport && viewport.scrollTop <= TOP_THRESHOLD_PX) {
-      loadOlderChannelHistory(activeChannel);
+      conversationHistory.loadOlderChannelHistory(activeChannel);
     }
   }
 
@@ -228,37 +227,26 @@ export function ChatWorkspace() {
   }
 
   function handleSubmitMessage() {
-    // TODO(api:chat): send guild messages through SignalR SendMessage and DMs through SendDirectMessage.
     const content = activeDraft.trim();
     if (!content || !activeConversationId || isComposerDisabled) {
       return;
     }
 
-    const nextMessage: ChatMessageData = {
-      id: `${activeConversationId}-${Date.now()}`,
-      author: username,
-      accent: 'pink',
-      content: content.split(/\r?\n/),
-      timestamp: new Date().toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    };
-
-    setMessagesByConversation((current) => ({
-      ...current,
-      [activeConversationId]: [...(current[activeConversationId] ?? []), nextMessage]
-    }));
+    conversationHistory.sendMessage(content);
     scroll.scrollToBottomOnNextRender();
 
     if (chatMode === 'dm') {
+      const previewTimestamp = new Date().toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
       dmWorkspace.setDmConversations((current) =>
         current.map((dm) =>
           dm.id === activeConversationId
             ? {
                 ...dm,
                 lastMessage: content.split(/\r?\n/)[0] ?? content,
-                lastMessageAt: nextMessage.timestamp,
+                lastMessageAt: previewTimestamp,
                 lastActivityAt: Date.now(),
                 unreadCount: 0
               }
@@ -302,7 +290,7 @@ export function ChatWorkspace() {
       return;
     }
 
-    setMessagesByConversation((current) => ({
+    conversationHistory.setMessagesByConversation((current) => ({
       ...current,
       [activeConversationId]: (current[activeConversationId] ?? []).map((message) => {
         if (message.id !== messageId) {
@@ -336,39 +324,29 @@ export function ChatWorkspace() {
     setEditingDraft('');
   }
 
-  function handleSaveEdit(messageId: string) {
-    if (!activeConversationId) {
-      return;
-    }
-
+  async function handleSaveEdit(messageId: string) {
     const content = editingDraft.trim();
     if (!content) {
       return;
     }
 
-    setMessagesByConversation((current) => ({
-      ...current,
-      [activeConversationId]: (current[activeConversationId] ?? []).map((message) =>
-        message.id === messageId ? { ...message, content: content.split(/\r?\n/) } : message
-      )
-    }));
-    handleCancelEdit();
+    try {
+      await conversationHistory.updateMessage(messageId, content);
+      handleCancelEdit();
+    } catch {
+      // best effort: keep the edit UI open so the user can retry or cancel
+    }
   }
 
-  function handleDeleteMessage(messageId: string) {
-    if (!activeConversationId) {
-      return;
-    }
+  async function handleDeleteMessage(messageId: string) {
+    try {
+      await conversationHistory.removeMessage(messageId);
 
-    setMessagesByConversation((current) => ({
-      ...current,
-      [activeConversationId]: (current[activeConversationId] ?? []).filter(
-        (message) => message.id !== messageId
-      )
-    }));
-
-    if (editingMessageId === messageId) {
-      handleCancelEdit();
+      if (editingMessageId === messageId) {
+        handleCancelEdit();
+      }
+    } catch {
+      // best effort: leave the message in place, allow the user to retry
     }
   }
 
