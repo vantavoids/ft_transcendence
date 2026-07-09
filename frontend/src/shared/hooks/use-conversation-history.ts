@@ -15,6 +15,7 @@ import {
   type SendMessagePayload
 } from '../api/chat';
 import { ApiError } from '../api/client';
+import { onChatHubEvent } from '../api/chat-hub';
 import {
   accentForAuthor,
   authorLabel,
@@ -23,6 +24,48 @@ import {
   mapDirectMessage,
   splitMessageLines
 } from '../mappers/chat';
+
+// nonce-aware upsert: a locally-sent message can arrive here before or after
+// its own REST response already reconciled the optimistic bubble - match by
+//  nonce first, then by id, else append.
+function reconcileIncomingMessage(
+  existing: ChatMessageData[],
+  mapped: ChatMessageData,
+  nonce: string | null
+): ChatMessageData[] {
+  if (nonce) {
+    const nonceIndex = existing.findIndex((message) => message.id === nonce);
+    if (nonceIndex >= 0) {
+      return existing.map((message, index) => (index === nonceIndex ? mapped : message));
+    }
+  }
+
+  if (existing.some((message) => message.id === mapped.id)) {
+    return existing;
+  }
+
+  return [...existing, mapped];
+}
+
+function reconcileEditedMessage(
+  current: Record<string, ChatMessageData[]>,
+  containerId: string,
+  messageId: string,
+  content: string,
+  editedAt: string
+): Record<string, ChatMessageData[]> {
+  const existing = current[containerId];
+  if (!existing) {
+    return current;
+  }
+
+  return {
+    ...current,
+    [containerId]: existing.map((message) =>
+      message.id === messageId ? { ...message, content: splitMessageLines(content), editedAt } : message
+    )
+  };
+}
 
 const MESSAGE_HISTORY_PAGE_SIZE = 50;
 
@@ -118,6 +161,123 @@ export function useConversationHistory(
       cancelled = true;
     };
   }, [mode, conversationId, currentUserId]);
+
+  // real-time reconciliation - registered once (not per-conversation): the
+  // hub delivers channel events to joined channels and DM events to the
+  // caller's personal group regardless of which conversation is on screen,
+  // so every event carries its own container id to route the state patch.
+  useEffect(() => {
+    const unsubscribers = [
+      onChatHubEvent('ReceiveMessage', (event) => {
+        const mapped = mapChannelMessage(event, currentUserId);
+        setMessagesByConversation((current) => ({
+          ...current,
+          [event.channel_id]: reconcileIncomingMessage(
+            current[event.channel_id] ?? [],
+            mapped,
+            event.nonce
+          )
+        }));
+      }),
+      onChatHubEvent('ReceiveDirectMessage', (event) => {
+        const mapped = mapDirectMessage(event, currentUserId);
+        const conversationKey = event.sender_id === currentUserId ? event.recipient_id : event.sender_id;
+        setMessagesByConversation((current) => ({
+          ...current,
+          [conversationKey]: reconcileIncomingMessage(current[conversationKey] ?? [], mapped, event.nonce)
+        }));
+      }),
+      onChatHubEvent('MessageEdited', (event) => {
+        setMessagesByConversation((current) =>
+          reconcileEditedMessage(current, event.channel_id, event.id, event.content, event.edited_at)
+        );
+      }),
+      onChatHubEvent('MessageDeleted', (event) => {
+        setMessagesByConversation((current) => {
+          const existing = current[event.channel_id];
+          if (!existing) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [event.channel_id]: existing.filter((message) => message.id !== event.message_id)
+          };
+        });
+      }),
+      // DirectMessageEdited/Deleted only carry conversation_id, but
+      // messagesByConversation is keyed by partner user id - scan the small
+      // set of open DM buckets for the message instead (message ids are
+      // globally unique snowflakes).
+      onChatHubEvent('DirectMessageEdited', (event) => {
+        setMessagesByConversation((current) => {
+          const containerId = Object.keys(current).find((key) =>
+            current[key].some((message) => message.id === event.id)
+          );
+          if (!containerId) {
+            return current;
+          }
+
+          return reconcileEditedMessage(current, containerId, event.id, event.content, event.edited_at);
+        });
+      }),
+      onChatHubEvent('DirectMessageDeleted', (event) => {
+        setMessagesByConversation((current) => {
+          const key = Object.keys(current).find((k) =>
+            current[k].some((message) => message.id === event.message_id)
+          );
+          if (!key) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [key]: current[key].filter((message) => message.id !== event.message_id)
+          };
+        });
+      }),
+      onChatHubEvent('ReactionAdded', (event) => {
+        applyReactionEvent(event, true);
+      }),
+      onChatHubEvent('ReactionRemoved', (event) => {
+        applyReactionEvent(event, false);
+      })
+    ];
+
+    function applyReactionEvent(
+      event: { message_id: string; channel_id: string; user_id: string; emoji: string; count: number },
+      added: boolean
+    ) {
+      setMessagesByConversation((current) => {
+        const existing = current[event.channel_id];
+        if (!existing) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [event.channel_id]: existing.map((message) => {
+            if (message.id !== event.message_id) {
+              return message;
+            }
+
+            const otherReactions = (message.reactions ?? []).filter((r) => r.emoji !== event.emoji);
+            const meReacted = event.user_id === currentUserId ? added : (message.reactions ?? []).some(
+              (r) => r.emoji === event.emoji && r.meReacted
+            );
+            const nextReactions =
+              event.count > 0 ? [...otherReactions, { emoji: event.emoji, count: event.count, meReacted }] : otherReactions;
+
+            return { ...message, reactions: nextReactions.length > 0 ? nextReactions : undefined };
+          })
+        };
+      });
+    }
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [currentUserId]);
 
   async function loadOlderChannelHistory(channelId: string) {
     if (isFetchingOlderHistory.current[channelId] || hasMoreChannelHistory.current[channelId] === false) {
@@ -286,14 +446,9 @@ export function useConversationHistory(
 
     const response = await editMessageApi(messageId, { content });
 
-    setMessagesByConversation((current) => ({
-      ...current,
-      [conversationId]: (current[conversationId] ?? []).map((message) =>
-        message.id === messageId
-          ? { ...message, content: splitMessageLines(response.content), editedAt: response.edited_at }
-          : message
-      )
-    }));
+    setMessagesByConversation((current) =>
+      reconcileEditedMessage(current, conversationId, messageId, response.content, response.edited_at)
+    );
   }
 
   async function removeMessage(messageId: string) {

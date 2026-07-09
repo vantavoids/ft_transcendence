@@ -34,6 +34,7 @@ import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
+import { stopChatHub } from '../shared/api/chat-hub';
 import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
@@ -311,6 +312,7 @@ export function ChatWorkspace() {
     } catch {
       // best-effort revoke; clear the local session regardless
     }
+    stopChatHub();
     clearSession();
     router.push('/auth/login');
     router.refresh();
