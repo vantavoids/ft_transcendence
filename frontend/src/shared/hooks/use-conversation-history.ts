@@ -357,7 +357,9 @@ export function useConversationHistory(
       replyToId,
       // real attachment metadata (url, mime_type, size) only exists once the
       // real response lands - avoid rendering a broken preview in the meantime
-      attachments: []
+      attachments: [],
+      // id is the nonce, not a real snowflake, until the server confirms this
+      pending: true
     };
 
     setMessagesByConversation((current) => ({
