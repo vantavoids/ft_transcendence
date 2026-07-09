@@ -355,8 +355,8 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | Multi-browser support | Tested and supported on Chrome (mandated), Firefox and Safari with broad feature parity | `tstephan`, `jramiro` |
 | Server-Side Rendering | App Router renders Server Components by default for fast first paint and SEO | `tstephan`, `jramiro` |
 | Design system | Tailwind tokens (palette, typography, spacing, shadows) + 11 reusable components, lucide-react icons | `tstephan`, `jramiro` |
-| Voice calls | 1-on-1 real-time voice via WebRTC P2P | `yandry` (signaling), `tstephan` (frontend client + UI), `yandry` (coturn infra) |
-| Video calls | 1-on-1 real-time video via WebRTC P2P | `yandry` (signaling), `tstephan` (frontend client + UI), `yandry` (coturn infra) |
+| Voice calls | 1-on-1 real-time voice via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
+| Video calls | 1-on-1 real-time video via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
 | Privacy Policy | Accessible from footer, project-relevant content | `achu` |
 | Terms of Service | Accessible from footer, project-relevant content | `achu` |
 | GDPR: data export | "Download my data" button aggregates every service's data on the user into a single JSON bundle | all (cross-service) |
@@ -390,7 +390,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | 9 | Monitoring with Prometheus + Grafana | Devops | Major | 2 | `yandry`, `jramiro` |
 | 10 | ORM (Entity Framework Core, Guild Service) | Web | Minor | 1 | `yandry` |
 | 11 | Advanced permissions system (roles, hierarchy, overwrites) | User Management | Major | 2 | `yandry` |
-| 12 | 1-on-1 voice and video calls (WebRTC) | Module of choice (IV.10) | Major | 2 | `yandry` (signaling + coturn infra), `tstephan` (frontend client + UI) |
+| 12 | 1-on-1 voice and video calls (WebRTC) | Module of choice (IV.10) | Major | 2 | `yandry` (signaling + coturn infra + frontend client + UI) |
 | 13 | Custom design system (Tailwind tokens + 10+ reusable components) | Web | Minor | 1 | `tstephan`, `jramiro` |
 | 14 | Server-Side Rendering (Next.js App Router) | Web | Minor | 1 | `tstephan`, `jramiro` |
 | 15 | File upload and management (avatars, banners, chat attachments) | Web | Minor | 1 | `tstephan` (avatar/banner + frontend), `yandry` (chat attachments + MinIO container) |
@@ -491,6 +491,7 @@ The four subject bullets all map to concrete pieces of work:
 - Set up Prometheus scraping and built Grafana dashboards with alerting (with jramiro's help on the monitoring side), driven by per-service OpenTelemetry metric exporters
 - Implemented the Guild Service (ASP.NET Core, Clean Architecture, EF Core): full CRUD for guilds, channel categories, channels, membership management (invite, join via link, kick, ban) and the full role and permissions system (role CRUD, role hierarchy, permission bitmasks, channel permission overwrites, permission resolution, plus the `/internal/users/{user_id}/owned-guilds-count` endpoint that gates Auth's account deletion)
 - Led the Chat Service (ASP.NET Core + SignalR + ScyllaDB) alongside sliziard and achu: foundations, SignalR hub, channel message send/history, lazy channel subscription, DM send/history, WebRTC signaling (call offer / answer / ICE relay) and the coturn STUN/TURN deployment
+- Built the frontend WebRTC calling experience on top of my own signaling hub: the `RTCPeerConnection` lifecycle, trickle-ICE exchange over SignalR, `getUserMedia` camera/mic handling, the call state machine (ringing / active / ended), and the full call UI (incoming-call overlay, side-by-side video tiles, active-speaker indicator, mute / camera / hang-up controls, and a minimizable in-call window)
 - Added the MailHog container to the compose stack for GDPR confirmation emails, and implemented Guild + Chat's `/internal/users/{user_id}/data-export` endpoints and `user.deleted` cascade consumers
 
 **Challenges:**
@@ -511,7 +512,6 @@ The data and real-time layers had their own traps. ScyllaDB partitions messages 
 - Implemented the User Service in NestJS (TypeScript, Node.js, `pg`): profile CRUD (display name, bio, status), avatar and banner upload with multipart validation and a default-avatar fallback, friend request state machine (pending to accepted / declined / blocked) with the canonical-ordering constraint on `friendships`, unilateral block flow independent of friendship, online / idle / offline presence published to RabbitMQ for the rest of the system to consume, `GET /users/search` with case-insensitive matching, batch user lookup (`POST /users` with `ids`), and the internal existence + relationship endpoints
 - Built the frontend with jramiro on Next.js 16 (App Router, React 19, TypeScript, Tailwind 3, Zod, lucide-react): designed and owned the design system (color palette, 13-step typography scale, three custom Google fonts, custom spacing tokens, signature glow shadow) and shipped the 11 reusable components (`auth-card`, `channel-list`, `chat-message`, `chat-workspace`, `dm-list`, `friends-list`, `guild-member-list`, `guild-sidebar`, `notification-card`, `profile-card`, `settings-modal`) that the rest of the app composes
 - Kept Server-Side Rendering as the default with jramiro by writing React Server Components everywhere except where client-side interactivity genuinely requires `"use client"`, keeping the JS bundle small and first-contentful-paint fast
-- Implemented the WebRTC frontend on top of yandry's signaling: peer connection setup, ICE candidate exchange via the SignalR hub, media-stream lifecycle (camera / mic permissions, track replacement, hang-up cleanup), call UI / overlay, ringtone playback for incoming calls
 - Enforced input validation on both sides of every form: Zod schemas on the client mirror the backend rules exactly, so the same error messages render in both places and the backend is never the only line of defense
 - Implemented the User Service GDPR data-export aggregator (fans out to Auth, Guild, Chat and Notification's `/internal/users/{user_id}/data-export` endpoints in parallel, stitches the results into a single downloadable JSON bundle) and User's own per-service data-export endpoint; built the "Download my data" and "Delete my account" frontend flows with jramiro, including the destructive-action confirmation modal
 
