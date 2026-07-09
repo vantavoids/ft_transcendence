@@ -28,6 +28,7 @@ export type ChannelCategory = {
 type ChannelListProps = {
   activeChannel: string;
   categories: ChannelCategory[];
+  unreadCounts: Record<string, number>;
   mobilePane: 'channels' | 'messages';
   username: string;
   isMicMuted: boolean;
@@ -53,6 +54,7 @@ export function hasChannel(channelId: string, channels: TextChannel[]) {
 export function ChannelList({
   activeChannel,
   categories,
+  unreadCounts,
   mobilePane,
   username,
   isMicMuted,
@@ -129,6 +131,7 @@ export function ChannelList({
               <div className="mt-2 space-y-1">
                 {category.channels.map((channel) => {
                   const isActive = channel.id === activeChannel;
+                  const unreadCount = unreadCounts[channel.id] ?? 0;
 
                   return (
                     <button
@@ -141,10 +144,17 @@ export function ChannelList({
                     >
                       <Hash className="h-4 w-4 shrink-0 text-[#8a8a96]" strokeWidth={1.8} />
                       <span
-                        className={`min-w-0 truncate ${isActive ? 'font-bold' : 'font-normal'}`}
+                        className={`min-w-0 flex-1 truncate ${
+                          isActive || unreadCount > 0 ? 'font-bold' : 'font-normal'
+                        }`}
                       >
                         {channel.name}
                       </span>
+                      {unreadCount > 0 ? (
+                        <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
+                          {unreadCount}
+                        </span>
+                      ) : null}
                     </button>
                   );
                 })}

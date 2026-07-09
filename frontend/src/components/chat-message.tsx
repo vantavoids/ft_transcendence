@@ -21,6 +21,12 @@ function formatFileSize(sizeBytes: number): string {
   return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
 
+export type ReactionSummary = {
+  emoji: string;
+  count: number;
+  meReacted: boolean;
+};
+
 export type ChatMessageData = {
   id: string;
   // real author_id once fetched from the API; absent for still-mocked DM messages (epic 4 step 4)
@@ -34,7 +40,8 @@ export type ChatMessageData = {
   replyToId?: string | null;
   editedAt?: string | null;
   attachments?: MessageAttachmentDto[];
-  reactions?: Record<string, number>;
+  // channel messages only - DMs never carry reactions (docs/contracts/chat.md)
+  reactions?: ReactionSummary[];
   // set when the optimistic send failed - neither the 201 nor a matching
   // ReceiveMessage/ReceiveDirectMessage arrived (docs/contracts/chat.md nonce semantics)
   failed?: boolean;
@@ -52,15 +59,18 @@ type ChatMessageProps = {
   isOwnMessage: boolean;
   isEditing: boolean;
   editingDraft: string;
+  canReact: boolean;
   onEditDraftChange: (value: string) => void;
   onStartEdit: (message: ChatMessageData) => void;
   onSaveEdit: (messageId: string) => void;
   onCancelEdit: () => void;
   onDelete: (messageId: string) => void;
-  onToggleReaction: (messageId: string) => void;
+  onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenAuthorProfile?: (message: ChatMessageData) => void;
   setMessageRef: (messageId: string, element: HTMLElement | null) => void;
 };
+
+const QUICK_REACTION_EMOJI = '👍';
 
 function isEscapeKey(event: KeyboardEvent | React.KeyboardEvent) {
   return event.key === 'Escape' || event.key === 'Esc' || event.code === 'Escape';
@@ -103,6 +113,7 @@ export function ChatMessage({
   isOwnMessage,
   isEditing,
   editingDraft,
+  canReact,
   onEditDraftChange,
   onStartEdit,
   onSaveEdit,
@@ -113,7 +124,7 @@ export function ChatMessage({
   setMessageRef
 }: ChatMessageProps) {
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const reactions = Object.entries(message.reactions ?? {});
+  const reactions = message.reactions ?? [];
 
   useEffect(() => {
     if (!isEditing) {
@@ -152,14 +163,16 @@ export function ChatMessage({
       }`}
     >
       <div className="absolute right-3 top-0 hidden -translate-y-1/2 overflow-hidden rounded-md border border-white/10 bg-panel shadow-lg shadow-black/30 group-hover:flex">
-        <button
-          type="button"
-          onClick={() => onToggleReaction(message.id)}
-          className="flex h-8 w-8 items-center justify-center text-[#8b8b8f] transition hover:bg-frame hover:text-white"
-          aria-label="React to message"
-        >
-          <SmilePlus className="h-4 w-4" strokeWidth={1.8} />
-        </button>
+        {canReact ? (
+          <button
+            type="button"
+            onClick={() => onToggleReaction(message.id, QUICK_REACTION_EMOJI)}
+            className="flex h-8 w-8 items-center justify-center text-[#8b8b8f] transition hover:bg-frame hover:text-white"
+            aria-label="React to message"
+          >
+            <SmilePlus className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+        ) : null}
         {isOwnMessage ? (
           <>
             <button
@@ -323,12 +336,17 @@ export function ChatMessage({
 
         {reactions.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
-            {reactions.map(([emoji, count]) => (
+            {reactions.map(({ emoji, count, meReacted }) => (
               <button
                 key={emoji}
                 type="button"
-                onClick={() => onToggleReaction(message.id)}
-                className="flex h-7 items-center gap-1 rounded-full border border-aqua/30 bg-aqua/10 px-2 text-sm text-aqua transition hover:border-aqua"
+                disabled={!canReact}
+                onClick={() => onToggleReaction(message.id, emoji)}
+                className={`flex h-7 items-center gap-1 rounded-full border px-2 text-sm transition ${
+                  meReacted
+                    ? 'border-aqua bg-aqua/20 text-aqua'
+                    : 'border-aqua/30 bg-aqua/10 text-aqua hover:border-aqua'
+                } ${!canReact ? 'cursor-default' : ''}`}
               >
                 <span>{emoji}</span>
                 <span className="mono-detail text-xs">{count}</span>

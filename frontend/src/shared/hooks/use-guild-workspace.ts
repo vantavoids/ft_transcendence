@@ -11,6 +11,7 @@ import {
   type GuildChannelDto,
   type MyGuildDto
 } from '../api/guild';
+import { listChannelReadStates } from '../api/chat';
 
 const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
@@ -52,14 +53,21 @@ function buildChannelCategories(
   return grouped;
 }
 
+export type ChannelReadState = {
+  lastReadMessageId: string | null;
+  unreadCount: number;
+};
+
 export type GuildWorkspace = {
   guilds: Guild[];
   activeGuildId: string | null;
   channelCategories: ChannelCategory[];
   channels: TextChannel[];
   activeChannel: string | null;
+  channelReadStates: Record<string, ChannelReadState>;
   selectGuild: (guildId: string) => void;
   selectChannel: (channelId: string) => void;
+  markChannelReadLocally: (channelId: string, messageId: string) => void;
 };
 
 // owns everything needed to render the guild sidebar + channel list: the
@@ -72,6 +80,7 @@ export function useGuildWorkspace(): GuildWorkspace {
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([]);
   const [channels, setChannels] = useState<TextChannel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [channelReadStates, setChannelReadStates] = useState<Record<string, ChannelReadState>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +161,40 @@ export function useGuildWorkspace(): GuildWorkspace {
     };
   }, [activeGuildId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    listChannelReadStates()
+      .then((dtos) => {
+        if (cancelled) {
+          return;
+        }
+
+        const states: Record<string, ChannelReadState> = {};
+        for (const dto of dtos) {
+          states[dto.channel_id] = {
+            lastReadMessageId: dto.last_read_message_id,
+            unreadCount: dto.unread_count
+          };
+        }
+        setChannelReadStates(states);
+      })
+      .catch(() => {
+        // best effort: sidebar just shows no unread badges until this resolves
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function markChannelReadLocally(channelId: string, messageId: string) {
+    setChannelReadStates((current) => ({
+      ...current,
+      [channelId]: { lastReadMessageId: messageId, unreadCount: 0 }
+    }));
+  }
+
   function selectGuild(guildId: string) {
     setActiveGuildId(guildId);
     window.sessionStorage.setItem(LAST_CHAT_GUILD_KEY, guildId);
@@ -168,7 +211,9 @@ export function useGuildWorkspace(): GuildWorkspace {
     channelCategories,
     channels,
     activeChannel,
+    channelReadStates,
     selectGuild,
-    selectChannel
+    selectChannel,
+    markChannelReadLocally
   };
 }
