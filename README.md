@@ -147,8 +147,8 @@ make down
 - [Entity Framework Core documentation](https://learn.microsoft.com/en-us/ef/core/)
 - [Carter (HTTP modules for ASP.NET)](https://github.com/CarterCommunity/Carter)
 - [MassTransit documentation](https://masstransit.io/documentation)
-- [axum documentation](https://docs.rs/axum/)
-- [sqlx documentation](https://docs.rs/sqlx/)
+- [NestJS documentation](https://docs.nestjs.com/)
+- [node-postgres (`pg`) documentation](https://node-postgres.com/)
 - [RabbitMQ documentation](https://www.rabbitmq.com/documentation.html)
 - [ScyllaDB documentation](https://docs.scylladb.com/)
 - [OpenTelemetry documentation](https://opentelemetry.io/docs/)
@@ -240,7 +240,7 @@ The polyglot architecture lets each service pick the best tool for the job. Serv
 | --- | --- | --- |
 | API Gateway | Go 1.25 (`golang-jwt`) | Reverse proxy for `/api/{service}/vN/...`, local JWT validation, rate limiting |
 | Auth Service | ASP.NET Core 10 (C#), Clean Architecture | Registration, login, OAuth 2.0 (Google / GitHub / 42), JWT issuance & refresh, account deletion |
-| User Service | Rust (`axum` + `sqlx` + `tokio`) | Profiles, avatars, banners, friends, blocks, online status |
+| User Service | NestJS (TypeScript, Node.js; `pg`) | Profiles, avatars, banners, friends, blocks, online status |
 | Guild Service | ASP.NET Core 10 (C#), Clean Architecture, EF Core | Guilds, channels, categories, membership, roles, invites, bans, permission overwrites |
 | Chat Service | ASP.NET Core 10 (C#), Clean Architecture, SignalR | Channel messages, DMs, attachments, reactions, read state, WebRTC signaling |
 | Notification Service | Go 1.25 | Consumes events, persists notifications, serves read endpoints, pushes real-time updates via SSE |
@@ -272,7 +272,7 @@ The polyglot architecture lets each service pick the best tool for the job. Serv
 - **Polyglot microservices.** Each service owns its stack. The communication contract (REST + RabbitMQ) is the only thing services need to agree on, so the internal tech of each service is an implementation detail and each owner picks what they're most productive in.
 - **Next.js (frontend).** Built-in App Router, server components, image optimisation and a TypeScript-first DX. We use it as a frontend-only framework and pair it with separate backend services, which still qualifies as a Major per v21 III.3.
 - **ASP.NET Core + Clean Architecture (Auth, Guild, Chat).** Strong typing, first-class SignalR for WebSockets, EF Core for Guild's relational model, and a layered structure (Domain / Application / Infrastructure / Persistence / Presentation) that keeps business rules off the framework. Carter handles minimal HTTP module routing on top of the standard ASP.NET pipeline.
-- **Rust + axum + sqlx (User).** The User Service is read-heavy and concurrency-bound (friend lists, presence fan-out). Rust gives us a low-overhead async runtime and `sqlx` gives us compile-time-checked SQL.
+- **NestJS + `pg` (User).** The User Service is read-heavy and I/O-bound (friend lists, presence fan-out), which Node's event loop handles well. NestJS gives a layered module/DI structure with class-validator DTOs, and the `pg` driver keeps SQL explicit (no ORM). Keeping it in TypeScript also shares one language with the frontend. (Originally prototyped in Rust/axum; migrated to NestJS for stack consistency and developer velocity.)
 - **Go (Gateway, Notification).** Both are small, latency-sensitive, mostly I/O-bound services. Go's HTTP stack and goroutines are an excellent fit, and the resulting binaries are tiny.
 - **RabbitMQ + MassTransit.** Lightweight, easy to self-host, supports both pub/sub and work queues. MassTransit on the .NET side lets us treat queues as strongly typed message buses with automatic exchange / queue setup and contract-based routing.
 - **PostgreSQL.** Default choice for relational data (Auth, User, Guild, Notification). One database per service enforces ownership boundaries.
@@ -374,7 +374,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 
 | # | Module | Category | Type | Points | Implemented by |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Frameworks for frontend and backend (Next.js + ASP.NET Core + axum) | Web | Major | 2 | `tstephan`, `jramiro` (Next.js frontend), `yandry`, `sliziard` (ASP.NET backends), `tstephan` (axum backend) |
+| 1 | Frameworks for frontend and backend (Next.js + ASP.NET Core + NestJS) | Web | Major | 2 | `tstephan`, `jramiro` (Next.js frontend), `yandry`, `sliziard` (ASP.NET backends), `tstephan` (NestJS backend) |
 | 2 | Real-time features (WebSockets via SignalR) | Web | Major | 2 | `yandry`, `sliziard`, `achu` |
 | 3 | User Interaction (chat, profiles, friends, presence) | Web | Major | 2 | `tstephan` (profiles + friends), `yandry`, `sliziard`, `achu` (chat) |
 | 4 | Backend as microservices | Devops | Major | 2 | `yandry` (architecture + infra), `jramiro` (API Gateway) |
@@ -402,7 +402,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 
 **Module 1 - Frameworks for frontend and backend:**
 
-The frontend is a full Next.js 16 application (App Router, server components, TypeScript). The backend services use multiple frameworks: ASP.NET Core 10 with Clean Architecture for the C# services (Auth, Guild, Chat) and axum for the Rust User Service. v21 III.3 explicitly accepts Next.js for this module even when paired with separate backends, which is our case. The Go services (Gateway, Notification) use Go's standard `net/http` library rather than a third-party framework; they exist to support the overall architecture but do not contribute to this module's framework claim.
+The frontend is a full Next.js 16 application (App Router, server components, TypeScript). The backend services use multiple frameworks: ASP.NET Core 10 with Clean Architecture for the C# services (Auth, Guild, Chat) and NestJS (TypeScript) for the User Service. v21 III.3 explicitly accepts Next.js for this module even when paired with separate backends, which is our case. The Go services (Gateway, Notification) use Go's standard `net/http` library rather than a third-party framework; they exist to support the overall architecture but do not contribute to this module's framework claim.
 
 **Module 2 - Real-time features (WebSockets):**
 
@@ -438,7 +438,7 @@ Each service exposes a `/metrics` endpoint scraped by Prometheus. Custom Grafana
 
 **Module 10 - ORM (Entity Framework Core):**
 
-The Guild Service uses EF Core 10 with a code-first model (Domain entities in `Guild.Domain`, configured in `Guild.Persistence`). EF Core handles relational queries, migrations and the unit-of-work pattern. Other services use lower-level data access tools by choice (sqlx for User, the Cassandra C# driver for Chat) so this module is explicitly scoped to Guild.
+The Guild Service uses EF Core 10 with a code-first model (Domain entities in `Guild.Domain`, configured in `Guild.Persistence`). EF Core handles relational queries, migrations and the unit-of-work pattern. Other services use lower-level data access tools by choice (the `pg` driver for User, the Cassandra C# driver for Chat) so this module is explicitly scoped to Guild.
 
 **Module 11 - Advanced permissions system:**
 
@@ -508,7 +508,7 @@ The data and real-time layers had their own traps. ScyllaDB partitions messages 
 - Held the Tech Lead seat for the project: chaired architecture discussions, validated technical proposals before they were turned into issues, owned the cross-cutting decisions (REST + RabbitMQ split, Snowflake `BIGINT` ID policy serialized as quoted strings on the wire, JWT validation at the Gateway rather than per-service, contracts-first development)
 - Set and enforced code-quality standards across the team: PR-review discipline, Conventional Commits convention, shared linting/formatting rules, Husky pre-commit hooks with `lint-staged` + Prettier + ESLint on the frontend
 - Designed the contracts-first workflow that splits "contract change" PRs from "feature implementation" PRs, so service boundaries stay reviewable in isolation
-- Implemented the User Service in Rust (axum + sqlx + tokio): profile CRUD (display name, bio, status), avatar and banner upload with multipart validation and a default-avatar fallback, friend request state machine (pending to accepted / declined / blocked) with the canonical-ordering constraint on `friendships`, unilateral block flow independent of friendship, online / idle / offline presence published to RabbitMQ for the rest of the system to consume, `GET /users/search` with case-insensitive matching, batch user lookup (`POST /users` with `ids`), and the internal existence + relationship endpoints
+- Implemented the User Service in NestJS (TypeScript, Node.js, `pg`): profile CRUD (display name, bio, status), avatar and banner upload with multipart validation and a default-avatar fallback, friend request state machine (pending to accepted / declined / blocked) with the canonical-ordering constraint on `friendships`, unilateral block flow independent of friendship, online / idle / offline presence published to RabbitMQ for the rest of the system to consume, `GET /users/search` with case-insensitive matching, batch user lookup (`POST /users` with `ids`), and the internal existence + relationship endpoints
 - Built the frontend with jramiro on Next.js 16 (App Router, React 19, TypeScript, Tailwind 3, Zod, lucide-react): designed and owned the design system (color palette, 13-step typography scale, three custom Google fonts, custom spacing tokens, signature glow shadow) and shipped the 11 reusable components (`auth-card`, `channel-list`, `chat-message`, `chat-workspace`, `dm-list`, `friends-list`, `guild-member-list`, `guild-sidebar`, `notification-card`, `profile-card`, `settings-modal`) that the rest of the app composes
 - Kept Server-Side Rendering as the default with jramiro by writing React Server Components everywhere except where client-side interactivity genuinely requires `"use client"`, keeping the JS bundle small and first-contentful-paint fast
 - Implemented the WebRTC frontend on top of yandry's signaling: peer connection setup, ICE candidate exchange via the SignalR hub, media-stream lifecycle (camera / mic permissions, track replacement, hang-up cleanup), call UI / overlay, ringtone playback for incoming calls
