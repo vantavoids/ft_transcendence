@@ -11,6 +11,22 @@ services:
       timeout: 3s
       retries: 10
 
+  user-migrate:
+    container_name: user-migrate
+    profiles: ["migrate"]
+    image: user-migrate-service
+    pull_policy: never
+    build:
+      context: ${PWD}/services/user
+      dockerfile: Dockerfile.migrate
+    env_file: ${PWD}/services/user/.env
+    environment:
+      POSTGRES_HOST: user-db
+      POSTGRES_PORT: 5432
+    depends_on:
+      user-db:
+        condition: service_healthy
+
   user:
     container_name: user
     image: user-service
