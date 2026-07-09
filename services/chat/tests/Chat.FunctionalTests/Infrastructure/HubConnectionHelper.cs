@@ -1,5 +1,7 @@
+using Chat.Infrastructure;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Chat.FunctionalTests.Infrastructure;
 
@@ -34,6 +36,15 @@ internal static class HubConnectionHelper
 
 					return await wsClient.ConnectAsync(uri, ct);
 				};
+			})
+			// server payloads are snake_case with quoted snowflakes (see Program.cs
+			// AddJsonProtocol); match that here rather than relying on case-insensitive
+			// fallback, since the deserializer used against typed test DTOs otherwise
+			// silently leaves properties null (or throws on quoted longs) instead of erroring clearly.
+			.AddJsonProtocol(o =>
+			{
+				o.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
+				o.PayloadSerializerOptions.Converters.Add(new SnowflakeJsonConverter());
 			})
 			.Build();
 	}
