@@ -1,12 +1,30 @@
 import { apiFetch } from './client';
 
+export type MessageAttachmentDto = {
+  id: string;
+  url: string;
+  filename: string;
+  size_bytes: number;
+  mime_type: string;
+};
+
+export type MessageReactionDto = {
+  emoji: string;
+  count: number;
+  me_reacted: boolean;
+};
+
 export type ChannelMessageDto = {
   id: string;
   channel_id: string;
   author_id: string;
-  content: string;
+  // NULL for attachment-only messages (docs/schema/chat.cql: messages.content)
+  content: string | null;
+  reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;
+  attachments: MessageAttachmentDto[];
+  reactions: MessageReactionDto[];
 };
 
 export type DirectMessageConversationDto = {
@@ -22,7 +40,8 @@ export type DirectMessageDto = {
   id: string;
   sender_id: string;
   recipient_id: string;
-  content: string;
+  // NULL for attachment-only messages (docs/schema/chat.cql: direct_messages.content)
+  content: string | null;
   created_at: string;
 };
 
