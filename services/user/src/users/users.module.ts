@@ -4,6 +4,11 @@ import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
 import { RelationshipEventsPublisher } from './events/relationship-events.publisher';
 import { NoopRelationshipEventsPublisher } from './events/relationship-events.publisher';
 import { RabbitMqRelationshipEventsPublisher } from './events/rabbitmq-relationship-events.publisher';
+import {
+  NoopUserEventsConsumer,
+  RabbitMqUserEventsConsumer,
+  UserEventsConsumer,
+} from './events/user-events.consumer';
 import { InternalUsersController } from './internal-users.controller';
 import { DataExportController } from './data-export.controller';
 import { DataExportEventsPublisher, NoopDataExportEventsPublisher, RabbitMqDataExportEventsPublisher } from './data-export.publisher';
@@ -42,6 +47,14 @@ import { UsersService } from './users.service';
         config.get<'development' | 'test' | 'production'>('APP_ENV') === 'test'
           ? new NoopRelationshipEventsPublisher()
           : new RabbitMqRelationshipEventsPublisher(),
+    },
+    {
+      provide: UserEventsConsumer,
+      inject: [ConfigService, ProfilesRepository],
+      useFactory: (config: ConfigService, profilesRepository: ProfilesRepository) =>
+        config.get<'development' | 'test' | 'production'>('APP_ENV') === 'test'
+          ? new NoopUserEventsConsumer()
+          : new RabbitMqUserEventsConsumer(profilesRepository),
     },
     ProfilesRepository,
     RelationshipsRepository,
