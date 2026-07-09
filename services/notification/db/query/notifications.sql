@@ -23,8 +23,10 @@ FROM notifications
 WHERE user_id = $1 AND read_at IS NULL AND dismissed_at IS NULL;
 
 -- name: DismissNotification :execrows
+-- dismissing implies the user saw it: mark unread rows read in the same write
 UPDATE notifications
-SET dismissed_at = NOW()
+SET dismissed_at = NOW(),
+    read_at = COALESCE(read_at, NOW())
 WHERE id = $1 AND user_id = $2;
 
 -- name: GetNotifications :many
