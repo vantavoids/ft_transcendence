@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Gavel } from 'lucide-react';
-import { banGuildMember, listGuildBans, unbanGuildMember, type GuildBanDto } from '../../shared/api/guild';
+import {
+  banGuildMember,
+  listGuildBans,
+  unbanGuildMember,
+  type GuildBanDto
+} from '../../shared/api/guild';
 import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
 import { formatDate } from './guild-overview';
 import { FormError } from './guild-forms';
@@ -32,7 +37,9 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
       const rows = await listGuildBans(guildId, { limit: 100 });
       setBans(rows);
 
-      const ids = rows.flatMap((ban) => [ban.user_id, ban.banned_by]).filter((id): id is string => Boolean(id));
+      const ids = rows
+        .flatMap((ban) => [ban.user_id, ban.banned_by])
+        .filter((id): id is string => Boolean(id));
       const users = await getUsersByIds(ids);
       setUsersById(new Map(users.map((user) => [user.id, user])));
     } catch (loadError) {

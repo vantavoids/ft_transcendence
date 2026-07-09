@@ -4,17 +4,23 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { GuildIcon } from '../../src/components/guild/guild-icon';
 import { GuildBansPanel } from '../../src/components/guild/guild-bans-panel';
+import { GuildCategoriesPanel } from '../../src/components/guild/guild-categories-panel';
 import { GuildCreateForm, GuildJoinForm } from '../../src/components/guild/guild-forms';
 import { GuildInvitesPanel } from '../../src/components/guild/guild-invites-panel';
 import { GuildMembersPanel } from '../../src/components/guild/guild-members-panel';
 import { GuildOverview } from '../../src/components/guild/guild-overview';
+import { GuildRolesPanel } from '../../src/components/guild/guild-roles-panel';
+import { GuildSettingsPanel } from '../../src/components/guild/guild-settings-panel';
 import { useGuilds } from '../../src/shared/guilds/guild-store';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'members', label: 'Members' },
   { id: 'bans', label: 'Bans' },
-  { id: 'invites', label: 'Invites' }
+  { id: 'invites', label: 'Invites' },
+  { id: 'roles', label: 'Roles' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'settings', label: 'Settings' }
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -95,6 +101,11 @@ export default function GuildsPage() {
               {activeTab === 'members' ? <GuildMembersPanel guildId={selectedGuildId} /> : null}
               {activeTab === 'bans' ? <GuildBansPanel guildId={selectedGuildId} /> : null}
               {activeTab === 'invites' ? <GuildInvitesPanel guildId={selectedGuildId} /> : null}
+              {activeTab === 'roles' ? <GuildRolesPanel guildId={selectedGuildId} /> : null}
+              {activeTab === 'categories' ? (
+                <GuildCategoriesPanel guildId={selectedGuildId} />
+              ) : null}
+              {activeTab === 'settings' ? <GuildSettingsPanel guildId={selectedGuildId} /> : null}
             </>
           ) : isLoading ? (
             <div className="h-48 animate-pulse rounded-[1rem] bg-panel" />

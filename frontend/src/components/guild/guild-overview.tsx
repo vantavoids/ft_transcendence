@@ -86,7 +86,11 @@ export function GuildOverview({ guildId }: GuildOverviewProps) {
             <h2 className="flex items-center gap-2 truncate text-3xl font-extrabold tracking-[-0.05em] text-white">
               {guild.name}
               {currentUserId && guild.owner_id === currentUserId ? (
-                <Crown className="h-5 w-5 shrink-0 text-yellow" strokeWidth={1.9} aria-label="You own this guild" />
+                <Crown
+                  className="h-5 w-5 shrink-0 text-yellow"
+                  strokeWidth={1.9}
+                  aria-label="You own this guild"
+                />
               ) : null}
             </h2>
           </div>
