@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AtSign,
   Bell,
+  BellOff,
   Check,
   CheckCheck,
   Mail,
@@ -15,8 +16,17 @@ import {
   X,
   type LucideIcon
 } from 'lucide-react';
-import type { NotificationDto } from '../shared/api/notification';
-import type { UseNotificationsResult } from '../shared/lib/use-notifications';
+import type {
+  NotificationDto,
+  NotificationPreferenceDto,
+  NotificationScopeType
+} from '../shared/api/notification';
+import {
+  getNotificationMuteScopes,
+  isScopeMuted,
+  type NotificationMuteScope,
+  type UseNotificationsResult
+} from '../shared/lib/use-notifications';
 
 type NotificationTone = 'aqua' | 'yellow' | 'pink';
 
@@ -140,15 +150,30 @@ function FilterChip({ active, label, onClick }: FilterChipProps) {
   );
 }
 
+function getScopeLabel(scopeType: NotificationScopeType) {
+  return scopeType === 'guild' ? 'la guilde' : 'le salon';
+}
+
 type NotificationRowProps = {
   notification: NotificationDto;
+  preferences: NotificationPreferenceDto[];
   onMarkRead: (notificationId: string) => void;
   onDismiss: (notificationId: string) => void;
+  onMute: (scope: NotificationMuteScope) => void;
 };
 
-function NotificationRow({ notification, onMarkRead, onDismiss }: NotificationRowProps) {
+function NotificationRow({
+  notification,
+  preferences,
+  onMarkRead,
+  onDismiss,
+  onMute
+}: NotificationRowProps) {
   const { title, detail, tone, Icon } = describeNotification(notification);
   const isDismissed = Boolean(notification.dismissed_at);
+  const muteScopes = getNotificationMuteScopes(notification).filter(
+    (scope) => !isScopeMuted(preferences, scope.scopeType, scope.scopeId)
+  );
 
   return (
     <article
@@ -187,6 +212,18 @@ function NotificationRow({ notification, onMarkRead, onDismiss }: NotificationRo
                   <Check className="h-3.5 w-3.5" strokeWidth={2} />
                 </button>
               ) : null}
+              {muteScopes.map((scope) => (
+                <button
+                  key={`${scope.scopeType}-${scope.scopeId}`}
+                  type="button"
+                  onClick={() => onMute(scope)}
+                  className="flex h-6 w-6 items-center justify-center rounded text-white/35 transition hover:bg-frame hover:text-yellow"
+                  aria-label={`Muter ${getScopeLabel(scope.scopeType)}`}
+                  title={`Muter ${getScopeLabel(scope.scopeType)}`}
+                >
+                  <BellOff className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+              ))}
               {!isDismissed ? (
                 <button
                   type="button"
@@ -207,6 +244,177 @@ function NotificationRow({ notification, onMarkRead, onDismiss }: NotificationRo
   );
 }
 
+const muteDurations = [
+  { value: '1h', label: '1 h', hours: 1 },
+  { value: '8h', label: '8 h', hours: 8 },
+  { value: '24h', label: '24 h', hours: 24 },
+  { value: 'forever', label: 'Indefinie', hours: null }
+] as const;
+
+type MuteDuration = (typeof muteDurations)[number]['value'];
+
+function muteDurationToIso(duration: MuteDuration): string | null {
+  const hours = muteDurations.find((option) => option.value === duration)?.hours ?? null;
+  return hours === null ? null : new Date(Date.now() + hours * 3_600_000).toISOString();
+}
+
+function describeMuteState(preference: NotificationPreferenceDto): string {
+  if (!preference.muted) {
+    return 'Inactive';
+  }
+  if (preference.muted_until === null) {
+    return 'Indefinie';
+  }
+  if (Date.parse(preference.muted_until) <= Date.now()) {
+    return 'Expiree';
+  }
+  return `Jusqu au ${new Date(preference.muted_until).toLocaleString('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })}`;
+}
+
+type MutePanelProps = {
+  preferences: NotificationPreferenceDto[];
+  onMute: (
+    scopeType: NotificationScopeType,
+    scopeId: string,
+    mutedUntil: string | null
+  ) => Promise<void>;
+  onUnmute: (scopeType: NotificationScopeType, scopeId: string) => Promise<void>;
+};
+
+function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
+  const [scopeType, setScopeType] = useState<NotificationScopeType>('guild');
+  const [scopeId, setScopeId] = useState('');
+  const [duration, setDuration] = useState<MuteDuration>('forever');
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleAddMute() {
+    const trimmedId = scopeId.trim();
+    if (!/^\d+$/.test(trimmedId)) {
+      setFormError('Entre l identifiant (snowflake) de la guilde ou du salon.');
+      return;
+    }
+
+    setFormError('');
+    setIsSubmitting(true);
+    try {
+      await onMute(scopeType, trimmedId, muteDurationToIso(duration));
+      setScopeId('');
+    } catch {
+      setFormError('Impossible d enregistrer la sourdine.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-white/8 bg-panel px-3 py-3">
+        <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
+          Nouvelle sourdine
+        </p>
+        <div className="mt-2.5 flex gap-2">
+          {(['guild', 'channel'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setScopeType(option)}
+              aria-pressed={scopeType === option}
+              className={`h-8 flex-1 rounded-md border text-xs font-semibold transition ${
+                scopeType === option
+                  ? 'border-aqua/45 bg-aqua/10 text-aqua'
+                  : 'border-white/10 text-white/40 hover:text-white/70'
+              }`}
+            >
+              {option === 'guild' ? 'Guilde' : 'Salon'}
+            </button>
+          ))}
+        </div>
+        <input
+          value={scopeId}
+          onChange={(event) => setScopeId(event.target.value)}
+          placeholder={`Identifiant ${scopeType === 'guild' ? 'de la guilde' : 'du salon'}`}
+          className="mono-detail mt-2 h-9 w-full rounded-md bg-input-bg px-3 text-sm text-white outline-none placeholder:text-input-placeholder focus:ring-1 focus:ring-aqua/35"
+        />
+        <div className="mt-2 flex gap-2">
+          {muteDurations.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDuration(option.value)}
+              aria-pressed={duration === option.value}
+              className={`h-7 flex-1 rounded-md border text-[0.68rem] font-semibold transition ${
+                duration === option.value
+                  ? 'border-yellow/45 bg-yellow/10 text-yellow'
+                  : 'border-white/10 text-white/40 hover:text-white/70'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {formError ? <p className="mt-2 text-xs text-pink">{formError}</p> : null}
+        <button
+          type="button"
+          onClick={handleAddMute}
+          disabled={isSubmitting}
+          className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-frame text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <BellOff className="h-4 w-4" strokeWidth={1.9} />
+          {isSubmitting ? 'Enregistrement...' : 'Muter'}
+        </button>
+      </div>
+
+      {preferences.length === 0 ? (
+        <p className="py-3 text-center text-sm text-white/40">Aucune sourdine configuree.</p>
+      ) : (
+        <div className="space-y-2">
+          {preferences.map((preference) => (
+            <div
+              key={`${preference.scope_type}-${preference.scope_id}`}
+              className="flex items-center gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
+            >
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${
+                  preference.muted
+                    ? 'border-yellow/30 bg-yellow/10 text-yellow'
+                    : 'border-white/10 bg-frame text-white/35'
+                }`}
+              >
+                <BellOff className="h-4 w-4" strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white">
+                  {preference.scope_type === 'guild' ? 'Guilde' : 'Salon'}
+                  <span className="mono-detail ml-2 text-xs font-normal text-white/35">
+                    {preference.scope_id}
+                  </span>
+                </p>
+                <p className="font-category mt-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-white/35">
+                  {describeMuteState(preference)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void onUnmute(preference.scope_type, preference.scope_id).catch(() => {});
+                }}
+                className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-2.5 text-xs font-semibold text-white/50 transition hover:border-aqua/40 hover:text-aqua"
+              >
+                <Bell className="h-3.5 w-3.5" strokeWidth={1.9} />
+                Reactiver
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NotificationCard({ feed, onClose }: NotificationCardProps) {
   const {
     notifications,
@@ -221,8 +429,12 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
     loadMore,
     markRead,
     markAllRead,
-    dismiss
+    dismiss,
+    preferences,
+    mute,
+    unmute
   } = feed;
+  const [view, setView] = useState<'feed' | 'mutes'>('feed');
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -281,10 +493,25 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
             label="Ignorees"
             onClick={() => setFilter({ ...filter, includeDismissed: !filter.includeDismissed })}
           />
+          <button
+            type="button"
+            onClick={() => setView((current) => (current === 'feed' ? 'mutes' : 'feed'))}
+            aria-pressed={view === 'mutes'}
+            className={`font-category ml-auto flex h-8 items-center gap-1.5 rounded-full border px-3 text-[0.68rem] uppercase tracking-[0.12em] transition ${
+              view === 'mutes'
+                ? 'border-yellow/45 bg-yellow/10 text-yellow'
+                : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white/70'
+            }`}
+          >
+            <BellOff className="h-3.5 w-3.5" strokeWidth={1.9} />
+            Sourdines
+          </button>
         </div>
 
         <div className="max-h-[24rem] overflow-y-auto px-4 py-4">
-          {isLoading ? (
+          {view === 'mutes' ? (
+            <MutePanel preferences={preferences} onMute={mute} onUnmute={unmute} />
+          ) : isLoading ? (
             <div className="space-y-2" aria-label="Chargement des notifications">
               {[0, 1, 2].map((index) => (
                 <div
@@ -318,8 +545,12 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                 <NotificationRow
                   key={notification.id}
                   notification={notification}
+                  preferences={preferences}
                   onMarkRead={markRead}
                   onDismiss={dismiss}
+                  onMute={(scope) => {
+                    void mute(scope.scopeType, scope.scopeId, null).catch(() => {});
+                  }}
                 />
               ))}
               {hasMore ? (
