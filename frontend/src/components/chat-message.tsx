@@ -58,6 +58,7 @@ type ChatMessageProps = {
   isGrouped: boolean;
   isOwnMessage: boolean;
   isEditing: boolean;
+  isHighlighted?: boolean;
   editingDraft: string;
   canReact: boolean;
   onEditDraftChange: (value: string) => void;
@@ -66,6 +67,8 @@ type ChatMessageProps = {
   onCancelEdit: () => void;
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
+  onReply: (message: ChatMessageData) => void;
+  onJumpToReply: (messageId: string) => void;
   onOpenAuthorProfile?: (message: ChatMessageData) => void;
   setMessageRef: (messageId: string, element: HTMLElement | null) => void;
 };
@@ -112,6 +115,7 @@ export function ChatMessage({
   isGrouped,
   isOwnMessage,
   isEditing,
+  isHighlighted,
   editingDraft,
   canReact,
   onEditDraftChange,
@@ -120,6 +124,8 @@ export function ChatMessage({
   onCancelEdit,
   onDelete,
   onToggleReaction,
+  onReply,
+  onJumpToReply,
   onOpenAuthorProfile,
   setMessageRef
 }: ChatMessageProps) {
@@ -158,9 +164,9 @@ export function ChatMessage({
   return (
     <article
       ref={(element) => setMessageRef(message.id, element)}
-      className={`group relative -mx-3 rounded-md px-3 py-1 pr-28 transition hover:bg-white/[0.04] ${
+      className={`group relative -mx-3 rounded-md px-3 py-1 pr-36 transition-colors duration-700 hover:bg-white/[0.04] ${
         isGrouped ? 'mt-1 grid grid-cols-[3rem_minmax(0,1fr)] gap-4' : 'mt-6 flex gap-4 first:mt-0'
-      }`}
+      } ${isHighlighted ? 'bg-aqua/10 ring-1 ring-aqua/40' : ''}`}
     >
       <div className="absolute right-3 top-0 hidden -translate-y-1/2 overflow-hidden rounded-md border border-white/10 bg-panel shadow-lg shadow-black/30 group-hover:flex">
         {canReact ? (
@@ -173,6 +179,14 @@ export function ChatMessage({
             <SmilePlus className="h-4 w-4" strokeWidth={1.8} />
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={() => onReply(message)}
+          className="flex h-8 w-8 items-center justify-center text-[#8b8b8f] transition hover:bg-frame hover:text-white"
+          aria-label="Reply to message"
+        >
+          <CornerUpLeft className="h-4 w-4" strokeWidth={1.8} />
+        </button>
         {isOwnMessage ? (
           <>
             <button
@@ -231,7 +245,11 @@ export function ChatMessage({
         )}
 
         {!isEditing && replyPreview ? (
-          <p className="mono-detail mb-1 flex items-center gap-1.5 text-xs text-white/35">
+          <button
+            type="button"
+            onClick={() => message.replyToId && onJumpToReply(message.replyToId)}
+            className="mono-detail mb-1 flex items-center gap-1.5 text-left text-xs text-white/35 transition hover:text-white/55"
+          >
             <CornerUpLeft className="h-3 w-3 shrink-0" strokeWidth={2} />
             <span className="truncate">
               {replyPreview.author ? (
@@ -243,7 +261,7 @@ export function ChatMessage({
                 <>Replying to {replyPreview.snippet}</>
               )}
             </span>
-          </p>
+          </button>
         ) : null}
 
         {isEditing ? (
