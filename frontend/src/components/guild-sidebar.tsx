@@ -2,15 +2,11 @@
 
 import { useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
-
-type Guild = {
-  id: string;
-  name: string;
-  iconUrl: string;
-};
+import { AddGuildModal } from './guild/add-guild-modal';
+import { GuildIcon } from './guild/guild-icon';
+import { useGuilds } from '../shared/guilds/guild-store';
 
 type GuildSidebarProps = {
   activeMode: 'guild' | 'dm';
@@ -18,36 +14,15 @@ type GuildSidebarProps = {
   onOpenGuild: () => void;
 };
 
-const initialGuilds: Guild[] = [
-  {
-    id: 'default',
-    name: 'Default guild',
-    iconUrl: 'https://placehold.co/160x160/png?text=G'
-  }
-];
-
-const guildNames = ['Neon Arena', 'Pixel Club', 'Pong Squad', 'Byte House', 'Arcade Hub'];
-const guildColors = ['78dce8', 'a9dc76', 'ffd866', 'ff6188', 'ab9df2'];
-
-function createRandomGuild(): Guild {
-  const name = guildNames[Math.floor(Math.random() * guildNames.length)];
-  const color = guildColors[Math.floor(Math.random() * guildColors.length)];
-  const text = encodeURIComponent(name.slice(0, 1));
-
-  return {
-    id: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-    name,
-    iconUrl: `https://placehold.co/160x160/${color}/101014/png?text=${text}`
-  };
-}
-
 export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
-  const [guilds, setGuilds] = useState(initialGuilds);
+  const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
+  const [isAddGuildOpen, setIsAddGuildOpen] = useState(false);
 
-  function handleAddGuild() {
-    setGuilds((current) => [...current, createRandomGuild()]);
+  function handleSelectGuild(guildId: string) {
+    selectGuild(guildId);
+    onOpenGuild();
   }
 
   function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {
@@ -92,34 +67,43 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
           <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
         </button>
         <div className="mx-1 border-t border-white/10" />
-        {guilds.map((guild, index) => (
+        {isLoading && guilds.length === 0 ? (
+          <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
+        ) : null}
+        {error && guilds.length === 0 ? (
+          <p className="px-1 text-center text-xs text-pink/80" title={error}>
+            Guilds unavailable
+          </p>
+        ) : null}
+        {guilds.map((guild) => (
           <button
             key={guild.id}
             type="button"
-            onClick={onOpenGuild}
+            onClick={() => handleSelectGuild(guild.id)}
             onMouseEnter={(event) => handleShowLabel(guild.name, event)}
             onMouseLeave={() => setTooltip(null)}
             className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
-              index === 0 && activeMode === 'guild'
+              guild.id === selectedGuildId && activeMode === 'guild'
                 ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
                 : 'border-frame'
             }`}
             aria-label={guild.name}
           >
-            <Image
-              src={guild.iconUrl}
-              alt=""
-              width={160}
-              height={160}
-              className="h-full w-full object-cover"
+            <GuildIcon
+              guildId={guild.id}
+              name={guild.name}
+              iconUrl={guild.icon_url}
+              className="h-full w-full text-2xl"
             />
           </button>
         ))}
         <button
           type="button"
-          onClick={handleAddGuild}
+          onClick={() => setIsAddGuildOpen(true)}
+          onMouseEnter={(event) => handleShowLabel('Add a guild', event)}
+          onMouseLeave={() => setTooltip(null)}
           className="flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
-          aria-label="Add server"
+          aria-label="Add guild"
         >
           <Plus className="h-8 w-8" strokeWidth={1.5} />
         </button>
@@ -133,6 +117,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         </div>
       ) : null}
       <div className="flex justify-center pt-5 text-3xl tracking-[0.4em] text-[#9f9f9f]">...</div>
+      {isAddGuildOpen ? <AddGuildModal onClose={() => setIsAddGuildOpen(false)} /> : null}
     </aside>
   );
 }

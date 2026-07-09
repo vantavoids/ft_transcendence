@@ -14,6 +14,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { channelCategories } from './mocks/channel-mocks';
+import { useGuilds } from '../shared/guilds/guild-store';
 
 export type TextChannel = {
   id: string;
@@ -65,6 +66,7 @@ export function ChannelList({
   onOpenSettings,
   onSelectChannel
 }: ChannelListProps) {
+  const { selectedGuild } = useGuilds();
   const [search, setSearch] = useState('');
 
   const filteredCategories = useMemo(() => {
@@ -97,7 +99,7 @@ export function ChannelList({
             Logo<span className="text-aqua">_</span>
           </Link>
           <h2 className="min-w-0 truncate font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
-            server_name
+            {selectedGuild?.name ?? 'server_name'}
           </h2>
           <div className="flex shrink-0 items-center gap-3 text-[#8c8c90]">
             <UserRound className="h-5 w-5" strokeWidth={1.8} />

@@ -7,10 +7,12 @@ import { AuthCard } from '../../../src/components/auth-card';
 import { login } from '../../../src/shared/api/auth';
 import { establishSession } from '../../../src/shared/lib/session';
 import { describeLoginError } from '../../../src/shared/lib/auth-errors';
+import { useGuilds } from '../../../src/shared/guilds/guild-store';
 import { validateLoginForm, type LoginFormErrors } from '../../../src/shared/lib/validators/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refreshGuilds } = useGuilds();
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,6 +33,7 @@ export default function LoginPage() {
       setIsSubmitting(true);
       const { access_token, user_id } = await login({ email: email.trim(), password });
       establishSession(access_token, user_id);
+      void refreshGuilds();
       router.push('/chat');
     } catch (error) {
       setServerError(describeLoginError(error));
