@@ -50,11 +50,15 @@ function performRequest(
   const { body, query, skipAuthRefresh: _skip, headers: rawHeaders, ...rest } = options;
   const headers = new Headers(rawHeaders);
   const token = overrideToken ?? getAccessToken();
+  // FormData must be sent as-is: the browser sets Content-Type itself
+  // (multipart/form-data with the right boundary) - JSON.stringify-ing it
+  // or forcing application/json would both silently corrupt the upload.
+  const isFormData = body instanceof FormData;
 
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  if (body !== undefined && !headers.has("Content-Type")) {
+  if (body !== undefined && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -62,7 +66,7 @@ function performRequest(
     ...rest,
     headers,
     credentials: "include",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined || isFormData ? body : JSON.stringify(body),
   });
 }
 
