@@ -28,7 +28,8 @@ import {
   getDmDetails,
   getDmName,
   getDmStatusClasses,
-  hasDm
+  hasDm,
+  type DirectMessage
 } from './dm-list';
 import {
   getGuildMemberByName,
@@ -39,8 +40,6 @@ import { GuildSidebar, type Guild } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
-import { directMessages } from './mocks/dm-mocks';
-import { initialMessages } from './mocks/message-mocks';
 import { clearSession } from '../shared/lib/session';
 import { getIdentity, logout } from '../shared/api/auth';
 import {
@@ -51,8 +50,14 @@ import {
   type GuildChannelDto,
   type MyGuildDto
 } from '../shared/api/guild';
-import { listChannelMessages } from '../shared/api/chat';
-import { mapChannelMessage } from '../shared/mappers/chat';
+import {
+  archiveDirectMessageConversation,
+  listChannelMessages,
+  listDirectMessageHistory,
+  listDirectMessages
+} from '../shared/api/chat';
+import { ApiError } from '../shared/api/client';
+import { mapChannelMessage, mapDirectMessage, mapDirectMessageConversation } from '../shared/mappers/chat';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
@@ -62,7 +67,7 @@ const BOTTOM_THRESHOLD_PX = 96;
 const TOP_THRESHOLD_PX = 96;
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
 const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
-const CHANNEL_HISTORY_PAGE_SIZE = 50;
+const MESSAGE_HISTORY_PAGE_SIZE = 50;
 
 function guildIconUrl(guild: MyGuildDto) {
   if (guild.icon_url) {
@@ -158,8 +163,11 @@ export function ChatWorkspace() {
   const [username] = useState('cartoone');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [dmConversations, setDmConversations] = useState(directMessages);
-  const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
+  const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
+  const [showArchivedDms, setShowArchivedDms] = useState(false);
+  const [messagesByConversation, setMessagesByConversation] = useState<
+    Record<string, ChatMessageData[]>
+  >({});
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -171,10 +179,8 @@ export function ChatWorkspace() {
   useEffect(() => {
     // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
-    const storedDm = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
-    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
     setIsHydrated(true);
   }, []);
 
@@ -286,12 +292,12 @@ export function ChatWorkspace() {
 
     async function loadHistory(channelId: string) {
       try {
-        const dtos = await listChannelMessages(channelId, { limit: CHANNEL_HISTORY_PAGE_SIZE });
+        const dtos = await listChannelMessages(channelId, { limit: MESSAGE_HISTORY_PAGE_SIZE });
         if (cancelled) {
           return;
         }
 
-        hasMoreChannelHistory.current[channelId] = dtos.length >= CHANNEL_HISTORY_PAGE_SIZE;
+        hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
         const mapped = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
         setMessagesByConversation((current) => ({ ...current, [channelId]: mapped }));
       } catch {
@@ -322,10 +328,10 @@ export function ChatWorkspace() {
     try {
       const dtos = await listChannelMessages(channelId, {
         before_time: oldestMessage.createdAt,
-        limit: CHANNEL_HISTORY_PAGE_SIZE
+        limit: MESSAGE_HISTORY_PAGE_SIZE
       });
 
-      hasMoreChannelHistory.current[channelId] = dtos.length >= CHANNEL_HISTORY_PAGE_SIZE;
+      hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
 
       if (dtos.length > 0) {
         const olderMessages = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
@@ -339,6 +345,94 @@ export function ChatWorkspace() {
     } finally {
       isFetchingOlderHistory.current[channelId] = false;
     }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDms() {
+      try {
+        const dtos = await listDirectMessages({ include_archived: showArchivedDms });
+        if (cancelled) {
+          return;
+        }
+
+        const mapped = dtos.map(mapDirectMessageConversation);
+        setDmConversations(mapped);
+
+        const storedDmId = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
+        if (storedDmId && hasDm(storedDmId, mapped)) {
+          setActiveDm(storedDmId);
+        }
+      } catch {
+        // best effort: leave the DM list empty if the chat service is unreachable
+      }
+    }
+
+    loadDms();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showArchivedDms]);
+
+  useEffect(() => {
+    if (chatMode !== 'dm' || !activeDm) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDmHistory(partnerId: string) {
+      try {
+        const dtos = await listDirectMessageHistory(partnerId, { limit: MESSAGE_HISTORY_PAGE_SIZE });
+        if (cancelled) {
+          return;
+        }
+
+        const mapped = [...dtos].reverse().map((dto) => mapDirectMessage(dto, currentUserId));
+        setMessagesByConversation((current) => ({ ...current, [partnerId]: mapped }));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        // no conversation started yet with this partner - an empty history, not an error
+        if (error instanceof ApiError && error.status === 404) {
+          setMessagesByConversation((current) => ({ ...current, [partnerId]: [] }));
+        }
+      }
+    }
+
+    loadDmHistory(activeDm);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDm, chatMode, currentUserId]);
+
+  async function handleArchiveDm(dmId: string) {
+    try {
+      await archiveDirectMessageConversation(dmId);
+
+      if (showArchivedDms) {
+        setDmConversations((current) =>
+          current.map((dm) => (dm.id === dmId ? { ...dm, isArchived: true } : dm))
+        );
+      } else {
+        setDmConversations((current) => current.filter((dm) => dm.id !== dmId));
+      }
+
+      if (activeDm === dmId) {
+        setActiveDm(null);
+      }
+    } catch {
+      // best effort: leave the list as-is, allow the user to retry
+    }
+  }
+
+  function handleToggleShowArchivedDms() {
+    setShowArchivedDms((current) => !current);
   }
 
   const activeDmDetails =
@@ -359,6 +453,8 @@ export function ChatWorkspace() {
   const activeDraft = activeConversationId
     ? (draftsByConversation[activeConversationId] ?? '')
     : '';
+  const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
+  const isComposerDisabled = !activeConversationId || isActiveDmArchived;
   const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
   const activeDmProfileMember: GuildMember | null = activeDmDetails
     ? {
@@ -581,7 +677,7 @@ export function ChatWorkspace() {
   function handleSubmitMessage() {
     // TODO(api:chat): send guild messages through SignalR SendMessage and DMs through SendDirectMessage.
     const content = activeDraft.trim();
-    if (!content || !activeConversationId) {
+    if (!content || !activeConversationId || isComposerDisabled) {
       return;
     }
 
@@ -777,6 +873,7 @@ export function ChatWorkspace() {
             <DmList
               activeDm={activeDm ?? ''}
               directMessages={dmConversations}
+              showArchived={showArchivedDms}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
@@ -786,6 +883,8 @@ export function ChatWorkspace() {
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectDm={handleSelectDm}
+              onToggleShowArchived={handleToggleShowArchivedDms}
+              onArchiveDm={handleArchiveDm}
             />
           ) : (
             <ChannelList
@@ -913,7 +1012,8 @@ export function ChatWorkspace() {
               ) : (
                 <div>
                   {activeMessageItems.map(({ message, isGrouped, replyPreview }) => {
-                    const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
+                    const isOwnMessage =
+                      message.authorId != null && message.authorId === currentUserId;
                     const isEditing = editingMessageId === message.id;
 
                     return (
@@ -977,8 +1077,12 @@ export function ChatWorkspace() {
                       handleSubmitMessage();
                     }
                   }}
-                  disabled={!activeConversationId}
-                  placeholder={`Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`}
+                  disabled={isComposerDisabled}
+                  placeholder={
+                    isActiveDmArchived
+                      ? 'This conversation is archived.'
+                      : `Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`
+                  }
                   rows={1}
                   className="h-full min-h-0 w-full resize-none overflow-y-auto bg-transparent py-4 text-lg leading-6 text-white outline-none placeholder:text-muted disabled:cursor-not-allowed disabled:text-white/30"
                 />
@@ -994,7 +1098,7 @@ export function ChatWorkspace() {
                   <button
                     type="button"
                     onClick={handleSubmitMessage}
-                    disabled={!activeConversationId}
+                    disabled={isComposerDisabled}
                     className="text-aqua transition hover:text-white disabled:cursor-not-allowed disabled:text-[#535353]"
                     aria-label="Send message"
                   >

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  Archive,
   Bell,
   CircleEllipsis,
   Headphones,
@@ -15,7 +16,6 @@ import {
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 import { FriendsList } from './friends-list';
-import { directMessages } from './mocks/dm-mocks';
 import { friends } from './mocks/friend-mocks';
 
 export type DirectMessage = {
@@ -25,13 +25,15 @@ export type DirectMessage = {
   accent: ChatMessageData['accent'];
   lastMessage: string;
   lastMessageAt: string;
-  lastActivityMinutes: number;
+  lastActivityAt: number;
   unreadCount: number;
+  isArchived: boolean;
 };
 
 type DmListProps = {
   activeDm: string;
   directMessages: DirectMessage[];
+  showArchived: boolean;
   mobilePane: 'channels' | 'messages';
   username: string;
   isMicMuted: boolean;
@@ -41,17 +43,19 @@ type DmListProps = {
   onOpenNotifications: () => void;
   onOpenSettings: () => void;
   onSelectDm: (dmId: string) => void;
+  onToggleShowArchived: () => void;
+  onArchiveDm: (dmId: string) => void;
 };
 
-export function getDmName(dmId: string, dms = directMessages) {
+export function getDmName(dmId: string, dms: DirectMessage[]) {
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
-export function getDmDetails(dmId: string, dms = directMessages) {
+export function getDmDetails(dmId: string, dms: DirectMessage[]) {
   return dms.find((dm) => dm.id === dmId) ?? null;
 }
 
-export function hasDm(dmId: string, dms = directMessages) {
+export function hasDm(dmId: string, dms: DirectMessage[]) {
   return dms.some((dm) => dm.id === dmId);
 }
 
@@ -69,6 +73,7 @@ export function getDmStatusClasses(status: DirectMessage['status']) {
 export function DmList({
   activeDm,
   directMessages,
+  showArchived,
   mobilePane,
   username,
   isMicMuted,
@@ -77,7 +82,9 @@ export function DmList({
   onToggleMicMute,
   onOpenNotifications,
   onOpenSettings,
-  onSelectDm
+  onSelectDm,
+  onToggleShowArchived,
+  onArchiveDm
 }: DmListProps) {
   const [search, setSearch] = useState('');
   const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
@@ -86,7 +93,7 @@ export function DmList({
     const term = search.trim().toLowerCase();
 
     const sortedDms = [...directMessages].sort(
-      (first, second) => second.lastActivityMinutes - first.lastActivityMinutes
+      (first, second) => second.lastActivityAt - first.lastActivityAt
     );
 
     if (!term) {
@@ -154,15 +161,28 @@ export function DmList({
         </div>
 
         {isFriendsView ? null : (
-          <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-            <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search DMs"
-              className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-            />
-          </label>
+          <>
+            <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
+              <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search DMs"
+                className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={onToggleShowArchived}
+              className={`mt-2 flex items-center gap-2 text-xs font-semibold transition ${
+                showArchived ? 'text-aqua' : 'text-white/35 hover:text-white'
+              }`}
+              aria-pressed={showArchived}
+            >
+              <Archive className="h-3.5 w-3.5" strokeWidth={1.8} />
+              {showArchived ? 'Hide archived' : 'Show archived'}
+            </button>
+          </>
         )}
       </div>
 
@@ -190,51 +210,68 @@ export function DmList({
                 const isActive = dm.id === activeDm;
 
                 return (
-                  <button
+                  <div
                     key={dm.id}
-                    type="button"
-                    onClick={() => onSelectDm(dm.id)}
-                    className={`flex h-[4.75rem] w-full items-center gap-3 rounded-lg px-3 text-left transition ${
+                    className={`group relative flex h-[4.75rem] w-full items-center rounded-lg transition ${
                       isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
-                    }`}
+                    } ${dm.isArchived ? 'opacity-50' : ''}`}
                   >
-                    <span className="relative shrink-0">
-                      <span
-                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                          dm.accent
-                        )}`}
-                      >
-                        {dm.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                          dm.status
-                        )}`}
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center justify-between gap-3">
-                        <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
-                        <span className="mono-detail shrink-0 text-xs text-white/30">
-                          {dm.lastMessageAt}
-                        </span>
-                      </span>
-                      <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onSelectDm(dm.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
+                    >
+                      <span className="relative shrink-0">
                         <span
-                          className={`block truncate text-sm ${
-                            dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
-                          }`}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                            dm.accent
+                          )}`}
                         >
-                          {dm.lastMessage}
+                          {dm.name.slice(0, 1).toUpperCase()}
                         </span>
-                        {dm.unreadCount > 0 ? (
-                          <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
-                            {dm.unreadCount}
-                          </span>
-                        ) : null}
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
+                            dm.status
+                          )}`}
+                        />
                       </span>
-                    </span>
-                  </button>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex min-w-0 items-center justify-between gap-3">
+                          <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
+                          <span className="mono-detail shrink-0 text-xs text-white/30">
+                            {dm.lastMessageAt}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
+                          <span
+                            className={`block truncate text-sm ${
+                              dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
+                            }`}
+                          >
+                            {dm.lastMessage}
+                          </span>
+                          {dm.unreadCount > 0 ? (
+                            <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
+                              {dm.unreadCount}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </button>
+                    {dm.isArchived ? null : (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onArchiveDm(dm.id);
+                        }}
+                        className="mr-2 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white group-hover:flex"
+                        aria-label={`Archive conversation with ${dm.name}`}
+                      >
+                        <Archive className="h-4 w-4" strokeWidth={1.8} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
