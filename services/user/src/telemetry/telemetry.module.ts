@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { collectDefaultMetrics, Histogram, Registry } from 'prom-client';
+import { DomainMetricsCollector } from './domain-metrics.collector';
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
 import { MetricsController } from './metrics.controller';
 import { HTTP_REQUEST_DURATION, METRICS_REGISTRY } from './telemetry.constants';
@@ -46,6 +47,7 @@ import { HTTP_REQUEST_DURATION, METRICS_REGISTRY } from './telemetry.constants';
       provide: APP_INTERCEPTOR,
       useClass: HttpMetricsInterceptor,
     },
+    DomainMetricsCollector,
   ],
 })
 export class TelemetryModule {}
