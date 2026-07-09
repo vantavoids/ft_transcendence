@@ -27,7 +27,14 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
 	.AddPersistenceHealthChecks();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+	.AddJsonProtocol(o =>
+	{
+		o.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+		// hub method args (e.g. JoinChannel(long), Typing(string, long)) arrive as
+		// quoted strings from the frontend, same snowflake wire convention as REST/MassTransit
+		o.PayloadSerializerOptions.Converters.Add(new SnowflakeJsonConverter());
+	});
 builder.Services.AddApplication()
 	.AddInfrastructure()
 	.AddPersistence();
