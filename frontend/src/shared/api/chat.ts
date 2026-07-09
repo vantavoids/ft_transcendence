@@ -29,11 +29,10 @@ export type ChannelMessageDto = {
 
 export type DirectMessageConversationDto = {
   partner_id: string;
-  last_message: {
-    content: string;
-    created_at: string;
-  } | null;
+  last_preview: string;
+  last_message_at: string;
   unread_count: number;
+  is_archived: boolean;
 };
 
 export type DirectMessageDto = {
@@ -42,7 +41,9 @@ export type DirectMessageDto = {
   recipient_id: string;
   // NULL for attachment-only messages (docs/schema/chat.cql: direct_messages.content)
   content: string | null;
+  reply_to_id: string | null;
   created_at: string;
+  attachments: MessageAttachmentDto[];
 };
 
 export type EditMessagePayload = {
@@ -75,8 +76,8 @@ export function deleteMessage(messageId: string) {
   });
 }
 
-export function listDirectMessages() {
-  return apiFetch<DirectMessageConversationDto[]>('chat', '/dms');
+export function listDirectMessages(query?: { include_archived?: boolean }) {
+  return apiFetch<DirectMessageConversationDto[]>('chat', '/dms', { query });
 }
 
 export function listDirectMessageHistory(
@@ -84,4 +85,8 @@ export function listDirectMessageHistory(
   query?: { before_time?: string; limit?: number }
 ) {
   return apiFetch<DirectMessageDto[]>('chat', `/dms/${userId}/messages`, { query });
+}
+
+export function archiveDirectMessageConversation(userId: string) {
+  return apiFetch<void>('chat', `/dms/${userId}`, { method: 'DELETE' });
 }
