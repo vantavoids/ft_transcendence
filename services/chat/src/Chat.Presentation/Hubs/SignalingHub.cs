@@ -1,5 +1,4 @@
 using Chat.Application.Abstractions;
-using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
 using Chat.Presentation.Hubs.Signaling;
 using Microsoft.AspNetCore.Authorization;
@@ -9,16 +8,15 @@ namespace Chat.Presentation.Hubs;
 
 [Authorize]
 public sealed class SignalingHub(
-	ICurrentUser currentUser,
 	CallRegistry calls,
 	IEventBus eventBus,
 	ILogger<SignalingHub> logger) : Hub<ISignalingClient>
 {
 	public override async Task OnConnectedAsync()
 	{
-		calls.Connect(currentUser.UserId);
-		logger.LogDebug("Signaling: {User} connected", currentUser.UserId);
-		foreach (var call in calls.PendingFor(currentUser.UserId))
+		calls.Connect(Context.GetUserId());
+		logger.LogDebug("Signaling: {User} connected", Context.GetUserId());
+		foreach (var call in calls.PendingFor(Context.GetUserId()))
 			await Clients.Caller.IncomingCall(new IncomingCallEvent(
 				call.CallId.ToString(), call.CallerId.ToString(), call.CallType, call.Sdp));
 		await base.OnConnectedAsync();
@@ -26,8 +24,8 @@ public sealed class SignalingHub(
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
-		calls.Disconnect(currentUser.UserId);
-		logger.LogDebug("Signaling: {User} disconnected", currentUser.UserId);
+		calls.Disconnect(Context.GetUserId());
+		logger.LogDebug("Signaling: {User} disconnected", Context.GetUserId());
 		await base.OnDisconnectedAsync(exception);
 	}
 
@@ -36,7 +34,7 @@ public sealed class SignalingHub(
 		if (!long.TryParse(args.CalleeId, out var calleeId) || !long.TryParse(args.CallId, out var callId))
 			return;
 
-		var callerId = currentUser.UserId;
+		var callerId = Context.GetUserId();
 		var info = new CallInfo(callId, callerId, calleeId, args.CallType, args.Sdp);
 
 		if (!calls.TryOffer(info))
@@ -65,11 +63,11 @@ public sealed class SignalingHub(
 		if (!long.TryParse(args.CallId, out var callId))
 			return;
 
-		var call = calls.Answer(callId, currentUser.UserId);
+		var call = calls.Answer(callId, Context.GetUserId());
 		if (call is null)
 			return;
 
-		logger.LogInformation("Call {CallId}: answered by {Callee}", callId, currentUser.UserId);
+		logger.LogInformation("Call {CallId}: answered by {Callee}", callId, Context.GetUserId());
 		await Clients.User(call.CallerId.ToString()).CallAnswered(new CallAnsweredEvent(args.CallId, args.Sdp));
 	}
 
@@ -78,12 +76,12 @@ public sealed class SignalingHub(
 		if (!long.TryParse(args.CallId, out var callId))
 			return;
 
-		var call = calls.End(callId, currentUser.UserId);
+		var call = calls.End(callId, Context.GetUserId());
 		if (call is null)
 			return;
 
-		logger.LogInformation("Call {CallId}: rejected by {User}", callId, currentUser.UserId);
-		await Clients.User(Other(call, currentUser.UserId).ToString())
+		logger.LogInformation("Call {CallId}: rejected by {User}", callId, Context.GetUserId());
+		await Clients.User(Other(call, Context.GetUserId()).ToString())
 			.CallRejected(new CallIdEvent(args.CallId));
 	}
 
@@ -92,12 +90,12 @@ public sealed class SignalingHub(
 		if (!long.TryParse(args.CallId, out var callId))
 			return;
 
-		var call = calls.End(callId, currentUser.UserId);
+		var call = calls.End(callId, Context.GetUserId());
 		if (call is null)
 			return;
 
-		logger.LogInformation("Call {CallId}: hung up by {User}", callId, currentUser.UserId);
-		await Clients.User(Other(call, currentUser.UserId).ToString())
+		logger.LogInformation("Call {CallId}: hung up by {User}", callId, Context.GetUserId());
+		await Clients.User(Other(call, Context.GetUserId()).ToString())
 			.CallHungUp(new CallIdEvent(args.CallId));
 	}
 
@@ -106,11 +104,11 @@ public sealed class SignalingHub(
 		if (!long.TryParse(args.CallId, out var callId))
 			return;
 
-		var call = calls.ForParticipant(callId, currentUser.UserId);
+		var call = calls.ForParticipant(callId, Context.GetUserId());
 		if (call is null)
 			return;
 
-		await Clients.User(Other(call, currentUser.UserId).ToString())
+		await Clients.User(Other(call, Context.GetUserId()).ToString())
 			.IceCandidate(new IceCandidateEvent(args.CallId, args.Candidate, args.SdpMid, args.SdpMlineIndex));
 	}
 
