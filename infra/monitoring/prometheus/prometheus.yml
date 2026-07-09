@@ -41,9 +41,8 @@ scrape_configs:
         labels: { service: notification }
       - targets: ["gateway:9090"]
         labels: { service: gateway }
-      # user (#229) not instrumented yet
-      # - targets: ["user:8080"]
-      #   labels: { service: user }
+      - targets: ["user:8080"]
+        labels: { service: user }
 
   # black-box liveness via each service's existing /healthz, probed through the
   # blackbox exporter. the probe URL is carried in __param_target and the real
