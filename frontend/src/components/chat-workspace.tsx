@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
   CircleEllipsis,
   MessageCircle,
+  Paperclip,
   Smile,
-  UserRound
+  UserRound,
+  X
 } from 'lucide-react';
 import {
   ChatMessage,
@@ -83,6 +85,7 @@ export function ChatWorkspace() {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
@@ -123,6 +126,12 @@ export function ChatWorkspace() {
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
   const isComposerDisabled = !activeConversationId || isActiveDmArchived;
+  // an uploading/errored attachment has no confirmed id yet - block send entirely
+  // until it's ready or removed, rather than silently sending without it.
+  const hasUnresolvedAttachment = conversationHistory.pendingAttachments.some(
+    (attachment) => attachment.status !== 'ready'
+  );
+  const isSendDisabled = isComposerDisabled || hasUnresolvedAttachment;
   const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
   const activeDmProfileMember: GuildMember | null = activeDmDetails
     ? {
@@ -228,7 +237,10 @@ export function ChatWorkspace() {
 
   function handleSubmitMessage() {
     const content = activeDraft.trim();
-    if (!content || !activeConversationId || isComposerDisabled) {
+    const hasReadyAttachment = conversationHistory.pendingAttachments.some(
+      (attachment) => attachment.status === 'ready'
+    );
+    if ((!content && !hasReadyAttachment) || !activeConversationId || isSendDisabled) {
       return;
     }
 
@@ -261,6 +273,14 @@ export function ChatWorkspace() {
       return next;
     });
     setIsEmojiOpen(false);
+  }
+
+  function handleFilesSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      conversationHistory.uploadAttachments(Array.from(files));
+    }
+    event.target.value = '';
   }
 
   function appendEmoji(emoji: string) {
@@ -573,6 +593,39 @@ export function ChatWorkspace() {
             </div>
 
             <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+              {conversationHistory.pendingAttachments.length > 0 ? (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {conversationHistory.pendingAttachments.map((attachment) => (
+                    <span
+                      key={attachment.id}
+                      className={`flex h-8 items-center gap-2 rounded-full border px-3 text-xs ${
+                        attachment.status === 'error'
+                          ? 'border-pink/40 text-pink'
+                          : 'border-white/10 text-white/70'
+                      }`}
+                    >
+                      <span className="max-w-[10rem] truncate">{attachment.filename}</span>
+                      {attachment.status === 'uploading' ? <span>Uploading…</span> : null}
+                      {attachment.status === 'error' ? <span>Failed</span> : null}
+                      <button
+                        type="button"
+                        onClick={() => conversationHistory.removePendingAttachment(attachment.id)}
+                        aria-label={`Remove ${attachment.filename}`}
+                        className="text-white/40 hover:text-white"
+                      >
+                        <X className="h-3 w-3" strokeWidth={2} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               {isEmojiOpen ? (
                 <div className="mb-3 rounded-xl border border-white/10 bg-panel p-3">
                   <div className="grid grid-cols-6 gap-2">
@@ -612,6 +665,15 @@ export function ChatWorkspace() {
                 <div className="ml-auto flex items-center gap-4">
                   <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isComposerDisabled}
+                    className="text-[#7e7e82] transition hover:text-white disabled:cursor-not-allowed disabled:text-[#535353]"
+                    aria-label="Attach files"
+                  >
+                    <Paperclip className="h-5 w-5" strokeWidth={1.8} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setIsEmojiOpen((current) => !current)}
                     className="text-[#7e7e82] transition hover:text-white"
                     aria-label="Toggle emoji picker"
@@ -621,7 +683,7 @@ export function ChatWorkspace() {
                   <button
                     type="button"
                     onClick={handleSubmitMessage}
-                    disabled={isComposerDisabled}
+                    disabled={isSendDisabled}
                     className="text-aqua transition hover:text-white disabled:cursor-not-allowed disabled:text-[#535353]"
                     aria-label="Send message"
                   >
