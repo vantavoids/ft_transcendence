@@ -127,3 +127,13 @@ export function listDirectMessageHistory(
 export function archiveDirectMessageConversation(userId: string) {
   return apiFetch<void>('chat', `/dms/${userId}`, { method: 'DELETE' });
 }
+
+export function uploadAttachment(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiFetch<MessageAttachmentDto>('chat', '/attachments', {
+    method: 'POST',
+    body: formData
+  });
+}
