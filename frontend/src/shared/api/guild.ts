@@ -10,6 +10,22 @@ export type GuildDto = {
   created_at: string;
 };
 
+export type MyGuildDto = {
+  id: string;
+  name: string;
+  icon_url?: string | null;
+  owner_id: string;
+  member_count?: number;
+  joined_at: string;
+};
+
+export type GuildCategoryDto = {
+  id: string;
+  guild_id: string;
+  name: string;
+  position: number;
+};
+
 export type GuildMemberDto = {
   user_id: string;
   nickname?: string | null;
@@ -63,6 +79,10 @@ export type GuildInviteDto = {
   expires_at?: string | null;
 };
 
+export function listMyGuilds() {
+  return apiFetch<MyGuildDto[]>('guild', '/guilds/me');
+}
+
 export function createGuild(payload: CreateGuildPayload) {
   return apiFetch<GuildDto>('guild', '/guilds', {
     method: 'POST',
@@ -109,6 +129,10 @@ export function listGuildMembers(
 
 export function listGuildChannels(guildId: string) {
   return apiFetch<GuildChannelDto[]>('guild', `/guilds/${guildId}/channels`);
+}
+
+export function listGuildCategories(guildId: string) {
+  return apiFetch<GuildCategoryDto[]>('guild', `/guilds/${guildId}/categories`);
 }
 
 export function listGuildRoles(guildId: string) {
