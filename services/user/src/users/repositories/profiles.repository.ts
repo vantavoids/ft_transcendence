@@ -13,6 +13,15 @@ interface UserProfileRow {
   last_seen_at: Date | null;
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === '23505'
+  );
+}
+
 @Injectable()
 export class ProfilesRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -93,6 +102,112 @@ export class ProfilesRepository {
     }
 
     return this.toProfileResponse(row);
+  }
+
+  async createProfileFromRegistration(
+    userId: string,
+    email: string,
+  ): Promise<'created' | 'exists' | 'conflict'> {
+    const usernames = this.buildCandidateUsernames(email, userId);
+
+    for (const username of usernames) {
+      try {
+        const result = await this.database.client.query<{ id: string }>(
+          `
+            INSERT INTO users_profile (id, username, status)
+            VALUES ($1::bigint, $2, 'offline')
+            ON CONFLICT (id) DO NOTHING
+            RETURNING id::text
+          `,
+          [userId, username],
+        );
+
+        if ((result.rowCount ?? 0) > 0) {
+          return 'created';
+        }
+
+        const existing = await this.database.client.query<{ id: string }>(
+          `
+            SELECT id::text
+            FROM users_profile
+            WHERE id = $1::bigint
+            LIMIT 1
+          `,
+          [userId],
+        );
+
+        if ((existing.rowCount ?? 0) > 0) {
+          return 'exists';
+        }
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    return 'conflict';
+  }
+
+  async markUserOnline(userId: string): Promise<boolean> {
+    const result = await this.database.client.query<{ id: string }>(
+      `
+        UPDATE users_profile
+        SET
+          status = 'online',
+          updated_at = NOW()
+        WHERE id = $1::bigint
+        RETURNING id::text
+      `,
+      [userId],
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markUserOffline(userId: string): Promise<boolean> {
+    const result = await this.database.client.query<{ id: string }>(
+      `
+        UPDATE users_profile
+        SET
+          status = 'offline',
+          last_seen_at = CASE
+            WHEN status IS DISTINCT FROM 'offline' THEN NOW()
+            ELSE last_seen_at
+          END,
+          updated_at = NOW()
+        WHERE id = $1::bigint
+        RETURNING id::text
+      `,
+      [userId],
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteProfileById(userId: string): Promise<boolean> {
+    const result = await this.database.client.query<{ id: string }>(
+      `
+        DELETE FROM users_profile
+        WHERE id = $1::bigint
+        RETURNING id::text
+      `,
+      [userId],
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  private buildCandidateUsernames(email: string, userId: string): string[] {
+    const atIndex = email.indexOf('@');
+    const prefix = (atIndex >= 0 ? email.slice(0, atIndex) : email).trim();
+    const base = prefix.slice(0, 32);
+    const fallback =
+      base.length <= 13 ? `${base}_${userId}` : `${base.slice(0, 13)}_${userId}`;
+
+    return base === fallback ? [base] : [base, fallback];
   }
 
   private toProfileResponse(row: UserProfileRow): UserProfileResponse {
