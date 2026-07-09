@@ -1,0 +1,7 @@
+Hi,
+
+Your account and all associated personal data were permanently deleted on {{.DeletedAt}}.
+
+This action is irreversible. If you did not request this deletion, please contact us immediately at {{.SupportEmail}}.
+
+Thank you for having been part of ft_transcendence.

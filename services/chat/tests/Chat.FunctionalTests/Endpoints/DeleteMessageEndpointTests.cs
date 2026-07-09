@@ -17,6 +17,7 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 		factory.GuildClient.Result = null;
 		factory.MessageRepository.Reset();
 		factory.Broadcaster.Reset();
+		factory.ConversationUnicast.Reset();
 		return Task.CompletedTask;
 	}
 
@@ -33,7 +34,16 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 	private static void SeedMessage(ChatApiFactory f, long id, long channelId, long authorId)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: authorId,
+			id: id, containerId: channelId, authorId: authorId, recipientId: null,
+			content: "hello", replyToId: null, editedAt: null,
+			isDeleted: false, createdAt: DateTimeOffset.UtcNow);
+		f.MessageRepository.Seed(message);
+	}
+
+	private static void SeedDirectMessage(ChatApiFactory f, long id, long conversationId, long authorId, long recipientId)
+	{
+		var message = Message.Reconstitute(
+			id: id, containerId: conversationId, authorId: authorId, recipientId: recipientId,
 			content: "hello", replyToId: null, editedAt: null,
 			isDeleted: false, createdAt: DateTimeOffset.UtcNow);
 		f.MessageRepository.Seed(message);
@@ -129,7 +139,7 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 	public async Task Delete_AlreadyDeletedMessage_Returns404()
 	{
 		var deleted = Message.Reconstitute(
-			id: 1, channelId: 100, authorId: 42,
+			id: 1, containerId: 100, authorId: 42, recipientId: null,
 			content: null, replyToId: null, editedAt: null,
 			isDeleted: true, createdAt: DateTimeOffset.UtcNow);
 		factory.MessageRepository.Seed(deleted);
@@ -139,5 +149,38 @@ public sealed class DeleteMessageEndpointTests(ChatApiFactory factory)
 
 		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 		Assert.Empty(factory.Broadcaster.DeletedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Delete_DirectMessage_Author_Returns204AndUnicastsToRecipient_NotTheChannelBroadcaster()
+	{
+		SeedDirectMessage(factory, id: 1, conversationId: 555, authorId: 42, recipientId: 100);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.DeleteAsync("/v1/messages/1");
+
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+		Assert.Null(factory.GuildClient.Result);
+
+		var (senderId, recipientId, evt) = Assert.Single(factory.ConversationUnicast.DeletedUnicasts);
+		Assert.Equal(42L, senderId);
+		Assert.Equal(100L, recipientId);
+		Assert.Equal("1", evt.MessageId);
+		Assert.Equal("555", evt.ConversationId);
+
+		// proves routing didn't leak into the channel path
+		Assert.Empty(factory.Broadcaster.DeletedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Delete_DirectMessage_NonAuthor_Returns403()
+	{
+		SeedDirectMessage(factory, id: 1, conversationId: 555, authorId: 99, recipientId: 42);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.DeleteAsync("/v1/messages/1");
+
+		Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+		Assert.Empty(factory.ConversationUnicast.DeletedUnicasts);
 	}
 }

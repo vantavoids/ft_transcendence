@@ -113,6 +113,16 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 			.ToListAsync(cancellationToken);
 	}
 
+	public async Task<IReadOnlyList<long>> ListGuildIdsForMemberAsync(
+		long userId, CancellationToken cancellationToken = default)
+	{
+		return await context.Members
+			.AsNoTracking()
+			.Where(m => m.UserId == userId)
+			.Select(m => m.GuildId)
+			.ToListAsync(cancellationToken);
+	}
+
 	public Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default)
 	{
 		return context.Members

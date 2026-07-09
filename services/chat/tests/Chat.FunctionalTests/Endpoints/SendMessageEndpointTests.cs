@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Chat.Application.Contracts;
+using Chat.Domain.Messages;
 using Chat.FunctionalTests.Infrastructure;
 using Xunit;
 
@@ -72,7 +73,7 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 
 		var saved = Assert.Single(factory.SavedMessages);
 		Assert.Equal(messageId, saved.Id);
-		Assert.Equal(100L, saved.ChannelId);
+		Assert.Equal(100L, saved.ContainerId);
 		Assert.Equal(42L, saved.AuthorId);
 
 		var evt = Assert.Single(factory.EventBus.PublishedOf<ChatMessageSent>());
@@ -160,6 +161,54 @@ public sealed class SendMessageEndpointTests(ChatApiFactory factory)
 		Assert.Equal(firstBody.CreatedAt, secondBody.CreatedAt);
 		Assert.Equal("dedup-nonce", secondBody.Nonce);
 		Assert.Single(factory.SavedMessages);
+	}
+
+	[Fact]
+	public async Task Post_ReplyToNonexistentMessage_Returns400_NoSideEffects()
+	{
+		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PostAsJsonAsync("/v1/channels/100/messages",
+			new { content = "hi", reply_to_id = 999 });
+
+		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+		Assert.Empty(factory.SavedMessages);
+	}
+
+	[Fact]
+	public async Task Post_ReplyToMessageInAnotherChannel_Returns400_NoSideEffects()
+	{
+		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
+		var target = Message.Reconstitute(
+			id: 7, containerId: 200, authorId: 1, recipientId: null, content: "original",
+			replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow);
+		factory.MessageRepository.Seed(target);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PostAsJsonAsync("/v1/channels/100/messages",
+			new { content = "hi", reply_to_id = 7 });
+
+		Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+		Assert.Single(factory.SavedMessages); // only the seeded reply target, no new message
+	}
+
+	[Fact]
+	public async Task Post_ReplyToValidMessageInSameChannel_Returns201WithReplyToId()
+	{
+		factory.WithMembership(channelId: 100, userId: 42, guildId: 9, permissions: SendMessagesPermission);
+		var target = Message.Reconstitute(
+			id: 7, containerId: 100, authorId: 1, recipientId: null, content: "original",
+			replyToId: null, editedAt: null, isDeleted: false, createdAt: DateTimeOffset.UtcNow);
+		factory.MessageRepository.Seed(target);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PostAsJsonAsync("/v1/channels/100/messages",
+			new { content = "hi", reply_to_id = 7 });
+
+		Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+		var body = await response.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+		Assert.Equal("7", body!.ReplyToId);
 	}
 
 	private sealed record MessageBody(

@@ -5,6 +5,7 @@ using Chat.Application;
 using Chat.Application.Abstractions;
 using Chat.Infrastructure;
 using Chat.Persistence;
+using Chat.Presentation.Endpoints;
 using Chat.Presentation.Hubs;
 using Chat.Presentation.Hubs.Signaling;
 using Chat.Presentation.Observability;
@@ -48,6 +49,7 @@ builder.Services.AddOpenTelemetry()
 		.AddPrometheusExporter());
 builder.Services.AddScoped<IChannelBroadcaster, SignalRChannelBroadcaster>();
 builder.Services.AddScoped<IUserBroadcaster, SignalRUserBroadcaster>();
+builder.Services.AddScoped<IConversationUnicast, SignalRConversationUnicast>();
 builder.Services.AddCarter();
 
 var jwtSecret = builder.Configuration["Jwt:SecretKey"]
@@ -121,6 +123,11 @@ var v1 = app.MapGroup("/v1").RequireAuthorization();
 v1.MapCarter();
 app.MapHub<ChatHub>("/v1/hubs/chat");
 app.MapHub<SignalingHub>("/v1/hubs/signaling");
+
+// internal endpoints: the API Gateway only forwards /api/{service}/vN/..., so
+// /internal/... is reachable only over the docker network (no auth header).
+var internalRoutes = app.MapGroup("/internal");
+UserDataExportEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();
 

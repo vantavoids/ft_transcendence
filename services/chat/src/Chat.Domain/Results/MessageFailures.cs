@@ -2,6 +2,11 @@ using Chat.Domain.Messages;
 
 namespace Chat.Domain.Results;
 
+/// <summary>
+/// Failures shared by channel messages and DMs. One catalog because a caller
+/// (client, log line) never needs to know which storage a message lives in —
+/// "content required" or "recipient blocked" mean the same thing either way.
+/// </summary>
 public static class MessageFailures
 {
 	public static readonly Failure ContentRequired =
@@ -32,6 +37,9 @@ public static class MessageFailures
 	public static readonly Failure NonceTooLong =
 		new("Message.NonceTooLong", "Nonce must be 64 characters or fewer.");
 
+	public static readonly Failure InvalidReplyTarget =
+		new("Message.InvalidReplyTarget", "Reply target was not found.");
+
 	public static readonly Failure NotFound =
 		new("Message.NotFound", "Message not found.");
 
@@ -54,5 +62,20 @@ public static class MessageFailures
 		new("Message.RecipientNotFriend", "You must be friends to send direct message.");
 
 	public static readonly Failure RecipientBlocked =
-		new("Message.RecipientBlocked", "You can't send messages to blocked user.");
+		new("Message.RecipientBlocked", "You can't send messages to a blocked user.");
+
+	public static readonly Failure InvalidConversationId =
+		new("Message.InvalidConversationId", "Conversation id must be a positive snowflake.");
+
+	public static readonly Failure ConversationNotFound =
+		new("Message.ConversationNotFound", "Conversation not found.");
+
+	public static readonly Failure InvalidRecipientId =
+		new("Message.InvalidRecipientId", "Recipient id must be a positive snowflake.");
+
+	public static readonly Failure CannotMessageSelf =
+		new("Message.CannotMessageSelf", "Sender and recipient can't be the same id.");
+
+	public static readonly Failure RecipientNotFound =
+		new("Message.RecipientNotFound", "Recipient not found.");
 }

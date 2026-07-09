@@ -26,6 +26,15 @@ public interface IGuildRepository
 	Task<IReadOnlyList<MyGuildSummary>> ListForMemberAsync(
 		long userId, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// bare guild ids the user is a member of - no joined columns, no member
+	/// count. used by callers that only need to iterate guilds to resolve
+	/// per-guild data themselves (e.g. the visible-channels lookup), where
+	/// <see cref="ListForMemberAsync"/>'s correlated COUNT would be wasted work.
+	/// </summary>
+	Task<IReadOnlyList<long>> ListGuildIdsForMemberAsync(
+		long userId, CancellationToken cancellationToken = default);
+
 	Task<int> CountMembersAsync(long guildId, CancellationToken cancellationToken = default);
 	Task<int> CountOwnedByAsync(long userId, CancellationToken cancellationToken = default);
 	Task<bool> IsMemberAsync(long guildId, long userId, CancellationToken cancellationToken = default);

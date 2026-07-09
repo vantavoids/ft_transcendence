@@ -28,7 +28,7 @@ public sealed class ChatHub(
 
 	public override async Task OnConnectedAsync()
 	{
-		if (connectionTracker.TrackConnected(currentUser.UserId, Context.ConnectionId))
+		if (connectionTracker.TrackConnected(currentUser.UserId, Context.ConnectionId, Context))
 			await eventBus.PublishAsync(new UserOnline(currentUser.UserId), CancellationToken.None);
 		await base.OnConnectedAsync();
 	}

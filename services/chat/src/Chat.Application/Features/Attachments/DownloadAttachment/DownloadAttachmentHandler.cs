@@ -12,11 +12,12 @@ namespace Chat.Application.Features.Attachments.DownloadAttachment;
 internal sealed class DownloadAttachmentHandler(
 	ICurrentUser currentUser,
 	IAttachmentRepository repository,
+	IMessageRepository messageRepository,
 	IGuildClient guildClient,
 	IObjectStore objectStore)
 	: IQueryHandler<DownloadAttachmentQuery, Result<AttachmentDownload>>
 {
-	// mirrors the Guild Service permission bitmask; see SendMessageHandler
+	// mirrors the Guild Service permission bitmask; see SendChannelMessageHandler
 	private const long ReadMessages = 1L << 1;
 	private const long Administrator = 1L << 8;
 
@@ -31,9 +32,7 @@ internal sealed class DownloadAttachmentHandler(
 			return await DownloadDraftAsync(query, cancellationToken);
 
 		if (location.IsDm)
-			// DM attachments arrive with the DM feature; nothing on the channel path
-			// can produce one, so deny rather than leak an unauthorized stream
-			return AttachmentFailures.NotAuthorized;
+			return await DownloadDmAttachmentAsync(query, location, cancellationToken);
 
 		return await DownloadChannelAttachmentAsync(query, location, cancellationToken);
 	}
@@ -43,7 +42,7 @@ internal sealed class DownloadAttachmentHandler(
 		AttachmentLocation location,
 		CancellationToken ct)
 	{
-		var channelId = location.ChannelId!.Value;
+		var channelId = location.ContainerId;
 
 		var membership = await guildClient.GetMembershipAsync(channelId, currentUser.UserId, ct);
 		if (membership is null || !membership.IsMember)
@@ -52,8 +51,30 @@ internal sealed class DownloadAttachmentHandler(
 		if ((membership.Permissions & (ReadMessages | Administrator)) == 0)
 			return AttachmentFailures.NotAuthorized;
 
-		var metadata = await repository.GetChannelAttachmentAsync(
-			channelId, location.MessageId, query.Id, ct);
+		var metadata = await repository.GetAttachmentAsync(
+			channelId, isDm: false, location.MessageId, query.Id, ct);
+		if (metadata is null)
+			return AttachmentFailures.NotFound;
+
+		return await OpenAsync(metadata, query.Filename, ct);
+	}
+
+	private async Task<Result<AttachmentDownload>> DownloadDmAttachmentAsync(
+		DownloadAttachmentQuery query,
+		AttachmentLocation location,
+		CancellationToken ct)
+	{
+		var conversationId = location.ContainerId;
+
+		var message = await messageRepository.GetByIdAsync(location.MessageId, ct);
+		if (message is null)
+			return AttachmentFailures.NotAuthorized;
+
+		var userId = currentUser.UserId;
+		if (message.AuthorId != userId && message.RecipientId != userId)
+			return AttachmentFailures.NotAuthorized;
+
+		var metadata = await repository.GetAttachmentAsync(conversationId, isDm: true, location.MessageId, query.Id, ct);
 		if (metadata is null)
 			return AttachmentFailures.NotFound;
 

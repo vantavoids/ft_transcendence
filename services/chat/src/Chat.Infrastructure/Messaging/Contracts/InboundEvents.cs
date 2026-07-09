@@ -17,3 +17,6 @@ public sealed record GuildMemberLeft(long GuildId, long UserId);
 
 [MessageUrn("Auth.Application.Contracts:UserLoggedOut")]
 public sealed record UserLoggedOut(long UserId);
+
+[MessageUrn("Auth.Application.Contracts:UserDeleted")]
+public sealed record UserDeleted(long UserId);

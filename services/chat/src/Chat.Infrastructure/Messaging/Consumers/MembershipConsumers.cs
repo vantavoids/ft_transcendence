@@ -1,4 +1,5 @@
 using Chat.Application.Abstractions;
+using Chat.Application.Abstractions.Persistence;
 using Chat.Infrastructure.Messaging.Contracts;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -54,13 +55,39 @@ public sealed class GuildMemberLeftConsumer(
 	}
 }
 
-public sealed class UserLoggedOutConsumer(ILogger<UserLoggedOutConsumer> logger)
-	: IConsumer<UserLoggedOut>
+public sealed class UserLoggedOutConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<UserLoggedOutConsumer> logger): IConsumer<UserLoggedOut>
 {
-	public Task Consume(ConsumeContext<UserLoggedOut> context)
+	public async Task Consume(ConsumeContext<UserLoggedOut> context)
 	{
 		var msg = context.Message;
-		logger.LogDebug("user.logged_out consumed: user_id={UserId}", msg.UserId);
-		return Task.CompletedTask;
+
+		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
+
+		logger.LogDebug(
+			"user.logged_out consumed: user_id={UserId} disconnected_connections={Disconnected}"
+			, msg.UserId, disconnected);
+	}
+}
+
+public sealed class UserDeletedConsumer(
+	IUserBroadcaster broadcaster,
+	IMessageRepository messages,
+	IReadStateRepository readStates,
+	ILogger<UserDeletedConsumer> logger): IConsumer<UserDeleted>
+{
+	public async Task Consume(ConsumeContext<UserDeleted> context)
+	{
+		var msg = context.Message;
+
+		var disconnected = await broadcaster.DisconnectUserAsync(msg.UserId, context.CancellationToken);
+
+		await messages.DeleteConversationAsync(msg.UserId, context.CancellationToken);
+		await readStates.DeleteAllForUserAsync(msg.UserId, context.CancellationToken);
+
+		logger.LogDebug(
+			"user.deleted consumed: user_id={UserId} disconnected_connections={Disconnected}"
+			, msg.UserId, disconnected);
 	}
 }

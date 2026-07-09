@@ -1,5 +1,5 @@
 using Chat.Application.Abstractions;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Chat.Presentation.Hubs;
@@ -7,14 +7,20 @@ namespace Chat.Presentation.Hubs;
 internal sealed class SignalRChannelBroadcaster(IHubContext<ChatHub, IChatClient> hub)
 	: IChannelBroadcaster
 {
-	public Task BroadcastMessageAsync(long channelId, MessageResponse message, CancellationToken ct) =>
+	public Task BroadcastMessageAsync(long channelId, ChannelMessageResponse message, CancellationToken ct) =>
 		hub.Clients.Group($"channel:{channelId}").ReceiveMessage(message);
 
-	public Task BroadcastMessageEditedAsync(long channelId, MessageEditedEvent evt, CancellationToken ct) =>
+	public Task BroadcastMessageEditedAsync(long channelId, ChannelMessageEditedEvent evt, CancellationToken ct) =>
 		hub.Clients.Group($"channel:{channelId}").MessageEdited(evt);
 
 	public Task BroadcastMessageDeletedAsync(long channelId, long messageId, CancellationToken ct) =>
-		hub.Clients.Group($"channel:{channelId}").MessageDeleted(new MessageDeletedEvent(
+		hub.Clients.Group($"channel:{channelId}").MessageDeleted(new ChannelMessageDeletedEvent(
 			MessageId: messageId.ToString(),
 			ChannelId: channelId.ToString()));
+
+	public Task BroadcastReactionAddedAsync(long channelId, ReactionAddedEvent evt, CancellationToken ct) =>
+		hub.Clients.Group($"channel:{channelId}").ReactionAdded(evt);
+
+	public Task BroadcastReactionRemovedAsync(long channelId, ReactionRemovedEvent evt, CancellationToken ct) =>
+		hub.Clients.Group($"channel:{channelId}").ReactionRemoved(evt);
 }

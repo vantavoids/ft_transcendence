@@ -14,4 +14,9 @@ public sealed class FakeGuildClient : IGuildClient
 
 	public Task<ChannelMembership?> GetMembershipAsync(long channelId, long userId, CancellationToken ct)
 		=> Task.FromResult(_map.TryGetValue((channelId, userId), out var m) ? m : Result);
+
+	public List<long> VisibleChannelIds { get; set; } = [];
+
+	public Task<IReadOnlyList<long>> GetVisibleChannelIdsAsync(long userId, CancellationToken ct)
+		=> Task.FromResult<IReadOnlyList<long>>(VisibleChannelIds);
 }

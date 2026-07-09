@@ -1,4 +1,5 @@
 using Chat.Presentation.Hubs;
+using Chat.UnitTests.Fakes;
 using Microsoft.AspNetCore.SignalR;
 using Xunit;
 
@@ -55,6 +56,48 @@ public sealed class SignalRUserBroadcasterTests
 
 		Assert.Empty(tracker.ConnectionsInGuild(User, Guild));
 		Assert.Contains(("c1", $"channel:{ChannelB}"), groups.Removed);
+	}
+
+	[Fact]
+	public async Task DisconnectUser_AbortsEveryConnection_AndReturnsHowMany()
+	{
+		var tracker = new UserConnectionTracker();
+		var ctx1 = new FakeHubCallerContext();
+		var ctx2 = new FakeHubCallerContext();
+		tracker.TrackConnected(User, "c1", ctx1);
+		tracker.TrackConnected(User, "c2", ctx2);
+
+		var broadcaster = new SignalRUserBroadcaster(new FakeHubContext(new RecordingGroupManager()), tracker);
+
+		var disconnected = await broadcaster.DisconnectUserAsync(User, CancellationToken.None);
+
+		Assert.Equal(2, disconnected);
+		Assert.True(ctx1.Aborted);
+		Assert.True(ctx2.Aborted);
+	}
+
+	[Fact]
+	public async Task DisconnectUser_ConnectionWithoutContext_IsNotCounted()
+	{
+		var tracker = new UserConnectionTracker();
+		tracker.TrackConnected(User, "c1"); // no HubCallerContext, e.g. untracked connection
+
+		var broadcaster = new SignalRUserBroadcaster(new FakeHubContext(new RecordingGroupManager()), tracker);
+
+		var disconnected = await broadcaster.DisconnectUserAsync(User, CancellationToken.None);
+
+		Assert.Equal(0, disconnected);
+	}
+
+	[Fact]
+	public async Task DisconnectUser_UnknownUser_ReturnsZero_AndDoesNotThrow()
+	{
+		var tracker = new UserConnectionTracker();
+		var broadcaster = new SignalRUserBroadcaster(new FakeHubContext(new RecordingGroupManager()), tracker);
+
+		var disconnected = await broadcaster.DisconnectUserAsync(User, CancellationToken.None);
+
+		Assert.Equal(0, disconnected);
 	}
 
 	private sealed class RecordingGroupManager : IGroupManager

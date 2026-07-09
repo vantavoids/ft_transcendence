@@ -1,7 +1,7 @@
 using Cassandra;
 using Chat.Application.Abstractions;
 using Chat.Application.Abstractions.Persistence;
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
 using Chat.Presentation.Hubs;
 using Chat.Domain.Messages;
 using Chat.UnitTests.Fakes;
@@ -39,13 +39,18 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	public FakeUserClient UserClient { get; } = new();
 	public FakeMessageRepository MessageRepository { get; } = new();
 	public FakeAttachmentRepository AttachmentRepository { get; } = new();
+	public FakeDataExportRepository DataExportRepository { get; } = new();
+	public FakeReactionRepository ReactionRepository { get; } = new();
 	public FakeObjectStore ObjectStore { get; } = new();
 	public FakeEventBus EventBus { get; } = new();
 	public FakeChannelBroadcaster Broadcaster { get; } = new();
 	public FakeClock Clock { get; } = new();
 	public FakeIdGenerator IdGenerator { get; } = new();
+	public FakeConversationUnicast ConversationUnicast { get; } = new();
+	public FakeReadStateRepository ReadStateRepository { get; } = new();
 
-	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved;
+	public IReadOnlyList<Message> SavedMessages => MessageRepository.Saved.Where(m => !m.IsDirectMessage).ToList();
+	public IReadOnlyList<Message> SavedDirectMessages => MessageRepository.Saved.Where(m => m.IsDirectMessage).ToList();
 
 	public void WithMembership(long channelId, long userId, long guildId, long permissions)
 	{
@@ -68,7 +73,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	// Bypasses FakeChannelBroadcaster (which is a no-op for SignalR) and pushes
 	// events directly into the hub group via IHubContext. Use to verify that a
 	// subscriber in the group receives the correct hub invocation.
-	public async Task SimulateMessageEditedAsync(long channelId, MessageEditedEvent evt)
+	public async Task SimulateMessageEditedAsync(long channelId, ChannelMessageEditedEvent evt)
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").MessageEdited(evt);
@@ -78,7 +83,19 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").MessageDeleted(
-			new MessageDeletedEvent(messageId.ToString(), channelId.ToString()));
+			new ChannelMessageDeletedEvent(messageId.ToString(), channelId.ToString()));
+	}
+
+	public async Task SimulateReactionAddedAsync(long channelId, ReactionAddedEvent evt)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").ReactionAdded(evt);
+	}
+
+	public async Task SimulateReactionRemovedAsync(long channelId, ReactionRemovedEvent evt)
+	{
+		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
+		await hub.Clients.Group($"channel:{channelId}").ReactionRemoved(evt);
 	}
 
 	// Directly calls the real SignalRUserBroadcaster (not a fake) so that
@@ -120,7 +137,7 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 	// Bypasses IChannelBroadcaster (replaced by a fake) and pushes a message
 	// directly into the SignalR channel group. Use to verify that a connected
 	// client receives ReceiveMessage after JoinChannel.
-	public async Task SimulateChannelMessageAsync(long channelId, MessageResponse message)
+	public async Task SimulateChannelMessageAsync(long channelId, ChannelMessageResponse message)
 	{
 		var hub = Server.Services.GetRequiredService<IHubContext<ChatHub, IChatClient>>();
 		await hub.Clients.Group($"channel:{channelId}").ReceiveMessage(message);
@@ -193,6 +210,14 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			services.RemoveAll<IAttachmentRepository>();
 			services.AddSingleton<IAttachmentRepository>(AttachmentRepository);
 
+			// the real DataExportRepository needs ISession (stripped above)
+			services.RemoveAll<IDataExportRepository>();
+			services.AddSingleton<IDataExportRepository>(DataExportRepository);
+
+			// same story as IAttachmentRepository: the real ReactionRepository needs ISession
+			services.RemoveAll<IReactionRepository>();
+			services.AddSingleton<IReactionRepository>(ReactionRepository);
+
 			// the real MinioObjectStore would dial MinIO; serve attachment blobs
 			// from memory instead so the upload/download endpoints stay hermetic
 			services.RemoveAll<IObjectStore>();
@@ -201,11 +226,17 @@ public sealed class ChatApiFactory : WebApplicationFactory<Program>
 			services.RemoveAll<IChannelBroadcaster>();
 			services.AddSingleton<IChannelBroadcaster>(Broadcaster);
 
+			services.RemoveAll<IConversationUnicast>();
+			services.AddSingleton<IConversationUnicast>(ConversationUnicast);
+
 			services.RemoveAll<IClock>();
 			services.AddSingleton<IClock>(Clock);
 
 			services.RemoveAll<ISnowflakeIdGenerator>();
 			services.AddSingleton<ISnowflakeIdGenerator>(IdGenerator);
+
+			services.RemoveAll<IReadStateRepository>();
+			services.AddSingleton<IReadStateRepository>(ReadStateRepository);
 		});
 	}
 

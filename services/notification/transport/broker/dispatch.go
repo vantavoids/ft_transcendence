@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	core "github.com/vantavoids/ft_transcendence/services/notification/internal/core"
 	failure "github.com/vantavoids/ft_transcendence/services/notification/internal/platform/failure"
+	email "github.com/vantavoids/ft_transcendence/services/notification/transport/email"
 )
 
 const (
@@ -200,7 +202,41 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 		if err != nil {
 			return err
 		}
-		return orch.DeleteUserNotifs(ctx, ev.UserID)
+
+		if err := orch.DeleteUserNotifs(ctx, ev.UserID); err != nil {
+			return err
+		}
+
+		data := struct {
+			DeletedAt    string
+			SupportEmail string
+		}{
+			DeletedAt:    time.Now().Format("January 2, 2006 at 15:04 UTC"),
+			SupportEmail: "", // TODO: maybe see if we have a support email, for now we have nothing so lets put nothing
+		}
+
+		return email.Send("account_deleted", ev.Email, "Account successfully deleted", data) // if the user deleted his account, we dont need his id because it doesnt exist anymore
+
+	case "data.export_ready":
+		ev, err := parse[DataExportReadyEvent](d)
+		if err != nil {
+			return err
+		}
+
+		expires, err := time.Parse(time.RFC3339, ev.ExpiresAt)
+		if err != nil {
+			return fmt.Errorf("parse expires_at %q: %w", ev.ExpiresAt, err)
+		}
+
+		data := struct {
+			DownloadURL string
+			ExpiresAt   string
+		}{
+			DownloadURL: ev.DownloadURL,
+			ExpiresAt:   expires.Format("January 2, 2006 at 15:04 UTC"),
+		}
+
+		return email.Send("data_export_ready", ev.Email, "Your data export is ready", data)
 
 	default:
 		log.Printf("unknown routing key: %s", d.RoutingKey)

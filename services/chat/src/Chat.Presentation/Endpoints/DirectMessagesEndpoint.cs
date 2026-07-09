@@ -1,0 +1,170 @@
+using Carter;
+using Chat.Application.Abstractions.Messaging;
+using Chat.Application.Features.DirectMessages.ArchiveConversation;
+using Chat.Application.Features.DirectMessages.Common;
+using Chat.Application.Features.DirectMessages.SendMessage;
+using Chat.Application.Features.DirectMessages.ListMessages;
+using Chat.Application.Features.DirectMessages.ListConversations;
+using Chat.Domain.Results;
+using Microsoft.AspNetCore.Http.HttpResults;
+
+namespace Chat.Presentation.Endpoints;
+
+public sealed class DirectMessagesEndpoint : ICarterModule
+{
+	public void AddRoutes(IEndpointRouteBuilder app)
+	{
+		var messagesGroup = app.MapGroup("/dms/{userId:long}/messages").WithTags("Direct Messages");
+		messagesGroup.MapPost("/", SendAsync);
+		messagesGroup.MapGet("/", ListAsync);
+
+		var conversationsGroup = app.MapGroup("/dms").WithTags("Direct Messages");
+		conversationsGroup.MapGet("/", ListConversationsAsync);
+		conversationsGroup.MapDelete("/{userId:long}", ArchiveAsync);
+	}
+
+	private static async Task<Results<
+		Created<DirectMessageResponse>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	SendAsync(
+		long userId,
+		SendDirectMessageRequest request,
+		ICommandHandler<SendDirectMessageCommand, Result<DirectMessageResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new SendDirectMessageCommand(
+				RecipientId: userId,
+				Content: request.Content,
+				ReplyToId: request.ReplyToId,
+				AttachmentIds: request.AttachmentIds ?? [],
+				Nonce: request.Nonce),
+			cancellationToken);
+
+		if (result.Succeeded)
+		{
+			return TypedResults.Created(
+				$"/dms/{userId}/messages/{result.Value.Id}",
+				result.Value);
+		}
+
+		return MapSendError(result.Error);
+	}
+
+	private static async Task<Results<
+		Ok<IReadOnlyList<DirectMessageResponse>>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>>
+	ListAsync(
+		long userId,
+		DateTimeOffset? before_time,
+		int? limit,
+		IQueryHandler<ListDirectMessagesQuery, Result<IReadOnlyList<DirectMessageResponse>>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+				new ListDirectMessagesQuery(
+					RecipientId: userId,
+					Limit: limit ?? 50,
+					BeforeTime: before_time),
+				cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: MapListError(result.Error);
+	}
+
+	private static async Task<Results<Ok<IReadOnlyList<DmConversationResponse>>, JsonHttpResult<ErrorBody>>>
+	ListConversationsAsync(
+		bool? include_archived,
+		IQueryHandler<ListDmConversationsQuery, Result<IReadOnlyList<DmConversationResponse>>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(
+			new ListDmConversationsQuery(include_archived ?? false),
+			cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: TypedResults.Json(new ErrorBody(result.Error.Message), statusCode: StatusCodes.Status500InternalServerError);
+	}
+
+	private static async Task<Results<NoContent, NotFound<ErrorBody>>> ArchiveAsync(
+		long userId,
+		ICommandHandler<ArchiveConversationCommand, Result> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new ArchiveConversationCommand(userId), cancellationToken);
+
+		return result.Succeeded
+			? TypedResults.NoContent()
+			: TypedResults.NotFound(new ErrorBody(result.Error.Message));
+	}
+
+	private static Results<
+		Ok<IReadOnlyList<DirectMessageResponse>>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>
+	MapListError(Failure failure)
+	{
+		var body = new ErrorBody(failure.Message);
+
+		return failure.Code switch
+		{
+			"Message.ConversationNotFound" => TypedResults.NotFound(body),
+
+			"Message.RecipientBlocked" => TypedResults.Json(
+				body,
+				statusCode: StatusCodes.Status403Forbidden),
+
+			// "Message.InvalidRecipientId"
+			// "Message.CannotMessageSelf"
+			_ => TypedResults.BadRequest(body)
+		};
+	}
+
+	private static Results<
+		Created<DirectMessageResponse>,
+		BadRequest<ErrorBody>,
+		JsonHttpResult<ErrorBody>,
+		NotFound<ErrorBody>>
+	MapSendError(Failure failure)
+	{
+		var body = new ErrorBody(failure.Message);
+
+		return failure.Code switch
+		{
+			"Message.RecipientNotFound" or
+			"Message.ConversationNotFound" or
+			"Attachment.InvalidReference" => TypedResults.NotFound(body),
+
+			"Message.RecipientBlocked" => TypedResults.Json(
+				body,
+				statusCode: StatusCodes.Status403Forbidden),
+
+			// "Message.ContentRequired"
+			// "Message.ContentTooLong"
+			// "Message.InvalidId"
+			// "Message.InvalidConversationId"
+			// "Message.InvalidAuthorId"
+			// "Message.InvalidRecipientId"
+			// "Message.InvalidReplyTarget"
+			// "Message.CannotMessageSelf"
+			// "Message.NonceTooLong"
+			// "Attachment.TooMany"
+			_ => TypedResults.BadRequest(body)
+		};
+	}
+
+	private sealed record SendDirectMessageRequest(
+		string? Content,
+		long? ReplyToId,
+		IReadOnlyList<long>? AttachmentIds,
+		string? Nonce);
+
+	private sealed record ErrorBody(string Error);
+}

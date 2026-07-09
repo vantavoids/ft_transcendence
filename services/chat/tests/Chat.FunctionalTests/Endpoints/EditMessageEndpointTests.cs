@@ -22,6 +22,7 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 		factory.GuildClient.Result = null;
 		factory.MessageRepository.Reset();
 		factory.Broadcaster.Reset();
+		factory.ConversationUnicast.Reset();
 		return Task.CompletedTask;
 	}
 
@@ -38,7 +39,17 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 	private static Message SeedMessage(ChatApiFactory f, long id, long channelId, long authorId)
 	{
 		var message = Message.Reconstitute(
-			id: id, channelId: channelId, authorId: authorId,
+			id: id, containerId: channelId, authorId: authorId, recipientId: null,
+			content: "original", replyToId: null, editedAt: null,
+			isDeleted: false, createdAt: DateTimeOffset.UtcNow);
+		f.MessageRepository.Seed(message);
+		return message;
+	}
+
+	private static Message SeedDirectMessage(ChatApiFactory f, long id, long conversationId, long authorId, long recipientId)
+	{
+		var message = Message.Reconstitute(
+			id: id, containerId: conversationId, authorId: authorId, recipientId: recipientId,
 			content: "original", replyToId: null, editedAt: null,
 			isDeleted: false, createdAt: DateTimeOffset.UtcNow);
 		f.MessageRepository.Seed(message);
@@ -143,7 +154,7 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 	public async Task Patch_AlreadyDeletedMessage_Returns404()
 	{
 		var deleted = Message.Reconstitute(
-			id: 1, channelId: 100, authorId: 42,
+			id: 1, containerId: 100, authorId: 42, recipientId: null,
 			content: null, replyToId: null, editedAt: null,
 			isDeleted: true, createdAt: DateTimeOffset.UtcNow);
 		factory.MessageRepository.Seed(deleted);
@@ -171,6 +182,44 @@ public sealed class EditMessageEndpointTests(ChatApiFactory factory)
 		var body = await second.Content.ReadFromJsonAsync<EditBody>(JsonOptions);
 		Assert.Equal("v2", body!.Content);
 		Assert.Equal(2, factory.Broadcaster.EditedBroadcasts.Count);
+	}
+
+	[Fact]
+	public async Task Patch_DirectMessage_HappyPath_Returns200AndUnicastsToRecipient_NotTheChannelBroadcaster()
+	{
+		SeedDirectMessage(factory, id: 1, conversationId: 555, authorId: 42, recipientId: 100);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PatchAsJsonAsync("/v1/messages/1",
+			new { content = "updated dm content" });
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+		var body = await response.Content.ReadFromJsonAsync<EditBody>(JsonOptions);
+		Assert.NotNull(body);
+		Assert.Equal("updated dm content", body.Content);
+
+		var (senderId, recipientId, evt) = Assert.Single(factory.ConversationUnicast.EditedUnicasts);
+		Assert.Equal(42L, senderId);
+		Assert.Equal(100L, recipientId);
+		Assert.Equal("1", evt.Id);
+		Assert.Equal("555", evt.ConversationId);
+
+		// proves routing didn't leak into the channel path
+		Assert.Empty(factory.Broadcaster.EditedBroadcasts);
+	}
+
+	[Fact]
+	public async Task Patch_DirectMessage_NotAuthor_Returns403()
+	{
+		SeedDirectMessage(factory, id: 1, conversationId: 555, authorId: 99, recipientId: 42);
+		var client = BuildClient(userId: 42);
+
+		var response = await client.PatchAsJsonAsync("/v1/messages/1",
+			new { content = "hi" });
+
+		Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+		Assert.Empty(factory.ConversationUnicast.EditedUnicasts);
 	}
 
 	private sealed record EditBody(string Id, string? Content, DateTimeOffset? EditedAt);

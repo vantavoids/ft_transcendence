@@ -34,6 +34,12 @@ public static class DependencyInjection
 		services.AddScoped<IMessageRepository, MessageRepository>();
 		services.AddSingleton<AttachmentStatements>();
 		services.AddScoped<IAttachmentRepository, AttachmentRepository>();
+		services.AddSingleton<DataExportStatements>();
+		services.AddScoped<IDataExportRepository, DataExportRepository>();
+		services.AddSingleton<ReadStateStatements>();
+		services.AddScoped<IReadStateRepository, ReadStateRepository>();
+		services.AddSingleton<ReactionStatements>();
+		services.AddScoped<IReactionRepository, ReactionRepository>();
 		return services;
 	}
 

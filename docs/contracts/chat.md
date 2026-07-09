@@ -81,7 +81,7 @@ Send a message to a channel. Returns the canonical persisted message synchronous
 The nonce is a client-supplied string that the server treats as opaque. Its purpose is threefold:
 
 1. **Optimistic UI reconciliation.** The sender places a local message bubble keyed by nonce, then replaces it when either the `201` response or the `ReceiveMessage` broadcast arrives (whichever wins the race).
-2. **Idempotency.** If the same `(author_id, channel_id, nonce)` triple is seen again within **10 minutes**, the server returns the originally persisted message (same `id`, `created_at`) instead of writing a new row. Lets clients safely retry on network failure. Outside that window the nonce is forgotten and a repeat call would create a new message.
+2. **Idempotency.** If the same `(author_id, channel_id, nonce)` triple is seen again within **10 minutes**, the server returns the originally persisted message (same `id`, `created_at`) instead of writing a new row. Lets clients safely retry on network failure. Outside that window the nonce is forgotten and a repeat call would create a new message. For a channel message, this replayed response carries the message's *current* `reactions[]` (it may have accrued some since the original send) rather than the `[]` a truly new message gets.
 3. **Send-status feedback.** The sender can show "failed, retry" if neither the `201` nor a matching `ReceiveMessage` arrives within a UI timeout.
 
 Omitting `nonce` opts out of all three: the response and broadcast carry `"nonce": null`, and retries will create duplicate messages.
@@ -141,7 +141,7 @@ Deleted messages (`is_deleted = true` in the schema) are filtered out of the res
 
 ### PATCH /messages/{id}
 
-Edit a message. Only the author can edit their own messages.
+Edit a message, channel or DM alike. Only the author can edit their own message — no moderator override for either kind, matching `DELETE`'s author check but without its `MANAGE_MESSAGES` escape hatch.
 
 **Request body:**
 ```json
@@ -162,26 +162,27 @@ Edit a message. Only the author can edit their own messages.
 **Errors:**
 | Status | Reason |
 |--------|--------|
+| 400 | `content` empty, or longer than 4000 characters |
 | 403 | Not the author |
 | 404 | Message not found |
 
-**Side effects:** Broadcasts `MessageEdited` event to all clients in the SignalR channel group.
+**Side effects:** Broadcasts `MessageEdited` to the SignalR channel group for a channel message; sends `DirectMessageEdited` to both participants' personal groups for a DM.
 
 ---
 
 ### DELETE /messages/{id}
 
-Delete a message. Author or member with `MANAGE_MESSAGES` permission.
+Delete a message. For a channel message: author or member with `MANAGE_MESSAGES` permission. For a DM: **author only** — DMs have no moderation concept, so the recipient can never delete a message sent to them.
 
 **Response `204`:** No content.
 
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 403 | Not the author and lacks `MANAGE_MESSAGES` |
-| 404 | Message not found |
+| 403 | Caller is a guild member but not the author and lacks `MANAGE_MESSAGES` (channel), or not the author (DM) |
+| 404 | Message not found, **or** (channel message) caller isn't a member of the guild that owns the channel at all — same info-hiding rule as `GET /channels/{channel_id}/messages` |
 
-**Side effects:** Broadcasts `MessageDeleted { message_id, channel_id }` to the SignalR channel group.
+**Side effects:** Broadcasts `MessageDeleted { message_id, channel_id }` to the SignalR channel group for a channel message; sends `DirectMessageDeleted { message_id, conversation_id }` to both participants' personal groups for a DM.
 
 ---
 
@@ -291,6 +292,7 @@ Deleted DMs are filtered out (same rule as channel messages).
 **Errors:**
 | Status | Reason |
 |--------|--------|
+| 400 | `user_id` is not a positive snowflake, or equals the caller's own id |
 | 404 | No DM conversation found |
 
 ---
@@ -410,6 +412,8 @@ Advance the caller's read cursor for a channel to a specific message. Idempotent
 
 Mark a DM conversation as read up to a specific message. Mirrors `PUT /channels/{id}/read` for channels; the implicit alternative (auto-reset on `GET /dms/{user_id}/messages`) is rejected because infinite-scroll into older history shouldn't reset unread, and other devices need an explicit signal to update their badge.
 
+Unlike the channel side, this is a whole-conversation reset rather than a precise "messages after cursor" recount: `dm_unread_counts` is a monotonic counter (incremented on send, reset on read), not a value that can express "read up to message 10 of 15, 5 still unread." Marking any `message_id` as read - even one older than the most recent message - zeroes the badge for the whole conversation. `unread_count` in the response below is therefore always `0` on success.
+
 **Request body:**
 ```json
 {
@@ -504,6 +508,37 @@ Remove the caller's own reaction. Removing a reaction the caller did not place i
 | 404 | Message not found, or message is a DM |
 
 **Side effects:** Broadcasts `ReactionRemoved` to the SignalR channel group when the caller actually had a reaction to remove.
+
+---
+
+## Internal Endpoints
+
+### GET /internal/users/{user_id}/data-export
+
+The user's Chat-owned data for a GDPR self-serve export: the messages they authored, in channels and DMs. Called by the User Service's public data-export aggregator, which fans out to every service and stitches the results.
+
+**Auth required:** None. Not reachable through the API Gateway: the gateway only forwards `/api/{service}/vN/...`, and `/internal/...` has no version segment. Callers reach this directly over the docker network (e.g. `http://chat:8080/internal/users/{user_id}/data-export`).
+
+**Response `200`:**
+```json
+{
+  "user_id": "123",
+  "channel_messages": [
+    { "channel_id": "77", "message_id": "9001", "content": "gg", "created_at": "2026-06-01T12:00:00Z", "edited_at": null }
+  ],
+  "direct_messages": [
+    { "conversation_id": "88", "partner_id": "456", "message_id": "9002", "content": "hey", "created_at": "2026-06-02T09:30:00Z", "edited_at": null }
+  ]
+}
+```
+
+**How it's queried.** Scylla partitions `messages` by `channel_id` and `direct_messages` by `conversation_id`, so "all messages by author" is not a direct query. Instead the export uses the per-user index tables to find the partitions the user touched, then filters each to the user's own rows:
+- `channel_read_states` (`PK ((user_id), channel_id)`) → for each channel, read `messages[channel_id]` where `author_id = user`.
+- `user_conversations` (`PK ((user_id), partner_id)`) → for each conversation, read `direct_messages[conversation_id]` where `sender_id = user`.
+
+These are bounded, partition-keyed reads (no cluster-wide scan). Soft-deleted messages (`is_deleted = true`) are excluded.
+
+**Scope.** Only the user's **own messages** - the crown-jewel GDPR data (Discord's export is likewise mostly your messages). Ids stay raw: Chat doesn't own channel or user names (Guild and User do), so the aggregator resolves them when stitching. Coverage of channel messages depends on the user having a `channel_read_states` cursor for the channel (created on activity); a user with no messages returns `200` with empty arrays.
 
 ---
 
@@ -679,6 +714,40 @@ Broadcast (for channels) or sent (for DMs) when another user calls `Typing`. The
   "arguments": [{
     "message_id": "<snowflake>",
     "channel_id": "<snowflake>"
+  }]
+}
+```
+
+---
+
+#### DirectMessageEdited
+
+Sent to both participants' personal SignalR groups when a DM is edited.
+
+```json
+{
+  "target": "DirectMessageEdited",
+  "arguments": [{
+    "id": "<snowflake>",
+    "conversation_id": "<snowflake>",
+    "content": "et la p'tite update du message là mhmmm",
+    "edited_at": "2026-03-09T12:05:00Z"
+  }]
+}
+```
+
+---
+
+#### DirectMessageDeleted
+
+Sent to both participants' personal SignalR groups when a DM is deleted.
+
+```json
+{
+  "target": "DirectMessageDeleted",
+  "arguments": [{
+    "message_id": "<snowflake>",
+    "conversation_id": "<snowflake>"
   }]
 }
 ```

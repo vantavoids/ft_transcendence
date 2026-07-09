@@ -1,14 +1,26 @@
-using Chat.Application.Features.Messages.Common;
+using Chat.Application.Features.Channels.Common;
+using Chat.Application.Features.DirectMessages.Common;
 
 namespace Chat.Presentation.Hubs;
 
 public interface IChatClient
 {
-	Task ReceiveMessage(MessageResponse message);
-	Task MessageEdited(MessageEditedEvent evt);
-	Task MessageDeleted(MessageDeletedEvent evt);
+	Task ReceiveMessage(ChannelMessageResponse message);
+	Task ReceiveDirectMessage(DirectMessageResponse message);
+
+	Task MessageEdited(ChannelMessageEditedEvent evt);
+	Task MessageDeleted(ChannelMessageDeletedEvent evt);
+
+	Task ReactionAdded(ReactionAddedEvent evt);
+	Task ReactionRemoved(ReactionRemovedEvent evt);
+
+	Task DirectMessageEdited(DirectMessageEditedEvent evt);
+	Task DirectMessageDeleted(DirectMessageDeletedEvent evt);
 
 	Task TypingStarted(string userId, string scope, string id, DateTimeOffset expiresAt);
+
+	Task ReadStateUpdated(ChannelReadStateResponse response);
+	Task DmReadStateUpdated(DmReadStateResponse response);
 
 	Task GuildJoined(string guildId, string guildName);
 	Task GuildLeft(string guildId);

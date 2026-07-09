@@ -3,6 +3,7 @@ namespace Chat.Application.Contracts;
 // own-source events published by Chat. consumers in other services bind to
 // these URNs via [MessageUrn("Chat.Application.Contracts:...")] on their side
 public sealed record ChatMessageSent(long ChannelId, long GuildId, long AuthorId, long MessageId, string Content, long[] Mentions);
+public sealed record ChatDmSent(long ConversationId, long MessageId, long SenderId, long RecipientId, string Content);
 public sealed record CallIncoming(long CallId, long CallerId, long CalleeId, string CallType);
 public sealed record UserOnline(long UserId);
 public sealed record UserOffline(long UserId);
