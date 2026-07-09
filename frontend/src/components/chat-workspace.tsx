@@ -39,8 +39,7 @@ import { SettingsModal } from './settings-modal';
 import type { Friend } from './friends-list';
 import { initialMessages } from './mocks/message-mocks';
 import { useNotifications } from '../shared/lib/use-notifications';
-import { clearSession, getUserId } from '../shared/lib/session';
-import { logout } from '../shared/api/auth';
+import { getIdentity, logout } from '../shared/api/auth';
 import {
   listGuildCategories,
   listGuildChannels,
@@ -149,6 +148,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username] = useState('cartoone');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -170,6 +170,27 @@ export function ChatWorkspace() {
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
     setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const identity = await getIdentity();
+        if (!cancelled) {
+          setCurrentUserId(identity.id);
+        }
+      } catch {
+        // best effort: message-ownership checks fall back to the placeholder username until this resolves
+      }
+    }
+
+    loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
