@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Crown, Shield, UserRound } from 'lucide-react';
+import { Crown, Shield } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 import { getDmStatusClasses, type DirectMessage } from './dm-list';
 import { guildMembers } from './mocks/guild-member-mocks';
@@ -124,11 +124,10 @@ function MemberRow({
 }
 
 type GuildMemberListProps = {
-  onToggleVisibility: () => void;
   onOpenProfile: (member: GuildMember) => void;
 };
 
-export function GuildMemberList({ onToggleVisibility, onOpenProfile }: GuildMemberListProps) {
+export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
   const { selectedGuild } = useGuilds();
   const { members, isLoading, error } = useGuildMembers(
     selectedGuild?.id ?? null,
@@ -151,15 +150,6 @@ export function GuildMemberList({ onToggleVisibility, onOpenProfile }: GuildMemb
             {members.length} online and offline
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onToggleVisibility}
-          className="text-aqua transition hover:text-white"
-          aria-label="Hide member list"
-          aria-pressed
-        >
-          <UserRound className="h-5 w-5" strokeWidth={1.8} />
-        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">

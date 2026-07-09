@@ -266,10 +266,9 @@ export function ChatWorkspace() {
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
   }
 
-  function handleSelectGuild(guildId: string) {
+  function handleOpenGuild() {
     scroll.rememberConversationScrollPosition(activeConversationId);
     setChatMode('guild');
-    guildWorkspace.selectGuild(guildId);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
   }
 
@@ -472,7 +471,8 @@ export function ChatWorkspace() {
               id: message.author.toLowerCase(),
               name: message.author,
               role: 'Member',
-              status: message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
+              status:
+                message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
               accent: message.accent,
               activity: 'No recent activity'
             })
@@ -487,10 +487,8 @@ export function ChatWorkspace() {
         <>
           <GuildSidebar
             activeMode={chatMode}
-            guilds={guildWorkspace.guilds}
-            activeGuildId={guildWorkspace.activeGuildId}
             onOpenDms={handleOpenDms}
-            onSelectGuild={handleSelectGuild}
+            onOpenGuild={handleOpenGuild}
           />
 
           {chatMode === 'dm' ? (
@@ -839,10 +837,7 @@ export function ChatWorkspace() {
           </section>
 
           {chatMode === 'guild' && isMemberListOpen ? (
-            <GuildMemberList
-              onToggleVisibility={() => setIsMemberListOpen((current) => !current)}
-              onOpenProfile={setProfileMember}
-            />
+            <GuildMemberList onOpenProfile={setProfileMember} />
           ) : null}
 
           {chatMode === 'dm' && isDmProfileOpen && activeDmProfileMember ? (
