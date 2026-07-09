@@ -262,13 +262,15 @@ function describeMuteState(preference: NotificationPreferenceDto): string {
   if (!preference.muted) {
     return 'Inactive';
   }
-  if (preference.muted_until === null) {
+  const expiry = preference.muted_until == null ? NaN : Date.parse(preference.muted_until);
+  if (Number.isNaN(expiry)) {
+    // no expiry or an unparseable one: never render Invalid Date
     return 'Indefinie';
   }
-  if (Date.parse(preference.muted_until) <= Date.now()) {
+  if (expiry <= Date.now()) {
     return 'Expiree';
   }
-  return `Jusqu au ${new Date(preference.muted_until).toLocaleString('fr-FR', {
+  return `Jusqu au ${new Date(expiry).toLocaleString('fr-FR', {
     dateStyle: 'short',
     timeStyle: 'short'
   })}`;
