@@ -1,19 +1,33 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import { CornerUpLeft, Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import type { MessageAttachmentDto } from '../shared/api/chat';
 
 export type ChatMessageData = {
   id: string;
+  // real author_id once fetched from the API; absent for still-mocked DM messages (epic 4 step 4)
+  authorId?: string;
   author: string;
   accent: 'aqua' | 'yellow' | 'lime' | 'lavender' | 'pink';
   content: string[];
   timestamp: string;
+  // ISO created_at, needed for before_time pagination cursors; absent for mocked messages
+  createdAt?: string;
+  replyToId?: string | null;
+  editedAt?: string | null;
+  attachments?: MessageAttachmentDto[];
   reactions?: Record<string, number>;
+};
+
+export type ReplyPreview = {
+  author: string;
+  snippet: string;
 };
 
 type ChatMessageProps = {
   message: ChatMessageData;
+  replyPreview?: ReplyPreview | null;
   isGrouped: boolean;
   isOwnMessage: boolean;
   isEditing: boolean;
@@ -64,6 +78,7 @@ export function getAccentText(accent: ChatMessageData['accent']) {
 
 export function ChatMessage({
   message,
+  replyPreview,
   isGrouped,
   isOwnMessage,
   isEditing,
@@ -150,6 +165,7 @@ export function ChatMessage({
       {isGrouped ? (
         <span className="mono-detail pt-1 text-right text-[0.72rem] text-white/0 transition group-hover:text-white/35">
           {message.timestamp}
+          {message.editedAt ? ' (edited)' : ''}
         </span>
       ) : (
         <button
@@ -172,9 +188,28 @@ export function ChatMessage({
             >
               {message.author}
             </h3>
-            <span className="mono-detail pb-2 text-xs text-white/35">{message.timestamp}</span>
+            <span className="mono-detail pb-2 text-xs text-white/35">
+              {message.timestamp}
+              {message.editedAt ? ' (edited)' : ''}
+            </span>
           </div>
         )}
+
+        {!isEditing && replyPreview ? (
+          <p className="mono-detail mb-1 flex items-center gap-1.5 text-xs text-white/35">
+            <CornerUpLeft className="h-3 w-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">
+              {replyPreview.author ? (
+                <>
+                  Replying to <span className="text-white/55">{replyPreview.author}</span>:{' '}
+                  {replyPreview.snippet}
+                </>
+              ) : (
+                <>Replying to {replyPreview.snippet}</>
+              )}
+            </span>
+          </p>
+        ) : null}
 
         {isEditing ? (
           <div className={isGrouped ? '' : 'mt-2'}>
