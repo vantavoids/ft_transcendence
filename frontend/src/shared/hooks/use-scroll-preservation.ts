@@ -19,6 +19,7 @@ export type ScrollPreservation = {
   updateNearBottomState: () => void;
   scrollToBottomOnNextRender: () => void;
   scrollToBottom: () => void;
+  scrollToMessage: (messageId: string) => boolean;
 };
 
 // bundles the message-viewport scroll anchoring (restore the same message
@@ -162,6 +163,18 @@ export function useScrollPreservation(
     viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
   }
 
+  // used to jump to a replied-to message; returns whether the target is
+  // actually loaded (e.g. it can be out of the currently-paginated window)
+  function scrollToMessage(messageId: string): boolean {
+    const element = messageRefs.current[messageId];
+    if (!element) {
+      return false;
+    }
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
+  }
+
   return {
     messagesViewportRef,
     composerRef,
@@ -170,6 +183,7 @@ export function useScrollPreservation(
     rememberConversationScrollPosition,
     updateNearBottomState,
     scrollToBottomOnNextRender,
-    scrollToBottom
+    scrollToBottom,
+    scrollToMessage
   };
 }

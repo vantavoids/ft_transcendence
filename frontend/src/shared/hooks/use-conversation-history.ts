@@ -40,7 +40,7 @@ export type ConversationHistory = {
     React.SetStateAction<Record<string, ChatMessageData[]>>
   >;
   loadOlderChannelHistory: (channelId: string) => Promise<void>;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, replyToId?: string | null) => Promise<void>;
   updateMessage: (messageId: string, content: string) => Promise<void>;
   removeMessage: (messageId: string) => Promise<void>;
   toggleReaction: (messageId: string, emoji: string) => Promise<void>;
@@ -153,7 +153,7 @@ export function useConversationHistory(
     }
   }
 
-  async function sendMessage(content: string) {
+  async function sendMessage(content: string, replyToId: string | null = null) {
     if (!conversationId) {
       return;
     }
@@ -177,7 +177,7 @@ export function useConversationHistory(
       content: content ? splitMessageLines(content) : [],
       timestamp: formatMessageTimestamp(nowIso),
       createdAt: nowIso,
-      replyToId: null,
+      replyToId,
       // real attachment metadata (url, mime_type, size) only exists once the
       // real response lands - avoid rendering a broken preview in the meantime
       attachments: []
@@ -194,6 +194,9 @@ export function useConversationHistory(
     }
     if (attachmentIds.length > 0) {
       payload.attachment_ids = attachmentIds;
+    }
+    if (replyToId) {
+      payload.reply_to_id = replyToId;
     }
 
     try {
