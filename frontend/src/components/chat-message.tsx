@@ -1,8 +1,25 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { CornerUpLeft, Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import { CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import type { MessageAttachmentDto } from '../shared/api/chat';
+
+function formatFileSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  const units = ['KB', 'MB', 'GB'];
+  let value = sizeBytes / 1024;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(1)} ${units[unitIndex]}`;
+}
 
 export type ChatMessageData = {
   id: string;
@@ -270,6 +287,39 @@ export function ChatMessage({
             ))}
           </div>
         )}
+
+        {!isEditing && message.attachments && message.attachments.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {message.attachments.map((attachment) =>
+              attachment.mime_type.startsWith('image/') ? (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block max-w-[16rem] overflow-hidden rounded-md border border-white/10"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- same-origin, deployment-specific attachment host, not worth a next/image remotePatterns entry */}
+                  <img src={attachment.url} alt={attachment.filename} className="max-h-64 w-full object-cover" />
+                </a>
+              ) : (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 rounded-md border border-white/10 bg-panel px-3 py-2 text-sm text-white/80 transition hover:border-aqua/40 hover:text-white"
+                >
+                  <FileText className="h-4 w-4 shrink-0" strokeWidth={1.8} />
+                  <span className="truncate">{attachment.filename}</span>
+                  <span className="mono-detail shrink-0 text-xs text-white/35">
+                    {formatFileSize(attachment.size_bytes)}
+                  </span>
+                </a>
+              )
+            )}
+          </div>
+        ) : null}
 
         {reactions.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
