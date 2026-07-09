@@ -76,6 +76,12 @@ public static class DependencyInjection
 					return opts;
 				});
 
+				// publish raw JSON bodies (no MassTransit envelope) so polyglot consumers
+				// (Go/NestJS) read the contract payload directly; the message type travels
+				// in transport headers so .NET consumers still bind.
+				cfg.UseRawJsonSerializer(
+					RawSerializerOptions.AddTransportHeaders | RawSerializerOptions.CopyHeaders);
+
 				cfg.Message<ChatMessageSent>(m => m.SetEntityName("chat.message_sent"));
 				cfg.Message<CallIncoming>(m => m.SetEntityName("call.incoming"));
 				cfg.Message<UserOnline>(m => m.SetEntityName("user.online"));
