@@ -194,7 +194,8 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
                   {invite.code}
                 </p>
                 <p className="truncate text-xs text-white/35">
-                  {invite.uses}/{invite.max_uses ?? '∞'} uses · by {describeCreator(invite.created_by)} ·{' '}
+                  {invite.uses}/{invite.max_uses ?? '∞'} uses · by{' '}
+                  {describeCreator(invite.created_by)} ·{' '}
                   {invite.expires_at ? `expires ${formatDate(invite.expires_at)}` : 'never expires'}
                 </p>
               </div>
@@ -246,7 +247,8 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
               <p className="truncate text-[0.95rem] font-bold text-white">{preview.guild.name}</p>
               <p className="truncate text-xs text-white/35">
                 {preview.guild.member_count ?? '—'} members · invited by @{preview.inviter.username}{' '}
-                · {preview.expires_at ? `expires ${formatDate(preview.expires_at)}` : 'never expires'}
+                ·{' '}
+                {preview.expires_at ? `expires ${formatDate(preview.expires_at)}` : 'never expires'}
               </p>
             </div>
           </div>
