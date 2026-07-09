@@ -306,11 +306,17 @@ export function useNotifications() {
   );
 
   const markAllRead = useCallback(async () => {
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.read ? notification : { ...notification, read: true }
-      )
-    );
+    if (filter.unreadOnly) {
+      // every row in this view just stopped matching the unread-only filter
+      setNotifications([]);
+      setHasMore(false);
+    } else {
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.read ? notification : { ...notification, read: true }
+        )
+      );
+    }
     setUnreadCount(0);
 
     try {
@@ -318,7 +324,7 @@ export function useNotifications() {
     } catch {
       void fetchFeed({ silent: true });
     }
-  }, [fetchFeed]);
+  }, [fetchFeed, filter.unreadOnly]);
 
   const dismiss = useCallback(
     async (notificationId: string) => {
