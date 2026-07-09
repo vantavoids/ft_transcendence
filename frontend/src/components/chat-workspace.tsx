@@ -7,8 +7,10 @@ import {
   ArrowRight,
   CircleEllipsis,
   MessageCircle,
+  Phone,
   Smile,
-  UserRound
+  UserRound,
+  Video
 } from 'lucide-react';
 import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
@@ -33,6 +35,9 @@ import { initialMessages } from './mocks/message-mocks';
 import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
 import { logout } from '../shared/api/auth';
+import { useCall } from '../shared/call/call-context';
+import { IncomingCallOverlay } from './call/incoming-call-overlay';
+import { CallWindow } from './call/call-window';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
@@ -74,6 +79,7 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 
 export function ChatWorkspace() {
   const router = useRouter();
+  const { startCall } = useCall();
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -116,6 +122,31 @@ export function ChatWorkspace() {
 
   const activeDmDetails =
     chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
+  const resolvePeerName = useCallback(
+    (peerId: string | null) =>
+      peerId ? (dmConversations.find((dm) => dm.id === peerId)?.name ?? 'Unknown user') : 'Unknown user',
+    [dmConversations]
+  );
+
+  function startDmCall(callType: 'audio' | 'video') {
+    if (!activeDmDetails) {
+      return;
+    }
+    // TODO(api:chat,user): use the real DM partner id once DMs are hydrated. Until
+    // then the mock DM id isn't a valid snowflake, so in dev we prompt for a real
+    // user id to allow live end-to-end call testing across two accounts.
+    let calleeId = activeDmDetails.id;
+    if (process.env.NODE_ENV !== 'production') {
+      const entered = window.prompt('Dev: callee user id for a live call', calleeId);
+      if (entered === null) {
+        return;
+      }
+      if (entered.trim()) {
+        calleeId = entered.trim();
+      }
+    }
+    void startCall(calleeId, callType);
+  }
   const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
   const activeConversationName =
     chatMode === 'dm'
@@ -610,6 +641,26 @@ export function ChatWorkspace() {
                 )}
               </div>
               <div className="flex items-center gap-4 text-[#8c8c90]">
+                {chatMode === 'dm' && activeDmDetails ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => startDmCall('audio')}
+                      className="transition hover:text-white"
+                      aria-label="Start voice call"
+                    >
+                      <Phone className="h-5 w-5" strokeWidth={1.8} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startDmCall('video')}
+                      className="transition hover:text-white"
+                      aria-label="Start video call"
+                    >
+                      <Video className="h-5 w-5" strokeWidth={1.8} />
+                    </button>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -809,6 +860,9 @@ export function ChatWorkspace() {
               onDisconnect={handleDisconnect}
             />
           ) : null}
+
+          <IncomingCallOverlay resolvePeerName={resolvePeerName} />
+          <CallWindow resolvePeerName={resolvePeerName} />
         </>
       )}
     </div>
