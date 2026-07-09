@@ -220,28 +220,37 @@ export function useGuildWorkspace(): GuildWorkspace {
     };
   }, []);
 
-  // join/leave the hub group for whichever channel is active.
+  // join every channel of the active guild (not just the one being viewed),
+  // so unread badges for other channels update live too.
   useEffect(() => {
-    if (!activeChannel) {
+    if (channels.length === 0) {
       return;
     }
 
-    const channelId = activeChannel;
-    joinChatChannel(channelId).catch(() => {});
-    // best effort: real-time updates for this channel just won't arrive
+    const channelIds = channels.map((channel) => channel.id);
 
-    const unsubscribeReconnect = onChatHubReconnected(() => {
-      joinChatChannel(channelId).catch(() => {});
-    });
+    function joinAll() {
+      for (const channelId of channelIds) {
+        joinChatChannel(channelId).catch(() => {
+          // best effort: real-time updates for this channel just won't arrive
+        });
+      }
+    }
+
+    joinAll();
+
+    const unsubscribeReconnect = onChatHubReconnected(joinAll);
 
     return () => {
       unsubscribeReconnect();
-      leaveChatChannel(channelId).catch(() => {});
+      for (const channelId of channelIds) {
+        leaveChatChannel(channelId).catch(() => {});
+      }
     };
-  }, [activeChannel]);
+  }, [channels]);
 
   useEffect(() => {
-    return onChatHubEvent('ReadStateUpdated', (event) => {
+    const unsubscribeReadState = onChatHubEvent('ReadStateUpdated', (event) => {
       setChannelReadStates((current) => ({
         ...current,
         [event.channel_id]: {
@@ -250,6 +259,27 @@ export function useGuildWorkspace(): GuildWorkspace {
         }
       }));
     });
+
+    // ReadStateUpdated only self-syncs when *you* mark something read - it
+    // never fires just because a new message arrived, so update unread counts
+    // locally on new messages. This fires for all active guild channels.
+    const unsubscribeReceiveMessage = onChatHubEvent('ReceiveMessage', (event) => {
+      setChannelReadStates((current) => {
+        const existing = current[event.channel_id];
+        return {
+          ...current,
+          [event.channel_id]: {
+            lastReadMessageId: existing?.lastReadMessageId ?? null,
+            unreadCount: (existing?.unreadCount ?? 0) + 1
+          }
+        };
+      });
+    });
+
+    return () => {
+      unsubscribeReadState();
+      unsubscribeReceiveMessage();
+    };
   }, []);
 
   function markChannelReadLocally(channelId: string, messageId: string) {
