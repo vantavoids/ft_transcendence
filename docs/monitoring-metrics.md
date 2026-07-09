@@ -48,7 +48,7 @@ NOT part of the cross-language contract (their names differ by runtime):
 
 - .NET: `AddRuntimeInstrumentation()` (GC, threadpool, exceptions)
 - Go: the Go collector (goroutines, GC, heap (vive la stack))
-- Rust: process/runtime metrics as available
+- Node (NestJS): `prom-client` `collectDefaultMetrics()` (heap, event loop, gc)
 
 Services may also expose **domain (business) gauges** via a custom `Meter`, again
 per-service and not part of the cross-language contract. Guild does this with a
@@ -68,7 +68,7 @@ if wanted, need a custom meter.
 |------------|----------|-----------|
 | Auth, Guild, Chat | .NET | `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Runtime`, `OpenTelemetry.Exporter.Prometheus.AspNetCore` |
 | Gateway, Notification | Go | `go.opentelemetry.io/otel` SDK, `otelhttp` middleware, `go.opentelemetry.io/otel/exporters/prometheus` |
-| User | Rust | `opentelemetry` + `opentelemetry-prometheus`. Rust OTel metrics is the least mature link; if it misbehaves, a native Prometheus client (e.g. `metrics-exporter-prometheus`) is acceptable **provided it emits the same metric name and labels above**. The contract is the names, not the tool. |
+| User | NestJS (Node) | `prom-client` (native Prometheus client). The RED histogram name/labels/buckets are hand-matched to the OTel `http.server.request.duration` convention above, plus `collectDefaultMetrics()` for Node runtime metrics. Allowed because **the contract is the names, not the tool**. |
 
 ### .NET reference (Guild)
 
