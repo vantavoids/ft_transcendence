@@ -137,3 +137,55 @@ export function uploadAttachment(file: File) {
     body: formData
   });
 }
+
+export type ReactionResponse = {
+  emoji: string;
+  count: number;
+  me_reacted: boolean;
+};
+
+export function addReaction(messageId: string, emoji: string) {
+  return apiFetch<ReactionResponse>(
+    'chat',
+    `/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+    { method: 'PUT' }
+  );
+}
+
+export function removeReaction(messageId: string, emoji: string) {
+  return apiFetch<ReactionResponse>(
+    'chat',
+    `/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+    { method: 'DELETE' }
+  );
+}
+
+export type ChannelReadStateDto = {
+  channel_id: string;
+  last_read_message_id: string | null;
+  unread_count: number;
+};
+
+export type DmReadStateResponse = {
+  partner_id: string;
+  last_read_message_id: string;
+  unread_count: number;
+};
+
+export function markChannelRead(channelId: string, messageId: string) {
+  return apiFetch<ChannelReadStateDto>('chat', `/channels/${channelId}/read`, {
+    method: 'PUT',
+    body: { message_id: messageId }
+  });
+}
+
+export function markDirectMessageRead(userId: string, messageId: string) {
+  return apiFetch<DmReadStateResponse>('chat', `/dms/${userId}/read`, {
+    method: 'PUT',
+    body: { message_id: messageId }
+  });
+}
+
+export function listChannelReadStates() {
+  return apiFetch<ChannelReadStateDto[]>('chat', '/channels/read-states');
+}

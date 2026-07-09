@@ -1,4 +1,4 @@
-import type { ChatMessageData } from '../../components/chat-message';
+import type { ChatMessageData, ReactionSummary } from '../../components/chat-message';
 import type { DirectMessage } from '../../components/dm-list';
 import type {
   ChannelMessageDto,
@@ -38,12 +38,16 @@ export function authorLabel(authorId: string, currentUserId: string | null): str
   return authorId === currentUserId ? 'You' : `User ${authorId}`;
 }
 
-function reactionsToRecord(reactions: MessageReactionDto[]): Record<string, number> | undefined {
+function mapReactions(reactions: MessageReactionDto[]): ReactionSummary[] | undefined {
   if (reactions.length === 0) {
     return undefined;
   }
 
-  return Object.fromEntries(reactions.map((reaction) => [reaction.emoji, reaction.count]));
+  return reactions.map(({emoji, count, me_reacted}) => ({
+    emoji,
+    count,
+    meReacted: me_reacted
+  }));
 }
 
 export function mapChannelMessage(
@@ -61,7 +65,7 @@ export function mapChannelMessage(
     replyToId: dto.reply_to_id,
     editedAt: dto.edited_at,
     attachments: dto.attachments,
-    reactions: reactionsToRecord(dto.reactions)
+    reactions: mapReactions(dto.reactions)
   };
 }
 
