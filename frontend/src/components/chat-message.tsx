@@ -45,6 +45,10 @@ export type ChatMessageData = {
   // set when the optimistic send failed - neither the 201 nor a matching
   // ReceiveMessage/ReceiveDirectMessage arrived (docs/contracts/chat.md nonce semantics)
   failed?: boolean;
+  // true from the optimistic bubble's creation until the real server message
+  // replaces it - id is a client-side nonce (not a real snowflake) until then,
+  // so anything needing a real message id (e.g. marking read) must skip it
+  pending?: boolean;
 };
 
 export type ReplyPreview = {
