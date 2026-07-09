@@ -1,5 +1,4 @@
 using Chat.Application.Abstractions;
-using Chat.Application.Abstractions.Authentication;
 using Chat.Application.Contracts;
 using Chat.Domain.Results;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +11,6 @@ namespace Chat.Presentation.Hubs;
 public sealed class ChatHub(
 	IGuildClient guildClient,
 	IUserClient userClient,
-	ICurrentUser currentUser,
 	UserConnectionTracker connectionTracker,
 	IEventBus eventBus,
 	IClock clock,
@@ -28,21 +26,21 @@ public sealed class ChatHub(
 
 	public override async Task OnConnectedAsync()
 	{
-		if (connectionTracker.TrackConnected(currentUser.UserId, Context.ConnectionId, Context))
-			await eventBus.PublishAsync(new UserOnline(currentUser.UserId), CancellationToken.None);
+		if (connectionTracker.TrackConnected(Context.GetUserId(), Context.ConnectionId, Context))
+			await eventBus.PublishAsync(new UserOnline(Context.GetUserId()), CancellationToken.None);
 		await base.OnConnectedAsync();
 	}
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
-		if (connectionTracker.TrackDisconnected(currentUser.UserId, Context.ConnectionId))
-			await eventBus.PublishAsync(new UserOffline(currentUser.UserId), CancellationToken.None);
+		if (connectionTracker.TrackDisconnected(Context.GetUserId(), Context.ConnectionId))
+			await eventBus.PublishAsync(new UserOffline(Context.GetUserId()), CancellationToken.None);
 		await base.OnDisconnectedAsync(exception);
 	}
 
 	public async Task JoinChannel(long channelId)
 	{
-		var membership = await guildClient.GetMembershipAsync(channelId, currentUser.UserId, Context.ConnectionAborted);
+		var membership = await guildClient.GetMembershipAsync(channelId, Context.GetUserId(), Context.ConnectionAborted);
 
 		if (membership is null || !membership.IsMember)
 		{
@@ -57,19 +55,19 @@ public sealed class ChatHub(
 		}
 
 		await Groups.AddToGroupAsync(Context.ConnectionId, $"channel:{channelId}", Context.ConnectionAborted);
-		connectionTracker.TrackChannelJoined(currentUser.UserId, Context.ConnectionId, channelId, membership.GuildId);
+		connectionTracker.TrackChannelJoined(Context.GetUserId(), Context.ConnectionId, channelId, membership.GuildId);
 	}
 
 	public async Task LeaveChannel(long channelId)
 	{
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"channel:{channelId}");
-		connectionTracker.TrackChannelLeft(currentUser.UserId, Context.ConnectionId, channelId);
+		connectionTracker.TrackChannelLeft(Context.GetUserId(), Context.ConnectionId, channelId);
 	}
 
 	public async Task Typing(string scope, long id)
 	{
 		var now = clock.UtcNow;
-		var cacheKey = $"typing:{currentUser.UserId}:{scope}:{id}";
+		var cacheKey = $"typing:{Context.GetUserId()}:{scope}:{id}";
 
 		if (cache.TryGetValue(cacheKey, out DateTimeOffset until) && until > now)
 			return;
@@ -92,12 +90,12 @@ public sealed class ChatHub(
 		cache.Set(cacheKey, expiry, TimeSpan.FromSeconds(TypingRateLimitDuration));
 
 		var recipient = (scope == "channel") ? Clients.OthersInGroup($"channel:{id}") : Clients.User(id.ToString());
-		await recipient.TypingStarted(currentUser.UserId.ToString(), scope, id.ToString(), now.AddSeconds(TypingExpirationDelay));
+		await recipient.TypingStarted(Context.GetUserId().ToString(), scope, id.ToString(), now.AddSeconds(TypingExpirationDelay));
 	}
 
 	private async Task<Failure?> ValidateChannelTypingAsync(long channelId)
 	{
-		var membership = await guildClient.GetMembershipAsync(channelId, currentUser.UserId, Context.ConnectionAborted);
+		var membership = await guildClient.GetMembershipAsync(channelId, Context.GetUserId(), Context.ConnectionAborted);
 		if (membership is null)
 			return MessageFailures.ChannelNotFound;
 
@@ -110,7 +108,7 @@ public sealed class ChatHub(
 
 	private async Task<Failure?> ValidateDmTypingAsync(long partnerId)
 	{
-		var relationship = await userClient.GetUsersRelationship(currentUser.UserId, partnerId, Context.ConnectionAborted);
+		var relationship = await userClient.GetUsersRelationship(Context.GetUserId(), partnerId, Context.ConnectionAborted);
 		if (relationship is null)
 			return MessageFailures.UserNotFound;
 
