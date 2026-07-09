@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CircleEllipsis,
+  CornerUpLeft,
   MessageCircle,
   Paperclip,
   Smile,
@@ -86,11 +87,22 @@ export function ChatWorkspace() {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<ChatMessageData | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
   const dmWorkspace = useDmWorkspace();
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
@@ -111,6 +123,11 @@ export function ChatWorkspace() {
       : getChannelName(guildWorkspace.activeChannel ?? '', guildWorkspace.channels);
 
   const conversationHistory = useConversationHistory(chatMode, activeConversationId, currentUserId);
+
+  // don't carry a reply target across conversations
+  useEffect(() => {
+    setReplyTarget(null);
+  }, [activeConversationId]);
 
   const activeMessages = useMemo(
     () => (activeConversationId ? (conversationHistory.messagesByConversation[activeConversationId] ?? []) : []),
@@ -306,8 +323,9 @@ export function ChatWorkspace() {
       return;
     }
 
-    conversationHistory.sendMessage(content);
+    conversationHistory.sendMessage(content, replyTarget?.id ?? null);
     scroll.scrollToBottomOnNextRender();
+    setReplyTarget(null);
 
     if (chatMode === 'dm') {
       const previewTimestamp = new Date().toLocaleTimeString('fr-FR', {
@@ -375,6 +393,32 @@ export function ChatWorkspace() {
   function handleCancelEdit() {
     setEditingMessageId(null);
     setEditingDraft('');
+  }
+
+  function handleStartReply(message: ChatMessageData) {
+    setReplyTarget(message);
+    scroll.composerRef.current?.focus();
+  }
+
+  function handleCancelReply() {
+    setReplyTarget(null);
+  }
+
+  function handleJumpToMessage(messageId: string) {
+    const found = scroll.scrollToMessage(messageId);
+    if (!found) {
+      return;
+    }
+
+    if (highlightTimeoutRef.current !== null) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+
+    setHighlightedMessageId(messageId);
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedMessageId((current) => (current === messageId ? null : current));
+      highlightTimeoutRef.current = null;
+    }, 1600);
   }
 
   async function handleSaveEdit(messageId: string) {
@@ -601,6 +645,7 @@ export function ChatWorkspace() {
                         isGrouped={isGrouped}
                         isOwnMessage={isOwnMessage}
                         isEditing={isEditing}
+                        isHighlighted={highlightedMessageId === message.id}
                         editingDraft={editingDraft}
                         canReact={chatMode === 'guild'}
                         onEditDraftChange={setEditingDraft}
@@ -609,6 +654,8 @@ export function ChatWorkspace() {
                         onCancelEdit={handleCancelEdit}
                         onDelete={handleDeleteMessage}
                         onToggleReaction={conversationHistory.toggleReaction}
+                        onReply={handleStartReply}
+                        onJumpToReply={handleJumpToMessage}
                         onOpenAuthorProfile={handleOpenAuthorProfile}
                         setMessageRef={scroll.setMessageRef}
                       />
@@ -635,6 +682,25 @@ export function ChatWorkspace() {
                 onChange={handleFilesSelected}
                 className="hidden"
               />
+              {replyTarget ? (
+                <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-white/10 bg-panel px-3 py-2 text-xs text-white/60">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <CornerUpLeft className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                    <span className="truncate">
+                      Replying to <span className="text-white/85">{replyTarget.author}</span>:{' '}
+                      {replyTarget.content[0] ?? ''}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCancelReply}
+                    aria-label="Cancel reply"
+                    className="shrink-0 text-white/40 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={2} />
+                  </button>
+                </div>
+              ) : null}
               {conversationHistory.pendingAttachments.length > 0 ? (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {conversationHistory.pendingAttachments.map((attachment) => (
