@@ -43,7 +43,7 @@ export function isScopeMuted(
       preference.scope_type === scopeType &&
       preference.scope_id === scopeId &&
       preference.muted &&
-      (preference.muted_until === null || Date.parse(preference.muted_until) > now)
+      (preference.muted_until == null || Date.parse(preference.muted_until) > now)
   );
 }
 

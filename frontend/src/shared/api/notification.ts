@@ -60,7 +60,9 @@ export type NotificationPreferenceDto = {
   scope_type: NotificationScopeType;
   scope_id: string;
   muted: boolean;
-  muted_until: string | null;
+  // null for indefinite mutes; kept optional so an omitted field (older
+  // service builds serialized with omitempty) reads the same as null
+  muted_until?: string | null;
 };
 
 export type UpdateNotificationPreferencePayload = {
