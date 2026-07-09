@@ -56,11 +56,48 @@ export type EditMessageResponse = {
   edited_at: string;
 };
 
+export type SendMessagePayload = {
+  content?: string;
+  reply_to_id?: string | null;
+  attachment_ids?: string[];
+  nonce?: string;
+};
+
+export type SendChannelMessageResponse = ChannelMessageDto & { nonce: string | null };
+
+// unlike ChannelMessageDto's response, DM send echoes conversation_id and nonce
+// but never edited_at/reactions (docs/contracts/chat.md:215-259)
+export type SendDirectMessageResponse = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string | null;
+  reply_to_id: string | null;
+  created_at: string;
+  attachments: MessageAttachmentDto[];
+  nonce: string | null;
+};
+
 export function listChannelMessages(
   channelId: string,
   query?: { before_time?: string; limit?: number }
 ) {
   return apiFetch<ChannelMessageDto[]>('chat', `/channels/${channelId}/messages`, { query });
+}
+
+export function sendChannelMessage(channelId: string, payload: SendMessagePayload) {
+  return apiFetch<SendChannelMessageResponse>('chat', `/channels/${channelId}/messages`, {
+    method: 'POST',
+    body: payload
+  });
+}
+
+export function sendDirectMessage(userId: string, payload: SendMessagePayload) {
+  return apiFetch<SendDirectMessageResponse>('chat', `/dms/${userId}/messages`, {
+    method: 'POST',
+    body: payload
+  });
 }
 
 export function editMessage(messageId: string, payload: EditMessagePayload) {
