@@ -69,6 +69,7 @@ type ChatMessageProps = {
   onToggleReaction: (messageId: string, emoji: string) => void;
   onReply: (message: ChatMessageData) => void;
   onJumpToReply: (messageId: string) => void;
+  onRetryMessage: (messageId: string) => void;
   onOpenAuthorProfile?: (message: ChatMessageData) => void;
   setMessageRef: (messageId: string, element: HTMLElement | null) => void;
 };
@@ -126,11 +127,31 @@ export function ChatMessage({
   onToggleReaction,
   onReply,
   onJumpToReply,
+  onRetryMessage,
   onOpenAuthorProfile,
   setMessageRef
 }: ChatMessageProps) {
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const reactions = message.reactions ?? [];
+
+  function renderFailedMarker() {
+    if (!message.failed) {
+      return null;
+    }
+
+    return (
+      <p className="mono-detail mt-1 flex items-center gap-1.5 text-xs text-pink">
+        Failed to send
+        <button
+          type="button"
+          onClick={() => onRetryMessage(message.id)}
+          className="text-aqua underline-offset-2 hover:underline"
+        >
+          Retry
+        </button>
+      </p>
+    );
+  }
 
   useEffect(() => {
     if (!isEditing) {
@@ -213,7 +234,6 @@ export function ChatMessage({
         <span className="mono-detail pt-1 text-right text-[0.72rem] text-white/0 transition group-hover:text-white/35">
           {message.timestamp}
           {message.editedAt ? ' (edited)' : ''}
-          {message.failed ? <span className="text-pink"> · Failed to send</span> : null}
         </span>
       ) : (
         <button
@@ -239,7 +259,6 @@ export function ChatMessage({
             <span className="mono-detail pb-2 text-xs text-white/35">
               {message.timestamp}
               {message.editedAt ? ' (edited)' : ''}
-              {message.failed ? <span className="text-pink"> · Failed to send</span> : null}
             </span>
           </div>
         )}
@@ -318,6 +337,8 @@ export function ChatMessage({
             ))}
           </div>
         )}
+
+        {!isEditing ? renderFailedMarker() : null}
 
         {!isEditing && message.attachments && message.attachments.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">

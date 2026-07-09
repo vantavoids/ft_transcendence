@@ -682,6 +682,7 @@ export function ChatWorkspace() {
                         onToggleReaction={conversationHistory.toggleReaction}
                         onReply={handleStartReply}
                         onJumpToReply={handleJumpToMessage}
+                        onRetryMessage={conversationHistory.retryMessage}
                         onOpenAuthorProfile={handleOpenAuthorProfile}
                         setMessageRef={scroll.setMessageRef}
                       />
