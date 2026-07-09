@@ -40,6 +40,8 @@ type ChannelListProps = {
 };
 
 export function getChannelName(channelId: string, channels: TextChannel[]) {
+  if (channelId.length === 0)
+    return channelId;
   return channels.find((channel) => channel.id === channelId)?.name ?? channelId;
 }
 
