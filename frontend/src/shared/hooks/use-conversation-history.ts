@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChatMessageData } from '../../components/chat-message';
 import {
+  addReaction,
   deleteMessage as deleteMessageApi,
   editMessage as editMessageApi,
   listChannelMessages,
   listDirectMessageHistory,
+  removeReaction,
   sendChannelMessage,
   sendDirectMessage,
   uploadAttachment,
@@ -41,6 +43,7 @@ export type ConversationHistory = {
   sendMessage: (content: string) => Promise<void>;
   updateMessage: (messageId: string, content: string) => Promise<void>;
   removeMessage: (messageId: string) => Promise<void>;
+  toggleReaction: (messageId: string, emoji: string) => Promise<void>;
   pendingAttachments: PendingAttachment[];
   uploadAttachments: (files: File[]) => void;
   removePendingAttachment: (attachmentId: string) => void;
@@ -303,6 +306,44 @@ export function useConversationHistory(
     }));
   }
 
+  // channel messages only - the contract has no DM reaction table
+  async function toggleReaction(messageId: string, emoji: string) {
+    if (!conversationId || mode !== 'guild') {
+      return;
+    }
+
+    const message = (messagesByConversation[conversationId] ?? []).find((m) => m.id === messageId);
+    const alreadyReacted = message?.reactions?.some((r) => r.emoji === emoji && r.meReacted) ?? false;
+
+    try {
+      const response = alreadyReacted
+        ? await removeReaction(messageId, emoji)
+        : await addReaction(messageId, emoji);
+
+      setMessagesByConversation((current) => ({
+        ...current,
+        [conversationId]: (current[conversationId] ?? []).map((m) => {
+          if (m.id !== messageId) {
+            return m;
+          }
+
+          const otherReactions = (m.reactions ?? []).filter((r) => r.emoji !== emoji);
+          const nextReactions =
+            response.count > 0
+              ? [
+                  ...otherReactions,
+                  { emoji: response.emoji, count: response.count, meReacted: response.me_reacted }
+                ]
+              : otherReactions;
+
+          return { ...m, reactions: nextReactions.length > 0 ? nextReactions : undefined };
+        })
+      }));
+    } catch {
+      // best effort: leave reactions as-is, allow the user to retry
+    }
+  }
+
   return {
     messagesByConversation,
     setMessagesByConversation,
@@ -310,6 +351,7 @@ export function useConversationHistory(
     sendMessage,
     updateMessage,
     removeMessage,
+    toggleReaction,
     pendingAttachments: conversationId ? (pendingAttachmentsByConversation[conversationId] ?? []) : [],
     uploadAttachments,
     removePendingAttachment

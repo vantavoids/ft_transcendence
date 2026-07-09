@@ -32,6 +32,7 @@ import { SettingsModal } from './settings-modal';
 import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
 import { logout } from '../shared/api/auth';
+import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
@@ -124,6 +125,67 @@ export function ChatWorkspace() {
     conversationHistory.messagesByConversation,
     isHydrated
   );
+
+  const channelUnreadCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const [channelId, state] of Object.entries(guildWorkspace.channelReadStates)) {
+      counts[channelId] = state.unreadCount;
+    }
+    return counts;
+  }, [guildWorkspace.channelReadStates]);
+
+  // mark the active conversation as read once its latest message is actually
+  // in view, rather than as soon as it's selected
+  useEffect(() => {
+    if (!scroll.isNearBottom || !activeConversationId) {
+      return;
+    }
+
+    const latestMessage = activeMessages[activeMessages.length - 1];
+    if (!latestMessage?.id) {
+      return;
+    }
+
+    if (chatMode === 'guild') {
+      const channelId = activeConversationId;
+      if (guildWorkspace.channelReadStates[channelId]?.lastReadMessageId === latestMessage.id) {
+        return;
+      }
+
+      markChannelRead(channelId, latestMessage.id)
+        .then(() => guildWorkspace.markChannelReadLocally(channelId, latestMessage.id))
+        .catch(() => {
+          // best effort: retry next time the viewport is at the bottom with a new message
+        });
+    } else {
+      const partnerId = activeConversationId;
+      const currentUnreadCount =
+        dmWorkspace.dmConversations.find((dm) => dm.id === partnerId)?.unreadCount ?? 0;
+      if (currentUnreadCount === 0) {
+        return;
+      }
+
+      markDirectMessageRead(partnerId, latestMessage.id)
+        .then(() => {
+          dmWorkspace.setDmConversations((current) =>
+            current.map((dm) => (dm.id === partnerId ? { ...dm, unreadCount: 0 } : dm))
+          );
+        })
+        .catch(() => {
+          // best effort: retry next time the viewport is at the bottom
+        });
+    }
+    // guildWorkspace/dmWorkspace are fresh objects every render (not memoized) -
+    // only their data fields belong in the trigger condition, not the whole objects
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    chatMode,
+    activeConversationId,
+    scroll.isNearBottom,
+    activeMessages,
+    guildWorkspace.channelReadStates,
+    dmWorkspace.dmConversations
+  ]);
 
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
@@ -307,35 +369,6 @@ export function ChatWorkspace() {
     }));
   }
 
-  function handleToggleReaction(messageId: string) {
-    if (!activeConversationId) {
-      return;
-    }
-
-    conversationHistory.setMessagesByConversation((current) => ({
-      ...current,
-      [activeConversationId]: (current[activeConversationId] ?? []).map((message) => {
-        if (message.id !== messageId) {
-          return message;
-        }
-
-        const currentCount = message.reactions?.['👍'] ?? 0;
-        const nextReactions = { ...message.reactions };
-
-        if (currentCount > 0) {
-          delete nextReactions['👍'];
-        } else {
-          nextReactions['👍'] = 1;
-        }
-
-        return {
-          ...message,
-          reactions: Object.keys(nextReactions).length > 0 ? nextReactions : undefined
-        };
-      })
-    }));
-  }
-
   function handleStartEdit(message: ChatMessageData) {
     setEditingMessageId(message.id);
     setEditingDraft(message.content.join('\n'));
@@ -436,6 +469,7 @@ export function ChatWorkspace() {
             <ChannelList
               activeChannel={guildWorkspace.activeChannel ?? ''}
               categories={guildWorkspace.channelCategories}
+              unreadCounts={channelUnreadCounts}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
@@ -592,12 +626,13 @@ export function ChatWorkspace() {
                         isOwnMessage={isOwnMessage}
                         isEditing={isEditing}
                         editingDraft={editingDraft}
+                        canReact={chatMode === 'guild'}
                         onEditDraftChange={setEditingDraft}
                         onStartEdit={handleStartEdit}
                         onSaveEdit={handleSaveEdit}
                         onCancelEdit={handleCancelEdit}
                         onDelete={handleDeleteMessage}
-                        onToggleReaction={handleToggleReaction}
+                        onToggleReaction={conversationHistory.toggleReaction}
                         onOpenAuthorProfile={handleOpenAuthorProfile}
                         setMessageRef={scroll.setMessageRef}
                       />
