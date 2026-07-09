@@ -69,7 +69,7 @@ function performRequest(
 // single-flight: concurrent 401s share one refresh instead of stampeding
 let refreshInFlight: Promise<string | null> | null = null;
 
-function refreshAccessToken(): Promise<string | null> {
+export function refreshAccessToken(): Promise<string | null> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       try {
