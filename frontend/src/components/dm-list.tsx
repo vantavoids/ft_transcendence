@@ -49,6 +49,8 @@ type DmListProps = {
 };
 
 export function getDmName(dmId: string, dms: DirectMessage[]) {
+  if (dmId.length === 0)
+    return dmId;
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 

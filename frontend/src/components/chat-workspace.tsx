@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -18,102 +18,31 @@ import {
   type ChatMessageData,
   type ReplyPreview
 } from './chat-message';
-import {
-  ChannelList,
-  getChannelName,
-  hasChannel,
-  type ChannelCategory,
-  type TextChannel
-} from './channel-list';
-import {
-  DmList,
-  getDmDetails,
-  getDmName,
-  getDmStatusClasses,
-  hasDm,
-  type DirectMessage
-} from './dm-list';
+import { ChannelList, getChannelName } from './channel-list';
+import { DmList, getDmDetails, getDmName, getDmStatusClasses } from './dm-list';
 import {
   getGuildMemberByName,
   GuildMemberList,
   type GuildMember
 } from './guild-member-list';
-import { GuildSidebar, type Guild } from './guild-sidebar';
+import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
 import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
-import { getIdentity, logout } from '../shared/api/auth';
-import {
-  listGuildCategories,
-  listGuildChannels,
-  listMyGuilds,
-  type GuildCategoryDto,
-  type GuildChannelDto,
-  type MyGuildDto
-} from '../shared/api/guild';
-import {
-  archiveDirectMessageConversation,
-  listChannelMessages,
-  listDirectMessageHistory,
-  listDirectMessages
-} from '../shared/api/chat';
-import { ApiError } from '../shared/api/client';
-import { mapChannelMessage, mapDirectMessage, mapDirectMessageConversation } from '../shared/mappers/chat';
+import { logout } from '../shared/api/auth';
+import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
+import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
+import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
+import { useConversationHistory } from '../shared/hooks/use-conversation-history';
+import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
-const LAST_CHAT_GUILD_KEY = 'ft_transcendence_last_chat_guild';
-const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
-const LAST_CHAT_DM_KEY = 'ft_transcendence_last_chat_dm';
-const BOTTOM_THRESHOLD_PX = 96;
-const TOP_THRESHOLD_PX = 96;
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
-const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
-const MESSAGE_HISTORY_PAGE_SIZE = 50;
-
-function guildIconUrl(guild: MyGuildDto) {
-  if (guild.icon_url) {
-    return guild.icon_url;
-  }
-
-  const initial = encodeURIComponent(guild.name.slice(0, 1).toUpperCase() || 'G');
-  return `https://placehold.co/160x160/23232b/e8e8ec/png?text=${initial}`;
-}
-
-function buildChannelCategories(
-  channels: GuildChannelDto[],
-  categories: GuildCategoryDto[]
-): ChannelCategory[] {
-  const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
-
-  const grouped: ChannelCategory[] = sortedCategories.map((category) => ({
-    id: category.id,
-    name: category.name,
-    channels: channels
-      .filter((channel) => channel.category_id === category.id)
-      .sort((a, b) => a.position - b.position)
-      .map((channel) => ({ id: channel.id, name: channel.name }))
-  }));
-
-  const uncategorized = channels
-    .filter((channel) => !channel.category_id)
-    .sort((a, b) => a.position - b.position)
-    .map((channel) => ({ id: channel.id, name: channel.name }));
-
-  if (uncategorized.length > 0) {
-    grouped.push({ id: UNCATEGORIZED_CATEGORY_ID, name: 'Channels', channels: uncategorized });
-  }
-
-  return grouped;
-}
+const TOP_THRESHOLD_PX = 96;
 
 type ChatMode = 'guild' | 'dm';
-
-type ChannelScrollPosition = {
-  messageId: string;
-  topOffset: number;
-};
 
 const emojiOptions = ['😀', '😅', '🤣', '😂', '🙂', '🙃', '🤔', '😎', '🥳', '😍', '😘', '😉'];
 
@@ -142,36 +71,14 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 
 export function ChatWorkspace() {
   const router = useRouter();
-  const { startCall } = useCall();
-  const messagesViewportRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-  const messageRefs = useRef<Record<string, HTMLElement | null>>({});
-  const conversationScrollPositions = useRef<Record<string, ChannelScrollPosition>>({});
-  const pendingScrollBottom = useRef(false);
-  const isRestoringScroll = useRef(false);
-  const isFetchingOlderHistory = useRef<Record<string, boolean>>({});
-  const hasMoreChannelHistory = useRef<Record<string, boolean>>({});
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
-  const [guilds, setGuilds] = useState<Guild[]>([]);
-  const [activeGuildId, setActiveGuildId] = useState<string | null>(null);
-  const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([]);
-  const [channels, setChannels] = useState<TextChannel[]>([]);
-  const [activeChannel, setActiveChannel] = useState<string | null>(null);
-  const [activeDm, setActiveDm] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
-  const [isNearBottom, setIsNearBottom] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username] = useState('cartoone');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
-  const [showArchivedDms, setShowArchivedDms] = useState(false);
-  const [messagesByConversation, setMessagesByConversation] = useState<
-    Record<string, ChatMessageData[]>
-  >({});
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -181,297 +88,44 @@ export function ChatWorkspace() {
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
   const notificationFeed = useNotifications();
 
+  const currentUserId = useCurrentUserId();
+  const guildWorkspace = useGuildWorkspace();
+  const dmWorkspace = useDmWorkspace();
+
   useEffect(() => {
     // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
-
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setIsHydrated(true);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCurrentUser() {
-      try {
-        const identity = await getIdentity();
-        if (!cancelled) {
-          setCurrentUserId(identity.id);
-        }
-      } catch {
-        // best effort: message-ownership checks fall back to the placeholder username until this resolves
-      }
-    }
-
-    loadCurrentUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadGuilds() {
-      try {
-        const dtos = await listMyGuilds();
-        if (cancelled)
-          return;
-
-        const sorted = [...dtos].sort((a, b) => b.joined_at.localeCompare(a.joined_at));
-        setGuilds(
-          sorted.map((guild) => ({ id: guild.id, name: guild.name, iconUrl: guildIconUrl(guild) }))
-        );
-
-        const storedGuildId = window.sessionStorage.getItem(LAST_CHAT_GUILD_KEY);
-        const initialGuildId = sorted.some((guild) => guild.id === storedGuildId)
-          ? storedGuildId
-          : (sorted[0]?.id ?? null);
-        setActiveGuildId(initialGuildId);
-      } catch {
-        // best effort: leave the sidebar empty if the guild service is unreachable
-      }
-    }
-
-    loadGuilds();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!activeGuildId) {
-      setChannelCategories([]);
-      setChannels([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadChannels(guildId: string) {
-      try {
-        const [channelDtos, categoryDtos] = await Promise.all([
-          listGuildChannels(guildId),
-          listGuildCategories(guildId)
-        ]);
-        if (cancelled) {
-          return;
-        }
-
-        const flatChannels: TextChannel[] = channelDtos.map((channel) => ({
-          id: channel.id,
-          name: channel.name
-        }));
-        setChannelCategories(buildChannelCategories(channelDtos, categoryDtos));
-        setChannels(flatChannels);
-
-        const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
-        const initialChannelId =
-          storedChannelId && hasChannel(storedChannelId, flatChannels)
-            ? storedChannelId
-            : (flatChannels[0]?.id ?? null);
-        setActiveChannel(initialChannelId);
-      } catch {
-        if (!cancelled) {
-          setChannelCategories([]);
-          setChannels([]);
-        }
-      }
-    }
-
-    loadChannels(activeGuildId);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeGuildId]);
-
-  useEffect(() => {
-    if (!activeChannel) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadHistory(channelId: string) {
-      try {
-        const dtos = await listChannelMessages(channelId, { limit: MESSAGE_HISTORY_PAGE_SIZE });
-        if (cancelled) {
-          return;
-        }
-
-        hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
-        const mapped = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
-        setMessagesByConversation((current) => ({ ...current, [channelId]: mapped }));
-      } catch {
-        // best effort: leave any previously-loaded history in place
-      }
-    }
-
-    loadHistory(activeChannel);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChannel, currentUserId]);
-
-  async function loadOlderChannelHistory(channelId: string) {
-    if (isFetchingOlderHistory.current[channelId] || hasMoreChannelHistory.current[channelId] === false) {
-      return;
-    }
-
-    const oldestMessage = messagesByConversation[channelId]?.[0];
-    if (!oldestMessage?.createdAt) {
-      return;
-    }
-
-    isFetchingOlderHistory.current[channelId] = true;
-    rememberConversationScrollPosition(channelId);
-
-    try {
-      const dtos = await listChannelMessages(channelId, {
-        before_time: oldestMessage.createdAt,
-        limit: MESSAGE_HISTORY_PAGE_SIZE
-      });
-
-      hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
-
-      if (dtos.length > 0) {
-        const olderMessages = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
-        setMessagesByConversation((current) => ({
-          ...current,
-          [channelId]: [...olderMessages, ...(current[channelId] ?? [])]
-        }));
-      }
-    } catch {
-      // best effort: leave existing history in place, retry on the next scroll-to-top
-    } finally {
-      isFetchingOlderHistory.current[channelId] = false;
-    }
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDms() {
-      try {
-        const dtos = await listDirectMessages({ include_archived: showArchivedDms });
-        if (cancelled) {
-          return;
-        }
-
-        const mapped = dtos.map(mapDirectMessageConversation);
-        setDmConversations(mapped);
-
-        const storedDmId = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
-        if (storedDmId && hasDm(storedDmId, mapped)) {
-          setActiveDm(storedDmId);
-        }
-      } catch {
-        // best effort: leave the DM list empty if the chat service is unreachable
-      }
-    }
-
-    loadDms();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showArchivedDms]);
-
-  useEffect(() => {
-    if (chatMode !== 'dm' || !activeDm) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadDmHistory(partnerId: string) {
-      try {
-        const dtos = await listDirectMessageHistory(partnerId, { limit: MESSAGE_HISTORY_PAGE_SIZE });
-        if (cancelled) {
-          return;
-        }
-
-        const mapped = [...dtos].reverse().map((dto) => mapDirectMessage(dto, currentUserId));
-        setMessagesByConversation((current) => ({ ...current, [partnerId]: mapped }));
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        // no conversation started yet with this partner - an empty history, not an error
-        if (error instanceof ApiError && error.status === 404) {
-          setMessagesByConversation((current) => ({ ...current, [partnerId]: [] }));
-        }
-      }
-    }
-
-    loadDmHistory(activeDm);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeDm, chatMode, currentUserId]);
-
-  async function handleArchiveDm(dmId: string) {
-    try {
-      await archiveDirectMessageConversation(dmId);
-
-      if (showArchivedDms) {
-        setDmConversations((current) =>
-          current.map((dm) => (dm.id === dmId ? { ...dm, isArchived: true } : dm))
-        );
-      } else {
-        setDmConversations((current) => current.filter((dm) => dm.id !== dmId));
-      }
-
-      if (activeDm === dmId) {
-        setActiveDm(null);
-      }
-    } catch {
-      // best effort: leave the list as-is, allow the user to retry
-    }
-  }
-
-  function handleToggleShowArchivedDms() {
-    setShowArchivedDms((current) => !current);
-  }
-
   const activeDmDetails =
-    chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
-  const resolvePeerName = useCallback(
-    (peerId: string | null) =>
-      peerId ? (dmConversations.find((dm) => dm.id === peerId)?.name ?? 'Unknown user') : 'Unknown user',
-    [dmConversations]
-  );
-
-  function startDmCall(callType: 'audio' | 'video') {
-    if (!activeDmDetails) {
-      return;
-    }
-    // the DM id is now the partner's real user snowflake (hydrated from GET /chat/dms),
-    // so it is a valid callee for the signaling hub.
-    void startCall(activeDmDetails.id, callType);
-  }
-  const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
+    chatMode === 'dm' && dmWorkspace.activeDm
+      ? getDmDetails(dmWorkspace.activeDm, dmWorkspace.dmConversations)
+      : null;
+  const activeConversationId =
+    chatMode === 'dm' ? (activeDmDetails?.id ?? null) : guildWorkspace.activeChannel;
   const activeConversationName =
     chatMode === 'dm'
-      ? activeDmDetails
-        ? getDmName(activeDmDetails.id, dmConversations)
-        : ''
-      : activeChannel
-        ? getChannelName(activeChannel, channels)
-        : '';
+      ? getDmName(activeDmDetails?.id ?? '', dmWorkspace.dmConversations)
+      : getChannelName(guildWorkspace.activeChannel ?? '', guildWorkspace.channels);
+
+  const { messagesByConversation, setMessagesByConversation, loadOlderChannelHistory } =
+    useConversationHistory(chatMode, activeConversationId, currentUserId);
+
   const activeMessages = useMemo(
     () => (activeConversationId ? (messagesByConversation[activeConversationId] ?? []) : []),
     [activeConversationId, messagesByConversation]
   );
-  const activeDraft = activeConversationId
-    ? (draftsByConversation[activeConversationId] ?? '')
-    : '';
+
+  const scroll = useScrollPreservation(
+    activeConversationId,
+    activeMessages,
+    messagesByConversation,
+    isHydrated
+  );
+
+  const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
   const isComposerDisabled = !activeConversationId || isActiveDmArchived;
   const isDmEmptyState = chatMode === 'dm' && !activeDmDetails;
@@ -507,162 +161,46 @@ export function ChatWorkspace() {
     });
   }, [activeMessages]);
 
-  const updateNearBottomState = useCallback(() => {
-    const viewport = messagesViewportRef.current;
-    if (!viewport) {
-      setIsNearBottom(true);
-      return;
-    }
-
-    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-    setIsNearBottom(distanceFromBottom <= BOTTOM_THRESHOLD_PX);
-  }, []);
-
-  const rememberConversationScrollPosition = useCallback(
-    (conversationId: string | null) => {
-      if (!conversationId || isRestoringScroll.current) {
-        return;
-      }
-
-      const viewport = messagesViewportRef.current;
-      if (!viewport) {
-        return;
-      }
-
-      const viewportTop = viewport.getBoundingClientRect().top;
-      const visibleMessage = (messagesByConversation[conversationId] ?? [])
-        .map((message) => {
-          const element = messageRefs.current[message.id];
-          if (!element) {
-            return null;
-          }
-
-          return {
-            element,
-            id: message.id,
-            top: element.getBoundingClientRect().top
-          };
-        })
-        .filter((message): message is { element: HTMLElement; id: string; top: number } => {
-          if (!message) {
-            return false;
-          }
-
-          return message.element.getBoundingClientRect().bottom >= viewportTop;
-        })
-        .sort((a, b) => Math.abs(a.top - viewportTop) - Math.abs(b.top - viewportTop))[0];
-
-      if (!visibleMessage) {
-        return;
-      }
-
-      conversationScrollPositions.current[conversationId] = {
-        messageId: visibleMessage.id,
-        topOffset: visibleMessage.top - viewportTop
-      };
-    },
-    [messagesByConversation]
-  );
-
-  useLayoutEffect(() => {
-    if (!activeConversationId) {
-      return;
-    }
-
-    const viewport = messagesViewportRef.current;
-    if (!viewport) {
-      return;
-    }
-
-    isRestoringScroll.current = true;
-
-    if (pendingScrollBottom.current) {
-      viewport.scrollTop = viewport.scrollHeight;
-      pendingScrollBottom.current = false;
-    } else {
-      const savedPosition = conversationScrollPositions.current[activeConversationId];
-      const savedElement = savedPosition ? messageRefs.current[savedPosition.messageId] : null;
-
-      if (savedPosition && savedElement) {
-        const viewportTop = viewport.getBoundingClientRect().top;
-        const elementTop = savedElement.getBoundingClientRect().top;
-        viewport.scrollTop += elementTop - viewportTop - savedPosition.topOffset;
-      } else {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-
-    window.requestAnimationFrame(() => {
-      isRestoringScroll.current = false;
-      rememberConversationScrollPosition(activeConversationId);
-      updateNearBottomState();
-    });
-  }, [
-    activeConversationId,
-    activeMessages.length,
-    rememberConversationScrollPosition,
-    updateNearBottomState
-  ]);
-
-  useEffect(() => {
-    if (!activeConversationId || !isHydrated) {
-      return;
-    }
-
-    composerRef.current?.focus();
-  }, [activeConversationId, isHydrated]);
-
   function handleMessagesScroll() {
-    rememberConversationScrollPosition(activeConversationId);
-    updateNearBottomState();
+    scroll.rememberConversationScrollPosition(activeConversationId);
+    scroll.updateNearBottomState();
 
-    const viewport = messagesViewportRef.current;
+    const viewport = scroll.messagesViewportRef.current;
+    const activeChannel = guildWorkspace.activeChannel;
     if (chatMode === 'guild' && activeChannel && viewport && viewport.scrollTop <= TOP_THRESHOLD_PX) {
       loadOlderChannelHistory(activeChannel);
     }
   }
 
-  function handleJumpToBottom() {
-    const viewport = messagesViewportRef.current;
-    if (!viewport) {
-      return;
-    }
-
-    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-  }
-
   function handleOpenDms() {
-    rememberConversationScrollPosition(activeConversationId);
+    scroll.rememberConversationScrollPosition(activeConversationId);
     setChatMode('dm');
-    setActiveDm(null);
+    dmWorkspace.clearActiveDm();
     setIsDmProfileOpen(false);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
   }
 
   function handleSelectGuild(guildId: string) {
-    rememberConversationScrollPosition(activeConversationId);
+    scroll.rememberConversationScrollPosition(activeConversationId);
     setChatMode('guild');
-    setActiveGuildId(guildId);
+    guildWorkspace.selectGuild(guildId);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
-    window.sessionStorage.setItem(LAST_CHAT_GUILD_KEY, guildId);
   }
 
   function handleSelectChannel(channelId: string) {
-    rememberConversationScrollPosition(activeConversationId);
+    scroll.rememberConversationScrollPosition(activeConversationId);
     setChatMode('guild');
-    setActiveChannel(channelId);
+    guildWorkspace.selectChannel(channelId);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'guild');
-    window.sessionStorage.setItem(LAST_CHAT_CHANNEL_KEY, channelId);
     setMobilePane('messages');
   }
 
   function handleSelectDm(dmId: string) {
-    rememberConversationScrollPosition(activeConversationId);
+    scroll.rememberConversationScrollPosition(activeConversationId);
     setChatMode('dm');
-    setActiveDm(dmId);
+    dmWorkspace.selectDm(dmId);
     setIsDmProfileOpen(false);
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
-    window.sessionStorage.setItem(LAST_CHAT_DM_KEY, dmId);
     setMobilePane('messages');
   }
 
@@ -715,21 +253,17 @@ export function ChatWorkspace() {
       ...current,
       [activeConversationId]: [...(current[activeConversationId] ?? []), nextMessage]
     }));
-    pendingScrollBottom.current = true;
+    scroll.scrollToBottomOnNextRender();
 
     if (chatMode === 'dm') {
-      const [hours, minutes] = nextMessage.timestamp.split(':').map(Number);
-      const lastActivityMinutes =
-        Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : Date.now();
-
-      setDmConversations((current) =>
+      dmWorkspace.setDmConversations((current) =>
         current.map((dm) =>
           dm.id === activeConversationId
             ? {
                 ...dm,
                 lastMessage: content.split(/\r?\n/)[0] ?? content,
                 lastMessageAt: nextMessage.timestamp,
-                lastActivityMinutes,
+                lastActivityAt: Date.now(),
                 unreadCount: 0
               }
             : dm
@@ -842,13 +376,9 @@ export function ChatWorkspace() {
     }
   }
 
-  function setMessageRef(messageId: string, element: HTMLElement | null) {
-    messageRefs.current[messageId] = element;
-  }
-
   function handleOpenAuthorProfile(message: ChatMessageData) {
     const guildMember = getGuildMemberByName(message.author);
-    const directMessage = dmConversations.find(
+    const directMessage = dmWorkspace.dmConversations.find(
       (dm) => dm.name.toLowerCase() === message.author.toLowerCase()
     );
 
@@ -882,17 +412,17 @@ export function ChatWorkspace() {
         <>
           <GuildSidebar
             activeMode={chatMode}
-            guilds={guilds}
-            activeGuildId={activeGuildId}
+            guilds={guildWorkspace.guilds}
+            activeGuildId={guildWorkspace.activeGuildId}
             onOpenDms={handleOpenDms}
             onSelectGuild={handleSelectGuild}
           />
 
           {chatMode === 'dm' ? (
             <DmList
-              activeDm={activeDm ?? ''}
-              directMessages={dmConversations}
-              showArchived={showArchivedDms}
+              activeDm={dmWorkspace.activeDm ?? ''}
+              directMessages={dmWorkspace.dmConversations}
+              showArchived={dmWorkspace.showArchivedDms}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
@@ -903,13 +433,13 @@ export function ChatWorkspace() {
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectDm={handleSelectDm}
-              onToggleShowArchived={handleToggleShowArchivedDms}
-              onArchiveDm={handleArchiveDm}
+              onToggleShowArchived={dmWorkspace.toggleShowArchivedDms}
+              onArchiveDm={dmWorkspace.archiveDm}
             />
           ) : (
             <ChannelList
-              activeChannel={activeChannel ?? ''}
-              categories={channelCategories}
+              activeChannel={guildWorkspace.activeChannel ?? ''}
+              categories={guildWorkspace.channelCategories}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
@@ -1034,7 +564,7 @@ export function ChatWorkspace() {
             </div>
 
             <div
-              ref={messagesViewportRef}
+              ref={scroll.messagesViewportRef}
               onScroll={handleMessagesScroll}
               className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
             >
@@ -1073,16 +603,16 @@ export function ChatWorkspace() {
                         onDelete={handleDeleteMessage}
                         onToggleReaction={handleToggleReaction}
                         onOpenAuthorProfile={handleOpenAuthorProfile}
-                        setMessageRef={setMessageRef}
+                        setMessageRef={scroll.setMessageRef}
                       />
                     );
                   })}
                 </div>
               )}
-              {!isNearBottom ? (
+              {!scroll.isNearBottom ? (
                 <button
                   type="button"
-                  onClick={handleJumpToBottom}
+                  onClick={scroll.scrollToBottom}
                   className="mono-detail sticky bottom-0 z-10 ml-auto flex h-10 items-center rounded-full border border-aqua/40 bg-panel px-4 text-sm font-bold text-aqua shadow-lg shadow-black/30 transition hover:border-aqua hover:text-white"
                 >
                   Jump to bottom
@@ -1109,7 +639,7 @@ export function ChatWorkspace() {
               ) : null}
               <div className="flex h-14 items-center rounded-md bg-panel px-4 text-muted">
                 <textarea
-                  ref={composerRef}
+                  ref={scroll.composerRef}
                   value={activeDraft}
                   onChange={(event) => handleDraftChange(event.target.value)}
                   onKeyDown={(event) => {
