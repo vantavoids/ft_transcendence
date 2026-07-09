@@ -435,6 +435,16 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
     unmute
   } = feed;
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
+  const [muteError, setMuteError] = useState('');
+
+  async function handleRowMute(scope: NotificationMuteScope) {
+    setMuteError('');
+    try {
+      await mute(scope.scopeType, scope.scopeId, null);
+    } catch {
+      setMuteError('Impossible d enregistrer la sourdine.');
+    }
+  }
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -541,6 +551,11 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
             </div>
           ) : (
             <div className="space-y-2">
+              {muteError ? (
+                <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
+                  {muteError}
+                </p>
+              ) : null}
               {notifications.map((notification) => (
                 <NotificationRow
                   key={notification.id}
@@ -549,7 +564,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                   onMarkRead={markRead}
                   onDismiss={dismiss}
                   onMute={(scope) => {
-                    void mute(scope.scopeType, scope.scopeId, null).catch(() => {});
+                    void handleRowMute(scope);
                   }}
                 />
               ))}
