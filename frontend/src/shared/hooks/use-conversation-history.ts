@@ -8,7 +8,9 @@ import {
   listChannelMessages,
   listDirectMessageHistory,
   sendChannelMessage,
-  sendDirectMessage
+  sendDirectMessage,
+  uploadAttachment,
+  type SendMessagePayload
 } from '../api/chat';
 import { ApiError } from '../api/client';
 import {
@@ -24,6 +26,12 @@ const MESSAGE_HISTORY_PAGE_SIZE = 50;
 
 export type ConversationMode = 'guild' | 'dm';
 
+export type PendingAttachment = {
+  id: string;
+  filename: string;
+  status: 'uploading' | 'ready' | 'error';
+};
+
 export type ConversationHistory = {
   messagesByConversation: Record<string, ChatMessageData[]>;
   setMessagesByConversation: React.Dispatch<
@@ -33,6 +41,9 @@ export type ConversationHistory = {
   sendMessage: (content: string) => Promise<void>;
   updateMessage: (messageId: string, content: string) => Promise<void>;
   removeMessage: (messageId: string) => Promise<void>;
+  pendingAttachments: PendingAttachment[];
+  uploadAttachments: (files: File[]) => void;
+  removePendingAttachment: (attachmentId: string) => void;
 };
 
 // loads history for whichever conversation is active - channel and DM
@@ -46,6 +57,9 @@ export function useConversationHistory(
 ): ConversationHistory {
   const [messagesByConversation, setMessagesByConversation] = useState<
     Record<string, ChatMessageData[]>
+  >({});
+  const [pendingAttachmentsByConversation, setPendingAttachmentsByConversation] = useState<
+    Record<string, PendingAttachment[]>
   >({});
   const isFetchingOlderHistory = useRef<Record<string, boolean>>({});
   const hasMoreChannelHistory = useRef<Record<string, boolean>>({});
@@ -141,6 +155,15 @@ export function useConversationHistory(
       return;
     }
 
+    const readyAttachments = (pendingAttachmentsByConversation[conversationId] ?? []).filter(
+      (attachment) => attachment.status === 'ready'
+    );
+    const attachmentIds = readyAttachments.map((attachment) => attachment.id);
+
+    if (!content && attachmentIds.length === 0) {
+      return;
+    }
+
     const nonce = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const optimisticMessage: ChatMessageData = {
@@ -148,10 +171,12 @@ export function useConversationHistory(
       authorId: currentUserId ?? undefined,
       author: authorLabel(currentUserId ?? '', currentUserId),
       accent: accentForAuthor(currentUserId ?? ''),
-      content: splitMessageLines(content),
+      content: content ? splitMessageLines(content) : [],
       timestamp: formatMessageTimestamp(nowIso),
       createdAt: nowIso,
       replyToId: null,
+      // real attachment metadata (url, mime_type, size) only exists once the
+      // real response lands - avoid rendering a broken preview in the meantime
       attachments: []
     };
 
@@ -160,11 +185,19 @@ export function useConversationHistory(
       [conversationId]: [...(current[conversationId] ?? []), optimisticMessage]
     }));
 
+    const payload: SendMessagePayload = { nonce };
+    if (content) {
+      payload.content = content;
+    }
+    if (attachmentIds.length > 0) {
+      payload.attachment_ids = attachmentIds;
+    }
+
     try {
       const mapped =
         mode === 'guild'
-          ? mapChannelMessage(await sendChannelMessage(conversationId, { content, nonce }), currentUserId)
-          : mapDirectMessage(await sendDirectMessage(conversationId, { content, nonce }), currentUserId);
+          ? mapChannelMessage(await sendChannelMessage(conversationId, payload), currentUserId)
+          : mapDirectMessage(await sendDirectMessage(conversationId, payload), currentUserId);
 
       setMessagesByConversation((current) => ({
         ...current,
@@ -172,6 +205,10 @@ export function useConversationHistory(
           message.id === nonce ? mapped : message
         )
       }));
+
+      if (attachmentIds.length > 0) {
+        setPendingAttachmentsByConversation((current) => ({ ...current, [conversationId]: [] }));
+      }
     } catch {
       // 10-minute nonce dedup window means a retry can still land later - just flag this one as failed
       setMessagesByConversation((current) => ({
@@ -181,6 +218,59 @@ export function useConversationHistory(
         )
       }));
     }
+  }
+
+  function uploadAttachments(files: File[]) {
+    if (!conversationId) {
+      return;
+    }
+
+    const targetConversationId = conversationId;
+
+    for (const file of files) {
+      const draftId = `draft-${crypto.randomUUID()}`;
+
+      setPendingAttachmentsByConversation((current) => ({
+        ...current,
+        [targetConversationId]: [
+          ...(current[targetConversationId] ?? []),
+          { id: draftId, filename: file.name, status: 'uploading' }
+        ]
+      }));
+
+      uploadAttachment(file)
+        .then((dto) => {
+          setPendingAttachmentsByConversation((current) => ({
+            ...current,
+            [targetConversationId]: (current[targetConversationId] ?? []).map((attachment) =>
+              attachment.id === draftId
+                ? { id: dto.id, filename: dto.filename, status: 'ready' }
+                : attachment
+            )
+          }));
+        })
+        .catch(() => {
+          setPendingAttachmentsByConversation((current) => ({
+            ...current,
+            [targetConversationId]: (current[targetConversationId] ?? []).map((attachment) =>
+              attachment.id === draftId ? { ...attachment, status: 'error' } : attachment
+            )
+          }));
+        });
+    }
+  }
+
+  function removePendingAttachment(attachmentId: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    setPendingAttachmentsByConversation((current) => ({
+      ...current,
+      [conversationId]: (current[conversationId] ?? []).filter(
+        (attachment) => attachment.id !== attachmentId
+      )
+    }));
   }
 
   async function updateMessage(messageId: string, content: string) {
@@ -219,6 +309,9 @@ export function useConversationHistory(
     loadOlderChannelHistory,
     sendMessage,
     updateMessage,
-    removeMessage
+    removeMessage,
+    pendingAttachments: conversationId ? (pendingAttachmentsByConversation[conversationId] ?? []) : [],
+    uploadAttachments,
+    removePendingAttachment
   };
 }
