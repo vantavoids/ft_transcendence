@@ -43,8 +43,15 @@ export class NoopUserEventsConsumer extends UserEventsConsumer {
 
 @Injectable()
 export class RabbitMqUserEventsConsumer extends UserEventsConsumer {
-  private static readonly exchangeName = 'events';
   private static readonly queueName = 'user-service';
+  // .NET publishers (MassTransit) publish each event to its own fanout exchange
+  // named after the event via SetEntityName; bind the queue to each of them.
+  private static readonly eventExchanges = [
+    'user.registered',
+    'user.online',
+    'user.offline',
+    'user.deleted',
+  ];
   private readonly logger = new Logger(RabbitMqUserEventsConsumer.name);
   private connection?: ChannelModel;
   private channel?: Channel;
@@ -113,28 +120,15 @@ export class RabbitMqUserEventsConsumer extends UserEventsConsumer {
         });
 
         this.channel = await this.connection.createChannel();
-        await this.channel.assertExchange(
-          RabbitMqUserEventsConsumer.exchangeName,
-          'direct',
-          { durable: true },
-        );
 
         const queue = await this.channel.assertQueue(
           RabbitMqUserEventsConsumer.queueName,
           { durable: true },
         );
 
-        for (const routingKey of [
-          'user.registered',
-          'user.online',
-          'user.offline',
-          'user.deleted',
-        ]) {
-          await this.channel.bindQueue(
-            queue.queue,
-            RabbitMqUserEventsConsumer.exchangeName,
-            routingKey,
-          );
+        for (const exchange of RabbitMqUserEventsConsumer.eventExchanges) {
+          await this.channel.assertExchange(exchange, 'fanout', { durable: true });
+          await this.channel.bindQueue(queue.queue, exchange, '');
         }
 
         await this.channel.prefetch(10);
@@ -161,7 +155,9 @@ export class RabbitMqUserEventsConsumer extends UserEventsConsumer {
     }
 
     try {
-      const routingKey = message.fields.routingKey;
+      // fanout deliveries carry an empty routing key, so identify the event by the
+      // exchange it was published to (matches the .NET SetEntityName).
+      const eventName = message.fields.exchange;
       let payload: UserRegisteredEvent | UserLifecycleEvent;
       try {
         payload = JSON.parse(message.content.toString('utf8')) as
@@ -171,7 +167,7 @@ export class RabbitMqUserEventsConsumer extends UserEventsConsumer {
         throw new PermanentEventError('Invalid JSON payload');
       }
 
-      switch (routingKey) {
+      switch (eventName) {
         case 'user.registered':
           await this.handleUserRegistered(payload as UserRegisteredEvent);
           break;
@@ -185,7 +181,7 @@ export class RabbitMqUserEventsConsumer extends UserEventsConsumer {
           await this.handleUserDeleted(payload as UserLifecycleEvent);
           break;
         default:
-          throw new PermanentEventError(`Unsupported routing key: ${routingKey}`);
+          throw new PermanentEventError(`Unsupported event exchange: ${eventName}`);
       }
 
       channel.ack(message);
