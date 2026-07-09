@@ -70,6 +70,12 @@ public static class DependencyInjection
 				// apply the same policy or deserialisation will fail
 				cfg.ConfigureJsonSerializerOptions(GuildSerialization.ApplyEventWireFormat);
 
+				// publish raw JSON bodies (no MassTransit envelope) so polyglot consumers
+				// (Go/NestJS) read the contract payload directly; the message type travels
+				// in transport headers so .NET consumers still bind.
+				cfg.UseRawJsonSerializer(
+					RawSerializerOptions.AddTransportHeaders | RawSerializerOptions.CopyHeaders);
+
 				cfg.Message<GuildMemberJoined>(m => m.SetEntityName("guild.member_joined"));
 				cfg.Message<GuildMemberLeft>(m => m.SetEntityName("guild.member_left"));
 				cfg.Message<GuildInviteCreated>(m => m.SetEntityName("guild.invite_created"));

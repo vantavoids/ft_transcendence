@@ -47,6 +47,12 @@ public static class DependencyInjection
                     return opts;
                 });
 
+                // contracts specify raw snake_case event bodies (no MassTransit
+                // envelope) so polyglot consumers (Go/NestJS) can read them directly;
+                // the message type still travels in transport headers for .NET consumers.
+                conf.UseRawJsonSerializer(
+                    RawSerializerOptions.AddTransportHeaders | RawSerializerOptions.CopyHeaders);
+
                 // exchange names consumers bind to; must match their SetEntityName.
                 conf.Message<UserRegistered>(m => m.SetEntityName("user.registered"));
                 conf.Message<UserLoggedOut>(m => m.SetEntityName("user.logged_out"));
