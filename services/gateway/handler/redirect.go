@@ -111,6 +111,20 @@ func Redirect(proxies Proxies) http.HandlerFunc {
 		// log
 		host := middleware.SourceAddrFromCtx(r.Context())
 		logs.Info(host, "Redirect done, forwarding to "+utils.PurpleStr(parts[2]))
+
+		// event streams (SSE) outlive the server's absolute Read/WriteTimeout
+		// deadlines; lift them for this response only, keyed on the Accept
+		// header an EventSource always sends
+		if strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
+			rc := http.NewResponseController(w)
+			if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+				logs.Info(host, "sse: clear write deadline: "+err.Error())
+			}
+			if err := rc.SetReadDeadline(time.Time{}); err != nil {
+				logs.Info(host, "sse: clear read deadline: "+err.Error())
+			}
+		}
+
 		proxy.ServeHTTP(w, r)
 	}
 }
