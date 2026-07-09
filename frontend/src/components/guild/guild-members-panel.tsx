@@ -3,16 +3,9 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Check, Crown, Gavel, Pencil, UserX, X } from 'lucide-react';
-import {
-  banGuildMember,
-  kickGuildMember,
-  updateGuildMemberNickname
-} from '../../shared/api/guild';
+import { banGuildMember, kickGuildMember, updateGuildMemberNickname } from '../../shared/api/guild';
 import { useGuilds } from '../../shared/guilds/guild-store';
-import {
-  useGuildMembers,
-  type HydratedGuildMember
-} from '../../shared/guilds/use-guild-members';
+import { useGuildMembers, type HydratedGuildMember } from '../../shared/guilds/use-guild-members';
 import { formatDate } from './guild-overview';
 import { getGuildAccentClasses } from './guild-icon';
 import { FormError } from './guild-forms';

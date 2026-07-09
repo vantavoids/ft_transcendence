@@ -7,10 +7,7 @@ import { getDmStatusClasses, type DirectMessage } from './dm-list';
 import { guildMembers } from './mocks/guild-member-mocks';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
-import {
-  useGuildMembers,
-  type HydratedGuildMember
-} from '../shared/guilds/use-guild-members';
+import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
 
 export type GuildMember = {
   id: string;
@@ -187,11 +184,7 @@ export function GuildMemberList({ onToggleVisibility, onOpenProfile }: GuildMemb
                 </p>
                 <div className="mt-2 space-y-1">
                   {group.members.map((member) => (
-                    <MemberRow
-                      key={member.userId}
-                      member={member}
-                      onOpenProfile={onOpenProfile}
-                    />
+                    <MemberRow key={member.userId} member={member} onOpenProfile={onOpenProfile} />
                   ))}
                 </div>
               </section>

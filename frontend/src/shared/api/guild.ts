@@ -168,10 +168,7 @@ export function leaveGuild(guildId: string) {
   });
 }
 
-export function listGuildMembers(
-  guildId: string,
-  query?: { limit?: number; after?: string }
-) {
+export function listGuildMembers(guildId: string, query?: { limit?: number; after?: string }) {
   return apiFetch<GuildMemberDto[]>('guild', `/guilds/${guildId}/members`, { query });
 }
 
