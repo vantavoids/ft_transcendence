@@ -18,6 +18,9 @@ export type ChatMessageData = {
   editedAt?: string | null;
   attachments?: MessageAttachmentDto[];
   reactions?: Record<string, number>;
+  // set when the optimistic send failed - neither the 201 nor a matching
+  // ReceiveMessage/ReceiveDirectMessage arrived (docs/contracts/chat.md nonce semantics)
+  failed?: boolean;
 };
 
 export type ReplyPreview = {
@@ -166,6 +169,7 @@ export function ChatMessage({
         <span className="mono-detail pt-1 text-right text-[0.72rem] text-white/0 transition group-hover:text-white/35">
           {message.timestamp}
           {message.editedAt ? ' (edited)' : ''}
+          {message.failed ? <span className="text-pink"> · Failed to send</span> : null}
         </span>
       ) : (
         <button
@@ -191,6 +195,7 @@ export function ChatMessage({
             <span className="mono-detail pb-2 text-xs text-white/35">
               {message.timestamp}
               {message.editedAt ? ' (edited)' : ''}
+              {message.failed ? <span className="text-pink"> · Failed to send</span> : null}
             </span>
           </div>
         )}

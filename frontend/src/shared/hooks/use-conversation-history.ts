@@ -2,9 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ChatMessageData } from '../../components/chat-message';
-import { listChannelMessages, listDirectMessageHistory } from '../api/chat';
+import {
+  deleteMessage as deleteMessageApi,
+  editMessage as editMessageApi,
+  listChannelMessages,
+  listDirectMessageHistory,
+  sendChannelMessage,
+  sendDirectMessage
+} from '../api/chat';
 import { ApiError } from '../api/client';
-import { mapChannelMessage, mapDirectMessage } from '../mappers/chat';
+import {
+  accentForAuthor,
+  authorLabel,
+  formatMessageTimestamp,
+  mapChannelMessage,
+  mapDirectMessage,
+  splitMessageLines
+} from '../mappers/chat';
 
 const MESSAGE_HISTORY_PAGE_SIZE = 50;
 
@@ -16,6 +30,9 @@ export type ConversationHistory = {
     React.SetStateAction<Record<string, ChatMessageData[]>>
   >;
   loadOlderChannelHistory: (channelId: string) => Promise<void>;
+  sendMessage: (content: string) => Promise<void>;
+  updateMessage: (messageId: string, content: string) => Promise<void>;
+  removeMessage: (messageId: string) => Promise<void>;
 };
 
 // loads history for whichever conversation is active - channel and DM
@@ -119,5 +136,89 @@ export function useConversationHistory(
     }
   }
 
-  return { messagesByConversation, setMessagesByConversation, loadOlderChannelHistory };
+  async function sendMessage(content: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    const nonce = crypto.randomUUID();
+    const nowIso = new Date().toISOString();
+    const optimisticMessage: ChatMessageData = {
+      id: nonce,
+      authorId: currentUserId ?? undefined,
+      author: authorLabel(currentUserId ?? '', currentUserId),
+      accent: accentForAuthor(currentUserId ?? ''),
+      content: splitMessageLines(content),
+      timestamp: formatMessageTimestamp(nowIso),
+      createdAt: nowIso,
+      replyToId: null,
+      attachments: []
+    };
+
+    setMessagesByConversation((current) => ({
+      ...current,
+      [conversationId]: [...(current[conversationId] ?? []), optimisticMessage]
+    }));
+
+    try {
+      const mapped =
+        mode === 'guild'
+          ? mapChannelMessage(await sendChannelMessage(conversationId, { content, nonce }), currentUserId)
+          : mapDirectMessage(await sendDirectMessage(conversationId, { content, nonce }), currentUserId);
+
+      setMessagesByConversation((current) => ({
+        ...current,
+        [conversationId]: (current[conversationId] ?? []).map((message) =>
+          message.id === nonce ? mapped : message
+        )
+      }));
+    } catch {
+      // 10-minute nonce dedup window means a retry can still land later - just flag this one as failed
+      setMessagesByConversation((current) => ({
+        ...current,
+        [conversationId]: (current[conversationId] ?? []).map((message) =>
+          message.id === nonce ? { ...message, failed: true } : message
+        )
+      }));
+    }
+  }
+
+  async function updateMessage(messageId: string, content: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    const response = await editMessageApi(messageId, { content });
+
+    setMessagesByConversation((current) => ({
+      ...current,
+      [conversationId]: (current[conversationId] ?? []).map((message) =>
+        message.id === messageId
+          ? { ...message, content: splitMessageLines(response.content), editedAt: response.edited_at }
+          : message
+      )
+    }));
+  }
+
+  async function removeMessage(messageId: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    await deleteMessageApi(messageId);
+
+    setMessagesByConversation((current) => ({
+      ...current,
+      [conversationId]: (current[conversationId] ?? []).filter((message) => message.id !== messageId)
+    }));
+  }
+
+  return {
+    messagesByConversation,
+    setMessagesByConversation,
+    loadOlderChannelHistory,
+    sendMessage,
+    updateMessage,
+    removeMessage
+  };
 }
