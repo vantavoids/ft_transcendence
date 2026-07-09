@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
-    "start:dev": "tsx watch src/main.ts",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -27,7 +27,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.4",
-    "tsx": "^4.20.3",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
   }
 }
