@@ -2,33 +2,28 @@
 
 import { useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
-
-export type Guild = {
-  id: string;
-  name: string;
-  iconUrl: string;
-};
+import { AddGuildModal } from './guild/add-guild-modal';
+import { GuildIcon } from './guild/guild-icon';
+import { useGuilds } from '../shared/guilds/guild-store';
 
 type GuildSidebarProps = {
   activeMode: 'guild' | 'dm';
-  guilds: Guild[];
-  activeGuildId: string | null;
   onOpenDms: () => void;
-  onSelectGuild: (guildId: string) => void;
+  onOpenGuild: () => void;
 };
 
-export function GuildSidebar({
-  activeMode,
-  guilds,
-  activeGuildId,
-  onOpenDms,
-  onSelectGuild
-}: GuildSidebarProps) {
+export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
+  const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
+  const [isAddGuildOpen, setIsAddGuildOpen] = useState(false);
+
+  function handleSelectGuild(guildId: string) {
+    selectGuild(guildId);
+    onOpenGuild();
+  }
 
   function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {
     const sidebarBox = sidebarRef.current?.getBoundingClientRect();
@@ -72,36 +67,44 @@ export function GuildSidebar({
           <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
         </button>
         <div className="mx-1 border-t border-white/10" />
+        {isLoading && guilds.length === 0 ? (
+          <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
+        ) : null}
+        {error && guilds.length === 0 ? (
+          <p className="px-1 text-center text-xs text-pink/80" title={error}>
+            Guilds unavailable
+          </p>
+        ) : null}
         {guilds.map((guild) => (
           <button
             key={guild.id}
             type="button"
-            onClick={() => onSelectGuild(guild.id)}
+            onClick={() => handleSelectGuild(guild.id)}
             onMouseEnter={(event) => handleShowLabel(guild.name, event)}
             onMouseLeave={() => setTooltip(null)}
             className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
-              activeMode === 'guild' && guild.id === activeGuildId
+              guild.id === selectedGuildId && activeMode === 'guild'
                 ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
                 : 'border-frame'
             }`}
             aria-label={guild.name}
           >
-            <Image
-              src={guild.iconUrl}
-              alt=""
-              width={160}
-              height={160}
-              className="h-full w-full object-cover"
+            <GuildIcon
+              guildId={guild.id}
+              name={guild.name}
+              iconUrl={guild.icon_url}
+              className="h-full w-full text-2xl"
             />
           </button>
         ))}
         <button
           type="button"
-          disabled
-          className="flex h-[4.9rem] shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
-          aria-label="Add server"
+          onClick={() => setIsAddGuildOpen(true)}
+          onMouseEnter={(event) => handleShowLabel('Add a guild', event)}
+          onMouseLeave={() => setTooltip(null)}
+          className="flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
+          aria-label="Add guild"
         >
-          {/*TODO: handle guild Add */}
           <Plus className="h-8 w-8" strokeWidth={1.5} />
         </button>
       </div>
@@ -113,7 +116,7 @@ export function GuildSidebar({
           {tooltip.name}
         </div>
       ) : null}
-      <div className="flex justify-center pt-5 text-3xl tracking-[0.4em] text-[#9f9f9f]">...</div>
+      {isAddGuildOpen ? <AddGuildModal onClose={() => setIsAddGuildOpen(false)} /> : null}
     </aside>
   );
 }
