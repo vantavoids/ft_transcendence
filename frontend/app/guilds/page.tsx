@@ -1,24 +1,95 @@
+'use client';
+
 import Link from 'next/link';
+import { GuildIcon } from '../../src/components/guild/guild-icon';
+import { GuildCreateForm, GuildJoinForm } from '../../src/components/guild/guild-forms';
+import { GuildOverview } from '../../src/components/guild/guild-overview';
+import { useGuilds } from '../../src/shared/guilds/guild-store';
 
 export default function GuildsPage() {
+  const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
+
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-5xl items-center px-6 py-12">
-      <div className="w-full rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-12">
-        <p className="mono-detail text-aqua">Guilds</p>
-        <h1 className="mt-4 text-5xl font-extrabold tracking-[-0.07em] text-white md:text-6xl">
-          Espace guildes prêt à brancher.
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg text-white/65">
-          La maquette chat est maintenant utilisée directement sur `/chat`. Cette route peut
-          accueillir la vraie liste de guildes dès que le service est exposé.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-4">
+    <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10">
+      <div className="w-full rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="mono-detail text-aqua">Guilds</p>
+            <h1 className="mt-2 text-4xl font-extrabold tracking-[-0.07em] text-white md:text-5xl">
+              Your guilds
+            </h1>
+          </div>
           <Link
             href="/chat"
             className="rounded-full border border-aqua/50 bg-aqua/10 px-5 py-3 font-semibold text-aqua transition hover:bg-aqua/20"
           >
             Ouvrir le chat
           </Link>
+        </div>
+
+        {error && guilds.length === 0 ? (
+          <p className="mt-6 rounded-md border border-pink/25 bg-pink/10 px-4 py-3 text-sm text-pink">
+            {error}
+          </p>
+        ) : null}
+
+        {guilds.length > 0 ? (
+          <div className="mt-6 flex flex-wrap gap-3">
+            {guilds.map((guild) => (
+              <button
+                key={guild.id}
+                type="button"
+                onClick={() => selectGuild(guild.id)}
+                className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-4 text-sm font-semibold transition ${
+                  guild.id === selectedGuildId
+                    ? 'border-aqua/60 bg-aqua/10 text-aqua'
+                    : 'border-white/10 bg-panel text-white/60 hover:text-white'
+                }`}
+              >
+                <GuildIcon
+                  guildId={guild.id}
+                  name={guild.name}
+                  iconUrl={guild.icon_url}
+                  className="h-7 w-7 overflow-hidden rounded-full text-xs"
+                />
+                {guild.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-8">
+          {selectedGuildId ? (
+            <GuildOverview guildId={selectedGuildId} />
+          ) : isLoading ? (
+            <div className="h-48 animate-pulse rounded-[1rem] bg-panel" />
+          ) : (
+            <p className="max-w-2xl text-lg text-white/65">
+              Tu n&apos;as pas encore de guilde. Crée la tienne ou rejoins-en une avec un code
+              d&apos;invitation.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          <div className="rounded-[1rem] border border-white/8 bg-panel p-6">
+            <h2 className="text-xl font-bold tracking-[-0.03em] text-white">Create a guild</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Démarre une nouvelle guilde dont tu seras propriétaire.
+            </p>
+            <div className="mt-5">
+              <GuildCreateForm />
+            </div>
+          </div>
+          <div className="rounded-[1rem] border border-white/8 bg-panel p-6">
+            <h2 className="text-xl font-bold tracking-[-0.03em] text-white">Join a guild</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Utilise un code d&apos;invitation pour rejoindre une guilde existante.
+            </p>
+            <div className="mt-5">
+              <GuildJoinForm />
+            </div>
+          </div>
         </div>
       </div>
     </section>
