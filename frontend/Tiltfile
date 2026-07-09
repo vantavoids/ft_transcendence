@@ -1,7 +1,11 @@
-load('../tiltlib.star', 'detect_engine', 'run_flags', 'container_serve')
+load('../tiltlib.star', 'read_dotenv', 'detect_engine', 'run_flags', 'container_serve')
 
 DOCKER = detect_engine()
 FLAGS  = run_flags(DOCKER)
+
+# browser TURN config comes from the root .env (single source; same vars coturn
+# uses). dev runs `next dev`, so these are read from the runtime environment.
+root_env = read_dotenv('../.env')
 
 local_resource(
     'frontend',
@@ -10,6 +14,9 @@ local_resource(
         '--network ft_transcendence ' +
         '--env-file .env ' +
         '-e WATCHPACK_POLLING=true ' +
+        '-e NEXT_PUBLIC_TURN_URL=turn:' + root_env.get('TURN_REALM', '') + ':3478 ' +
+        '-e NEXT_PUBLIC_TURN_USERNAME=' + root_env.get('TURN_USERNAME', '') + ' ' +
+        '-e NEXT_PUBLIC_TURN_PASSWORD=' + root_env.get('TURN_PASSWORD', '') + ' ' +
         '-v $(pwd)/app:/app/app ' +
         '-v $(pwd)/src:/app/src ' +
         '-v $(pwd)/public:/app/public ' +

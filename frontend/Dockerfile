@@ -7,6 +7,16 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+
+# browser-exposed TURN config, inlined into the bundle at build time.
+# fed from the root .env (TURN_*) via frontend/compose.yaml build args.
+ARG NEXT_PUBLIC_TURN_URL=
+ARG NEXT_PUBLIC_TURN_USERNAME=
+ARG NEXT_PUBLIC_TURN_PASSWORD=
+ENV NEXT_PUBLIC_TURN_URL=$NEXT_PUBLIC_TURN_URL \
+    NEXT_PUBLIC_TURN_USERNAME=$NEXT_PUBLIC_TURN_USERNAME \
+    NEXT_PUBLIC_TURN_PASSWORD=$NEXT_PUBLIC_TURN_PASSWORD
+
 RUN pnpm run build
 
 FROM node:22-alpine AS runtime
