@@ -35,20 +35,35 @@ internal sealed class OAuthCallbackHandler(
         var userInfo = userInfoResult.Value;
         var now = clock.UtcNow;
 
+        var existingEmail = userInfo.Email is not null
+            ? await repository.GetByEmailAsync(userInfo.Email, cancellationToken)
+            : null;
         var existingUser = await repository.GetByOAuthAsync(command.Provider, userInfo.ProviderId, cancellationToken);
+
+        string? providerEmail = userInfo.Email;
+        var providerVerified = userInfo.EmailVerified == true;
+        if (existingEmail is not null && existingEmail.Id != existingUser?.Id)
+        {
+            providerEmail = null;
+            providerVerified = false;
+        }
 
         bool isNewUser;
         AuthUser user;
 
         if (existingUser is not null)
         {
-            UpdateOAuthUser(now, existingUser, userInfo.Email, userInfo.EmailVerified == true);
+            UpdateOAuthUser(now, existingUser, providerEmail, providerVerified);
             user = existingUser;
             isNewUser = false;
         }
         else
         {
-            var newUserResult = await CreateOAuthUser(now, command.Provider, userInfo, cancellationToken);
+            var newUserResult = await CreateOAuthUser(
+                now,
+                command.Provider,
+                new OAuthUserInfo(userInfo.ProviderId, providerEmail, providerVerified),
+                cancellationToken);
             if (newUserResult.IsFailure)
                 return newUserResult.Error;
 
