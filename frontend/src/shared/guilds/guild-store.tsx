@@ -12,6 +12,7 @@ import {
   type MyGuildDto
 } from '../api/guild';
 import { getCurrentUser } from '../api/user';
+import { getAccessToken } from '../lib/session';
 
 export const LAST_GUILD_KEY = 'ft_transcendence_last_guild';
 
