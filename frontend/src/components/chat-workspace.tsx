@@ -31,6 +31,7 @@ import { SettingsModal } from './settings-modal';
 import { directMessages } from './mocks/dm-mocks';
 import { initialMessages } from './mocks/message-mocks';
 import { clearSession } from '../shared/lib/session';
+import { useNotifications } from '../shared/lib/use-notifications';
 import { logout } from '../shared/api/auth';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
@@ -99,6 +100,7 @@ export function ChatWorkspace() {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
+  const notificationFeed = useNotifications();
 
   useEffect(() => {
     // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
@@ -534,6 +536,7 @@ export function ChatWorkspace() {
               username={username}
               isMicMuted={isMicMuted}
               isDeafened={isDeafened}
+              unreadNotifications={notificationFeed.unreadCount}
               onToggleDeafen={handleToggleDeafen}
               onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
@@ -547,6 +550,7 @@ export function ChatWorkspace() {
               username={username}
               isMicMuted={isMicMuted}
               isDeafened={isDeafened}
+              unreadNotifications={notificationFeed.unreadCount}
               onToggleDeafen={handleToggleDeafen}
               onToggleMicMute={handleToggleMicMute}
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
@@ -792,7 +796,10 @@ export function ChatWorkspace() {
           ) : null}
 
           {isNotificationCardOpen ? (
-            <NotificationCard onClose={() => setIsNotificationCardOpen(false)} />
+            <NotificationCard
+              feed={notificationFeed}
+              onClose={() => setIsNotificationCardOpen(false)}
+            />
           ) : null}
 
           {isSettingsOpen ? (
