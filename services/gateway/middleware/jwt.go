@@ -68,11 +68,17 @@ func extractToken(r *http.Request) string {
 			return strings.TrimSpace(token) // TrimSpace just to be safe if extra space is present
 		}
 	}
-	if isWebSocketUpgrade(r) {
+	// websockets and EventSource cannot set an Authorization header, so for
+	// both the token travels as a query parameter
+	if isWebSocketUpgrade(r) || isEventStream(r) {
 		return r.URL.Query().Get("access_token")
 	}
 
 	return ""
+}
+
+func isEventStream(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "text/event-stream")
 }
 
 func checkToken(tokenStr string, secret string) (string, error) {
