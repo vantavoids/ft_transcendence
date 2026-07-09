@@ -84,6 +84,7 @@ export type ConversationHistory = {
   >;
   loadOlderChannelHistory: (channelId: string) => Promise<void>;
   sendMessage: (content: string, replyToId?: string | null) => Promise<void>;
+  retryMessage: (messageId: string) => Promise<void>;
   updateMessage: (messageId: string, content: string) => Promise<void>;
   removeMessage: (messageId: string) => Promise<void>;
   toggleReaction: (messageId: string, emoji: string) => Promise<void>;
@@ -109,6 +110,9 @@ export function useConversationHistory(
   >({});
   const isFetchingOlderHistory = useRef<Record<string, boolean>>({});
   const hasMoreChannelHistory = useRef<Record<string, boolean>>({});
+  // attachment ids aren't kept on the (optimistic) ChatMessageData itself, so a
+  // retry needs its own record of what was actually attached to a given send
+  const pendingSendAttachmentIds = useRef<Record<string, string[]>>({});
 
   useEffect(() => {
     if (!conversationId) {
@@ -313,6 +317,19 @@ export function useConversationHistory(
     }
   }
 
+  // delivers one send attempt to the right endpoint for the mode and maps
+  // the response - shared by the initial send and a later retry of the same
+  // nonce, both of which only differ in how the payload/optimistic bubble
+  // were originally built.
+  async function deliverMessage(
+    targetConversationId: string,
+    payload: SendMessagePayload
+  ): Promise<ChatMessageData> {
+    return mode === 'guild'
+      ? mapChannelMessage(await sendChannelMessage(targetConversationId, payload), currentUserId)
+      : mapDirectMessage(await sendDirectMessage(targetConversationId, payload), currentUserId);
+  }
+
   async function sendMessage(content: string, replyToId: string | null = null) {
     if (!conversationId) {
       return;
@@ -347,6 +364,7 @@ export function useConversationHistory(
       ...current,
       [conversationId]: [...(current[conversationId] ?? []), optimisticMessage]
     }));
+    pendingSendAttachmentIds.current[nonce] = attachmentIds;
 
     const payload: SendMessagePayload = { nonce };
     if (content) {
@@ -360,10 +378,7 @@ export function useConversationHistory(
     }
 
     try {
-      const mapped =
-        mode === 'guild'
-          ? mapChannelMessage(await sendChannelMessage(conversationId, payload), currentUserId)
-          : mapDirectMessage(await sendDirectMessage(conversationId, payload), currentUserId);
+      const mapped = await deliverMessage(conversationId, payload);
 
       setMessagesByConversation((current) => ({
         ...current,
@@ -372,6 +387,7 @@ export function useConversationHistory(
         )
       }));
 
+      delete pendingSendAttachmentIds.current[nonce];
       if (attachmentIds.length > 0) {
         setPendingAttachmentsByConversation((current) => ({ ...current, [conversationId]: [] }));
       }
@@ -381,6 +397,61 @@ export function useConversationHistory(
         ...current,
         [conversationId]: (current[conversationId] ?? []).map((message) =>
           message.id === nonce ? { ...message, failed: true } : message
+        )
+      }));
+    }
+  }
+
+  // re-attempts a failed send with the same nonce - not a new one - so a
+  // request that actually reached the server the first time (but whose
+  // response was lost client-side) replays into the original message
+  // instead of risking a second, real duplicate.
+  async function retryMessage(messageId: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    const target = (messagesByConversation[conversationId] ?? []).find(
+      (message) => message.id === messageId
+    );
+    if (!target?.failed) {
+      return;
+    }
+
+    setMessagesByConversation((current) => ({
+      ...current,
+      [conversationId]: (current[conversationId] ?? []).map((message) =>
+        message.id === messageId ? { ...message, failed: false } : message
+      )
+    }));
+
+    const attachmentIds = pendingSendAttachmentIds.current[messageId] ?? [];
+    const payload: SendMessagePayload = { nonce: messageId };
+    if (target.content.length > 0) {
+      payload.content = target.content.join('\n');
+    }
+    if (attachmentIds.length > 0) {
+      payload.attachment_ids = attachmentIds;
+    }
+    if (target.replyToId) {
+      payload.reply_to_id = target.replyToId;
+    }
+
+    try {
+      const mapped = await deliverMessage(conversationId, payload);
+
+      setMessagesByConversation((current) => ({
+        ...current,
+        [conversationId]: (current[conversationId] ?? []).map((message) =>
+          message.id === messageId ? mapped : message
+        )
+      }));
+      delete pendingSendAttachmentIds.current[messageId];
+    } catch {
+      setMessagesByConversation((current) => ({
+        ...current,
+        [conversationId]: (current[conversationId] ?? []).map((message) =>
+          message.id === messageId ? { ...message, failed: true } : message
         )
       }));
     }
@@ -507,6 +578,7 @@ export function useConversationHistory(
     setMessagesByConversation,
     loadOlderChannelHistory,
     sendMessage,
+    retryMessage,
     updateMessage,
     removeMessage,
     toggleReaction,
