@@ -289,6 +289,8 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
   const isRequestsTab = activeTab === 'requests';
   const placeholder =
     activeTab === 'discover' ? 'Search users' : activeTab === 'requests' ? 'Filter requests' : 'Search friends';
+  const pendingCount = pendingRequests.length;
+  const requestCountLabel = pendingCount > 0 ? `(${pendingCount})` : '';
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -302,7 +304,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
             }`}
           >
             <Users className="h-4 w-4" strokeWidth={1.8} />
-            Friends
+            Friends ({friends.length})
           </button>
           <button
             type="button"
@@ -312,7 +314,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
             }`}
           >
             <UserRound className="h-4 w-4" strokeWidth={1.8} />
-            Requests
+            Requests{requestCountLabel}
           </button>
           <button
             type="button"
@@ -336,7 +338,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
           <section className="grid gap-4">
             <div className="grid gap-2">
               <h3 className="font-category text-[0.72rem] uppercase tracking-[0.16em] text-category">
-                Incoming
+                Incoming ({pendingIncoming.length})
               </h3>
               {pendingLoading && pendingIncoming.length === 0 ? (
                 <div className="h-20 animate-pulse rounded-md bg-panel/70" />
@@ -361,7 +363,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
 
             <div className="grid gap-2">
               <h3 className="font-category text-[0.72rem] uppercase tracking-[0.16em] text-category">
-                Outgoing
+                Outgoing ({pendingOutgoing.length})
               </h3>
               {pendingLoading && pendingOutgoing.length === 0 ? (
                 <div className="h-20 animate-pulse rounded-md bg-panel/70" />
