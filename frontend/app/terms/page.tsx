@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { LegalPage } from '../../src/components/legal-page';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — ft_discord',
+  title: 'Terms of Service - ft_discord',
   description: 'Terms of Service for ft_discord, a student project built at École 42.'
 };
 
 export default function TermsPage() {
   return (
-    <LegalPage eyebrow="ft_discord — legal" title="Terms of Service" lastUpdated="7 July 2026">
+    <LegalPage eyebrow="ft_discord - legal" title="Terms of Service" lastUpdated="7 July 2026">
       <h2>1. What this is</h2>
       <p>
         ft_discord (&ldquo;the Service&rdquo;) is a student project built to fulfill the

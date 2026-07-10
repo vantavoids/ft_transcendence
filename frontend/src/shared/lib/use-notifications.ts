@@ -237,7 +237,7 @@ export function useNotifications() {
       const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS);
       retryTimer = window.setTimeout(() => {
         // this request goes through apiFetch, which refreshes an expired
-        // access token on 401 — so the stream reopens with valid credentials
+        // access token on 401 - so the stream reopens with valid credentials
         getUnreadNotificationCount()
           .then(({ count }) => setUnreadCount(count))
           .catch(() => {})
@@ -369,8 +369,7 @@ export function useNotifications() {
       });
       setPreferences((current) => [
         ...current.filter(
-          (preference) =>
-            !(preference.scope_type === scopeType && preference.scope_id === scopeId)
+          (preference) => !(preference.scope_type === scopeType && preference.scope_id === scopeId)
         ),
         updated
       ]);
