@@ -129,6 +129,8 @@ Mark all notifications as read for the authenticated user.
 
 Dismiss a notification. Soft-delete: the row stays in DB with `dismissed_at` set so it does not reappear in the panel, but `include_dismissed=true` on `GET /notifications` can still surface it.
 
+Dismissing also marks the notification as read in the same write (`read_at` is set if it was still `NULL`): removing it from the panel is treated as having seen it, so a dismissed row never lingers in an unread state.
+
 **Response `204`:** No content.
 
 **Errors:**

@@ -19,17 +19,19 @@ func NewHandler(svc *core.Orchestrator, hub *core.Hub) (*Handler, error) {
 func (h *Handler) Routes(secret string, metricsHandler http.Handler) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /notifications", listNotificationHandler(h.orch))
-	mux.HandleFunc("PATCH /notifications/{id}/read", markReadNotificationHandler(h.orch))
-	mux.HandleFunc("GET /notifications/unread-count", unreadCountNotificationHandler(h.orch))
-	mux.HandleFunc("PATCH /notifications/read-all", markReadAllNotificationHandler(h.orch))
-	mux.HandleFunc("DELETE /notifications/{id}", dismissNotificationHandler(h.orch))
+	// the gateway strips /api/{service} and forwards /v1/..., so every
+	// public route carries the version prefix (like the other services)
+	mux.HandleFunc("GET /v1/notifications", listNotificationHandler(h.orch))
+	mux.HandleFunc("PATCH /v1/notifications/{id}/read", markReadNotificationHandler(h.orch))
+	mux.HandleFunc("GET /v1/notifications/unread-count", unreadCountNotificationHandler(h.orch))
+	mux.HandleFunc("PATCH /v1/notifications/read-all", markReadAllNotificationHandler(h.orch))
+	mux.HandleFunc("DELETE /v1/notifications/{id}", dismissNotificationHandler(h.orch))
 
-	mux.HandleFunc("GET /notifications/preferences", listPreferenceHandler(h.orch))
-	mux.HandleFunc("PUT /notifications/preferences/{scope_type}/{scope_id}", upsertPreferenceHandler(h.orch))
-	mux.HandleFunc("DELETE /notifications/preferences/{scope_type}/{scope_id}", removePreferenceHandler(h.orch))
+	mux.HandleFunc("GET /v1/notifications/preferences", listPreferenceHandler(h.orch))
+	mux.HandleFunc("PUT /v1/notifications/preferences/{scope_type}/{scope_id}", upsertPreferenceHandler(h.orch))
+	mux.HandleFunc("DELETE /v1/notifications/preferences/{scope_type}/{scope_id}", removePreferenceHandler(h.orch))
 
-	mux.HandleFunc("GET /notifications/events", sseHandler(h.hub))
+	mux.HandleFunc("GET /v1/notifications/events", sseHandler(h.hub))
 
 	// instrument the app mux for the http.server RED metric. otelhttp sits just
 	// outside the mux (inside the auth/logging middleware) so it can read the

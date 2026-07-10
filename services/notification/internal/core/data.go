@@ -109,10 +109,11 @@ const (
 )
 
 type PreferenceDTO struct {
-	ScopeType  PreferenceScopeType `json:"scope_type"`
-	ScopeID    string              `json:"scope_id"`
-	Muted      bool                `json:"muted"`
-	MutedUntil *time.Time          `json:"muted_until,omitempty"`
+	ScopeType PreferenceScopeType `json:"scope_type"`
+	ScopeID   string              `json:"scope_id"`
+	Muted     bool                `json:"muted"`
+	// no omitempty: the contract promises an explicit null for indefinite mutes
+	MutedUntil *time.Time `json:"muted_until"`
 }
 
 func ToPreferenceDTO(pref database.NotificationPreference) PreferenceDTO {

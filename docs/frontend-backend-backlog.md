@@ -131,24 +131,26 @@ Goal: remove message mocks and make `/chat` use the real chat service.
 
 Goal: replace the notification drawer mock with the reactive notification service.
 
-- [ ] Notification feed
-  - [ ] fetch `GET /notifications`
-  - [ ] support `read`, `include_dismissed`, and cursor pagination
-  - [ ] render notification types with service-specific payloads
-- [ ] Notification actions
-  - [ ] mark individual notifications with `PATCH /notifications/{id}/read`
-  - [ ] mark all notifications with `PATCH /notifications/read-all`
-  - [ ] dismiss notifications with `DELETE /notifications/{id}`
-- [ ] Badge counter
-  - [ ] fetch `GET /notifications/unread-count`
-  - [ ] keep the badge in sync with real-time updates
-- [ ] Live updates
-  - [ ] connect notification SignalR delivery
-  - [ ] reconcile server pushes with local cache and pagination
-  - [ ] suppress notifications according to mute preferences
-- [ ] Preferences
-  - [ ] wire `GET /notifications/preferences`
-  - [ ] add mute/unmute by guild and channel scope
+- [x] Notification feed
+  - [x] fetch `GET /notifications`
+  - [x] support `read`, `include_dismissed`, and cursor pagination
+  - [x] render notification types with service-specific payloads
+- [x] Notification actions
+  - [x] mark individual notifications with `PATCH /notifications/{id}/read`
+  - [x] mark all notifications with `PATCH /notifications/read-all`
+  - [x] dismiss notifications with `DELETE /notifications/{id}`
+- [x] Badge counter
+  - [x] fetch `GET /notifications/unread-count`
+  - [x] keep the badge in sync with real-time updates
+- [x] Live updates
+  - [x] connect notification SignalR delivery
+        (the notification contract ships SSE, not SignalR: `EventSource` on
+        `GET /notifications/events` with the named `ReceiveNotification` event)
+  - [x] reconcile server pushes with local cache and pagination
+  - [x] suppress notifications according to mute preferences
+- [x] Preferences
+  - [x] wire `GET /notifications/preferences`
+  - [x] add mute/unmute by guild and channel scope
 
 ## Epic 6 - Cross-service consistency and UX resilience
 

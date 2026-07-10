@@ -23,6 +23,18 @@ func sseHandler(hub *core.Hub) http.HandlerFunc {
 		w.Header().Set("X-Accel-Buffering", "no")
 
 		rc := http.NewResponseController(w)
+
+		// the server's Read/WriteTimeout are absolute per-request deadlines
+		// that would kill this long-lived stream ~20s in (an expired read
+		// deadline also cancels the request context via the background
+		// close-detection read). lift both for this response only.
+		if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+			log.Printf("sse: clear write deadline: %v", err)
+		}
+		if err := rc.SetReadDeadline(time.Time{}); err != nil {
+			log.Printf("sse: clear read deadline: %v", err)
+		}
+
 		ch := hub.Subscribe(userID)
 		defer hub.Unsubscribe(userID, ch)
 
