@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CornerUpLeft, MessageCircle, Paperclip, Smile, X } from 'lucide-react';
-import { ChatMessage, type ChatMessageData, type ReplyPreview } from './chat-message';
+import { type ChatMessageData } from './chat-message';
 import { ConversationHeader } from './chat/conversation-header';
+import { MessageList } from './chat/message-list';
 import { ChannelList, getChannelName } from './channel-list';
 import { DmList, getDmDetails, getDmName } from './dm-list';
 import {
@@ -34,35 +35,11 @@ import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
-const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
 const TOP_THRESHOLD_PX = 96;
 
 type ChatMode = 'guild' | 'dm';
 
 const emojiOptions = ['😀', '😅', '🤣', '😂', '🙂', '🙃', '🤔', '😎', '🥳', '😍', '😘', '😉'];
-
-function getTimestampMinutes(timestamp: string) {
-  const [hours, minutes] = timestamp.split(':').map(Number);
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return null;
-  }
-
-  return hours * 60 + minutes;
-}
-
-function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) {
-  const previousMinutes = getTimestampMinutes(previousTimestamp);
-  const currentMinutes = getTimestampMinutes(currentTimestamp);
-
-  if (previousMinutes === null || currentMinutes === null) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return currentMinutes >= previousMinutes
-    ? currentMinutes - previousMinutes
-    : currentMinutes + 24 * 60 - previousMinutes;
-}
 
 export function ChatWorkspace() {
   const router = useRouter();
@@ -268,28 +245,6 @@ export function ChatWorkspace() {
   const sidePanelAriaLabel =  chatMode === 'dm'
       ? isDmProfileOpen ? 'Hide profile' : 'Show profile'
       : isMemberListOpen ? 'Hide member list' : 'Show member list';
-
-  const activeMessageItems = useMemo(() => {
-    const messagesById = new Map(activeMessages.map((message) => [message.id, message]));
-
-    return activeMessages.map((message, index) => {
-      const previousMessage = activeMessages[index - 1];
-      const isGrouped =
-        previousMessage?.author === message.author &&
-        getMinutesBetween(previousMessage.timestamp, message.timestamp) <=
-          MESSAGE_GROUP_THRESHOLD_MINUTES;
-
-      let replyPreview: ReplyPreview | null = null;
-      if (message.replyToId) {
-        const target = messagesById.get(message.replyToId);
-        replyPreview = target
-          ? { author: target.author, snippet: target.content[0] ?? '' }
-          : { author: '', snippet: 'an earlier message' };
-      }
-
-      return { message, isGrouped, replyPreview };
-    });
-  }, [activeMessages]);
 
   function handleMessagesScroll() {
     scroll.rememberConversationScrollPosition(activeConversationId);
@@ -608,67 +563,30 @@ export function ChatWorkspace() {
               onStartVideoCall={() => startDmCall('video')}
             />
 
-            <div
-              ref={scroll.messagesViewportRef}
+            <MessageList
+              viewportRef={scroll.messagesViewportRef}
               onScroll={handleMessagesScroll}
-              className="min-h-0 flex-1 overflow-auto px-5 py-7 sm:px-7"
-            >
-              {isDmEmptyState ? (
-                <div className="flex min-h-full flex-col items-center justify-center px-6 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-panel text-[#8b8b8f]">
-                    <MessageCircle className="h-7 w-7" strokeWidth={1.8} />
-                  </div>
-                  <h3 className="mt-5 text-[1.25rem] font-bold tracking-[-0.03em] text-white">
-                    No DM selected
-                  </h3>
-                  <p className="mt-2 max-w-[22rem] text-sm leading-6 text-white/40">
-                    Select a conversation from the DM list to start reading or sending messages.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  {activeMessageItems.map(({ message, isGrouped, replyPreview }) => {
-                    const isOwnMessage =
-                      message.authorId != null && message.authorId === currentUserId;
-                    const isEditing = editingMessageId === message.id;
-
-                    return (
-                      <ChatMessage
-                        key={message.id}
-                        message={message}
-                        replyPreview={replyPreview}
-                        isGrouped={isGrouped}
-                        isOwnMessage={isOwnMessage}
-                        isEditing={isEditing}
-                        isHighlighted={highlightedMessageId === message.id}
-                        editingDraft={editingDraft}
-                        canReact={chatMode === 'guild'}
-                        onEditDraftChange={setEditingDraft}
-                        onStartEdit={handleStartEdit}
-                        onSaveEdit={handleSaveEdit}
-                        onCancelEdit={handleCancelEdit}
-                        onDelete={handleDeleteMessage}
-                        onToggleReaction={conversationHistory.toggleReaction}
-                        onReply={handleStartReply}
-                        onJumpToReply={handleJumpToMessage}
-                        onRetryMessage={conversationHistory.retryMessage}
-                        onOpenAuthorProfile={handleOpenAuthorProfile}
-                        setMessageRef={scroll.setMessageRef}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-              {!scroll.isNearBottom ? (
-                <button
-                  type="button"
-                  onClick={scroll.scrollToBottom}
-                  className="mono-detail sticky bottom-0 z-10 ml-auto flex h-10 items-center rounded-full border border-aqua/40 bg-panel px-4 text-sm font-bold text-aqua shadow-lg shadow-black/30 transition hover:border-aqua hover:text-white"
-                >
-                  Jump to bottom
-                </button>
-              ) : null}
-            </div>
+              isDmEmptyState={isDmEmptyState}
+              activeMessages={activeMessages}
+              currentUserId={currentUserId}
+              editingMessageId={editingMessageId}
+              editingDraft={editingDraft}
+              highlightedMessageId={highlightedMessageId}
+              canReact={chatMode === 'guild'}
+              isNearBottom={scroll.isNearBottom}
+              setMessageRef={scroll.setMessageRef}
+              onEditDraftChange={setEditingDraft}
+              onStartEdit={handleStartEdit}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+              onDelete={handleDeleteMessage}
+              onToggleReaction={conversationHistory.toggleReaction}
+              onReply={handleStartReply}
+              onJumpToReply={handleJumpToMessage}
+              onRetryMessage={conversationHistory.retryMessage}
+              onOpenAuthorProfile={handleOpenAuthorProfile}
+              onScrollToBottom={scroll.scrollToBottom}
+            />
 
             <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
               <input
