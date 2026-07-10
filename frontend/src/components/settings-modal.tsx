@@ -83,7 +83,7 @@ export function SettingsModal({
   }, [currentUser]);
 
   const isOAuthOnly = identity !== null && identity.email === null;
-  const displayName = currentUser?.display_name?.trim() || currentUser?.username || 'Loading...';
+  const displayName = currentUser?.display_name?.trim() || currentUser?.username || '';
   const handleAccountDeleted = async () => {
     clearSession();
     router.push('/auth/login');
@@ -261,7 +261,7 @@ export function SettingsModal({
                     name="display_name"
                     label="Display name"
                     type="text"
-                    placeholder={currentUser?.display_name || currentUser?.username || 'Your name'}
+                    placeholder={currentUser?.display_name ?? currentUser?.username ?? ''}
                     defaultValue={currentUser?.display_name ?? ''}
                     autoComplete="nickname"
                   />
@@ -439,13 +439,13 @@ export function SettingsModal({
                     <div className="flex items-center justify-between gap-4">
                       <dt className="text-white/45">Username</dt>
                       <dd className="truncate font-semibold text-white">
-                        {currentUser?.username ?? '...'}
+                        {currentUser?.username ?? ''}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                       <dt className="text-white/45">Display</dt>
                       <dd className="truncate font-semibold text-white">
-                        {currentUser?.display_name ?? 'No display name'}
+                        {currentUser?.display_name ?? currentUser?.username ?? ''}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-4">

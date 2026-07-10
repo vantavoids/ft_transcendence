@@ -29,6 +29,14 @@ type FriendsListProps = {
 
 type Tab = 'friends' | 'pending' | 'blocked';
 
+export type Friend = {
+  id: string;
+  name: string;
+  status: FriendSummaryDto['status'];
+  accent: string;
+  note: string;
+};
+
 function getDisplayName(user: Pick<UserSummaryDto, 'username' | 'display_name'>) {
   return user.display_name?.trim() || user.username;
 }

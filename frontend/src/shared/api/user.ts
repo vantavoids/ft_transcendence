@@ -90,6 +90,16 @@ export type BlockListItemDto = {
   blocked_at: string;
 };
 
+export type UserProfileDto = PublicUserProfileDto;
+export type FriendDto = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status: UserStatus;
+  friendship_status: 'accepted' | 'pending' | 'blocked';
+};
+
 export type CreateFriendRequestPayload = {
   addressee_id: string;
 };
