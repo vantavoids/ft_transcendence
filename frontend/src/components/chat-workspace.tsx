@@ -206,8 +206,8 @@ export function ChatWorkspace() {
   ]);
 
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
+  const isComposerDisabled = !activeConversationId;
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
-  const isComposerDisabled = !activeConversationId || isActiveDmArchived;
   // an uploading/errored attachment has no confirmed id yet - block send entirely
   // until it's ready or removed, rather than silently sending without it.
   const hasUnresolvedAttachment = conversationHistory.pendingAttachments.some(
@@ -784,7 +784,7 @@ export function ChatWorkspace() {
                   disabled={isComposerDisabled}
                   placeholder={
                     isActiveDmArchived
-                      ? 'This conversation is archived.'
+                      ? 'This conversation is archived -- send a message to unarchive it.'
                       : `Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`
                   }
                   rows={1}
