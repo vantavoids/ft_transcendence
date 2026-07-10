@@ -506,16 +506,43 @@ The data and real-time layers had their own traps. ScyllaDB partitions messages 
 
 ### `tstephan` - Tech Lead / User Service / Frontend
 
-- Held the Tech Lead seat for the project: chaired architecture discussions, validated technical proposals before they were turned into issues, owned the cross-cutting decisions (REST + RabbitMQ split, Snowflake `BIGINT` ID policy serialized as quoted strings on the wire, JWT validation at the Gateway rather than per-service, contracts-first development)
-- Set and enforced code-quality standards across the team: PR-review discipline, Conventional Commits convention, shared linting/formatting rules, Husky pre-commit hooks with `lint-staged` + Prettier + ESLint on the frontend
-- Designed the contracts-first workflow that splits "contract change" PRs from "feature implementation" PRs, so service boundaries stay reviewable in isolation
-- Implemented the User Service in NestJS (TypeScript, Node.js, `pg`): profile CRUD (display name, bio, status), avatar and banner upload with multipart validation and a default-avatar fallback, friend request state machine (pending to accepted / declined / blocked) with the canonical-ordering constraint on `friendships`, unilateral block flow independent of friendship, online / idle / offline presence published to RabbitMQ for the rest of the system to consume, `GET /users/search` with case-insensitive matching, batch user lookup (`POST /users` with `ids`), and the internal existence + relationship endpoints
-- Built the frontend with jramiro on Next.js 16 (App Router, React 19, TypeScript, Tailwind 3, Zod, lucide-react): designed and owned the design system (color palette, 13-step typography scale, three custom Google fonts, custom spacing tokens, signature glow shadow) and shipped the 11 reusable components (`auth-card`, `channel-list`, `chat-message`, `chat-workspace`, `dm-list`, `friends-list`, `guild-member-list`, `guild-sidebar`, `notification-card`, `profile-card`, `settings-modal`) that the rest of the app composes
-- Kept Server-Side Rendering as the default with jramiro by writing React Server Components everywhere except where client-side interactivity genuinely requires `"use client"`, keeping the JS bundle small and first-contentful-paint fast
-- Enforced input validation on both sides of every form: Zod schemas on the client mirror the backend rules exactly, so the same error messages render in both places and the backend is never the only line of defense
-- Implemented the User Service GDPR data-export aggregator (fans out to Auth, Guild, Chat and Notification's `/internal/users/{user_id}/data-export` endpoints in parallel, stitches the results into a single downloadable JSON bundle) and User's own per-service data-export endpoint; built the "Download my data" and "Delete my account" frontend flows with jramiro, including the destructive-action confirmation modal
+- Built the User Service foundation with NestJS, including its module structure, configuration, Docker setup, database integration and development workflow.
+- Implemented public profile retrieval and authenticated user access through a JWT guard and a current-user decorator.
+- Added profile update functionality with DTO validation for editable user information.
+- Implemented user lookup features, including individual profile queries, user searches and batch lookups by user IDs.
+- Built the friendship system with friend request creation, listing, updating and relationship persistence.
+- Implemented the blocking system with dedicated repositories, endpoints and service-layer handling.
+- Added RabbitMQ relationship events so friendship changes can be consumed by other services.
+- Implemented profile media storage using MinIO, including the storage layer, persistence repository and configuration.
+- Added avatar and banner upload endpoints with backend validation and profile media management.
+- Implemented the User Service data-export endpoint for GDPR compliance.
+- Built the cross-service GDPR export aggregator, including export generation, storage and communication with the other services.
+- Added user lifecycle event handling for profile creation and cleanup when users are registered, deleted or otherwise updated.
+- Set up the initial Next.js frontend structure, including authentication, chat, guild, notification and profile pages.
+- Implemented login and registration forms with client-side validation and OAuth provider buttons.
+- Developed the main chat interface, including guild navigation, channel navigation, member lists, message display and responsive layouts.
+- Implemented message editing interactions with keyboard shortcuts, hover actions and improved editing flows.
+- Added direct-message navigation, dedicated DM headers, conversation previews, empty states and per-conversation drafts.
+- Implemented friend lists, friend request interactions, member profiles and profile panels in the frontend.
+- Created typed frontend API modules for the User, Guild, Chat and Notification services.
+- Added centralized bearer-token injection to keep authenticated API requests consistent across the application.
+- Developed and maintained the frontend design system with shared Tailwind styling, typography, spacing, colors and reusable UI components.
 
-**Challenges:** TBD
+**Challenges:**
+
+The main challenge was synchronizing a frontend that was being developed alongside several independently evolving backend services. Every new feature required the frontend routes, request payloads, response types and error handling to remain aligned with the corresponding backend contracts.
+
+Authentication was another important integration challenge. The frontend had to manage authenticated sessions while calling protected User Service endpoints through JWT bearer tokens. Centralizing token injection in the API client helped avoid inconsistent authentication behaviour across profiles, friendships, blocking, media uploads and GDPR-related requests.
+
+The User Service also contained several features that affected multiple parts of the application. Profile updates, friend requests, blocks, avatar uploads and banner uploads all required coordination between controllers, DTOs, repositories, storage and frontend forms. A change in one API contract could therefore affect both the backend service and several independent frontend components.
+
+The friendship and blocking systems required the frontend to represent different relationship states correctly, including pending requests, accepted friendships and blocked users. These states also had to remain consistent when the data was updated through different views, such as a profile page, the friends list or a direct-message interface.
+
+The direct-message interface introduced additional synchronization concerns. Conversation selection, message previews, drafts, profile information and chat state had to remain consistent while navigating between guild channels and private conversations.
+
+The GDPR export flow was challenging because the User Service had to gather data from several backend services and expose it through a single user-facing flow. The frontend therefore had to handle a process whose result depended on multiple service responses, export generation and file storage.
+
+Finally, the frontend needed to remain responsive while new dynamic behaviour was added. Components such as the guild sidebar, channel list, member list, chat workspace, profile panels and authentication cards had to be progressively refactored without breaking existing layouts or interactions.
 
 ---
 
