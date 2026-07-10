@@ -19,7 +19,7 @@ import {
   getDmDetails,
   getDmName,
   getDmStatusClasses,
-  hasDm
+  type DirectMessage
 } from './dm-list';
 import {
   getGuildMemberByName,
@@ -30,11 +30,14 @@ import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
-import { directMessages } from './mocks/dm-mocks';
+import type { Friend } from './friends-list';
 import { initialMessages } from './mocks/message-mocks';
-import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
+import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
+import { listDirectMessages } from '../shared/api/chat';
+import { getUser, listFriends } from '../shared/api/user';
+import { toDirectMessage, toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
@@ -97,7 +100,8 @@ export function ChatWorkspace() {
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username] = useState('cartoone');
   const [isHydrated, setIsHydrated] = useState(false);
-  const [dmConversations, setDmConversations] = useState(directMessages);
+  const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
@@ -116,8 +120,52 @@ export function ChatWorkspace() {
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
-    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
+    // the DM list loads asynchronously; keep the stored selection and let the
+    // empty-state render until it resolves (getDmDetails returns null meanwhile).
+    setActiveDm(storedDm && storedDm.length > 0 ? storedDm : null);
     setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    // Hydrate the DM sidebar and friends list from the real services. DM rows are
+    // conversation summaries (GET /chat/dms) enriched with the partner's profile
+    // (GET /users/{id}); friends come straight from GET /users/{id}/friends. All
+    // calls are best-effort: failures leave the lists empty rather than surfacing
+    // as console errors (III: zero console errors in Chrome).
+    let cancelled = false;
+
+    async function loadWorkspaceData() {
+      const userId = getUserId();
+
+      const [conversations, friendList] = await Promise.all([
+        listDirectMessages().catch(() => []),
+        userId ? listFriends(userId).catch(() => []) : Promise.resolve([])
+      ]);
+
+      const hydratedDms = await Promise.all(
+        conversations.map(async (conversation) => {
+          try {
+            const partner = await getUser(conversation.partner_id);
+            return toDirectMessage(conversation, partner);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setDmConversations(hydratedDms.filter((dm): dm is DirectMessage => dm !== null));
+      setFriends(friendList.map(toFriend));
+    }
+
+    void loadWorkspaceData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeDmDetails =
@@ -132,20 +180,9 @@ export function ChatWorkspace() {
     if (!activeDmDetails) {
       return;
     }
-    // TODO(api:chat,user): use the real DM partner id once DMs are hydrated. Until
-    // then the mock DM id isn't a valid snowflake, so in dev we prompt for a real
-    // user id to allow live end-to-end call testing across two accounts.
-    let calleeId = activeDmDetails.id;
-    if (process.env.NODE_ENV !== 'production') {
-      const entered = window.prompt('Dev: callee user id for a live call', calleeId);
-      if (entered === null) {
-        return;
-      }
-      if (entered.trim()) {
-        calleeId = entered.trim();
-      }
-    }
-    void startCall(calleeId, callType);
+    // the DM id is now the partner's real user snowflake (hydrated from GET /chat/dms),
+    // so it is a valid callee for the signaling hub.
+    void startCall(activeDmDetails.id, callType);
   }
   const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
   const activeConversationName =
@@ -563,6 +600,7 @@ export function ChatWorkspace() {
             <DmList
               activeDm={activeDm ?? ''}
               directMessages={dmConversations}
+              friends={friends}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}
