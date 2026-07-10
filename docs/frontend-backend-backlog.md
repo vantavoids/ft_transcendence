@@ -52,23 +52,23 @@ Goal: complete sign-in, sign-up, and account management flows.
 
 Goal: replace all local friend/profile placeholders with real user-service data.
 
-- [ ] Current user profile
-  - [ ] fetch `GET /users/me` on app load
-  - [ ] hydrate username, display name, avatar, banner, bio, and presence
-  - [ ] use the profile in the chat sidebar and settings modal
-- [ ] Profile editing
-  - [ ] wire `PATCH /users/{id}` for display name, bio, and status
-  - [ ] wire avatar upload and avatar removal
-  - [ ] wire banner upload and banner removal
-- [ ] Friend discovery
-  - [ ] wire `GET /users/search?q=`
-  - [ ] allow friend-add by username via `POST /friends`
-  - [ ] handle acceptance, blocking, and deletion with friendship IDs
-- [ ] Friend panels
-  - [ ] replace `friend-mocks` with `GET /users/{id}/friends`
-  - [ ] add pending requests tab with `GET /users/me/friend-requests`
-  - [ ] add relationship state rendering with `GET /users/me/friendship/{user_id}`
-  - [ ] add block/unblock actions with `/users/{id}/block`
+- [x] Current user profile
+  - [x] fetch `GET /users/me` on app load
+  - [x] hydrate username, display name, avatar, banner, bio, and presence
+  - [x] use the profile in the chat sidebar and settings modal
+- [x] Profile editing
+  - [x] wire `PATCH /users/{id}` for display name, bio, and status
+  - [x] wire avatar upload and avatar removal
+  - [x] wire banner upload and banner removal
+- [x] Friend discovery
+  - [x] wire `GET /users/search?q=`
+  - [x] allow friend-add by username via `POST /friends`
+  - [x] handle acceptance, blocking, and deletion with friendship IDs
+- [x] Friend panels
+  - [x] replace `friend-mocks` with `GET /users/{id}/friends`
+  - [x] add pending requests tab with `GET /users/me/friend-requests`
+  - [x] add relationship state rendering with `GET /users/me/friendship/{user_id}`
+  - [x] add block/unblock actions with `/users/{id}/block`
 
 ## Epic 3 - Guild discovery and membership management
 
@@ -191,4 +191,3 @@ Goal: keep the app coherent when services disagree, disconnect, or return partia
 5. Epic 4: chat transport and history
 6. Epic 5: notifications
 7. Epic 6: resilience and cache consistency
-
