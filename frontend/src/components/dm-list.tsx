@@ -14,9 +14,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { FriendsList } from './friends-list';
-import { directMessages } from './mocks/dm-mocks';
-import { friends } from './mocks/friend-mocks';
+import { FriendsList, type Friend } from './friends-list';
 
 export type DirectMessage = {
   id: string;
@@ -32,6 +30,7 @@ export type DirectMessage = {
 type DmListProps = {
   activeDm: string;
   directMessages: DirectMessage[];
+  friends: Friend[];
   mobilePane: 'channels' | 'messages';
   username: string;
   isMicMuted: boolean;
@@ -44,15 +43,15 @@ type DmListProps = {
   onSelectDm: (dmId: string) => void;
 };
 
-export function getDmName(dmId: string, dms = directMessages) {
+export function getDmName(dmId: string, dms: DirectMessage[] = []) {
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
-export function getDmDetails(dmId: string, dms = directMessages) {
+export function getDmDetails(dmId: string, dms: DirectMessage[] = []) {
   return dms.find((dm) => dm.id === dmId) ?? null;
 }
 
-export function hasDm(dmId: string, dms = directMessages) {
+export function hasDm(dmId: string, dms: DirectMessage[] = []) {
   return dms.some((dm) => dm.id === dmId);
 }
 
@@ -70,6 +69,7 @@ export function getDmStatusClasses(status: DirectMessage['status']) {
 export function DmList({
   activeDm,
   directMessages,
+  friends,
   mobilePane,
   username,
   isMicMuted,
