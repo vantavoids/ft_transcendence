@@ -69,6 +69,19 @@ export function toCurrentUserProfile(user: UserProfileDto): CurrentUserProfile {
   };
 }
 
+export function toUserStatusLabel(status: UserStatus): string {
+  switch (status) {
+    case 'online':
+      return 'Online';
+    case 'idle':
+      return 'Idle';
+    case 'dnd':
+      return 'Do not disturb';
+    default:
+      return 'Offline';
+  }
+}
+
 export function toFriend(friend: { id: string; username: string; display_name: string; status: UserStatus; friendship_status: 'accepted' | 'pending' | 'blocked'; }): Friend {
   return {
     id: friend.id,
