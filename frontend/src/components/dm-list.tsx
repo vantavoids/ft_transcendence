@@ -14,7 +14,9 @@ import {
   UserRound
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { FriendsList, type Friend } from './friends-list';
+import { FriendsList } from './friends-list';
+import { directMessages } from './mocks/dm-mocks';
+import type { PublicUserProfileDto } from '../shared/api/user';
 
 export type DirectMessage = {
   id: string;
@@ -30,9 +32,9 @@ export type DirectMessage = {
 type DmListProps = {
   activeDm: string;
   directMessages: DirectMessage[];
-  friends: Friend[];
+  currentUser: PublicUserProfileDto | null;
+  friendsRefreshKey: number;
   mobilePane: 'channels' | 'messages';
-  username: string;
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
@@ -41,17 +43,19 @@ type DmListProps = {
   onOpenNotifications: () => void;
   onOpenSettings: () => void;
   onSelectDm: (dmId: string) => void;
+  onOpenUserProfile: (userId: string, friendshipId?: string) => void;
+  onFriendsMutated: () => void;
 };
 
-export function getDmName(dmId: string, dms: DirectMessage[] = []) {
+export function getDmName(dmId: string, dms = directMessages) {
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
-export function getDmDetails(dmId: string, dms: DirectMessage[] = []) {
+export function getDmDetails(dmId: string, dms = directMessages) {
   return dms.find((dm) => dm.id === dmId) ?? null;
 }
 
-export function hasDm(dmId: string, dms: DirectMessage[] = []) {
+export function hasDm(dmId: string, dms = directMessages) {
   return dms.some((dm) => dm.id === dmId);
 }
 
@@ -69,9 +73,9 @@ export function getDmStatusClasses(status: DirectMessage['status']) {
 export function DmList({
   activeDm,
   directMessages,
-  friends,
+  currentUser,
+  friendsRefreshKey,
   mobilePane,
-  username,
   isMicMuted,
   isDeafened,
   unreadNotifications,
@@ -79,7 +83,9 @@ export function DmList({
   onToggleMicMute,
   onOpenNotifications,
   onOpenSettings,
-  onSelectDm
+  onSelectDm,
+  onOpenUserProfile,
+  onFriendsMutated
 }: DmListProps) {
   const [search, setSearch] = useState('');
   const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
@@ -169,7 +175,14 @@ export function DmList({
       </div>
 
       {isFriendsView ? (
-        <FriendsList friends={friends} search={search} onSearchChange={setSearch} />
+        <FriendsList
+          currentUserId={currentUser?.id ?? null}
+          refreshKey={friendsRefreshKey}
+          search={search}
+          onSearchChange={setSearch}
+          onOpenProfile={onOpenUserProfile}
+          onDataMutated={onFriendsMutated}
+        />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
           {filteredDms.length === 0 ? (
@@ -247,10 +260,17 @@ export function DmList({
       <div className="shrink-0 border-t border-white/8 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)]" />
-            <span className="mono-detail min-w-0 truncate text-[2rem] font-medium tracking-[-0.06em] text-white">
-              {username}
-            </span>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)] text-sm font-bold text-primary-bg">
+              {(currentUser?.display_name ?? currentUser?.username ?? '').slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <span className="block truncate text-[1rem] font-bold text-white">
+                {currentUser?.display_name ?? currentUser?.username ?? ''}
+              </span>
+              <span className="mono-detail block truncate text-xs text-white/40">
+                @{currentUser?.username ?? ''}
+              </span>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <button

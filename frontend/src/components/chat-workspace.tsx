@@ -7,40 +7,34 @@ import {
   ArrowRight,
   CircleEllipsis,
   MessageCircle,
-  Phone,
   Smile,
-  UserRound,
-  Video
+  UserRound
 } from 'lucide-react';
 import { ChatMessage, getAccentClasses, type ChatMessageData } from './chat-message';
 import { ChannelList, getChannelName, hasChannel } from './channel-list';
-import {
-  DmList,
-  getDmDetails,
-  getDmName,
-  getDmStatusClasses,
-  type DirectMessage
-} from './dm-list';
-import {
-  getGuildMemberByName,
-  GuildMemberList,
-  type GuildMember
-} from './guild-member-list';
+import { DmList, getDmDetails, getDmName, getDmStatusClasses, hasDm } from './dm-list';
+import { getGuildMemberByName, GuildMemberList, type GuildMember } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
-import type { Friend } from './friends-list';
+import { directMessages } from './mocks/dm-mocks';
 import { initialMessages } from './mocks/message-mocks';
+import {
+  blockUser,
+  createFriendRequest,
+  deleteFriendRequest,
+  getCurrentUser,
+  getRelationship,
+  getUser,
+  unblockUser,
+  updateFriendRequest,
+  type PublicUserProfileDto,
+  type RelationshipDto
+} from '../shared/api/user';
+import { clearSession } from '../shared/lib/session';
 import { useNotifications } from '../shared/lib/use-notifications';
-import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
-import { listDirectMessages } from '../shared/api/chat';
-import { getUser, listFriends } from '../shared/api/user';
-import { toDirectMessage, toFriend } from '../shared/api/hydrate';
-import { useCall } from '../shared/call/call-context';
-import { IncomingCallOverlay } from './call/incoming-call-overlay';
-import { CallWindow } from './call/call-window';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const LAST_CHAT_CHANNEL_KEY = 'ft_transcendence_last_chat_channel';
@@ -82,7 +76,6 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 
 export function ChatWorkspace() {
   const router = useRouter();
-  const { startCall } = useCall();
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -98,10 +91,19 @@ export function ChatWorkspace() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
-  const [username] = useState('cartoone');
+  const [currentUser, setCurrentUser] = useState<PublicUserProfileDto | null>(null);
+  const [isCurrentUserLoading, setIsCurrentUserLoading] = useState(true);
+  const [currentUserError, setCurrentUserError] = useState<string | null>(null);
+  const [currentUserRetry, setCurrentUserRetry] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<PublicUserProfileDto | null>(null);
+  const [selectedUserRelationship, setSelectedUserRelationship] = useState<RelationshipDto | null>(
+    null
+  );
+  const [selectedUserFriendshipId, setSelectedUserFriendshipId] = useState<string | null>(null);
+  const [socialGraphRevision, setSocialGraphRevision] = useState(0);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
-  const [friends, setFriends] = useState<Friend[]>([]);
+  const [dmConversations, setDmConversations] = useState(directMessages);
   const [messagesByConversation, setMessagesByConversation] = useState(initialMessages);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
@@ -111,79 +113,77 @@ export function ChatWorkspace() {
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
   const notificationFeed = useNotifications();
+  const currentUsername = currentUser?.username ?? '';
 
   useEffect(() => {
-    // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
     const storedChannel = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
     const storedDm = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
 
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setActiveChannel(storedChannel && hasChannel(storedChannel) ? storedChannel : 'general');
-    // the DM list loads asynchronously; keep the stored selection and let the
-    // empty-state render until it resolves (getDmDetails returns null meanwhile).
-    setActiveDm(storedDm && storedDm.length > 0 ? storedDm : null);
+    setActiveDm(storedDm && hasDm(storedDm, directMessages) ? storedDm : null);
     setIsHydrated(true);
   }, []);
 
   useEffect(() => {
-    // Hydrate the DM sidebar and friends list from the real services. DM rows are
-    // conversation summaries (GET /chat/dms) enriched with the partner's profile
-    // (GET /users/{id}); friends come straight from GET /users/{id}/friends. All
-    // calls are best-effort: failures leave the lists empty rather than surfacing
-    // as console errors (III: zero console errors in Chrome).
-    let cancelled = false;
-
-    async function loadWorkspaceData() {
-      const userId = getUserId();
-
-      const [conversations, friendList] = await Promise.all([
-        listDirectMessages().catch(() => []),
-        userId ? listFriends(userId).catch(() => []) : Promise.resolve([])
-      ]);
-
-      const hydratedDms = await Promise.all(
-        conversations.map(async (conversation) => {
-          try {
-            const partner = await getUser(conversation.partner_id);
-            return toDirectMessage(conversation, partner);
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setDmConversations(hydratedDms.filter((dm): dm is DirectMessage => dm !== null));
-      setFriends(friendList.map(toFriend));
-    }
-
-    void loadWorkspaceData();
+    setIsCurrentUserLoading(true);
+    setCurrentUserError(null);
+    let active = true;
+    getCurrentUser()
+      .then((profile) => {
+        if (active) {
+          setCurrentUser(profile);
+          setIsCurrentUserLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCurrentUser(null);
+          setCurrentUserError('Unable to load your user profile.');
+          setIsCurrentUserLoading(false);
+        }
+      });
 
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, []);
+  }, [currentUserRetry]);
+
+  useEffect(() => {
+    if (!selectedUserId) {
+      setSelectedUserProfile(null);
+      setSelectedUserRelationship(null);
+      setSelectedUserFriendshipId(null);
+      return;
+    }
+
+    let active = true;
+    Promise.all([getUser(selectedUserId), getRelationship(selectedUserId)])
+      .then(([profile, relationship]) => {
+        if (!active) {
+          return;
+        }
+
+        setSelectedUserProfile(profile);
+        setSelectedUserRelationship(relationship);
+      })
+      .catch(() => {
+        if (active) {
+          setSelectedUserProfile(null);
+          setSelectedUserRelationship(null);
+          setSelectedUserFriendshipId(null);
+          setSelectedUserId(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedUserId, socialGraphRevision]);
 
   const activeDmDetails =
     chatMode === 'dm' && activeDm ? getDmDetails(activeDm, dmConversations) : null;
-  const resolvePeerName = useCallback(
-    (peerId: string | null) =>
-      peerId ? (dmConversations.find((dm) => dm.id === peerId)?.name ?? 'Unknown user') : 'Unknown user',
-    [dmConversations]
-  );
-
-  function startDmCall(callType: 'audio' | 'video') {
-    if (!activeDmDetails) {
-      return;
-    }
-    // the DM id is now the partner's real user snowflake (hydrated from GET /chat/dms),
-    // so it is a valid callee for the signaling hub.
-    void startCall(activeDmDetails.id, callType);
-  }
   const activeConversationId = chatMode === 'dm' ? (activeDmDetails?.id ?? null) : activeChannel;
   const activeConversationName =
     chatMode === 'dm'
@@ -412,7 +412,7 @@ export function ChatWorkspace() {
 
     const nextMessage: ChatMessageData = {
       id: `${activeConversationId}-${Date.now()}`,
-      author: username,
+      author: currentUsername,
       accent: 'pink',
       content: content.split(/\r?\n/),
       timestamp: new Date().toLocaleTimeString('fr-FR', {
@@ -577,17 +577,169 @@ export function ChatWorkspace() {
               id: message.author.toLowerCase(),
               name: message.author,
               role: 'Member',
-              status: message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
+              status:
+                message.author.toLowerCase() === currentUsername.toLowerCase()
+                  ? 'online'
+                  : 'offline',
               accent: message.accent,
-              activity: 'No recent activity'
+              activity: ''
             })
     );
   }
 
+  function handleOpenUserProfile(userId: string, friendshipId?: string) {
+    setProfileMember(null);
+    setIsDmProfileOpen(false);
+    setSelectedUserProfile(null);
+    setSelectedUserRelationship(null);
+    setSelectedUserFriendshipId(friendshipId ?? null);
+    setSelectedUserId(userId);
+  }
+
+  async function handleAddFriend() {
+    if (!selectedUserProfile) {
+      return;
+    }
+
+    try {
+      await createFriendRequest({ addressee_id: selectedUserProfile.id });
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Let the profile remain open; the refreshed relationship will reflect any later retry.
+    }
+  }
+
+  async function handleCancelFriendRequest() {
+    if (!selectedUserFriendshipId) {
+      return;
+    }
+
+    try {
+      await deleteFriendRequest(selectedUserFriendshipId);
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Best-effort; the card stays open and the user can retry.
+    }
+  }
+
+  async function handleAcceptFriendRequest() {
+    if (!selectedUserFriendshipId) {
+      return;
+    }
+
+    try {
+      await updateFriendRequest(selectedUserFriendshipId, { status: 'accepted' });
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Best-effort; keep the profile open for retry.
+    }
+  }
+
+  async function handleRejectFriendRequest() {
+    if (!selectedUserFriendshipId) {
+      return;
+    }
+
+    try {
+      await deleteFriendRequest(selectedUserFriendshipId);
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Best-effort; keep the profile open for retry.
+    }
+  }
+
+  async function handleBlockSelectedUser() {
+    if (!selectedUserProfile) {
+      return;
+    }
+
+    try {
+      await blockUser(selectedUserProfile.id);
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Best-effort; keep the profile open for retry.
+    }
+  }
+
+  async function handleUnblockSelectedUser() {
+    if (!selectedUserProfile) {
+      return;
+    }
+
+    try {
+      await unblockUser(selectedUserProfile.id);
+      setSocialGraphRevision((current) => current + 1);
+    } catch {
+      // Best-effort; keep the profile open for retry.
+    }
+  }
+
+  function handleMessageSelectedUser() {
+    if (!selectedUserProfile) {
+      return;
+    }
+
+    const matchedDm = dmConversations.find(
+      (dm) => dm.name.toLowerCase() === selectedUserProfile.username.toLowerCase()
+    );
+
+    setChatMode('dm');
+    setIsDmProfileOpen(false);
+    setIsMemberListOpen(false);
+    setProfileMember(null);
+    setSelectedUserId(null);
+    setSelectedUserProfile(null);
+    setSelectedUserRelationship(null);
+    setSelectedUserFriendshipId(null);
+    rememberConversationScrollPosition(activeConversationId);
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
+
+    if (matchedDm) {
+      setActiveDm(matchedDm.id);
+      window.sessionStorage.setItem(LAST_CHAT_DM_KEY, matchedDm.id);
+    } else {
+      setActiveDm(null);
+    }
+
+    setMobilePane('messages');
+  }
+
+  function handleCloseSelectedUserProfile() {
+    setSelectedUserId(null);
+    setSelectedUserProfile(null);
+    setSelectedUserRelationship(null);
+    setSelectedUserFriendshipId(null);
+  }
+
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
-      {!isHydrated ? (
+      {!isHydrated || isCurrentUserLoading ? (
         <div className="flex min-h-0 flex-1 rounded-[1rem] bg-secondary-bg ring-1 ring-white/5" />
+      ) : currentUserError ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center rounded-[1rem] bg-secondary-bg px-6 text-center ring-1 ring-white/5">
+          <div className="max-w-md">
+            <h2 className="text-[1.35rem] font-bold tracking-[-0.03em] text-white">
+              Profile unavailable
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-white/45">{currentUserError}</p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCurrentUserRetry((current) => current + 1)}
+                className="flex h-11 items-center justify-center rounded-md bg-aqua px-4 text-sm font-bold text-primary-bg transition hover:bg-white"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-frame px-4 text-sm font-semibold text-white/80 transition hover:text-white"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           <GuildSidebar
@@ -600,9 +752,9 @@ export function ChatWorkspace() {
             <DmList
               activeDm={activeDm ?? ''}
               directMessages={dmConversations}
-              friends={friends}
+              currentUser={currentUser}
+              friendsRefreshKey={socialGraphRevision}
               mobilePane={mobilePane}
-              username={username}
               isMicMuted={isMicMuted}
               isDeafened={isDeafened}
               unreadNotifications={notificationFeed.unreadCount}
@@ -611,12 +763,14 @@ export function ChatWorkspace() {
               onOpenNotifications={() => setIsNotificationCardOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectDm={handleSelectDm}
+              onOpenUserProfile={handleOpenUserProfile}
+              onFriendsMutated={() => setSocialGraphRevision((current) => current + 1)}
             />
           ) : (
             <ChannelList
               activeChannel={activeChannel ?? ''}
               mobilePane={mobilePane}
-              username={username}
+              username={currentUsername}
               isMicMuted={isMicMuted}
               isDeafened={isDeafened}
               unreadNotifications={notificationFeed.unreadCount}
@@ -679,26 +833,6 @@ export function ChatWorkspace() {
                 )}
               </div>
               <div className="flex items-center gap-4 text-[#8c8c90]">
-                {chatMode === 'dm' && activeDmDetails ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => startDmCall('audio')}
-                      className="transition hover:text-white"
-                      aria-label="Start voice call"
-                    >
-                      <Phone className="h-5 w-5" strokeWidth={1.8} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startDmCall('video')}
-                      className="transition hover:text-white"
-                      aria-label="Start video call"
-                    >
-                      <Video className="h-5 w-5" strokeWidth={1.8} />
-                    </button>
-                  </>
-                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -758,7 +892,8 @@ export function ChatWorkspace() {
               ) : (
                 <div>
                   {activeMessageItems.map(({ message, isGrouped }) => {
-                    const isOwnMessage = message.author.toLowerCase() === username.toLowerCase();
+                    const isOwnMessage =
+                      message.author.toLowerCase() === currentUsername.toLowerCase();
                     const isEditing = editingMessageId === message.id;
 
                     return (
@@ -884,6 +1019,29 @@ export function ChatWorkspace() {
             <ProfileCard member={profileMember} onClose={() => setProfileMember(null)} />
           ) : null}
 
+          {selectedUserId && !selectedUserProfile ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6">
+              <div className="rounded-[1rem] border border-white/10 bg-secondary-bg px-5 py-4 text-sm text-white/70 shadow-2xl shadow-black/50">
+                Loading profile...
+              </div>
+            </div>
+          ) : null}
+
+          {selectedUserProfile ? (
+            <ProfileCard
+              user={selectedUserProfile}
+              relationship={selectedUserRelationship}
+              onClose={handleCloseSelectedUserProfile}
+              onMessage={handleMessageSelectedUser}
+              onAddFriend={handleAddFriend}
+              onCancelRequest={selectedUserFriendshipId ? handleCancelFriendRequest : undefined}
+              onAcceptRequest={selectedUserFriendshipId ? handleAcceptFriendRequest : undefined}
+              onRejectRequest={selectedUserFriendshipId ? handleRejectFriendRequest : undefined}
+              onBlock={handleBlockSelectedUser}
+              onUnblock={handleUnblockSelectedUser}
+            />
+          ) : null}
+
           {isNotificationCardOpen ? (
             <NotificationCard
               feed={notificationFeed}
@@ -893,14 +1051,12 @@ export function ChatWorkspace() {
 
           {isSettingsOpen ? (
             <SettingsModal
-              username={username}
+              currentUser={currentUser}
+              onProfileUpdated={setCurrentUser}
               onClose={() => setIsSettingsOpen(false)}
               onDisconnect={handleDisconnect}
             />
           ) : null}
-
-          <IncomingCallOverlay resolvePeerName={resolvePeerName} />
-          <CallWindow resolvePeerName={resolvePeerName} />
         </>
       )}
     </div>

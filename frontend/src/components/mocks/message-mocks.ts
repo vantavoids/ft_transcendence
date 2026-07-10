@@ -6,21 +6,21 @@ export const initialMessages: Record<string, ChatMessageData[]> = {
   general: [
     {
       id: '1',
-      author: 'um4ss',
+      author: 'user-gamma',
       accent: 'lime',
       content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
       timestamp: '20:01'
     },
     {
       id: '2',
-      author: 'add',
+      author: 'user-beta',
       accent: 'aqua',
       content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
       timestamp: '20:03'
     },
     {
       id: '3',
-      author: 'SkyDogzz',
+      author: 'user-alpha',
       accent: 'yellow',
       content: [
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -31,7 +31,7 @@ export const initialMessages: Record<string, ChatMessageData[]> = {
     },
     {
       id: '4',
-      author: 'Vanta',
+      author: 'user-delta',
       accent: 'lavender',
       content: ['Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
       timestamp: '20:11'
@@ -40,7 +40,7 @@ export const initialMessages: Record<string, ChatMessageData[]> = {
   idk: [
     {
       id: '5',
-      author: 'Cartoone',
+      author: 'user-epsilon',
       accent: 'pink',
       content: ['Canal de test prêt pour les messages locaux.'],
       timestamp: '20:15'
@@ -49,59 +49,59 @@ export const initialMessages: Record<string, ChatMessageData[]> = {
   ideas_are_tough: [
     {
       id: '6',
-      author: 'um4ss',
+      author: 'user-gamma',
       accent: 'lime',
       content: ['Brainstorm ici.'],
       timestamp: '20:17'
     }
   ],
-  'dm-skydogzz': [
+  'dm-user-alpha': [
     {
-      id: 'dm-skydogzz-1',
-      author: 'SkyDogzz',
+      id: 'dm-user-alpha-1',
+      author: 'user-alpha',
       accent: 'yellow',
       content: ['On teste la nouvelle view DM ici.'],
       timestamp: '19:42'
     },
     {
-      id: 'dm-skydogzz-2',
-      author: 'cartoone',
+      id: 'dm-user-alpha-2',
+      author: 'user-epsilon',
       accent: 'pink',
       content: ['Oui, la colonne de gauche doit juste lister les DMs.'],
       timestamp: '19:44'
     }
   ],
-  'dm-add': [
+  'dm-user-beta': [
     {
-      id: 'dm-add-1',
-      author: 'add',
+      id: 'dm-user-beta-1',
+      author: 'user-beta',
       accent: 'aqua',
       content: ['Je passe après le build.'],
       timestamp: '18:12'
     }
   ],
-  'dm-um4ss': [
+  'dm-user-gamma': [
     {
-      id: 'dm-um4ss-1',
-      author: 'um4ss',
+      id: 'dm-user-gamma-1',
+      author: 'user-gamma',
       accent: 'lime',
       content: ['Ping quand tu peux.'],
       timestamp: '17:58'
     }
   ],
-  'dm-vanta': [
+  'dm-user-delta': [
     {
-      id: 'dm-vanta-1',
-      author: 'Vanta',
+      id: 'dm-user-delta-1',
+      author: 'user-delta',
       accent: 'lavender',
       content: ['Archive de conversation.'],
       timestamp: '15:21'
     }
   ],
-  'dm-cartoone': [
+  'dm-user-epsilon': [
     {
-      id: 'dm-cartoone-1',
-      author: 'cartoone',
+      id: 'dm-user-epsilon-1',
+      author: 'user-epsilon',
       accent: 'pink',
       content: ['Notes personnelles.'],
       timestamp: '12:04'
