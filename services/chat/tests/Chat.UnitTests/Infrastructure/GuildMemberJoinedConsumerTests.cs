@@ -62,3 +62,27 @@ public sealed class GuildMemberLeftConsumerTests
 		Assert.Equal(100L, left.GuildId);
 	}
 }
+
+public sealed class ChannelAccessRevokedConsumerTests
+{
+	[Fact]
+	public async Task Consume_EvictsUserFromSingleChannel()
+	{
+		var broadcaster = new FakeUserBroadcaster();
+		await using var provider = new ServiceCollection()
+			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddMassTransitTestHarness(x => x.AddConsumer<ChannelAccessRevokedConsumer>())
+			.BuildServiceProvider(true);
+
+		var harness = provider.GetRequiredService<ITestHarness>();
+		await harness.Start();
+
+		await harness.Bus.Publish(new ChannelAccessRevoked(ChannelId: 500, UserId: 42));
+
+		Assert.True(await harness.Consumed.Any<ChannelAccessRevoked>());
+
+		var (UserId, ChannelId) = Assert.Single(broadcaster.EvictChannelCalls);
+		Assert.Equal(42L, UserId);
+		Assert.Equal(500L, ChannelId);
+	}
+}
