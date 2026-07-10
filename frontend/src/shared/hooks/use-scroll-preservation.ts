@@ -103,6 +103,8 @@ export function useScrollPreservation(
 
   useLayoutEffect(() => {
     if (!activeConversationId) {
+      // nothing to scroll to (e.g. a guild with no channels yet), treat as "near bottom"
+      setIsNearBottom(true);
       return;
     }
 
