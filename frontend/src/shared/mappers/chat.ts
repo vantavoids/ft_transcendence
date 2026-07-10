@@ -6,6 +6,7 @@ import type {
   DirectMessageDto,
   MessageReactionDto
 } from '../api/chat';
+import { hashToIndex } from '../lib/hash';
 
 type MessageAccent = ChatMessageData['accent'];
 
@@ -22,15 +23,8 @@ export function splitMessageLines(content: string): string[] {
   return content.split(/\r?\n/);
 }
 
-// deterministic (not random) so the same author always renders with the same accent color
 export function accentForAuthor(authorId: string): MessageAccent {
-  let hash = 0;
-
-  for (let index = 0; index < authorId.length; index += 1) {
-    hash = (hash * 31 + authorId.charCodeAt(index)) | 0;
-  }
-
-  return MESSAGE_ACCENTS[Math.abs(hash) % MESSAGE_ACCENTS.length];
+  return MESSAGE_ACCENTS[hashToIndex(authorId, MESSAGE_ACCENTS.length)];
 }
 
 // TODO: GET /users/{id} hydration yet (epic 2) - fall back to a raw-id placeholder

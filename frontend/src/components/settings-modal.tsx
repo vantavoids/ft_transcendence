@@ -15,6 +15,7 @@ import {
   describeDeleteAccountError
 } from '../shared/lib/auth-errors';
 import { checkEmail, checkPassword } from '../shared/lib/validators/auth';
+import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 
 type SettingsModalProps = {
   username: string;
@@ -29,18 +30,7 @@ export function SettingsModal({ username, onClose, onDisconnect }: SettingsModal
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
   const [panel, setPanel] = useState<Panel>('menu');
 
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape' && event.key !== 'Esc' && event.code !== 'Escape') {
-        return;
-      }
-
-      onClose();
-    }
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  useCloseOnEscape(onClose);
 
   useEffect(() => {
     let active = true;

@@ -10,7 +10,6 @@ import {
   Headphones,
   Mic,
   MicOff,
-  Search,
   Settings,
   UserPlus,
   UserRound,
@@ -19,6 +18,7 @@ import {
 import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import { FriendsList, type Friend } from './friends-list';
+import { SearchInput } from './search-input';
 
 export type DirectMessage = {
   id: string;
@@ -180,15 +180,7 @@ export function DmList({
 
         {isFriendsView ? null : (
           <>
-            <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-              <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search DMs"
-                className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-              />
-            </label>
+            <SearchInput value={search} onChange={setSearch} placeholder="Search DMs" />
             <button
               type="button"
               onClick={onToggleShowArchived}

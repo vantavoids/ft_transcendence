@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   AtSign,
   Bell,
@@ -27,6 +27,7 @@ import {
   type NotificationMuteScope,
   type UseNotificationsResult
 } from '../shared/lib/use-notifications';
+import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 
 type NotificationTone = 'aqua' | 'yellow' | 'pink';
 
@@ -448,18 +449,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
     }
   }
 
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape' && event.key !== 'Esc' && event.code !== 'Escape') {
-        return;
-      }
-
-      onClose();
-    }
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  useCloseOnEscape(onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6">

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import type { DirectMessage } from './dm-list';
+import { SearchInput } from './search-input';
 
 export type Friend = {
   id: string;
@@ -32,15 +33,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-        <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-        <input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search friends"
-          className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-        />
-      </label>
+      <SearchInput value={search} onChange={onSearchChange} placeholder="Search friends" />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
         {filteredFriends.length === 0 ? (
