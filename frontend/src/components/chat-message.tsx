@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import type { MessageAttachmentDto } from '../shared/api/chat';
+import { downloadAuthedAttachment, openAuthedAttachment } from '../shared/lib/attachments';
+import { AuthedImage } from './authed-image';
 import { isEscapeKey } from '../shared/hooks/use-close-on-escape';
 
 function formatFileSize(sizeBytes: number): string {
@@ -161,7 +163,7 @@ export function ChatMessage({
 
     editTextareaRef.current?.focus();
     editTextareaRef.current?.setSelectionRange(editingDraft.length, editingDraft.length);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
   useEffect(() => {
@@ -345,30 +347,37 @@ export function ChatMessage({
           <div className="mt-2 flex flex-wrap gap-2">
             {message.attachments.map((attachment) =>
               attachment.mime_type.startsWith('image/') ? (
-                <a
+                <button
                   key={attachment.id}
-                  href={attachment.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block max-w-[16rem] overflow-hidden rounded-md border border-white/10"
+                  type="button"
+                  onClick={() => {
+                    void openAuthedAttachment(attachment.url).catch(() => {});
+                  }}
+                  className="block max-w-[16rem] cursor-pointer overflow-hidden rounded-md border border-white/10 bg-transparent p-0"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- same-origin, deployment-specific attachment host, not worth a next/image remotePatterns entry */}
-                  <img src={attachment.url} alt={attachment.filename} className="max-h-64 w-full object-cover" />
-                </a>
+                  <AuthedImage
+                    src={attachment.url}
+                    alt={attachment.filename}
+                    className="max-h-64 w-full object-cover"
+                  />
+                </button>
               ) : (
-                <a
+                <button
                   key={attachment.id}
-                  href={attachment.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 rounded-md border border-white/10 bg-panel px-3 py-2 text-sm text-white/80 transition hover:border-aqua/40 hover:text-white"
+                  type="button"
+                  onClick={() => {
+                    void downloadAuthedAttachment(attachment.url, attachment.filename).catch(
+                      () => {}
+                    );
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-panel px-3 py-2 text-left text-sm text-white/80 transition hover:border-aqua/40 hover:text-white"
                 >
                   <FileText className="h-4 w-4 shrink-0" strokeWidth={1.8} />
                   <span className="truncate">{attachment.filename}</span>
                   <span className="mono-detail shrink-0 text-xs text-white/35">
                     {formatFileSize(attachment.size_bytes)}
                   </span>
-                </a>
+                </button>
               )
             )}
           </div>
