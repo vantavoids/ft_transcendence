@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Archive,
   Bell,
-  Check,
   CircleEllipsis,
   Headphones,
   Mic,
@@ -13,11 +11,12 @@ import {
   Search,
   Settings,
   UserPlus,
-  UserRound,
-  X
+  UserRound
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { FriendsList, type Friend } from './friends-list';
+import { FriendsList } from './friends-list';
+import { directMessages } from './mocks/dm-mocks';
+import type { PublicUserProfileDto } from '../shared/api/user';
 
 export type DirectMessage = {
   id: string;
@@ -26,18 +25,16 @@ export type DirectMessage = {
   accent: ChatMessageData['accent'];
   lastMessage: string;
   lastMessageAt: string;
-  lastActivityAt: number;
+  lastActivityMinutes: number;
   unreadCount: number;
-  isArchived: boolean;
 };
 
 type DmListProps = {
   activeDm: string;
   directMessages: DirectMessage[];
-  showArchived: boolean;
-  friends: Friend[];
+  currentUser: PublicUserProfileDto | null;
+  friendsRefreshKey: number;
   mobilePane: 'channels' | 'messages';
-  username: string;
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
@@ -46,20 +43,19 @@ type DmListProps = {
   onOpenNotifications: () => void;
   onOpenSettings: () => void;
   onSelectDm: (dmId: string) => void;
-  onToggleShowArchived: () => void;
-  onArchiveDm: (dmId: string) => void;
+  onOpenUserProfile: (userId: string, friendshipId?: string) => void;
+  onFriendsMutated: () => void;
 };
 
-export function getDmName(dmId: string, dms: DirectMessage[]) {
-  if (dmId.length === 0) return dmId;
+export function getDmName(dmId: string, dms = directMessages) {
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
-export function getDmDetails(dmId: string, dms: DirectMessage[]) {
+export function getDmDetails(dmId: string, dms = directMessages) {
   return dms.find((dm) => dm.id === dmId) ?? null;
 }
 
-export function hasDm(dmId: string, dms: DirectMessage[]) {
+export function hasDm(dmId: string, dms = directMessages) {
   return dms.some((dm) => dm.id === dmId);
 }
 
@@ -77,10 +73,9 @@ export function getDmStatusClasses(status: DirectMessage['status']) {
 export function DmList({
   activeDm,
   directMessages,
-  showArchived,
-  friends,
+  currentUser,
+  friendsRefreshKey,
   mobilePane,
-  username,
   isMicMuted,
   isDeafened,
   unreadNotifications,
@@ -89,37 +84,17 @@ export function DmList({
   onOpenNotifications,
   onOpenSettings,
   onSelectDm,
-  onToggleShowArchived,
-  onArchiveDm
+  onOpenUserProfile,
+  onFriendsMutated
 }: DmListProps) {
   const [search, setSearch] = useState('');
   const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
-  const [confirmingArchiveId, setConfirmingArchiveId] = useState<string | null>(null);
-  const confirmArchiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
-    };
-  }, []);
-
-  function armArchiveConfirm(dmId: string) {
-    setConfirmingArchiveId(dmId);
-    if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
-    // first click only arms the action - it auto-cancels after a few seconds
-    confirmArchiveTimeoutRef.current = setTimeout(() => setConfirmingArchiveId(null), 3000);
-  }
-
-  function cancelArchiveConfirm() {
-    setConfirmingArchiveId(null);
-    if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
-  }
 
   const filteredDms = useMemo(() => {
     const term = search.trim().toLowerCase();
 
     const sortedDms = [...directMessages].sort(
-      (first, second) => second.lastActivityAt - first.lastActivityAt
+      (first, second) => second.lastActivityMinutes - first.lastActivityMinutes
     );
 
     if (!term) {
@@ -187,33 +162,27 @@ export function DmList({
         </div>
 
         {isFriendsView ? null : (
-          <>
-            <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-              <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search DMs"
-                className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={onToggleShowArchived}
-              className={`mt-2 flex items-center gap-2 text-xs font-semibold transition ${
-                showArchived ? 'text-aqua' : 'text-white/35 hover:text-white'
-              }`}
-              aria-pressed={showArchived}
-            >
-              <Archive className="h-3.5 w-3.5" strokeWidth={1.8} />
-              {showArchived ? 'Hide archived' : 'Show archived'}
-            </button>
-          </>
+          <label className="mt-4 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
+            <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search DMs"
+              className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
+            />
+          </label>
         )}
       </div>
 
       {isFriendsView ? (
-        <FriendsList friends={friends} search={search} onSearchChange={setSearch} />
+        <FriendsList
+          currentUserId={currentUser?.id ?? null}
+          refreshKey={friendsRefreshKey}
+          search={search}
+          onSearchChange={setSearch}
+          onOpenProfile={onOpenUserProfile}
+          onDataMutated={onFriendsMutated}
+        />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
           {filteredDms.length === 0 ? (
@@ -234,98 +203,53 @@ export function DmList({
             <div className="space-y-1">
               {filteredDms.map((dm) => {
                 const isActive = dm.id === activeDm;
-                const isConfirmingArchive = confirmingArchiveId === dm.id;
 
                 return (
-                  <div
+                  <button
                     key={dm.id}
-                    onMouseLeave={cancelArchiveConfirm}
-                    className={`group relative flex h-[4.75rem] w-full items-center rounded-lg transition ${
+                    type="button"
+                    onClick={() => onSelectDm(dm.id)}
+                    className={`flex h-[4.75rem] w-full items-center gap-3 rounded-lg px-3 text-left transition ${
                       isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
-                    } ${dm.isArchived ? 'opacity-50' : ''}`}
+                    }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => onSelectDm(dm.id)}
-                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
-                    >
-                      <span className="relative shrink-0">
-                        <span
-                          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                            dm.accent
-                          )}`}
-                        >
-                          {dm.name.slice(0, 1).toUpperCase()}
-                        </span>
-                        <span
-                          className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                            dm.status
-                          )}`}
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex min-w-0 items-center justify-between gap-3">
-                          <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
-                          <span className="mono-detail shrink-0 text-xs text-white/30">
-                            {dm.lastMessageAt}
-                          </span>
-                        </span>
-                        <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
-                          <span
-                            className={`block truncate text-sm ${
-                              dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
-                            }`}
-                          >
-                            {dm.lastMessage}
-                          </span>
-                          {dm.unreadCount > 0 ? (
-                            <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
-                              {dm.unreadCount}
-                            </span>
-                          ) : null}
-                        </span>
-                      </span>
-                    </button>
-                    {dm.isArchived ? null : isConfirmingArchive ? (
-                      <span className="mr-2 flex shrink-0 items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            cancelArchiveConfirm();
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white"
-                          aria-label="Cancel archive"
-                        >
-                          <X className="h-4 w-4" strokeWidth={1.8} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            cancelArchiveConfirm();
-                            onArchiveDm(dm.id);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-md text-pink transition hover:bg-pink/15"
-                          aria-label={`Confirm archiving conversation with ${dm.name}`}
-                        >
-                          <Check className="h-4 w-4" strokeWidth={2} />
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          armArchiveConfirm(dm.id);
-                        }}
-                        className="mr-2 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-pink group-hover:flex"
-                        aria-label={`Archive conversation with ${dm.name}`}
+                    <span className="relative shrink-0">
+                      <span
+                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
+                          dm.accent
+                        )}`}
                       >
-                        <Archive className="h-4 w-4" strokeWidth={1.8} />
-                      </button>
-                    )}
-                  </div>
+                        {dm.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
+                          dm.status
+                        )}`}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center justify-between gap-3">
+                        <span className="block truncate text-[1rem] font-bold">{dm.name}</span>
+                        <span className="mono-detail shrink-0 text-xs text-white/30">
+                          {dm.lastMessageAt}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
+                        <span
+                          className={`block truncate text-sm ${
+                            dm.unreadCount > 0 ? 'font-semibold text-white/70' : 'text-white/35'
+                          }`}
+                        >
+                          {dm.lastMessage}
+                        </span>
+                        {dm.unreadCount > 0 ? (
+                          <span className="mono-detail flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-pink px-1.5 text-[0.68rem] font-bold text-primary-bg">
+                            {dm.unreadCount}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -336,10 +260,17 @@ export function DmList({
       <div className="shrink-0 border-t border-white/8 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)]" />
-            <span className="mono-detail min-w-0 truncate text-[2rem] font-medium tracking-[-0.06em] text-white">
-              {username}
-            </span>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)] text-sm font-bold text-primary-bg">
+              {(currentUser?.display_name ?? currentUser?.username ?? '').slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <span className="block truncate text-[1rem] font-bold text-white">
+                {currentUser?.display_name ?? currentUser?.username ?? ''}
+              </span>
+              <span className="mono-detail block truncate text-xs text-white/40">
+                @{currentUser?.username ?? ''}
+              </span>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <button
