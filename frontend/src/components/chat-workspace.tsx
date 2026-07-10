@@ -35,7 +35,6 @@ import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
-import { accentForUserId, toSidebarStatus } from '../shared/mappers/user';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
 
@@ -510,15 +509,6 @@ export function ChatWorkspace() {
             }
           : isCurrentUserMessage && currentGuildMember
             ? toProfileMember(currentGuildMember)
-            : isCurrentUserMessage && currentUser
-              ? {
-                  id: currentUser.id,
-                  name: currentUser.displayName,
-                  role: 'Member',
-                  status: toSidebarStatus(currentUser.status),
-                  accent: accentForUserId(currentUser.id),
-                  activity: currentUser.bio ?? 'Your profile'
-                }
           : {
               id: message.author.toLowerCase(),
               name: message.author,
