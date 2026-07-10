@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Archive,
   Bell,
+  Check,
   CircleEllipsis,
   Headphones,
   Mic,
@@ -12,7 +13,8 @@ import {
   Search,
   Settings,
   UserPlus,
-  UserRound
+  UserRound,
+  X
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 import { FriendsList } from './friends-list';
@@ -92,6 +94,26 @@ export function DmList({
 }: DmListProps) {
   const [search, setSearch] = useState('');
   const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
+  const [confirmingArchiveId, setConfirmingArchiveId] = useState<string | null>(null);
+  const confirmArchiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
+    };
+  }, []);
+
+  function armArchiveConfirm(dmId: string) {
+    setConfirmingArchiveId(dmId);
+    if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
+    // first click only arms the action - it auto-cancels after a few seconds
+    confirmArchiveTimeoutRef.current = setTimeout(() => setConfirmingArchiveId(null), 3000);
+  }
+
+  function cancelArchiveConfirm() {
+    setConfirmingArchiveId(null);
+    if (confirmArchiveTimeoutRef.current) clearTimeout(confirmArchiveTimeoutRef.current);
+  }
 
   const filteredDms = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -212,10 +234,12 @@ export function DmList({
             <div className="space-y-1">
               {filteredDms.map((dm) => {
                 const isActive = dm.id === activeDm;
+                const isConfirmingArchive = confirmingArchiveId === dm.id;
 
                 return (
                   <div
                     key={dm.id}
+                    onMouseLeave={cancelArchiveConfirm}
                     className={`group relative flex h-[4.75rem] w-full items-center rounded-lg transition ${
                       isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
                     } ${dm.isArchived ? 'opacity-50' : ''}`}
@@ -262,14 +286,40 @@ export function DmList({
                         </span>
                       </span>
                     </button>
-                    {dm.isArchived ? null : (
+                    {dm.isArchived ? null : isConfirmingArchive ? (
+                      <span className="mr-2 flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            cancelArchiveConfirm();
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white"
+                          aria-label="Cancel archive"
+                        >
+                          <X className="h-4 w-4" strokeWidth={1.8} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            cancelArchiveConfirm();
+                            onArchiveDm(dm.id);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-md text-pink transition hover:bg-pink/15"
+                          aria-label={`Confirm archiving conversation with ${dm.name}`}
+                        >
+                          <Check className="h-4 w-4" strokeWidth={2} />
+                        </button>
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          onArchiveDm(dm.id);
+                          armArchiveConfirm(dm.id);
                         }}
-                        className="mr-2 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white group-hover:flex"
+                        className="mr-2 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-pink group-hover:flex"
                         aria-label={`Archive conversation with ${dm.name}`}
                       >
                         <Archive className="h-4 w-4" strokeWidth={1.8} />
