@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link2, Search } from 'lucide-react';
+import { Check, Copy, Link2, Search } from 'lucide-react';
 import {
   createGuildInvite,
   listGuildInvites,
@@ -36,6 +36,17 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   const [preview, setPreview] = useState<InvitePreviewDto | null>(null);
   const [previewError, setPreviewError] = useState('');
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [copiedCode, setCopiedCode] = useState('');
+
+  async function handleCopyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode((current) => (current === code ? '' : current)), 1500);
+    } catch {
+      // best effort: clipboard access can be denied, nothing to recover from
+    }
+  }
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -169,8 +180,20 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
             {isCreating ? 'Creating...' : 'Create invite'}
           </button>
           {createdCode ? (
-            <span className="mono-detail rounded-md border border-lime/30 bg-lime/10 px-3 py-2 text-sm text-lime">
+            <span className="mono-detail flex items-center gap-2 rounded-md border border-lime/30 bg-lime/10 px-3 py-2 text-sm text-lime">
               Invite created: {createdCode}
+              <button
+                type="button"
+                onClick={() => void handleCopyCode(createdCode)}
+                className="text-lime/70 transition hover:text-lime"
+                aria-label="Copy invite code"
+              >
+                {copiedCode === createdCode ? (
+                  <Check className="h-3.5 w-3.5" strokeWidth={2} />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" strokeWidth={1.9} />
+                )}
+              </button>
             </span>
           ) : null}
         </div>
@@ -190,8 +213,20 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
               className="flex items-center gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
             >
               <div className="min-w-0 flex-1">
-                <p className="mono-detail truncate text-[0.95rem] font-bold text-white">
+                <p className="mono-detail flex items-center gap-1.5 truncate text-[0.95rem] font-bold text-white">
                   {invite.code}
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyCode(invite.code)}
+                    className="shrink-0 text-white/35 transition hover:text-white"
+                    aria-label={`Copy invite code ${invite.code}`}
+                  >
+                    {copiedCode === invite.code ? (
+                      <Check className="h-3.5 w-3.5 text-lime" strokeWidth={2} />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    )}
+                  </button>
                 </p>
                 <p className="truncate text-xs text-white/35">
                   {invite.uses}/{invite.max_uses ?? '∞'} uses · by{' '}
