@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { LegalPage } from '../../src/components/legal-page';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — ft_discord',
+  title: 'Privacy Policy - ft_discord',
   description: 'How ft_discord collects, uses, and protects your personal data under the GDPR.'
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage eyebrow="ft_discord — legal" title="Privacy Policy" lastUpdated="7 July 2026">
+    <LegalPage eyebrow="ft_discord - legal" title="Privacy Policy" lastUpdated="7 July 2026">
       <p>
         This document explains what personal data ft_discord processes, why, for how long, and how
         you can exercise your rights under the GDPR.
