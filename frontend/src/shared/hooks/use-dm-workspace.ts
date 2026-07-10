@@ -1,6 +1,6 @@
 'use client';
 
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { hasDm, type DirectMessage } from '../../components/dm-list';
 import { archiveDirectMessageConversation, listDirectMessages } from '../api/chat';
 import { onChatHubEvent } from '../api/chat-hub';
@@ -32,6 +32,8 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
   const [dmConversations, setDmConversations] = useState<DirectMessage[]>([]);
   const [showArchivedDms, setShowArchivedDms] = useState(false);
   const [activeDm, setActiveDm] = useState<string | null>(null);
+  const activeDmRef = useRef<string | null>(null);
+  activeDmRef.current = activeDm;
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +79,7 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
   useEffect(() => {
     return onChatHubEvent('ReceiveDirectMessage', (event) => {
       const partnerId = event.sender_id === currentUserId ? event.recipient_id : event.sender_id;
+      const isIncoming = event.recipient_id === currentUserId;
       const preview = splitMessageLines(event.content ?? '')[0] ?? '';
       const lastMessageAt = formatMessageTimestamp(event.created_at);
       const lastActivityAt = Date.parse(event.created_at);
@@ -85,7 +88,14 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
         if (current.some((dm) => dm.id === partnerId)) {
           return current.map((dm) =>
             dm.id === partnerId
-              ? { ...dm, lastMessage: preview, lastMessageAt, lastActivityAt, isArchived: false }
+              ? {
+                  ...dm,
+                  lastMessage: preview,
+                  lastMessageAt,
+                  lastActivityAt,
+                  isArchived: false,
+                  unreadCount: isIncoming && partnerId !== activeDmRef.current ? dm.unreadCount + 1 : dm.unreadCount
+                }
               : dm
           );
         }
@@ -102,7 +112,7 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
             lastMessage: preview,
             lastMessageAt,
             lastActivityAt,
-            unreadCount: 0,
+            unreadCount: isIncoming && partnerId !== activeDmRef.current ? 1 : 0,
             isArchived: false
           }
         ];
