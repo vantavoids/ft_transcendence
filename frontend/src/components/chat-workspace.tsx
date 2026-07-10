@@ -278,6 +278,9 @@ export function ChatWorkspace() {
         activity: activeDmDetails.lastMessage
       }
     : null;
+  const isSidePanelOpen =
+    (chatMode === 'guild' && isMemberListOpen) || (chatMode === 'dm' && isDmProfileOpen);
+  const isSidePanelToggleDisabled = chatMode === 'dm' && !activeDmProfileMember;
   const activeMessageItems = useMemo(() => {
     const messagesById = new Map(activeMessages.map((message) => [message.id, message]));
 
@@ -359,6 +362,17 @@ export function ChatWorkspace() {
   }
 
   const handleShowMobileSidebar = () => setMobilePane('channels');
+
+  const handleToggleSidePanel = () => {
+    if (chatMode === 'dm') {
+      if (activeDmProfileMember) {
+        setIsDmProfileOpen((current) => !current);
+      }
+      return;
+    }
+
+    setIsMemberListOpen((current) => !current);
+  };
   const handleToggleEmojiPicker = () => setIsEmojiOpen((current) => !current);
   const handleOpenNotifications = () => setIsNotificationCardOpen(true);
   const handleCloseNotifications = () => setIsNotificationCardOpen(false);
@@ -661,23 +675,11 @@ export function ChatWorkspace() {
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (chatMode === 'dm') {
-                      if (activeDmProfileMember) {
-                        setIsDmProfileOpen((current) => !current);
-                      }
-                      return;
-                    }
-
-                    setIsMemberListOpen((current) => !current);
-                  }}
+                  onClick={handleToggleSidePanel}
                   className={`transition hover:text-white ${
-                    (chatMode === 'guild' && isMemberListOpen) ||
-                    (chatMode === 'dm' && isDmProfileOpen)
-                      ? 'text-aqua'
-                      : 'text-[#8c8c90]'
-                  } ${chatMode === 'dm' && !activeDmProfileMember ? 'cursor-not-allowed opacity-45' : ''}`}
-                  disabled={chatMode === 'dm' && !activeDmProfileMember}
+                    isSidePanelOpen ? 'text-aqua' : 'text-[#8c8c90]'
+                  } ${isSidePanelToggleDisabled ? 'cursor-not-allowed opacity-45' : ''}`}
+                  disabled={isSidePanelToggleDisabled}
                   aria-label={
                     chatMode === 'dm'
                       ? isDmProfileOpen
@@ -687,10 +689,7 @@ export function ChatWorkspace() {
                         ? 'Hide member list'
                         : 'Show member list'
                   }
-                  aria-pressed={
-                    (chatMode === 'guild' && isMemberListOpen) ||
-                    (chatMode === 'dm' && isDmProfileOpen)
-                  }
+                  aria-pressed={isSidePanelOpen}
                 >
                   <UserRound className="h-5 w-5" strokeWidth={1.8} />
                 </button>
