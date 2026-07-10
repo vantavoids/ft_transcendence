@@ -194,7 +194,7 @@ This mirrors how real companies running microservices actually operate. At place
 | Notification Service | `achu` |
 | Chat Service | `yandry` (designated; see note) |
 
-**Chat is the exception.** It has been a collective effort with `sliziard` and `achu` contributing actively alongside `yandry`, rather than fitting cleanly under a single owner. We still designate `yandry` as the owner of record so that there is one person to ask about Chat-Service architecture at evaluation time, but credit on Chat is shared across all three.
+**Chat is the exception.** It has been a collective effort with `sliziard` contributing actively alongside `yandry`, rather than fitting cleanly under a single owner. We still designate `yandry` as the owner of record so that there is one person to ask about Chat-Service architecture at evaluation time, but credit on Chat is shared across all three.
 
 ---
 
@@ -340,9 +340,9 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | Guild membership | Invite users, leave guilds, kick members | `yandry` |
 | Role system | Create roles with color, position and permission bitmask | `yandry` |
 | Permissions | Per-role access control with channel-level overwrites | `yandry` |
-| Real-time chat | WebSocket-based messaging in channels and DMs via SignalR | `yandry`, `sliziard`, `achu` |
-| Message history | Persistent chat history, paginated load | `yandry`, `sliziard`, `achu` |
-| Direct messages | Private 1-on-1 real-time messaging | `yandry`, `sliziard`, `achu` |
+| Real-time chat | WebSocket-based messaging in channels and DMs via SignalR | `yandry`, `sliziard` |
+| Message history | Persistent chat history, paginated load | `yandry`, `sliziard` |
+| Direct messages | Private 1-on-1 real-time messaging | `yandry`, `sliziard` |
 | File uploads | Avatars, banners, chat attachments (multipart, type / size validation, MinIO storage) | `tstephan` (avatar/banner + frontend), `yandry` (chat attachments + MinIO container) |
 | Notification system | Mentions, DM alerts, friend requests, real-time + persistent | `achu` |
 | API Gateway | Centralized routing, JWT validation, rate limiting | `jramiro` |
@@ -357,8 +357,8 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | Design system | Tailwind tokens (palette, typography, spacing, shadows) + 11 reusable components, lucide-react icons | `tstephan`, `jramiro` |
 | Voice calls | 1-on-1 real-time voice via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
 | Video calls | 1-on-1 real-time video via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
-| Privacy Policy | Accessible from footer, project-relevant content | `achu` |
-| Terms of Service | Accessible from footer, project-relevant content | `achu` |
+| Privacy Policy | Accessible from footer, project-relevant content | |
+| Terms of Service | Accessible from footer, project-relevant content | |
 | GDPR: data export | "Download my data" button aggregates every service's data on the user into a single JSON bundle | all (cross-service) |
 | GDPR: account deletion | `DELETE /auth/me` with confirmation flow + cross-service cascade (Auth, User, Guild, Chat, Notification consume `user.deleted`) + confirmation email | all (cross-service) |
 
@@ -375,8 +375,8 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | # | Module | Category | Type | Points | Implemented by |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Frameworks for frontend and backend (Next.js + ASP.NET Core + NestJS) | Web | Major | 2 | `tstephan`, `jramiro` (Next.js frontend), `yandry`, `sliziard` (ASP.NET backends), `tstephan` (NestJS backend) |
-| 2 | Real-time features (WebSockets via SignalR) | Web | Major | 2 | `yandry`, `sliziard`, `achu` |
-| 3 | User Interaction (chat, profiles, friends, presence) | Web | Major | 2 | `tstephan` (profiles + friends), `yandry`, `sliziard`, `achu` (chat) |
+| 2 | Real-time features (WebSockets via SignalR) | Web | Major | 2 | `yandry`, `sliziard` |
+| 3 | User Interaction (chat, profiles, friends, presence) | Web | Major | 2 | `tstephan` (profiles + friends), `yandry`, `sliziard`, (chat) |
 | 4 | Backend as microservices | Devops | Major | 2 | `yandry` (architecture + infra), `jramiro` (API Gateway) |
 | 5 | Standard user management (profiles, avatars, friends, online status) | User Management | Major | 2 | `tstephan` |
 | 6 | Organization system (guilds with channels and membership) | User Management | Major | 2 | `yandry` |
@@ -397,7 +397,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | 16 | Multi-browser support (Firefox + Safari beyond mandated Chrome) | Accessibility | Minor | 1 | `tstephan`, `jramiro` |
 | 17 | `tools/secretman` - SOPS-based encrypted env file workflow | Module of choice (IV.10) | Minor | 1 | `jramiro` |
 | 18 | GDPR compliance (data export, deletion with confirmation, confirmation emails) | Data and Analytics | Minor | 1 | all (cross-service) |
-| 19 | Advanced chat features (block-to-message, typing indicators, read receipts, profile access from chat, history persistence) | Gaming and user experience (IV.6) | Minor | 1 | `yandry`, `sliziard`, `achu` (chat), `tstephan` (block system + profile-from-chat) |
+| 19 | Advanced chat features (block-to-message, typing indicators, read receipts, profile access from chat, history persistence) | Gaming and user experience (IV.6) | Minor | 1 | `yandry`, `sliziard` (chat), `tstephan` (block system + profile-from-chat) |
 
 ### Module Justifications
 
@@ -581,7 +581,7 @@ Finally, the frontend needed to remain responsive while new dynamic behaviour wa
 
 ---
 
-### `achu` - Notification Service / Chat co-developer / UX
+### `achu` - Notification Service
 
 - Implemented the Notification Service in Go from scaffolding to production: PostgreSQL-backed persistence with the `notifications` table (actor, source, type, expiry, dismiss tracking) and `notification_preferences` table for per-user mute (per-guild and per-channel granularity)
 - Wired all five upstream consumers: `user.registered` (welcome notification), `friend.request_sent` (friend_request type), `chat.message_sent` with mention detection (mention type), `chat.dm_sent` (dm type), `call.incoming` (incoming_call type), and `user.deleted` (cascade purge of the user's notifications and preferences)
@@ -589,8 +589,5 @@ Finally, the frontend needed to remain responsive while new dynamic behaviour wa
 - Built the REST surface (`GET /notifications`, `POST /notifications/{id}/read`, mute preference endpoints) plus the background cleanup for old dismissed notifications (`#171`)
 - Wired mention block-suppression to the User Service's internal endpoint (`#191`) so users who have blocked each other do not trigger mention notifications
 - Implemented Notification's `/internal/users/{user_id}/data-export` endpoint and the email-sending side of the Notification Service: consumes `user.deleted` and `data.export_ready` events, renders the corresponding confirmation emails (plaintext + minimal HTML templates) and dispatches them through MailHog locally / a real SMTP provider in production
-- Co-developer on the Chat Service alongside yandry and sliziard, contributing to message flows, presence wiring and consumer setup
-- Wore the UX hat for the project: designed the notification card, notification bell badge, mute-preference settings panel, did a mobile-responsiveness pass on the main views, and ran the zero-console-errors / accessibility audits against the latest stable Chrome
-- Wrote the Privacy Policy and Terms of Service pages with real, project-relevant content (not lorem-ipsum placeholders), reachable from the footer on every page
 
 **Challenges:** TBD
