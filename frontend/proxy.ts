@@ -4,8 +4,15 @@ import { SESSION_COOKIE_KEY } from './src/shared/lib/session';
 
 const AUTH_PATHS = new Set(['/auth/login', '/auth/register']);
 
+// landing and legal pages must stay readable without an account
+const PUBLIC_PATHS = new Set(['/', '/terms', '/privacy']);
+
 function isProtectedPath(pathname: string) {
   if (pathname.startsWith('/_next') || pathname === '/favicon.ico') {
+    return false;
+  }
+
+  if (PUBLIC_PATHS.has(pathname)) {
     return false;
   }
 
