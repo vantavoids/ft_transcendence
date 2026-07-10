@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { GuildIcon } from '../../src/components/guild/guild-icon';
 import { GuildBansPanel } from '../../src/components/guild/guild-bans-panel';
 import { GuildCategoriesPanel } from '../../src/components/guild/guild-categories-panel';
+import { GuildChannelsPanel } from '../../src/components/guild/guild-channels-panel';
 import { GuildCreateForm, GuildJoinForm } from '../../src/components/guild/guild-forms';
 import { GuildInvitesPanel } from '../../src/components/guild/guild-invites-panel';
 import { GuildMembersPanel } from '../../src/components/guild/guild-members-panel';
@@ -20,6 +21,7 @@ const TABS = [
   { id: 'invites', label: 'Invites' },
   { id: 'roles', label: 'Roles' },
   { id: 'categories', label: 'Categories' },
+  { id: 'channels', label: 'Channels' },
   { id: 'settings', label: 'Settings' }
 ] as const;
 
@@ -105,6 +107,7 @@ export default function GuildsPage() {
               {activeTab === 'categories' ? (
                 <GuildCategoriesPanel guildId={selectedGuildId} />
               ) : null}
+              {activeTab === 'channels' ? <GuildChannelsPanel guildId={selectedGuildId} /> : null}
               {activeTab === 'settings' ? <GuildSettingsPanel guildId={selectedGuildId} /> : null}
             </>
           ) : isLoading ? (
