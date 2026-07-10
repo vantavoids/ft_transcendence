@@ -366,7 +366,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 
 ## Modules
 
-**Modules implemented: 27 points** - 14 baseline (2 Minor + 6 Major) + 13 bonus. Per chapter VII, at most 5 bonus points count toward the final grade, for a graded maximum of 19 (14 + 5).
+**Modules implemented: 28 points** - 14 baseline (2 Minor + 6 Major) + 14 bonus. Per chapter VII, at most 5 bonus points count toward the final grade, for a graded maximum of 19 (14 + 5).
 
 > Note: per chapter IV, bonus points are only counted after the baseline 14 are fully validated.
 
@@ -397,6 +397,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | 16 | Multi-browser support (Firefox + Safari beyond mandated Chrome) | Accessibility | Minor | 1 | `tstephan`, `jramiro` |
 | 17 | `tools/secretman` - SOPS-based encrypted env file workflow | Module of choice (IV.10) | Minor | 1 | `jramiro` |
 | 18 | GDPR compliance (data export, deletion with confirmation, confirmation emails) | Data and Analytics | Minor | 1 | all (cross-service) |
+| 19 | Advanced chat features (block-to-message, typing indicators, read receipts, profile access from chat, history persistence) | Gaming and user experience (IV.6) | Minor | 1 | `yandry`, `sliziard`, `achu` (chat), `tstephan` (block system + profile-from-chat) |
 
 ### Module Justifications
 
@@ -477,6 +478,10 @@ The four subject bullets all map to concrete pieces of work:
 - *Allow users to request their data + Export user data in a readable format.* Each service exposes an `/internal/users/{user_id}/data-export` endpoint that returns a JSON blob of the data that service holds about that user. The User Service hosts a public aggregator that fans out to Auth, Guild, Chat and Notification in parallel, stitches the results into a single bundle, and returns it as a downloadable JSON file. The frontend exposes a "Download my data" button in user settings.
 - *Data deletion with confirmation.* `DELETE /auth/me` requires the frontend confirmation flow (`#150`) before firing; the Auth Service then publishes `user.deleted`, which Auth, User, Guild, Chat and Notification all consume (`#146`, `#147`, `#148`, `#149`) to purge that user's rows from their own databases. A synchronous Auth to Guild `/internal/users/{user_id}/owned-guilds-count` check (`#206`, already merged) blocks deletion if the user still owns guilds, forcing them to transfer ownership or delete those guilds first.
 - *Confirmation emails for data operations.* A MailHog container in `compose.yaml` provides an SMTP endpoint for the eval environment. The Notification Service grows an email-sending side that consumes the `user.deleted` event (sends "Your account has been deleted") and a new `data.export_ready` event (sends "Your data export is ready, here is the download link"). For production deployments the MailHog container is swapped for a real SMTP provider; the Notification Service code stays the same.
+
+**Module 19 - Advanced chat features (IV.6 Minor):**
+
+This module enhances the basic chat from the User Interaction module with a set of quality-of-life features, all delivered over the existing Chat Service SignalR hub. Users can block another user, which suppresses direct messages server-side (the Chat Service returns `RecipientBlocked` after checking the block relationship) as well as mention notifications. Typing indicators are broadcast per channel and per DM, with server-side rate limiting and expiry (`ChatHub.Typing`). Read receipts are tracked as per-user read state for both channels and DMs and pushed live to other clients (`ReadStateUpdated` / `DmReadStateUpdated`). User profiles are reachable directly from the chat view by clicking a message author, and full chat history is persisted in ScyllaDB with cursor-based pagination. Two of the subject's listed sub-features - inviting users to play games from chat, and game/tournament notifications in chat - are game-specific and therefore out of scope for this project, which is a social messaging platform rather than a game; every chat-focused enhancement in the module is implemented. The module's dependency (a working basic chat) is satisfied by the User Interaction Major.
 
 ---
 
