@@ -55,6 +55,30 @@ public sealed class GuildMemberLeftConsumer(
 	}
 }
 
+public sealed class ChannelAccessRevokedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<ChannelAccessRevokedConsumer> logger)
+	: IConsumer<ChannelAccessRevoked>
+{
+	public async Task Consume(ConsumeContext<ChannelAccessRevoked> context)
+	{
+		var msg = context.Message;
+
+		// read access to a single channel was revoked (role or overwrite change)
+		// without the member leaving the guild. purge their connections from just
+		// that channel's group so they stop receiving broadcasts server-side even
+		// if their client never unsubscribes.
+		var evicted = await broadcaster.EvictFromChannelAsync(
+			userId: msg.UserId,
+			channelId: msg.ChannelId,
+			ct: context.CancellationToken);
+
+		logger.LogDebug(
+			"channel.access_revoked consumed: channel_id={ChannelId} user_id={UserId} evicted_subscriptions={Evicted}",
+			msg.ChannelId, msg.UserId, evicted);
+	}
+}
+
 public sealed class UserLoggedOutConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<UserLoggedOutConsumer> logger): IConsumer<UserLoggedOut>
