@@ -11,6 +11,7 @@ import { DmList, getDmDetails, getDmName } from './dm-list';
 import {
   getGuildMemberByName,
   GuildMemberList,
+  toProfileMember,
   type GuildMember
 } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
@@ -35,6 +36,8 @@ import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { accentForUserId, toSidebarStatus } from '../shared/mappers/user';
+import { useGuilds } from '../shared/guilds/guild-store';
+import { useGuildMembers } from '../shared/guilds/use-guild-members';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -45,6 +48,7 @@ export function ChatWorkspace() {
   const router = useRouter();
   const { startCall } = useCall();
   const { currentUser, refreshCurrentUser, setCurrentUser } = useCurrentUserProfile();
+  const { selectedGuild } = useGuilds();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -69,6 +73,14 @@ export function ChatWorkspace() {
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
   const dmWorkspace = useDmWorkspace(currentUserId);
+  const { members: currentGuildMembers } = useGuildMembers(
+    selectedGuild?.id ?? null,
+    selectedGuild?.owner_id ?? null
+  );
+  const currentGuildMember = useMemo(
+    () => currentGuildMembers.find((member) => member.userId === currentUser?.id) ?? null,
+    [currentGuildMembers, currentUser?.id]
+  );
 
   useEffect(() => {
     return () => {
@@ -496,15 +508,17 @@ export function ChatWorkspace() {
               accent: directMessage.accent,
               activity: directMessage.lastMessage
             }
-          : isCurrentUserMessage && currentUser
-            ? {
-                id: currentUser.id,
-                name: currentUser.displayName,
-                role: 'Member',
-                status: toSidebarStatus(currentUser.status),
-                accent: accentForUserId(currentUser.id),
-                activity: currentUser.bio ?? 'Your profile'
-              }
+          : isCurrentUserMessage && currentGuildMember
+            ? toProfileMember(currentGuildMember)
+            : isCurrentUserMessage && currentUser
+              ? {
+                  id: currentUser.id,
+                  name: currentUser.displayName,
+                  role: 'Member',
+                  status: toSidebarStatus(currentUser.status),
+                  accent: accentForUserId(currentUser.id),
+                  activity: currentUser.bio ?? 'Your profile'
+                }
           : {
               id: message.author.toLowerCase(),
               name: message.author,
