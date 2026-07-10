@@ -15,14 +15,10 @@ import {
   Video,
   X
 } from 'lucide-react';
-import {
-  ChatMessage,
-  getAccentClasses,
-  type ChatMessageData,
-  type ReplyPreview
-} from './chat-message';
+import { ChatMessage, type ChatMessageData, type ReplyPreview } from './chat-message';
+import { AvatarWithStatus } from './avatar-with-status';
 import { ChannelList, getChannelName } from './channel-list';
-import { DmList, getDmDetails, getDmName, getDmStatusClasses } from './dm-list';
+import { DmList, getDmDetails, getDmName } from './dm-list';
 import {
   getGuildMemberByName,
   GuildMemberList,
@@ -619,20 +615,11 @@ export function ChatWorkspace() {
                 </button>
                 {chatMode === 'dm' && activeDmDetails ? (
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="relative shrink-0">
-                      <span
-                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                          activeDmDetails.accent
-                        )}`}
-                      >
-                        {activeDmDetails.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                          activeDmDetails.status
-                        )}`}
-                      />
-                    </span>
+                    <AvatarWithStatus
+                      name={activeDmDetails.name}
+                      accent={activeDmDetails.accent}
+                      status={activeDmDetails.status}
+                    />
                     <span className="min-w-0">
                       <span className="block truncate text-[1.2rem] font-bold tracking-[-0.03em] text-white">
                         {activeDmDetails.name}

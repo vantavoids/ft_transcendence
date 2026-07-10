@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { Crown, Shield } from 'lucide-react';
-import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { getDmStatusClasses, type DirectMessage } from './dm-list';
+import { AvatarWithStatus } from './avatar-with-status';
+import type { ChatMessageData } from './chat-message';
+import type { DirectMessage } from './dm-list';
 import { guildMembers } from './mocks/guild-member-mocks';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
@@ -85,31 +85,13 @@ function MemberRow({
       onClick={() => onOpenProfile(toProfileMember(member))}
       className="flex h-14 w-full items-center gap-3 rounded-md px-2 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
     >
-      <span className="relative shrink-0">
-        {member.avatarUrl ? (
-          <Image
-            src={member.avatarUrl}
-            alt=""
-            width={40}
-            height={40}
-            unoptimized
-            className="h-10 w-10 rounded-full object-cover"
-          />
-        ) : (
-          <span
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-              getAccentForId(member.userId)
-            )}`}
-          >
-            {member.displayName.slice(0, 1).toUpperCase()}
-          </span>
-        )}
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-            toSidebarStatus(member.status)
-          )}`}
-        />
-      </span>
+      <AvatarWithStatus
+        size="sm"
+        name={member.displayName}
+        accent={getAccentForId(member.userId)}
+        status={toSidebarStatus(member.status)}
+        avatarUrl={member.avatarUrl}
+      />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="block truncate text-[0.95rem] font-bold">{member.displayName}</span>
