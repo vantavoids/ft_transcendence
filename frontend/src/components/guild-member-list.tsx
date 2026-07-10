@@ -8,6 +8,7 @@ import { guildMembers } from './mocks/guild-member-mocks';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
+import { hashToIndex } from '../shared/lib/hash';
 
 export type GuildMember = {
   id: string;
@@ -26,12 +27,7 @@ export function getGuildMemberByName(name: string) {
 const ACCENTS: ChatMessageData['accent'][] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
 
 function getAccentForId(id: string): ChatMessageData['accent'] {
-  let hash = 0;
-  for (const char of id) {
-    hash = (hash * 31 + char.charCodeAt(0)) % ACCENTS.length;
-  }
-
-  return ACCENTS[hash];
+  return ACCENTS[hashToIndex(id, ACCENTS.length)];
 }
 
 function toSidebarStatus(status: UserStatus): DirectMessage['status'] {

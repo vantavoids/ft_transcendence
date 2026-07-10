@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import type { MessageAttachmentDto } from '../shared/api/chat';
+import { isEscapeKey } from '../shared/hooks/use-close-on-escape';
 
 function formatFileSize(sizeBytes: number): string {
   if (sizeBytes < 1024) {
@@ -79,10 +80,6 @@ type ChatMessageProps = {
 };
 
 const QUICK_REACTION_EMOJI = '👍';
-
-function isEscapeKey(event: KeyboardEvent | React.KeyboardEvent) {
-  return event.key === 'Escape' || event.key === 'Esc' || event.code === 'Escape';
-}
 
 export function getAccentClasses(accent: ChatMessageData['accent']) {
   switch (accent) {

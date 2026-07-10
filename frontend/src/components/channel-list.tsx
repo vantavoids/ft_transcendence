@@ -9,10 +9,10 @@ import {
   Headphones,
   Mic,
   MicOff,
-  Search,
   Settings,
   UserRound
 } from 'lucide-react';
+import { SearchInput } from './search-input';
 import { useGuilds } from '../shared/guilds/guild-store';
 
 export type TextChannel = {
@@ -113,15 +113,7 @@ export function ChannelList({
           <div className="h-full w-full bg-[linear-gradient(90deg,rgba(16,16,20,0.68),transparent_58%),radial-gradient(circle_at_78%_30%,rgba(255,216,102,0.5),transparent_26%),radial-gradient(circle_at_60%_78%,rgba(255,97,136,0.38),transparent_24%)]" />
         </div>
 
-        <label className="mt-6 flex h-11 items-center gap-3 rounded-md bg-panel px-4 text-muted">
-          <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            className="mono-detail w-full min-w-0 bg-transparent text-xl text-white outline-none placeholder:text-muted"
-          />
-        </label>
+        <SearchInput value={search} onChange={setSearch} placeholder="Search" className="mt-6" />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">

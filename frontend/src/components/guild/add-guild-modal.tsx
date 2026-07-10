@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { GuildCreateForm, GuildJoinForm } from './guild-forms';
+import { useCloseOnEscape } from '../../shared/hooks/use-close-on-escape';
 
 type AddGuildModalProps = {
   onClose: () => void;
@@ -11,16 +12,7 @@ type AddGuildModalProps = {
 export function AddGuildModal({ onClose }: AddGuildModalProps) {
   const [tab, setTab] = useState<'create' | 'join'>('create');
 
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' || event.key === 'Esc') {
-        onClose();
-      }
-    }
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  useCloseOnEscape(onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6">

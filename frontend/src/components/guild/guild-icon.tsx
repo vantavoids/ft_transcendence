@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { hashToIndex } from '../../shared/lib/hash';
 
 const ACCENTS = [
   'bg-aqua/15 text-aqua',
@@ -11,12 +12,7 @@ const ACCENTS = [
 ];
 
 export function getGuildAccentClasses(guildId: string) {
-  let hash = 0;
-  for (const char of guildId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % ACCENTS.length;
-  }
-
-  return ACCENTS[hash];
+  return ACCENTS[hashToIndex(guildId, ACCENTS.length)];
 }
 
 type GuildIconProps = {

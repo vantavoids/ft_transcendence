@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import { MessageCircle, Shield, Trophy, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import type { GuildMember } from './guild-member-list';
+import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 
 type ProfileCardProps = {
   member: GuildMember;
@@ -12,18 +12,7 @@ type ProfileCardProps = {
 };
 
 export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardProps) {
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape' && event.key !== 'Esc' && event.code !== 'Escape') {
-        return;
-      }
-
-      onClose();
-    }
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  useCloseOnEscape(onClose);
 
   const card = (
     <section
