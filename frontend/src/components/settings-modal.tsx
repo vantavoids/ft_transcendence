@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings, Trash2, X } from 'lucide-react';
+import { LogOut, Mail, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
 import {
   deleteAccount,
   getIdentity,
@@ -16,16 +16,18 @@ import {
 } from '../shared/lib/auth-errors';
 import { checkEmail, checkPassword } from '../shared/lib/validators/auth';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
+import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
+import { AvatarWithStatus } from './avatar-with-status';
 
 type SettingsModalProps = {
-  username: string;
+  currentUser: CurrentUserProfile | null;
   onClose: () => void;
   onDisconnect: () => void;
 };
 
 type Panel = 'menu' | 'credentials' | 'delete';
 
-export function SettingsModal({ username, onClose, onDisconnect }: SettingsModalProps) {
+export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsModalProps) {
   const router = useRouter();
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
   const [panel, setPanel] = useState<Panel>('menu');
@@ -62,7 +64,7 @@ export function SettingsModal({ username, onClose, onDisconnect }: SettingsModal
         onClick={onClose}
         aria-label="Close settings"
       />
-      <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <section className="relative w-full max-w-[26rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
         <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
@@ -88,18 +90,37 @@ export function SettingsModal({ username, onClose, onDisconnect }: SettingsModal
         </div>
 
         <div className="px-5 py-5">
-          <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 shrink-0 rounded-xl bg-[linear-gradient(135deg,#78dce8,#ab9df2,#ff6188)]">
-              <div className="absolute bottom-1.5 right-1.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg bg-lime" />
+          <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
+            <div className="flex items-center gap-4">
+              <AvatarWithStatus
+                size="lg"
+                name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                accent="aqua"
+                status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
+                avatarUrl={currentUser?.avatarUrl}
+              />
+              <div className="min-w-0">
+                <h3 className="truncate text-[1.35rem] font-bold tracking-[-0.04em] text-white">
+                  {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                </h3>
+                <p className="mono-detail mt-1 truncate text-sm text-white/40">
+                  {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                  <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
+                  {identity?.email ?? 'No email available'}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                  <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
+                  {currentUser ? currentUser.status : 'offline'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-[1.35rem] font-bold tracking-[-0.04em] text-white">
-                {username}
-              </h3>
-              <p className="mono-detail mt-1 truncate text-sm text-white/40">
-                {identity?.email ?? `${username}#4242`}
-              </p>
-            </div>
+            {currentUser?.bio ? (
+              <p className="mt-4 text-sm leading-6 text-white/60">{currentUser.bio}</p>
+            ) : (
+              <p className="mt-4 text-sm leading-6 text-white/35">No bio set.</p>
+            )}
           </div>
 
           {panel === 'menu' ? (
