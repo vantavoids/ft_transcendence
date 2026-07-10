@@ -46,13 +46,35 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 50% 52%, rgba(169, 220, 118, 0.14), transparent 22%),
+  background: radial-gradient(circle at 50% 52%, rgba(169, 220, 118, 0.14), transparent 22%),
     radial-gradient(circle at 42% 60%, rgba(120, 220, 232, 0.12), transparent 18%),
     radial-gradient(circle at 58% 78%, rgba(255, 216, 102, 0.12), transparent 16%),
     radial-gradient(circle at 50% 84%, rgba(171, 157, 242, 0.12), transparent 16%),
-    radial-gradient(circle at 50% 92%, rgba(255, 97, 136, 0.15), transparent 16%),
-    #191919;
+    radial-gradient(circle at 50% 92%, rgba(255, 97, 136, 0.15), transparent 16%), #191919;
+}
+
+.legal-prose h2 {
+  @apply mt-10 text-2xl font-bold tracking-[-0.04em] text-white first:mt-0;
+}
+
+.legal-prose p {
+  @apply mt-4 text-base leading-relaxed text-white/65;
+}
+
+.legal-prose ul {
+  @apply mt-4 grid list-disc gap-2 pl-5 text-base leading-relaxed text-white/65;
+}
+
+.legal-prose strong {
+  @apply font-semibold text-white/85;
+}
+
+.legal-prose a {
+  @apply text-aqua underline decoration-aqua/40 underline-offset-4 transition hover:decoration-aqua;
+}
+
+.legal-prose hr {
+  @apply my-10 border-white/10;
 }
 
 .mono-detail {
