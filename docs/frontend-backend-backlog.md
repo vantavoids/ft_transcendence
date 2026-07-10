@@ -95,10 +95,10 @@ Goal: connect the guild sidebar and guild page to live guild data.
   - [x] add edit guild settings with `PATCH /guilds/{id}`
   - [x] add delete guild with owner-only confirmation
   - [x] add roles and categories management UI on top of existing endpoints
-- [ ] Channel management (never scoped before, no UI or API wrapper exists)
-  - [ ] wire channel creation with `POST /guilds/{id}/channels`
-  - [ ] wire channel rename/topic/nsfw/slowmode edits with `PATCH /guilds/{id}/channels/{channel_id}`
-  - [ ] wire channel delete with `DELETE /guilds/{id}/channels/{channel_id}`
+- [x] Channel management
+  - [x] wire channel creation with `POST /guilds/{id}/channels`
+  - [x] wire channel rename/topic/nsfw/slowmode edits with `PATCH /guilds/{id}/channels/{channel_id}`
+  - [x] wire channel delete with `DELETE /guilds/{id}/channels/{channel_id}`
 
 ## Epic 4 - Chat history, composer, and realtime transport
 
