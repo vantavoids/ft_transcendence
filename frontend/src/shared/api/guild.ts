@@ -52,6 +52,18 @@ export type GuildChannelDto = {
   slowmode_seconds?: number;
 };
 
+export type CreateChannelPayload = {
+  name: string;
+  type: 'text' | 'announcement';
+  category_id?: string | null;
+  position?: number;
+  topic?: string | null;
+  is_nsfw?: boolean;
+  slowmode_seconds?: number;
+};
+
+export type UpdateChannelPayload = Partial<CreateChannelPayload>;
+
 export type GuildCategoryDto = {
   id: string;
   guild_id: string;
@@ -208,6 +220,30 @@ export function unbanGuildMember(guildId: string, userId: string) {
 
 export function listGuildChannels(guildId: string) {
   return apiFetch<GuildChannelDto[]>('guild', `/guilds/${guildId}/channels`);
+}
+
+export function createGuildChannel(guildId: string, payload: CreateChannelPayload) {
+  return apiFetch<GuildChannelDto>('guild', `/guilds/${guildId}/channels`, {
+    method: 'POST',
+    body: payload
+  });
+}
+
+export function updateGuildChannel(
+  guildId: string,
+  channelId: string,
+  payload: UpdateChannelPayload
+) {
+  return apiFetch<GuildChannelDto>('guild', `/guilds/${guildId}/channels/${channelId}`, {
+    method: 'PATCH',
+    body: payload
+  });
+}
+
+export function deleteGuildChannel(guildId: string, channelId: string) {
+  return apiFetch<void>('guild', `/guilds/${guildId}/channels/${channelId}`, {
+    method: 'DELETE'
+  });
 }
 
 export function listGuildCategories(guildId: string) {
