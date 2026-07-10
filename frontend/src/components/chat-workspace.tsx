@@ -34,6 +34,7 @@ import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
+import { accentForUserId, toSidebarStatus } from '../shared/mappers/user';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -479,6 +480,10 @@ export function ChatWorkspace() {
     const directMessage = dmWorkspace.dmConversations.find(
       (dm) => dm.name.toLowerCase() === message.author.toLowerCase()
     );
+    const isCurrentUserMessage =
+      Boolean(currentUser?.id && message.authorId === currentUser.id) ||
+      Boolean(currentUser?.username && message.author.toLowerCase() === currentUser.username.toLowerCase()) ||
+      message.author === 'You';
 
     setProfileMember(
       guildMember ??
@@ -491,15 +496,20 @@ export function ChatWorkspace() {
               accent: directMessage.accent,
               activity: directMessage.lastMessage
             }
+          : isCurrentUserMessage && currentUser
+            ? {
+                id: currentUser.id,
+                name: currentUser.displayName,
+                role: 'Member',
+                status: toSidebarStatus(currentUser.status),
+                accent: accentForUserId(currentUser.id),
+                activity: currentUser.bio ?? 'Your profile'
+              }
           : {
               id: message.author.toLowerCase(),
               name: message.author,
               role: 'Member',
-              status:
-                currentUser?.username &&
-                message.author.toLowerCase() === currentUser.username.toLowerCase()
-                  ? 'online'
-                  : 'offline',
+              status: 'offline',
               accent: message.accent,
               activity: 'No recent activity'
             })
