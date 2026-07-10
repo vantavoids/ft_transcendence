@@ -358,6 +358,15 @@ export function ChatWorkspace() {
     });
   }
 
+  const handleShowMobileSidebar = () => setMobilePane('channels');
+  const handleToggleEmojiPicker = () => setIsEmojiOpen((current) => !current);
+  const handleOpenNotifications = () => setIsNotificationCardOpen(true);
+  const handleCloseNotifications = () => setIsNotificationCardOpen(false);
+  const handleOpenSettings = () => setIsSettingsOpen(true);
+  const handleCloseSettings = () => setIsSettingsOpen(false);
+  const handleCloseDmProfile = () => setIsDmProfileOpen(false);
+  const handleCloseAuthorProfile = () => setProfileMember(null);
+
   async function handleDisconnect() {
     try {
       await logout();
@@ -532,6 +541,20 @@ export function ChatWorkspace() {
     );
   }
 
+  // DmList and ChannelList render the same sidebar footer (account strip +
+  // voice controls) regardless of chat mode, so they share this exact prop set.
+  const sidebarFooterProps = {
+    mobilePane,
+    username,
+    isMicMuted,
+    isDeafened,
+    unreadNotifications: notificationFeed.unreadCount,
+    onToggleDeafen: handleToggleDeafen,
+    onToggleMicMute: handleToggleMicMute,
+    onOpenNotifications: handleOpenNotifications,
+    onOpenSettings: handleOpenSettings
+  };
+
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
       {!isHydrated ? (
@@ -546,37 +569,21 @@ export function ChatWorkspace() {
 
           {chatMode === 'dm' ? (
             <DmList
+              {...sidebarFooterProps}
               activeDm={dmWorkspace.activeDm ?? ''}
               directMessages={dmWorkspace.dmConversations}
               showArchived={dmWorkspace.showArchivedDms}
               friends={friends}
-              mobilePane={mobilePane}
-              username={username}
-              isMicMuted={isMicMuted}
-              isDeafened={isDeafened}
-              unreadNotifications={notificationFeed.unreadCount}
-              onToggleDeafen={handleToggleDeafen}
-              onToggleMicMute={handleToggleMicMute}
-              onOpenNotifications={() => setIsNotificationCardOpen(true)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectDm={handleSelectDm}
               onToggleShowArchived={dmWorkspace.toggleShowArchivedDms}
               onArchiveDm={dmWorkspace.archiveDm}
             />
           ) : (
             <ChannelList
+              {...sidebarFooterProps}
               activeChannel={guildWorkspace.activeChannel ?? ''}
               categories={guildWorkspace.channelCategories}
               unreadCounts={channelUnreadCounts}
-              mobilePane={mobilePane}
-              username={username}
-              isMicMuted={isMicMuted}
-              isDeafened={isDeafened}
-              unreadNotifications={notificationFeed.unreadCount}
-              onToggleDeafen={handleToggleDeafen}
-              onToggleMicMute={handleToggleMicMute}
-              onOpenNotifications={() => setIsNotificationCardOpen(true)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectChannel={handleSelectChannel}
             />
           )}
@@ -590,7 +597,7 @@ export function ChatWorkspace() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setMobilePane('channels')}
+                  onClick={handleShowMobileSidebar}
                   className="flex h-11 w-11 items-center justify-center rounded-xl border border-frame text-[#7e7e82] md:hidden"
                   aria-label={chatMode === 'dm' ? 'Show DMs' : 'Show channels'}
                 >
@@ -854,7 +861,7 @@ export function ChatWorkspace() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsEmojiOpen((current) => !current)}
+                    onClick={handleToggleEmojiPicker}
                     className="text-[#7e7e82] transition hover:text-white"
                     aria-label="Toggle emoji picker"
                   >
@@ -880,7 +887,7 @@ export function ChatWorkspace() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setMobilePane('channels')}
+                  onClick={handleShowMobileSidebar}
                   className="inline-flex items-center gap-2 md:hidden"
                 >
                   <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
@@ -898,25 +905,22 @@ export function ChatWorkspace() {
             <ProfileCard
               member={activeDmProfileMember}
               variant="side"
-              onClose={() => setIsDmProfileOpen(false)}
+              onClose={handleCloseDmProfile}
             />
           ) : null}
 
           {profileMember ? (
-            <ProfileCard member={profileMember} onClose={() => setProfileMember(null)} />
+            <ProfileCard member={profileMember} onClose={handleCloseAuthorProfile} />
           ) : null}
 
           {isNotificationCardOpen ? (
-            <NotificationCard
-              feed={notificationFeed}
-              onClose={() => setIsNotificationCardOpen(false)}
-            />
+            <NotificationCard feed={notificationFeed} onClose={handleCloseNotifications} />
           ) : null}
 
           {isSettingsOpen ? (
             <SettingsModal
               username={username}
-              onClose={() => setIsSettingsOpen(false)}
+              onClose={handleCloseSettings}
               onDisconnect={handleDisconnect}
             />
           ) : null}
