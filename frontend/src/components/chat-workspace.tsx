@@ -77,8 +77,8 @@ export function ChatWorkspace() {
     selectedGuild?.owner_id ?? null
   );
   const currentGuildMember = useMemo(
-    () => currentGuildMembers.find((member) => member.userId === currentUser?.id) ?? null,
-    [currentGuildMembers, currentUser?.id]
+    () => currentGuildMembers.find((member) => member.userId === currentUserId) ?? null,
+    [currentGuildMembers, currentUserId]
   );
 
   useEffect(() => {
@@ -492,9 +492,7 @@ export function ChatWorkspace() {
       (dm) => dm.name.toLowerCase() === message.author.toLowerCase()
     );
     const isCurrentUserMessage =
-      Boolean(currentUser?.id && message.authorId === currentUser.id) ||
-      Boolean(currentUser?.username && message.author.toLowerCase() === currentUser.username.toLowerCase()) ||
-      message.author === 'You';
+      Boolean(currentUserId && message.authorId === currentUserId) || message.author === 'You';
 
     setProfileMember(
       guildMember ??
