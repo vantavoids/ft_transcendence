@@ -47,7 +47,7 @@ ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$
 
 .PHONY: all help build up down re clean fclean logs ps login dev check-env _build _up _certs _migrate secrets-setup secrets-decrypt secrets-encrypt secrets-refresh
 
-all: check-env _build _up ## Build all images and start the full stack (default)
+all: check-env _build up ## Build all images and start the full stack (default)
 
 help: ## Show this help
 	@echo "$(call ann,Cyan) $(call get_color,Purple)$(NAME)$(call get_color,Off) - available targets:"
