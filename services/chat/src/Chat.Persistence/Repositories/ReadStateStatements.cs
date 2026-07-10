@@ -46,9 +46,14 @@ internal sealed class ReadStateStatements(ISession session)
 	public Lazy<Task<PreparedStatement>> IncrementDmUnreadCount { get; } = new(() => session.PrepareAsync(
 		"UPDATE dm_unread_counts SET count = count + 1 WHERE user_id = ? AND partner_id = ?"));
 
-	// counters can only be reset by deleting the row - a missing row reads back as 0
-	public Lazy<Task<PreparedStatement>> ResetDmUnreadCount { get; } = new(() => session.PrepareAsync(
-		"DELETE FROM dm_unread_counts WHERE user_id = ? AND partner_id = ?"));
+	public Lazy<Task<PreparedStatement>> SelectDmUnreadCount { get; } = new(() => session.PrepareAsync(
+		"SELECT count FROM dm_unread_counts WHERE user_id = ? AND partner_id = ?"));
+
+	// never DELETE a counter cell that will be incremented again, it will
+	// always fail as no op later. Decrementing back to zero keeps the cell
+	// alive instead.
+	public Lazy<Task<PreparedStatement>> DecrementDmUnreadCount { get; } = new(() => session.PrepareAsync(
+		"UPDATE dm_unread_counts SET count = count - ? WHERE user_id = ? AND partner_id = ?"));
 
 	public Lazy<Task<PreparedStatement>> DeleteDmUnreadCountsForUser { get; } = new(() => session.PrepareAsync(
 		"DELETE FROM dm_unread_counts WHERE user_id = ?"));

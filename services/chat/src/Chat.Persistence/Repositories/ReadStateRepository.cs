@@ -58,8 +58,14 @@ internal sealed class ReadStateRepository(ISession session, ReadStateStatements 
 
 	public async Task ResetDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct)
 	{
-		var stmt = await statements.ResetDmUnreadCount.Value;
-		await session.ExecuteAsync(stmt.Bind(userId, partnerId));
+		var selectStmt = await statements.SelectDmUnreadCount.Value;
+		var row = (await session.ExecuteAsync(selectStmt.Bind(userId, partnerId))).FirstOrDefault();
+		var current = row?.GetValue<long>("count") ?? 0;
+		if (current == 0)
+			return;
+
+		var decrementStmt = await statements.DecrementDmUnreadCount.Value;
+		await session.ExecuteAsync(decrementStmt.Bind(current, userId, partnerId));
 	}
 
 	public async Task IncrementDmUnreadCountAsync(long userId, long partnerId, CancellationToken ct)
