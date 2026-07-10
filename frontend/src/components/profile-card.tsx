@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { MessageCircle, Shield, Trophy, X } from 'lucide-react';
-import { getAccentClasses } from './chat-message';
-import { getDmStatusClasses } from './dm-list';
+import { AvatarWithStatus } from './avatar-with-status';
 import type { GuildMember } from './guild-member-list';
 
 type ProfileCardProps = {
@@ -44,20 +43,7 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
 
       <div className="px-5 pb-5">
         <div className="-mt-10 flex items-end justify-between gap-4">
-          <span className="relative shrink-0">
-            <span
-              className={`flex h-20 w-20 items-center justify-center rounded-full border-4 border-secondary-bg text-3xl font-bold ${getAccentClasses(
-                member.accent
-              )}`}
-            >
-              {member.name.slice(0, 1).toUpperCase()}
-            </span>
-            <span
-              className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                member.status
-              )}`}
-            />
-          </span>
+          <AvatarWithStatus size="lg" name={member.name} accent={member.accent} status={member.status} />
           <span className="font-category mb-2 rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45">
             {member.role}
           </span>

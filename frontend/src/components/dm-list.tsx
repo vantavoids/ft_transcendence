@@ -16,7 +16,8 @@ import {
   UserRound,
   X
 } from 'lucide-react';
-import { getAccentClasses, type ChatMessageData } from './chat-message';
+import { AvatarWithStatus } from './avatar-with-status';
+import type { ChatMessageData } from './chat-message';
 import { FriendsList, type Friend } from './friends-list';
 
 export type DirectMessage = {
@@ -63,16 +64,7 @@ export function hasDm(dmId: string, dms: DirectMessage[]) {
   return dms.some((dm) => dm.id === dmId);
 }
 
-export function getDmStatusClasses(status: DirectMessage['status']) {
-  switch (status) {
-    case 'online':
-      return 'bg-lime';
-    case 'idle':
-      return 'bg-yellow';
-    default:
-      return 'bg-muted';
-  }
-}
+export { getDmStatusClasses } from './avatar-with-status';
 
 export function DmList({
   activeDm,
@@ -249,20 +241,7 @@ export function DmList({
                       onClick={() => onSelectDm(dm.id)}
                       className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
                     >
-                      <span className="relative shrink-0">
-                        <span
-                          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                            dm.accent
-                          )}`}
-                        >
-                          {dm.name.slice(0, 1).toUpperCase()}
-                        </span>
-                        <span
-                          className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                            dm.status
-                          )}`}
-                        />
-                      </span>
+                      <AvatarWithStatus name={dm.name} accent={dm.accent} status={dm.status} />
                       <span className="min-w-0 flex-1">
                         <span className="flex min-w-0 items-center justify-between gap-3">
                           <span className="block truncate text-[1rem] font-bold">{dm.name}</span>

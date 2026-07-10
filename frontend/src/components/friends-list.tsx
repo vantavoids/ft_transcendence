@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
-import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { getDmStatusClasses, type DirectMessage } from './dm-list';
+import { AvatarWithStatus } from './avatar-with-status';
+import type { ChatMessageData } from './chat-message';
+import type { DirectMessage } from './dm-list';
 
 export type Friend = {
   id: string;
@@ -60,20 +61,7 @@ export function FriendsList({ friends, search, onSearchChange }: FriendsListProp
                 type="button"
                 className="flex h-[4.25rem] w-full items-center gap-3 rounded-lg px-3 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
               >
-                <span className="relative shrink-0">
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${getAccentClasses(
-                      friend.accent
-                    )}`}
-                  >
-                    {friend.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-secondary-bg ${getDmStatusClasses(
-                      friend.status
-                    )}`}
-                  />
-                </span>
+                <AvatarWithStatus name={friend.name} accent={friend.accent} status={friend.status} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[1rem] font-bold">{friend.name}</span>
                   <span className="mt-0.5 block truncate text-sm text-white/35">
