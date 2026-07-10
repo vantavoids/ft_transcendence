@@ -17,8 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
-import { FriendsList } from './friends-list';
-import { friends } from './mocks/friend-mocks';
+import { FriendsList, type Friend } from './friends-list';
 
 export type DirectMessage = {
   id: string;
@@ -36,6 +35,7 @@ type DmListProps = {
   activeDm: string;
   directMessages: DirectMessage[];
   showArchived: boolean;
+  friends: Friend[];
   mobilePane: 'channels' | 'messages';
   username: string;
   isMicMuted: boolean;
@@ -51,8 +51,7 @@ type DmListProps = {
 };
 
 export function getDmName(dmId: string, dms: DirectMessage[]) {
-  if (dmId.length === 0)
-    return dmId;
+  if (dmId.length === 0) return dmId;
   return dms.find((dm) => dm.id === dmId)?.name ?? dmId;
 }
 
@@ -79,6 +78,7 @@ export function DmList({
   activeDm,
   directMessages,
   showArchived,
+  friends,
   mobilePane,
   username,
   isMicMuted,

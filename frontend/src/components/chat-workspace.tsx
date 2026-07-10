@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -9,8 +9,10 @@ import {
   CornerUpLeft,
   MessageCircle,
   Paperclip,
+  Phone,
   Smile,
   UserRound,
+  Video,
   X
 } from 'lucide-react';
 import {
@@ -30,8 +32,9 @@ import { GuildSidebar } from './guild-sidebar';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
-import { clearSession } from '../shared/lib/session';
+import type { Friend } from './friends-list';
 import { useNotifications } from '../shared/lib/use-notifications';
+import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { stopChatHub } from '../shared/api/chat-hub';
@@ -40,6 +43,11 @@ import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
 import { useConversationHistory } from '../shared/hooks/use-conversation-history';
 import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
+import { listFriends } from '../shared/api/user';
+import { toFriend } from '../shared/api/hydrate';
+import { useCall } from '../shared/call/call-context';
+import { IncomingCallOverlay } from './call/incoming-call-overlay';
+import { CallWindow } from './call/call-window';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const MESSAGE_GROUP_THRESHOLD_MINUTES = 5;
@@ -74,6 +82,7 @@ function getMinutesBetween(previousTimestamp: string, currentTimestamp: string) 
 
 export function ChatWorkspace() {
   const router = useRouter();
+  const { startCall } = useCall();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -82,6 +91,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [username] = useState('cartoone');
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -114,12 +124,55 @@ export function ChatWorkspace() {
     setIsHydrated(true);
   }, []);
 
+  useEffect(() => {
+    // Friends come straight from GET /users/{id}/friends; the DM list itself
+    // is owned by useDmWorkspace. Best-effort: leave the list empty rather
+    // than surface a console error (III: zero console errors in Chrome).
+    let cancelled = false;
+
+    async function loadFriends() {
+      const userId = getUserId();
+      if (!userId) {
+        return;
+      }
+
+      const friendList = await listFriends(userId).catch(() => []);
+      if (cancelled) {
+        return;
+      }
+
+      setFriends(friendList.map(toFriend));
+    }
+
+    void loadFriends();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const activeDmDetails =
     chatMode === 'dm' && dmWorkspace.activeDm
       ? getDmDetails(dmWorkspace.activeDm, dmWorkspace.dmConversations)
       : null;
   const activeConversationId =
     chatMode === 'dm' ? (activeDmDetails?.id ?? null) : guildWorkspace.activeChannel;
+  const resolvePeerName = useCallback(
+    (peerId: string | null) =>
+      peerId
+        ? (dmWorkspace.dmConversations.find((dm) => dm.id === peerId)?.name ?? 'Unknown user')
+        : 'Unknown user',
+    [dmWorkspace.dmConversations]
+  );
+
+  function startDmCall(callType: 'audio' | 'video') {
+    if (!activeDmDetails) {
+      return;
+    }
+    // the DM id is now the partner's real user snowflake (hydrated from GET /chat/dms),
+    // so it is a valid callee for the signaling hub.
+    void startCall(activeDmDetails.id, callType);
+  }
   const activeConversationName =
     chatMode === 'dm'
       ? getDmName(activeDmDetails?.id ?? '', dmWorkspace.dmConversations)
@@ -496,6 +549,7 @@ export function ChatWorkspace() {
               activeDm={dmWorkspace.activeDm ?? ''}
               directMessages={dmWorkspace.dmConversations}
               showArchived={dmWorkspace.showArchivedDms}
+              friends={friends}
               mobilePane={mobilePane}
               username={username}
               isMicMuted={isMicMuted}

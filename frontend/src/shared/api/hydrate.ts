@@ -41,17 +41,6 @@ function toClockLabel(iso: string | null | undefined): string {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function toActivityMinutes(iso: string | null | undefined): number {
-  if (!iso) {
-    return 0;
-  }
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return 0;
-  }
-  return date.getHours() * 60 + date.getMinutes();
-}
-
 export function toDirectMessage(
   conversation: DirectMessageConversationDto,
   partner: UserProfileDto
@@ -61,10 +50,11 @@ export function toDirectMessage(
     name: partner.display_name || partner.username,
     status: toSidebarStatus(partner.status),
     accent: accentForId(conversation.partner_id),
-    lastMessage: conversation.last_message?.content ?? '',
-    lastMessageAt: toClockLabel(conversation.last_message?.created_at),
-    lastActivityMinutes: toActivityMinutes(conversation.last_message?.created_at),
-    unreadCount: conversation.unread_count
+    lastMessage: conversation.last_preview,
+    lastMessageAt: toClockLabel(conversation.last_message_at),
+    lastActivityAt: Date.parse(conversation.last_message_at),
+    unreadCount: conversation.unread_count,
+    isArchived: conversation.is_archived
   };
 }
 
