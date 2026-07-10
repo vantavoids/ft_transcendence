@@ -13,6 +13,14 @@ export type UserProfileDto = {
   last_seen_at: string;
 };
 
+export type SearchUserDto = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string | null;
+  status: UserStatus;
+};
+
 export type UpdateUserProfilePayload = {
   display_name?: string;
   bio?: string;
@@ -44,6 +52,30 @@ export type UserSummaryDto = {
   status: UserStatus;
 };
 
+export type FriendRequestDto = {
+  friendship_id: string;
+  direction: 'incoming' | 'outgoing';
+  user: UserSummaryDto;
+  created_at: string;
+};
+
+export type FriendshipStateDto = {
+  status:
+    | 'accepted'
+    | 'pending_outgoing'
+    | 'pending_incoming'
+    | 'blocked_by_me'
+    | 'blocked_by_them'
+    | 'none';
+  since?: string | null;
+};
+
+export type BlockedUserDto = {
+  id: string;
+  username: string;
+  blocked_at: string;
+};
+
 const USERS_BATCH_LIMIT = 100;
 
 export async function getUsersByIds(ids: string[]): Promise<UserSummaryDto[]> {
@@ -69,6 +101,12 @@ export async function getUsersByIds(ids: string[]): Promise<UserSummaryDto[]> {
 
 export function getCurrentUser() {
   return apiFetch<UserProfileDto>('user', '/users/me');
+}
+
+export function searchUsers(query: string, limit = 20) {
+  return apiFetch<SearchUserDto[]>('user', '/users/search', {
+    query: { q: query, limit }
+  });
 }
 
 export function getUser(userId: string) {
@@ -106,6 +144,16 @@ export function deleteFriendship(friendshipId: string) {
   });
 }
 
+export function listFriendRequests(direction: 'incoming' | 'outgoing' | 'all' = 'all') {
+  return apiFetch<FriendRequestDto[]>('user', '/users/me/friend-requests', {
+    query: { direction }
+  });
+}
+
+export function getFriendshipState(userId: string) {
+  return apiFetch<FriendshipStateDto>('user', `/users/me/friendship/${userId}`);
+}
+
 export function blockUser(userId: string) {
   return apiFetch<void>('user', `/users/${userId}/block`, {
     method: 'POST'
@@ -114,6 +162,42 @@ export function blockUser(userId: string) {
 
 export function unblockUser(userId: string) {
   return apiFetch<void>('user', `/users/${userId}/block`, {
+    method: 'DELETE'
+  });
+}
+
+export function listBlockedUsers() {
+  return apiFetch<BlockedUserDto[]>('user', '/users/me/blocks');
+}
+
+export function uploadAvatar(userId: string, file: File) {
+  const body = new FormData();
+  body.set('avatar', file);
+
+  return apiFetch<{ avatar_url: string }>('user', `/users/${userId}/avatar`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function removeAvatar(userId: string) {
+  return apiFetch<void>('user', `/users/${userId}/avatar`, {
+    method: 'DELETE'
+  });
+}
+
+export function uploadBanner(userId: string, file: File) {
+  const body = new FormData();
+  body.set('banner', file);
+
+  return apiFetch<{ banner_url: string }>('user', `/users/${userId}/banner`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function removeBanner(userId: string) {
+  return apiFetch<void>('user', `/users/${userId}/banner`, {
     method: 'DELETE'
   });
 }

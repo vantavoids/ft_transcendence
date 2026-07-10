@@ -33,6 +33,7 @@ import { toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
 import { CallWindow } from './call/call-window';
+import { useCurrentUserProfile } from '../shared/user/user-store';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -42,6 +43,7 @@ type ChatMode = 'guild' | 'dm';
 export function ChatWorkspace() {
   const router = useRouter();
   const { startCall } = useCall();
+  const { currentUser, refreshCurrentUser, setCurrentUser } = useCurrentUserProfile();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -49,7 +51,6 @@ export function ChatWorkspace() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
-  const [username] = useState('cartoone');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
@@ -77,11 +78,11 @@ export function ChatWorkspace() {
   }, []);
 
   useEffect(() => {
-    // TODO(api:user): hydrate the real profile from GET /users/me (epic 2).
     const storedMode = window.sessionStorage.getItem(LAST_CHAT_MODE_KEY);
     setChatMode(storedMode === 'dm' ? 'dm' : 'guild');
     setIsHydrated(true);
-  }, []);
+    void refreshCurrentUser();
+  }, [refreshCurrentUser]);
 
   useEffect(() => {
     // Friends come straight from GET /users/{id}/friends; the DM list itself
@@ -335,6 +336,7 @@ export function ChatWorkspace() {
     }
     stopChatHub();
     clearSession();
+    setCurrentUser(null);
     router.push('/auth/login');
     router.refresh();
   }
@@ -494,7 +496,10 @@ export function ChatWorkspace() {
               name: message.author,
               role: 'Member',
               status:
-                message.author.toLowerCase() === username.toLowerCase() ? 'online' : 'offline',
+                currentUser?.username &&
+                message.author.toLowerCase() === currentUser.username.toLowerCase()
+                  ? 'online'
+                  : 'offline',
               accent: message.accent,
               activity: 'No recent activity'
             })
@@ -505,7 +510,7 @@ export function ChatWorkspace() {
   // voice controls) regardless of chat mode, so they share this exact prop set.
   const sidebarFooterProps = {
     mobilePane,
-    username,
+    currentUser,
     isMicMuted,
     isDeafened,
     unreadNotifications: notificationFeed.unreadCount,
@@ -636,7 +641,7 @@ export function ChatWorkspace() {
 
           {isSettingsOpen ? (
             <SettingsModal
-              username={username}
+              currentUser={currentUser}
               onClose={handleCloseSettings}
               onDisconnect={handleDisconnect}
             />

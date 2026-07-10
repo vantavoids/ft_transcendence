@@ -19,6 +19,7 @@ import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import { FriendsList, type Friend } from './friends-list';
 import { SearchInput } from './search-input';
+import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
 
 export type DirectMessage = {
   id: string;
@@ -38,7 +39,7 @@ type DmListProps = {
   showArchived: boolean;
   friends: Friend[];
   mobilePane: 'channels' | 'messages';
-  username: string;
+  currentUser: CurrentUserProfile | null;
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
@@ -72,7 +73,7 @@ export function DmList({
   showArchived,
   friends,
   mobilePane,
-  username,
+  currentUser,
   isMicMuted,
   isDeafened,
   unreadNotifications,
@@ -307,9 +308,20 @@ export function DmList({
       <div className="shrink-0 border-t border-white/8 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-[linear-gradient(135deg,#6e7f9d,#d9e2f0)]" />
-            <span className="mono-detail min-w-0 truncate text-[2rem] font-medium tracking-[-0.06em] text-white">
-              {username}
+            <AvatarWithStatus
+              size="sm"
+              name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+              accent="aqua"
+              status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
+              avatarUrl={currentUser?.avatarUrl}
+            />
+            <span className="min-w-0">
+              <span className="block truncate text-[1rem] font-bold text-white">
+                {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+              </span>
+              <span className="mono-detail block truncate text-xs text-white/35">
+                {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+              </span>
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
