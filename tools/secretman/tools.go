@@ -239,7 +239,7 @@ func resolveBetterLeaksToolPath() (string, error) {
 		return globalPath, nil
 	}
 
-	localPath := toolsDir + "betterleaks"
+	localPath := "tools/secretman/.tools/betterleaks"
 	if fileExists(localPath) {
 		fmt.Println("✅ BetterLeaks binary found in secretman tools.")
 		return localPath, nil
