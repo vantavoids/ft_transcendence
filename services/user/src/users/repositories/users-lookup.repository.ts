@@ -8,6 +8,7 @@ interface UserSummaryRow {
   display_name: string | null;
   avatar_url: string | null;
   status: UserProfileResponse['status'];
+  bio: string | null;
 }
 
 interface RequestedUserRow {
@@ -41,6 +42,7 @@ export class UsersLookupRepository {
           profile.display_name,
           profile.avatar_url,
           profile.status,
+          profile.bio,
           requested.ordinality
         FROM requested
         JOIN users_profile AS profile
@@ -78,7 +80,8 @@ export class UsersLookupRepository {
           profile.username,
           profile.display_name,
           profile.avatar_url,
-          profile.status
+          profile.status,
+          profile.bio
         FROM users_profile AS profile
         WHERE (
           profile.username ILIKE $2 ESCAPE '\\'
@@ -112,6 +115,7 @@ export class UsersLookupRepository {
       display_name: row.display_name,
       avatar_url: row.avatar_url,
       status: row.status,
+      bio: row.bio,
     };
   }
 }

@@ -23,6 +23,7 @@ export interface UserSummaryResponse {
   display_name: string | null;
   avatar_url: string | null;
   status: UserProfileResponse['status'];
+  bio: string | null;
 }
 
 export interface RelationshipResponse {

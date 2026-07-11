@@ -17,6 +17,7 @@ export type HydratedGuildMember = {
   /** Nickname when set, otherwise the user's display name. */
   displayName: string;
   username: string | null;
+  bio: string | null;
   nickname: string | null;
   avatarUrl: string | null;
   status: UserStatus;
@@ -80,6 +81,7 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
           userId: member.user_id,
           displayName: member.nickname ?? user?.display_name ?? 'Deleted User',
           username: user?.username ?? null,
+          bio: user?.bio ?? null,
           nickname: member.nickname ?? null,
           avatarUrl: user?.avatar_url ?? null,
           status: user?.status ?? 'offline',
