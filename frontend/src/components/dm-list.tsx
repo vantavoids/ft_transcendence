@@ -18,6 +18,7 @@ import {
 import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import { FriendsList, type Friend } from './friends-list';
+import { FortyTwoIcon } from './icons/brand-icons';
 import { SearchInput } from './search-input';
 import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
 
@@ -152,11 +153,8 @@ export function DmList({
     >
       <div className="shrink-0 px-4 pb-4 pt-4 sm:px-6">
         <div className="flex items-center justify-between gap-4">
-          <Link
-            href="/"
-            className="mono-detail text-[2rem] font-bold tracking-[-0.06em] text-white md:hidden"
-          >
-            Logo<span className="text-aqua">_</span>
+          <Link href="/" aria-label="Home" className="text-white md:hidden">
+            <FortyTwoIcon className="h-8 w-8" />
           </Link>
           <h2 className="min-w-0 truncate font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
             {isFriendsView ? 'Friends' : 'Direct Messages'}

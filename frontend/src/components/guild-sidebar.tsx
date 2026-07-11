@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
 import { AddGuildModal } from './guild/add-guild-modal';
 import { GuildIcon } from './guild/guild-icon';
+import { FortyTwoIcon } from './icons/brand-icons';
 import { useGuilds } from '../shared/guilds/guild-store';
 
 type GuildSidebarProps = {
@@ -44,8 +45,8 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
       ref={sidebarRef}
       className="relative hidden min-h-0 w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-white/5 md:flex"
     >
-      <Link href="/" className="mono-detail text-[2rem] font-bold tracking-[-0.06em] text-white">
-        Logo<span className="text-aqua">_</span>
+      <Link href="/" aria-label="Home" className="block w-fit text-white">
+        <FortyTwoIcon className="h-8 w-8" />
       </Link>
       <div className="mx-1 mt-5 border-t border-white/10" />
       <div
