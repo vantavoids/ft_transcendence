@@ -109,6 +109,7 @@ Goal: remove message mocks and make `/chat` use the real chat service.
   - [x] fetch `GET /channels/{channel_id}/messages`
   - [x] paginate upward with `before_time`
   - [x] render attachments, reactions, edited state, and reply chains
+  - [x] hydrate message authors and profile cards via `GET /users?ids=...`
 - [x] Direct messages
   - [x] fetch `GET /dms`
   - [x] fetch `GET /dms/{user_id}/messages`

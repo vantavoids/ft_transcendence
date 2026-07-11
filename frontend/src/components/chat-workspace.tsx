@@ -29,7 +29,7 @@ import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
 import { useConversationHistory } from '../shared/hooks/use-conversation-history';
 import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
-import { listFriends } from '../shared/api/user';
+import { getUsersByIds, listFriends, type UserSummaryDto } from '../shared/api/user';
 import { toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
@@ -37,6 +37,7 @@ import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
+import { accentForUserId, toSidebarStatus } from '../shared/mappers/user';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -80,6 +81,20 @@ export function ChatWorkspace() {
     () => currentGuildMembers.find((member) => member.userId === currentUserId) ?? null,
     [currentGuildMembers, currentUserId]
   );
+
+  function toProfileMemberFromUser(user: UserSummaryDto) {
+    return {
+      id: user.id,
+      name: user.display_name || user.username,
+      role: 'Member' as const,
+      status: toSidebarStatus(user.status),
+      accent: accentForUserId(user.id),
+      activity: 'No recent activity',
+      bio: user.bio,
+      avatarUrl: user.avatar_url ?? null,
+      bannerUrl: user.banner_url ?? null
+    };
+  }
 
   useEffect(() => {
     return () => {
@@ -151,6 +166,7 @@ export function ChatWorkspace() {
       : getChannelName(guildWorkspace.activeChannel ?? '', guildWorkspace.channels);
 
   const conversationHistory = useConversationHistory(chatMode, activeConversationId, currentUserId);
+  const { userProfilesById } = conversationHistory;
 
   // don't carry a reply target across conversations
   useEffect(() => {
@@ -497,41 +513,81 @@ export function ChatWorkspace() {
     }
   }
 
-  function handleOpenAuthorProfile(message: ChatMessageData) {
-    const guildMember = getGuildMemberByName(message.author);
+  async function handleOpenAuthorProfile(message: ChatMessageData) {
     const directMessage = dmWorkspace.dmConversations.find(
       (dm) => dm.name.toLowerCase() === message.author.toLowerCase()
     );
     const isCurrentUserMessage =
       Boolean(currentUserId && message.authorId === currentUserId) || message.author === 'You';
 
-    setProfileMember(
-      guildMember ??
-        (directMessage
+    if (directMessage) {
+      setProfileMember({
+        id: directMessage.id,
+        name: directMessage.name,
+        role: 'Member',
+        status: directMessage.status,
+        accent: directMessage.accent,
+        activity: directMessage.lastMessage,
+        bio: directMessage.bio ?? null,
+        avatarUrl: directMessage.avatarUrl ?? null,
+        bannerUrl: directMessage.bannerUrl ?? null
+      });
+      return;
+    }
+
+    if (isCurrentUserMessage && currentUser) {
+      setProfileMember(
+        currentGuildMember
           ? {
-              id: directMessage.id,
-              name: directMessage.name,
-              role: 'Member',
-              status: directMessage.status,
-              accent: directMessage.accent,
-              activity: directMessage.lastMessage,
-              bio: directMessage.bio ?? null,
-              avatarUrl: directMessage.avatarUrl ?? null,
-              bannerUrl: directMessage.bannerUrl ?? null
+              ...toProfileMember(currentGuildMember),
+              name: currentUser.displayName,
+              avatarUrl: currentUser.avatarUrl,
+              bannerUrl: currentUser.bannerUrl,
+              bio: currentUser.bio
             }
-          : isCurrentUserMessage && currentGuildMember
-            ? toProfileMember(currentGuildMember)
-            : {
-                id: message.author.toLowerCase(),
-                name: message.author,
-                role: 'Member',
-                status: 'offline',
-                accent: message.accent,
-                activity: 'No recent activity',
-                bio: null,
-                avatarUrl: null,
-                bannerUrl: null
-              })
+          : {
+              id: currentUser.id,
+              name: currentUser.displayName,
+              role: 'Member',
+              status: toSidebarStatus(currentUser.status),
+              accent: accentForUserId(currentUser.id),
+              activity: 'No recent activity',
+              bio: currentUser.bio,
+              avatarUrl: currentUser.avatarUrl,
+              bannerUrl: currentUser.bannerUrl
+            }
+      );
+      return;
+    }
+
+    if (message.authorId) {
+      const cachedUser = userProfilesById[message.authorId];
+      if (cachedUser) {
+        setProfileMember(toProfileMemberFromUser(cachedUser));
+        return;
+      }
+
+      const fetchedUsers = await getUsersByIds([message.authorId]).catch(() => []);
+      const fetchedUser = fetchedUsers[0];
+      if (fetchedUser) {
+        setProfileMember(toProfileMemberFromUser(fetchedUser));
+        return;
+      }
+    }
+
+    const guildMember = getGuildMemberByName(message.author);
+    setProfileMember(
+      guildMember ?? {
+        id: message.author.toLowerCase(),
+        name: message.author,
+        role: 'Member',
+        status: 'offline',
+        accent: message.accent,
+        activity: 'No recent activity',
+        bio: null,
+        avatarUrl: null,
+        bannerUrl: null
+      }
     );
   }
 
