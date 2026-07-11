@@ -65,7 +65,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
         onClick={onClose}
         aria-label="Close settings"
       />
-      <section className="relative w-full max-w-[58rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <section className="relative w-full max-w-[72rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
         <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
@@ -90,8 +90,8 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
           </button>
         </div>
 
-        <div className="grid gap-5 px-5 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
-          <aside className="grid gap-3">
+        <div className="grid gap-5 px-5 py-5 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
+          <aside className="grid min-w-0 gap-3">
             <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
               <div className="flex items-center gap-4">
                 <AvatarWithStatus
@@ -195,7 +195,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
             ) : null}
 
             {panel === 'menu' ? (
-              <div className="hidden lg:flex min-h-[24rem] items-center justify-center rounded-[1rem] border border-dashed border-white/10 bg-panel px-8 text-center text-sm text-white/35">
+              <div className="hidden min-h-[24rem] items-center justify-center rounded-[1rem] border border-dashed border-white/10 bg-panel px-8 text-center text-sm text-white/35 lg:flex">
                 Select a setting on the left to edit your account.
               </div>
             ) : null}
