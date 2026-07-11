@@ -139,7 +139,11 @@ function MemberRow({ guildId, member, onChanged, onError }: MemberRowProps) {
               ) : null}
             </p>
             <p className="truncate text-xs text-white/35">
-              {member.username ? `@${member.username}` : 'deleted user'}
+              {member.isDeleted
+                ? 'deleted user'
+                : member.username
+                  ? `@${member.username}`
+                  : 'Member'}
               {member.nickname ? ` · nickname: ${member.nickname}` : ''}
               {member.roles.length > 0
                 ? ` · ${member.roles.map((role) => role.name).join(', ')}`
