@@ -151,7 +151,7 @@ export function DmList({
     <div
       className={`${
         mobilePane === 'channels' ? 'flex' : 'hidden'
-      } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex md:max-w-[25rem]`}
+      } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke md:flex md:max-w-[25rem]`}
     >
       <div className="shrink-0 px-4 pb-4 pt-4 sm:px-6">
         <div className="flex items-center justify-between gap-4">
@@ -330,7 +330,7 @@ export function DmList({
         </div>
       )}
 
-      <div className="shrink-0 border-t border-white/8 px-4 py-4">
+      <div className="shrink-0 border-t border-stroke px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <AvatarWithStatus

@@ -176,7 +176,7 @@ function FilterChip({ active, label, onClick }: FilterChipProps) {
       className={`font-category h-8 rounded-full border px-3 text-[0.68rem] uppercase tracking-[0.12em] transition ${
         active
           ? 'border-aqua/45 bg-aqua/10 text-aqua'
-          : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white/70'
+          : 'border-stroke text-white/40 hover:border-stroke-strong hover:text-white/70'
       }`}
     >
       {label}
@@ -215,7 +215,7 @@ function NotificationRow({
   return (
     <article
       className={`relative rounded-md border px-3 py-3 ${
-        notification.read ? 'border-white/8' : 'border-aqua/25'
+        notification.read ? 'border-stroke' : 'border-aqua/25'
       } bg-panel ${isDismissed ? 'opacity-55' : ''} ${
         isClickable ? 'transition hover:border-aqua/45' : ''
       }`}
@@ -364,7 +364,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-white/8 bg-panel px-3 py-3">
+      <div className="rounded-md border border-stroke bg-panel px-3 py-3">
         <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
           New mute
         </p>
@@ -378,7 +378,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
               className={`h-8 flex-1 rounded-md border text-xs font-semibold transition ${
                 scopeType === option
                   ? 'border-aqua/45 bg-aqua/10 text-aqua'
-                  : 'border-white/10 text-white/40 hover:text-white/70'
+                  : 'border-stroke text-white/40 hover:text-white/70'
               }`}
               >
               {option === 'guild' ? 'Guild' : 'Channel'}
@@ -401,7 +401,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
               className={`h-7 flex-1 rounded-md border text-[0.68rem] font-semibold transition ${
                 duration === option.value
                   ? 'border-yellow/45 bg-yellow/10 text-yellow'
-                  : 'border-white/10 text-white/40 hover:text-white/70'
+                  : 'border-stroke text-white/40 hover:text-white/70'
               }`}
             >
               {option.label}
@@ -427,13 +427,13 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
           {preferences.map((preference) => (
             <div
               key={`${preference.scope_type}-${preference.scope_id}`}
-              className="flex items-center gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
+              className="flex items-center gap-3 rounded-md border border-stroke bg-panel px-3 py-2.5"
             >
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${
                   preference.muted
                     ? 'border-yellow/30 bg-yellow/10 text-yellow'
-                    : 'border-white/10 bg-frame text-white/35'
+                    : 'border-stroke bg-frame text-white/35'
                 }`}
               >
                 <BellOff className="h-4 w-4" strokeWidth={1.9} />
@@ -454,7 +454,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
                 onClick={() => {
                   void onUnmute(preference.scope_type, preference.scope_id).catch(() => {});
                 }}
-                className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-2.5 text-xs font-semibold text-white/50 transition hover:border-aqua/40 hover:text-aqua"
+                className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-stroke px-2.5 text-xs font-semibold text-white/50 transition hover:border-aqua/40 hover:text-aqua"
               >
                 <Bell className="h-3.5 w-3.5" strokeWidth={1.9} />
                 Unmute
@@ -508,8 +508,8 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
         onClick={onClose}
         aria-label="Close notifications"
       />
-      <section className="relative w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
-        <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
+      <section className="relative w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
+        <div className="flex h-[4.75rem] items-center justify-between border-b border-stroke px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
               <Bell className="h-5 w-5" strokeWidth={1.9} />
@@ -533,7 +533,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
           </button>
         </div>
 
-        <div className="flex items-center gap-2 border-b border-white/8 px-5 py-3">
+        <div className="flex items-center gap-2 border-b border-stroke px-5 py-3">
           <FilterChip
             active={filter.unreadOnly}
             label="Unread"
@@ -551,7 +551,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
             className={`font-category ml-auto flex h-8 items-center gap-1.5 rounded-full border px-3 text-[0.68rem] uppercase tracking-[0.12em] transition ${
               view === 'mutes'
                 ? 'border-yellow/45 bg-yellow/10 text-yellow'
-                : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white/70'
+                : 'border-stroke text-white/40 hover:border-stroke-strong hover:text-white/70'
             }`}
           >
             <BellOff className="h-3.5 w-3.5" strokeWidth={1.9} />
@@ -567,7 +567,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
               {[0, 1, 2].map((index) => (
                 <div
                   key={index}
-                  className="h-16 animate-pulse rounded-md border border-white/8 bg-panel"
+                  className="h-16 animate-pulse rounded-md border border-stroke bg-panel"
                 />
               ))}
             </div>
@@ -577,7 +577,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
               <button
                 type="button"
                 onClick={refresh}
-                className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-frame px-4 text-sm font-semibold text-white/70 transition hover:text-white"
+                className="flex h-9 items-center gap-2 rounded-md border border-stroke bg-frame px-4 text-sm font-semibold text-white/70 transition hover:text-white"
               >
                 <RotateCw className="h-4 w-4" strokeWidth={1.9} />
                 Retry
@@ -615,7 +615,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
                   type="button"
                   onClick={loadMore}
                   disabled={isLoadingMore}
-                  className="flex h-10 w-full items-center justify-center rounded-md border border-white/10 text-sm font-semibold text-white/50 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full items-center justify-center rounded-md border border-stroke text-sm font-semibold text-white/50 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoadingMore ? 'Loading...' : 'Load more'}
                 </button>
@@ -624,7 +624,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
           )}
         </div>
 
-        <div className="border-t border-white/8 px-4 py-4">
+        <div className="border-t border-stroke px-4 py-4">
           <button
             type="button"
             onClick={markAllRead}

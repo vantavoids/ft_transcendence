@@ -20,7 +20,7 @@ export function IncomingCallOverlay({ resolvePeerName }: IncomingCallOverlayProp
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6">
-      <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-6 text-center shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-6 text-center shadow-2xl shadow-black/50 ring-1 ring-stroke">
         <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-aqua/10 text-2xl font-bold text-aqua ring-1 ring-aqua/30">
           {peerName.slice(0, 1).toUpperCase()}
         </span>

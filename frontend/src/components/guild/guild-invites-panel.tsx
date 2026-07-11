@@ -158,7 +158,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
     <div className="grid gap-5">
       <form
         onSubmit={handleCreate}
-        className="grid gap-3 rounded-md border border-white/8 bg-panel p-4"
+        className="grid gap-3 rounded-md border border-stroke bg-panel p-4"
       >
         <h3 className="flex items-center gap-2 text-base font-bold text-white">
           <Link2 className="h-4 w-4 text-aqua" strokeWidth={1.9} />
@@ -223,7 +223,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
           {invites.map((invite) => (
             <li
               key={invite.code}
-              className="flex items-center gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
+              className="flex items-center gap-3 rounded-md border border-stroke bg-panel px-3 py-2.5"
             >
               <div className="min-w-0 flex-1">
                 <p className="mono-detail flex items-center gap-1.5 truncate text-[0.95rem] font-bold text-white">
@@ -250,7 +250,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
               <button
                 type="button"
                 onClick={() => void handleRevoke(invite.code)}
-                className="h-8 shrink-0 rounded-md border border-white/10 px-3 text-xs font-bold text-white/60 transition hover:border-pink/40 hover:text-pink"
+                className="h-8 shrink-0 rounded-md border border-stroke px-3 text-xs font-bold text-white/60 transition hover:border-pink/40 hover:text-pink"
               >
                 Revoke
               </button>
@@ -261,7 +261,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
 
       <form
         onSubmit={handlePreview}
-        className="grid gap-3 rounded-md border border-white/8 bg-panel p-4"
+        className="grid gap-3 rounded-md border border-stroke bg-panel p-4"
       >
         <h3 className="flex items-center gap-2 text-base font-bold text-white">
           <Search className="h-4 w-4 text-lavender" strokeWidth={1.9} />
@@ -277,14 +277,14 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
           <button
             type="submit"
             disabled={isPreviewing}
-            className="h-11 shrink-0 rounded-md border border-white/10 px-5 text-sm font-bold text-white/70 transition hover:border-aqua/40 hover:text-aqua disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 shrink-0 rounded-md border border-stroke px-5 text-sm font-bold text-white/70 transition hover:border-aqua/40 hover:text-aqua disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPreviewing ? 'Looking up...' : 'Preview'}
           </button>
         </div>
         {previewError ? <FormError message={previewError} /> : null}
         {preview ? (
-          <div className="flex items-center gap-3 rounded-md border border-white/10 bg-frame/50 px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-md border border-stroke bg-frame/50 px-3 py-2.5">
             <GuildIcon
               guildId={preview.guild.id}
               name={preview.guild.name}

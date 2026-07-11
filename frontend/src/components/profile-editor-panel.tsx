@@ -150,7 +150,7 @@ export function ProfileEditorPanel({
     <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
       <div className="grid gap-4">
         <div
-          className="overflow-hidden rounded-[1rem] border border-white/8 bg-panel"
+          className="overflow-hidden rounded-[1rem] border border-stroke bg-panel"
           style={
             currentUser.bannerUrl
               ? {
@@ -218,7 +218,7 @@ export function ProfileEditorPanel({
             type="button"
             onClick={() => void handleRemoveAvatar()}
             disabled={isBusyAvatar || !currentUser.avatarUrl}
-            className="flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 items-center justify-center gap-2 rounded-md border border-stroke bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             Remove avatar
           </button>
@@ -226,13 +226,13 @@ export function ProfileEditorPanel({
             type="button"
             onClick={() => void handleRemoveBanner()}
             disabled={isBusyBanner || !currentUser.bannerUrl}
-            className="flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 items-center justify-center gap-2 rounded-md border border-stroke bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             Remove banner
           </button>
         </div>
 
-        <div className="rounded-md border border-white/8 bg-panel px-3 py-2 text-xs text-white/40">
+        <div className="rounded-md border border-stroke bg-panel px-3 py-2 text-xs text-white/40">
           <div className="flex items-center gap-2">
             <ImageIcon className="h-3.5 w-3.5" strokeWidth={1.9} />
             Avatars and banners are stored by the user service. Upload a JPEG, PNG, or WebP file.
@@ -290,7 +290,7 @@ export function ProfileEditorPanel({
             <button
               type="button"
               onClick={onBack}
-              className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/70 transition hover:text-white"
+              className="flex h-11 items-center justify-center rounded-md border border-stroke bg-frame text-sm font-semibold text-white/70 transition hover:text-white"
             >
               Back
             </button>

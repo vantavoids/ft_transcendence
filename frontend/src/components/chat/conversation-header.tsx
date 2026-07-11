@@ -28,7 +28,7 @@ export function ConversationHeader({
   onStartVideoCall
 }: ConversationHeaderProps) {
   return (
-    <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5 sm:px-7">
+    <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-stroke px-5 sm:px-7">
       <div className="flex items-center gap-3">
         <button
           type="button"

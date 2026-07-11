@@ -43,12 +43,12 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
   return (
     <aside
       ref={sidebarRef}
-      className="relative hidden min-h-0 w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-white/5 md:flex"
+      className="relative hidden min-h-0 w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-stroke md:flex"
     >
       <Link href="/" aria-label="Home" className="mx-auto block w-fit text-white">
         <FortyTwoIcon className="h-8 w-8" />
       </Link>
-      <div className="mx-1 mt-5 border-t border-white/10" />
+      <div className="mx-1 mt-5 border-t border-stroke" />
       <div
         className="mt-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
         onScroll={() => setTooltip(null)}
@@ -67,7 +67,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         >
           <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
         </button>
-        <div className="mx-1 border-t border-white/10" />
+        <div className="mx-1 border-t border-stroke" />
         {isLoading && guilds.length === 0 ? (
           <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
         ) : null}
@@ -111,7 +111,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
       </div>
       {tooltip ? (
         <div
-          className="pointer-events-none absolute left-[calc(100%+0.4rem)] z-50 -translate-y-1/2 whitespace-nowrap rounded-md border border-white/10 bg-panel px-4 py-2.5 text-base font-semibold text-white shadow-xl shadow-black/30"
+          className="pointer-events-none absolute left-[calc(100%+0.4rem)] z-50 -translate-y-1/2 whitespace-nowrap rounded-md border border-stroke bg-panel px-4 py-2.5 text-base font-semibold text-white shadow-xl shadow-black/30"
           style={{ top: tooltip.top }}
         >
           {tooltip.name}

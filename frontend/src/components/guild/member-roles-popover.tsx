@@ -22,7 +22,7 @@ export function MemberRoleChips({ roles }: { roles: GuildRoleDto[] }) {
       {roles.map((role) => (
         <span
           key={role.id}
-          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-frame px-2 py-0.5 text-[0.7rem] font-semibold text-white/70"
+          className="inline-flex items-center gap-1.5 rounded-full border border-stroke bg-frame px-2 py-0.5 text-[0.7rem] font-semibold text-white/70"
         >
           <span
             className="h-2 w-2 shrink-0 rounded-full"
@@ -100,7 +100,7 @@ export function MemberRolesPopover({
   }
 
   return (
-    <div className="absolute right-0 top-9 z-20 w-64 rounded-md border border-white/8 bg-panel p-2 shadow-lg">
+    <div className="absolute right-0 top-9 z-20 w-64 rounded-md border border-stroke bg-panel p-2 shadow-lg">
       <div className="mb-1 flex items-center justify-between">
         <p className="px-1 text-xs font-bold uppercase tracking-wide text-white/40">Roles</p>
         <button

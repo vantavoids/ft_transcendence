@@ -192,7 +192,7 @@ export function ChatMessage({
         isGrouped ? 'mt-1 grid grid-cols-[3rem_minmax(0,1fr)] gap-4' : 'mt-6 flex gap-4 first:mt-0'
       } ${isHighlighted ? 'bg-aqua/10 ring-1 ring-aqua/40' : ''}`}
     >
-      <div className="absolute right-3 top-0 hidden -translate-y-1/2 overflow-hidden rounded-md border border-white/10 bg-panel shadow-lg shadow-black/30 group-hover:flex">
+      <div className="absolute right-3 top-0 hidden -translate-y-1/2 overflow-hidden rounded-md border border-stroke bg-panel shadow-lg shadow-black/30 group-hover:flex">
         {canReact ? (
           <button
             type="button"
@@ -244,7 +244,7 @@ export function ChatMessage({
           onClick={() => onOpenAuthorProfile?.(message)}
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
             message.accent
-          )} ${onOpenAuthorProfile ? 'transition hover:scale-105 hover:ring-2 hover:ring-white/25' : ''}`}
+          )} ${onOpenAuthorProfile ? 'transition hover:scale-105 hover:ring-2 hover:ring-stroke-strong' : ''}`}
           aria-label={`Open ${message.author} profile`}
         >
           {message.author.slice(0, 1).toUpperCase()}
@@ -353,7 +353,7 @@ export function ChatMessage({
                   onClick={() => {
                     void openAuthedAttachment(attachment.url).catch(() => {});
                   }}
-                  className="block max-w-[16rem] cursor-pointer overflow-hidden rounded-md border border-white/10 bg-transparent p-0"
+                  className="block max-w-[16rem] cursor-pointer overflow-hidden rounded-md border border-stroke bg-transparent p-0"
                 >
                   <AuthedImage
                     src={attachment.url}
@@ -370,7 +370,7 @@ export function ChatMessage({
                       () => {}
                     );
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-panel px-3 py-2 text-left text-sm text-white/80 transition hover:border-aqua/40 hover:text-white"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-stroke bg-panel px-3 py-2 text-left text-sm text-white/80 transition hover:border-aqua/40 hover:text-white"
                 >
                   <FileText className="h-4 w-4 shrink-0" strokeWidth={1.8} />
                   <span className="truncate">{attachment.filename}</span>

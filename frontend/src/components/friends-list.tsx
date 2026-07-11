@@ -470,7 +470,7 @@ export function FriendsList({
                                   <button
                                     type="button"
                                     onClick={() => void handleDecline(user.friendshipId!)}
-                                    className="flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
+                                    className="flex h-8 items-center gap-1.5 rounded-md border border-stroke bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
                                   >
                                     <XButtonIcon />
                                     Cancel
@@ -500,7 +500,7 @@ export function FriendsList({
                                     <button
                                       type="button"
                                       onClick={() => void handleDecline(user.friendshipId!)}
-                                      className="flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
+                                      className="flex h-8 items-center gap-1.5 rounded-md border border-stroke bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
                                     >
                                       <UserX className="h-3.5 w-3.5" strokeWidth={2} />
                                       Decline
@@ -520,13 +520,13 @@ export function FriendsList({
                               <button
                                 type="button"
                                 onClick={() => void handleUnblock(user.id)}
-                                className="flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
+                                className="flex h-8 items-center gap-1.5 rounded-md border border-stroke bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
                               >
                                 <Check className="h-3.5 w-3.5" strokeWidth={2} />
                                 Unblock
                               </button>
                             ) : isBlockedByThem ? (
-                              <span className="rounded-md border border-white/10 bg-frame px-3 py-2 text-xs font-semibold text-white/45">
+                              <span className="rounded-md border border-stroke bg-frame px-3 py-2 text-xs font-semibold text-white/45">
                                 No action available
                               </span>
                             ) : (
@@ -576,7 +576,7 @@ export function FriendsList({
                         {friend.note}
                       </span>
                     </span>
-                    <span className="rounded-md border border-white/10 bg-panel px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/35">
+                    <span className="rounded-md border border-stroke bg-panel px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/35">
                       {toUserStatusLabel(friend.status === 'idle' ? 'idle' : friend.status === 'online' ? 'online' : 'offline')}
                     </span>
                   </button>
@@ -587,7 +587,7 @@ export function FriendsList({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-white/8 px-4 py-4">
+      <div className="shrink-0 border-t border-stroke px-4 py-4">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -677,7 +677,7 @@ function RequestRow({
             <button
               type="button"
               onClick={onDecline}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-stroke bg-frame px-3 text-xs font-semibold text-white/80 transition hover:text-white"
             >
               <UserX className="h-3.5 w-3.5" strokeWidth={2} />
               {outgoing ? 'Cancel' : 'Decline'}

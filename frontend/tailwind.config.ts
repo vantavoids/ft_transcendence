@@ -35,6 +35,7 @@ const config: Config = {
         panel: '#121213',
         frame: '#1a1a1c',
         stroke: '#242426',
+        'stroke-strong': '#3a3a3f',
         'grey-link': '#848485',
         muted: '#5b5b5c',
         category: '#545454',

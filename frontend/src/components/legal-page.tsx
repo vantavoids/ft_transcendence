@@ -26,7 +26,7 @@ export function LegalPage({ eyebrow, title, lastUpdated, children }: LegalPagePr
           </h1>
           <p className="mt-3 text-sm text-white/45">Last updated: {lastUpdated}</p>
         </header>
-        <article className="legal-prose mt-10 rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-12">
+        <article className="legal-prose mt-10 rounded-[2rem] border border-stroke bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-12">
           {children}
         </article>
       </div>

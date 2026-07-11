@@ -74,7 +74,7 @@ button {
 }
 
 .legal-prose hr {
-  @apply my-10 border-white/10;
+  @apply my-10 border-stroke;
 }
 
 .mono-detail {
