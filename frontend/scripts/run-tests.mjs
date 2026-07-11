@@ -96,6 +96,7 @@ function writeNextShims() {
         type: 'module',
         exports: {
           './image': './image.js',
+          './link': './link.js',
           './navigation': './navigation.js'
         }
       },
@@ -114,6 +115,12 @@ function writeNextShims() {
   fs.writeFileSync(
     path.join(nextShimDir, 'navigation.js'),
     'export function useRouter() { return { push() {}, refresh() {}, replace() {}, back() {} }; }\n',
+    'utf8'
+  );
+
+  fs.writeFileSync(
+    path.join(nextShimDir, 'link.js'),
+    "import { createElement } from 'react';\nexport default function Link(props) { return createElement('a', props, props.children); }\n",
     'utf8'
   );
 }
