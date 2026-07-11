@@ -557,16 +557,28 @@ Finally, the frontend needed to remain responsive while new dynamic behaviour wa
 - Set up the Auth Service from scaffolding to production-shaped Clean Architecture: `Auth.Domain` (entities, value objects like `Email` and `OAuthIdentity`, failure catalogue), `Auth.Application` (command/query handlers, abstractions), `Auth.Infrastructure` (JWT issuance, OAuth provider clients, password hasher), `Auth.Persistence` (EF Core mappings, migrations), `Auth.Presentation` (Carter endpoints, global exception middleware)
 - Implemented the email + password auth flows: `POST /auth/register` and `POST /auth/login` with `bcrypt`-hashed + salted passwords, `POST /auth/refresh` with refresh-token rotation and hashed storage of refresh tokens, `POST /auth/logout` with refresh-token revocation, `GET /auth/me` for the authenticated principal's auth-side identity, and soft-delete on `users_auth` so emails free up correctly after deletion
 - Implemented the full OAuth 2.0 Authorization Code flow for three providers (Google, GitHub, 42) under `GET /auth/oauth/{provider}` and `GET /auth/oauth/{provider}/callback`, plus the integer-encoded `oauth_provider` storage decision (`Github=1`, `Google=2`, `FortyTwo=3`) so the schema stays compact and migrations don't churn on enum renames
-- Building the OAuth link / unlink flow for multi-provider accounts (one account, multiple linked OAuth identities, none allowed to leave the account without a password set)
 - Implemented the synchronous Auth to Guild `/internal/users/{user_id}/owned-guilds-count` check that gates `DELETE /auth/me` and forces users to transfer or delete owned guilds before account deletion; published the `user.deleted` event that drives the GDPR deletion cascade across User, Guild, Chat and Notification
 - Added Auth's `/internal/users/{user_id}/data-export` endpoint for the GDPR data-export bundle (email, OAuth providers, account timestamps), validated that OAuth-only accounts cannot be tricked into changing their email or password via `/auth/me`
-- Co-developer on the Chat Service alongside yandry and achu, contributing to the SignalR hub, message flows and consumer wiring as part of the cross-team push to round out the chat experience
+- Co-developer on the Chat Service alongside yandry and achu, contributing to the SignalR hub, message flows, connection tracking and consumer wiring as part of the cross-team push to round out the chat experience.
 
-**Challenges:** TBD
+**Challenges:**
+
+My first real challenge was learning C# itself. Coming from other languages the syntax wasn't too disorienting once I got past the sheer number of keywords, but the bigger hurdle was the .NET ecosystem around it: dependency injection, expressing business ports as interfaces, and pulling that apart into Domain / Application / Infrastructure / Persistence / Presentation, apply hexagonal architecture in practice, not just in theory.
+
+On the Auth Service specifically, understanding the access/refresh token split took a moment to click (it's simple once you see it, abstract until then), as did the reasoning behind hashing refresh tokens differently from passwords (SHA-256 for the opaque refresh token vs. bcrypt for passwords, since one is a system-generated random secret you only ever compare, the other is user-chosen and needs to resist offline brute-forcing).
+
+Reading through three different OAuth providers' documentation to reconcile their quirks into one Authorization Code flow was its own exercise in patience.
+
+EF Core was harder than expected in the other direction, its implicit conventions and change-tracking behavior aren't obvious until something surprises you. But genuinely pleasant once properly configured and understood. And serialization kept coming back as a recurring theme: getting the same C# classes to translate consistently to the right wire format across three different transports (HTTP JSON, SignalR, RabbitMQ events) took more care than I expected going in.
+
+As Project Manager, this was less a technical challenge and more a coordination one; yandry owned the product side (contracts, issues, the board) while I focused on keeping developers coordinated: splitting up tasks, running team meetings, and keeping everyone's work visible to everyone else. We underestimated the project's timeline early on, aimed a bit too big, and lost time getting lost in details before a round of team meetings forced us to refocus the scope.
+
+On Chat, SignalR itself was a big learning curve: the connection-per-user paradigm, authenticating a WebSocket via a JWT passed in the query string, and the operational reality of tracking many concurrent connections per user turned out to be genuinely hard to get right, `UserConnectionTracker` ended up being the fix for several separate blocking issues at once, and getting there meant revisiting our own contract: we dropped an early plan to auto-join every channel a user belonged to on connect, in favor of explicit client-driven subscribe/unsubscribe per channel. Message storage was another sore spot: channel and DM messages started out as two parallel Cassandra-backed tables duplicated almost line-for-line in the C# service (attachments especially), which is what eventually forced a large refactor PR (#289) to unify them and cut the repetition. Cross-service interactions were also a real open question for a while; the pattern we settled on (internal-only `/internal/...` endpoints, jramiro's idea) is what let me build the Guild-side `GET /internal/users/{user_id}/channels` endpoint Chat needed, keeping the DB/inter-service traffic bounded instead of resolving membership per-guild on every call.
+
+Finally, a smaller but real personal challenge: learning to work with GitHub project management properly, use the board ("The Holy Board") with categorized issues, iterations and statuses, and the PR workflow itself. It took real time to get comfortable with git and GitHub at first, but our workflow today feels genuinely clean, and I kept learning throughout the project (git history/manipulation, GitHub interactions, reviewing, branch organization).
 
 ---
 
-### `jramiro` - API Gateway / Secret Management / Frontend / Monitoring
 
 ### `jramiro` - Art Direction / Frontend Wireframes / API Gateway / Secret Management / Infra Support / Terms of Service
 
