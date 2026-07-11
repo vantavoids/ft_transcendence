@@ -358,8 +358,8 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
             : undefined
         }
       >
-        <div className="flex h-28 items-end justify-between gap-4 bg-[linear-gradient(135deg,rgba(18,18,24,0.65),rgba(18,18,24,0.2))] px-4 py-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 bg-[linear-gradient(135deg,rgba(18,18,24,0.65),rgba(18,18,24,0.2))] px-4 py-4 sm:h-28 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <AvatarWithStatus
               size="md"
               name={currentUser.displayName}
@@ -372,12 +372,12 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
               <p className="truncate text-xs text-white/45">@{currentUser.username}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={isBusyAvatar}
-              className="flex h-9 items-center gap-2 rounded-md bg-black/40 px-3 text-xs font-semibold text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 items-center justify-center gap-2 rounded-md bg-black/40 px-3 text-xs font-semibold text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload className="h-3.5 w-3.5" strokeWidth={2} />
               Avatar
@@ -386,7 +386,7 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
               type="button"
               onClick={() => bannerInputRef.current?.click()}
               disabled={isBusyBanner}
-              className="flex h-9 items-center gap-2 rounded-md bg-black/40 px-3 text-xs font-semibold text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 items-center justify-center gap-2 rounded-md bg-black/40 px-3 text-xs font-semibold text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload className="h-3.5 w-3.5" strokeWidth={2} />
               Banner
