@@ -120,6 +120,22 @@ func (e GuildMemberJoinedEvent) Validate() error {
 	return nil
 }
 
+type GuildOwnerTransferredEvent struct {
+	GuildID    int64 `json:"guild_id,string"`
+	OldOwnerID int64 `json:"old_owner_id,string"`
+	NewOwnerID int64 `json:"new_owner_id,string"`
+}
+
+func (e GuildOwnerTransferredEvent) Validate() error {
+	if e.GuildID == 0 {
+		return fmt.Errorf("guild.owner_transferred: missing guild_id")
+	}
+	if e.NewOwnerID == 0 {
+		return fmt.Errorf("guild.owner_transferred: missing new_owner_id")
+	}
+	return nil
+}
+
 type CallIncomingEvent struct {
 	CallID   int64  `json:"call_id,string"`
 	CallerID int64  `json:"caller_id,string"`

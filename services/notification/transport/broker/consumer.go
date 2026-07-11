@@ -33,6 +33,7 @@ var fanoutEvents = []string{
 	"call.incoming",
 	"guild.invite_created",
 	"guild.member_joined",
+	"guild.owner_transferred",
 	"user.deleted",
 }
 
