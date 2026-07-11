@@ -65,7 +65,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
         onClick={onClose}
         aria-label="Close settings"
       />
-      <section className="relative w-full max-w-[72rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <section className="relative w-full max-w-[26rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
         <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
@@ -90,42 +90,42 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
           </button>
         </div>
 
-        <div className="grid gap-5 px-5 py-5 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-          <aside className="grid min-w-0 gap-3">
-            <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
-              <div className="flex items-center gap-4">
-                <AvatarWithStatus
-                  size="lg"
-                  name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
-                  accent="aqua"
-                  status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
-                  avatarUrl={currentUser?.avatarUrl}
-                />
-                <div className="min-w-0">
-                  <h3 className="truncate text-[1.35rem] font-bold tracking-[-0.04em] text-white">
-                    {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
-                  </h3>
-                  <p className="mono-detail mt-1 truncate text-sm text-white/40">
-                    {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
-                  </p>
-                  <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
-                    <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-                    {identity?.email ?? 'No email available'}
-                  </p>
-                  <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
-                    <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
-                    {currentUser ? currentUser.status : 'offline'}
-                  </p>
-                </div>
+        <div className="px-5 py-5">
+          <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
+            <div className="flex items-center gap-4">
+              <AvatarWithStatus
+                size="lg"
+                name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                accent="aqua"
+                status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
+                avatarUrl={currentUser?.avatarUrl}
+              />
+              <div className="min-w-0">
+                <h3 className="truncate text-[1.35rem] font-bold tracking-[-0.04em] text-white">
+                  {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                </h3>
+                <p className="mono-detail mt-1 truncate text-sm text-white/40">
+                  {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                  <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
+                  {identity?.email ?? 'No email available'}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                  <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
+                  {currentUser ? currentUser.status : 'offline'}
+                </p>
               </div>
-              {currentUser?.bio ? (
-                <p className="mt-4 text-sm leading-6 text-white/60">{currentUser.bio}</p>
-              ) : (
-                <p className="mt-4 text-sm leading-6 text-white/35">No bio set.</p>
-              )}
             </div>
+            {currentUser?.bio ? (
+              <p className="mt-4 text-sm leading-6 text-white/60">{currentUser.bio}</p>
+            ) : (
+              <p className="mt-4 text-sm leading-6 text-white/35">No bio set.</p>
+            )}
+          </div>
 
-            <div className="grid gap-2.5 rounded-[1rem] border border-white/8 bg-panel p-3 sm:grid-cols-2 lg:grid-cols-1">
+          {panel === 'menu' ? (
+            <div className="mt-6 grid gap-2.5">
               <button
                 type="button"
                 onClick={() => setPanel('profile')}
@@ -143,7 +143,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
                 Change email or password
               </button>
               {isOAuthOnly ? (
-                <p className="sm:col-span-2 text-xs text-white/35">
+                <p className="text-xs text-white/35">
                   This account signs in with an OAuth provider, so it has no password to change
                   here.
                 </p>
@@ -159,41 +159,33 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
               <button
                 type="button"
                 onClick={() => setPanel('delete')}
-                className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold text-white/40 transition hover:text-pink sm:col-span-2"
+                className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold text-white/40 transition hover:text-pink"
               >
                 <Trash2 className="h-4 w-4" strokeWidth={1.9} />
                 Delete account
               </button>
             </div>
-          </aside>
+          ) : null}
 
-          <div className="min-w-0">
-            {panel === 'profile' ? (
-              <ProfileEditorPanel
-                currentUser={currentUser}
-                onBack={() => setPanel('menu')}
-                onSaveProfile={updateCurrentUserProfile}
-                onUploadAvatar={uploadCurrentUserAvatar}
-                onRemoveAvatar={removeCurrentUserAvatar}
-                onUploadBanner={uploadCurrentUserBanner}
-                onRemoveBanner={removeCurrentUserBanner}
-              />
-            ) : null}
+          {panel === 'profile' ? (
+            <ProfileEditorPanel
+              currentUser={currentUser}
+              onBack={() => setPanel('menu')}
+              onSaveProfile={updateCurrentUserProfile}
+              onUploadAvatar={uploadCurrentUserAvatar}
+              onRemoveAvatar={removeCurrentUserAvatar}
+              onUploadBanner={uploadCurrentUserBanner}
+              onRemoveBanner={removeCurrentUserBanner}
+            />
+          ) : null}
 
-            {panel === 'credentials' ? (
-              <CredentialsForm
-                onBack={() => setPanel('menu')}
-                currentEmail={identity?.email ?? ''}
-              />
-            ) : null}
+          {panel === 'credentials' ? (
+            <CredentialsForm onBack={() => setPanel('menu')} currentEmail={identity?.email ?? ''} />
+          ) : null}
 
-            {panel === 'delete' ? (
-              <DeleteAccountPanel
-                onBack={() => setPanel('menu')}
-                onDeleted={handleAccountDeleted}
-              />
-            ) : null}
-          </div>
+          {panel === 'delete' ? (
+            <DeleteAccountPanel onBack={() => setPanel('menu')} onDeleted={handleAccountDeleted} />
+          ) : null}
         </div>
       </section>
     </div>
