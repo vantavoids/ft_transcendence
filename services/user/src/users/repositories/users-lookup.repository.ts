@@ -7,6 +7,7 @@ interface UserSummaryRow {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   status: UserProfileResponse['status'];
   bio: string | null;
 }
@@ -41,6 +42,7 @@ export class UsersLookupRepository {
           profile.username,
           profile.display_name,
           profile.avatar_url,
+          profile.banner_url,
           profile.status,
           profile.bio,
           requested.ordinality
@@ -80,6 +82,7 @@ export class UsersLookupRepository {
           profile.username,
           profile.display_name,
           profile.avatar_url,
+          profile.banner_url,
           profile.status,
           profile.bio
         FROM users_profile AS profile
@@ -114,6 +117,7 @@ export class UsersLookupRepository {
       username: row.username,
       display_name: row.display_name,
       avatar_url: row.avatar_url,
+      banner_url: row.banner_url,
       status: row.status,
       bio: row.bio,
     };

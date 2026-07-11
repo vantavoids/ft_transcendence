@@ -44,6 +44,7 @@ export function ConversationHeader({
               name={activeDmDetails.name}
               accent={activeDmDetails.accent}
               status={activeDmDetails.status}
+              avatarUrl={activeDmDetails.avatarUrl}
             />
             <span className="min-w-0">
               <span className="block truncate text-[1.2rem] font-bold tracking-[-0.03em] text-white">
@@ -55,7 +56,9 @@ export function ConversationHeader({
             </span>
           </div>
         ) : chatMode === 'dm' ? (
-          <h2 className="text-[1.25rem] font-bold tracking-[-0.03em] text-white">Direct Messages</h2>
+          <h2 className="text-[1.25rem] font-bold tracking-[-0.03em] text-white">
+            Direct Messages
+          </h2>
         ) : (
           <h2 className="mono-detail text-[1.85rem] font-bold tracking-[-0.05em] text-white">
             # {activeConversationName}

@@ -22,6 +22,7 @@ export interface UserSummaryResponse {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   status: UserProfileResponse['status'];
   bio: string | null;
 }

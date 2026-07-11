@@ -28,7 +28,7 @@ Get the authenticated user's own profile.
   "avatar_url": "https://...",
   "banner_url": "https://...",
   "status": "online",
-  "bio": "...",
+  "bio": "I live in the terminal.",
   "last_seen_at": "2026-03-09T12:00:00Z"
 }
 ```
@@ -169,7 +169,7 @@ Remove the current banner. `{id}` must match the caller.
 
 ### GET /users
 
-Batch user lookup. Resolves a list of user IDs to minimal profile summaries in a single round-trip. Used by anything that holds a set of IDs and needs to render usernames/avatars: the channel member list, message author resolution in chat history, friend lists, mention rendering.
+Batch user lookup. Resolves a list of user IDs to profile summaries in a single round-trip. Used by anything that holds a set of IDs and needs to render usernames, avatars, banners, or bios: the channel member list, message author resolution in chat history, friend lists, mention rendering.
 
 Exactly one of `ids` or `q` (see `GET /users/search`) must be set. The two query modes are mutually exclusive, even though they share the `/users` path.
 
@@ -186,6 +186,7 @@ Exactly one of `ids` or `q` (see `GET /users/search`) must be set. The two query
     "username": "skaf_angel",
     "display_name": "Skaf",
     "avatar_url": "https://...",
+    "banner_url": "https://...",
     "bio": "I live in the terminal.",
     "status": "online"
   }
@@ -219,6 +220,7 @@ Search users by username or display name. Used by the friend-add flow to look up
     "username": "skaf_angel",
     "display_name": "Skaf",
     "avatar_url": "https://...",
+    "banner_url": "https://...",
     "status": "online"
   }
 ]

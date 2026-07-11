@@ -20,7 +20,18 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
         variant === 'modal' ? 'max-w-[23rem]' : 'min-h-0 max-w-none'
       }`}
     >
-      <div className="h-24 bg-[linear-gradient(135deg,#1a1a1c_0%,#27333a_46%,#78dce8_100%)]" />
+      <div
+        className="h-24 bg-[linear-gradient(135deg,#1a1a1c_0%,#27333a_46%,#78dce8_100%)]"
+        style={
+          member.bannerUrl
+            ? {
+                backgroundImage: `linear-gradient(135deg, rgba(26,26,28,0.72), rgba(39,51,58,0.48)), url(${member.bannerUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }
+            : undefined
+        }
+      />
       <button
         type="button"
         onClick={onClose}
@@ -37,6 +48,7 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
             name={member.name}
             accent={member.accent}
             status={member.status}
+            avatarUrl={member.avatarUrl ?? undefined}
           />
           <span className="font-category mb-2 rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45">
             {member.role}

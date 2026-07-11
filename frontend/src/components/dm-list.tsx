@@ -31,6 +31,9 @@ export type DirectMessage = {
   lastActivityAt: number;
   unreadCount: number;
   isArchived: boolean;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  bio?: string | null;
 };
 
 type DmListProps = {
