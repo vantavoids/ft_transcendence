@@ -15,6 +15,7 @@ import {
   type GuildMember
 } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
+import { GuildSettingsModal } from './guild/guild-settings-modal';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
@@ -60,6 +61,7 @@ export function ChatWorkspace() {
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGuildSettingsOpen, setIsGuildSettingsOpen] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
@@ -364,6 +366,8 @@ export function ChatWorkspace() {
   const handleCloseNotifications = () => setIsNotificationCardOpen(false);
   const handleOpenSettings = () => setIsSettingsOpen(true);
   const handleCloseSettings = () => setIsSettingsOpen(false);
+  const handleOpenGuildSettings = () => setIsGuildSettingsOpen(true);
+  const handleCloseGuildSettings = () => setIsGuildSettingsOpen(false);
   const handleCloseDmProfile = () => setIsDmProfileOpen(false);
   const handleCloseAuthorProfile = () => setProfileMember(null);
 
@@ -602,7 +606,8 @@ export function ChatWorkspace() {
     onToggleDeafen: handleToggleDeafen,
     onToggleMicMute: handleToggleMicMute,
     onOpenNotifications: handleOpenNotifications,
-    onOpenSettings: handleOpenSettings
+    onOpenSettings: handleOpenSettings,
+    onOpenGuildSettings: handleOpenGuildSettings
   };
 
   return (
@@ -730,6 +735,10 @@ export function ChatWorkspace() {
               onClose={handleCloseSettings}
               onDisconnect={handleDisconnect}
             />
+          ) : null}
+
+          {isGuildSettingsOpen && selectedGuild ? (
+            <GuildSettingsModal guildId={selectedGuild.id} onClose={handleCloseGuildSettings} />
           ) : null}
 
           <IncomingCallOverlay resolvePeerName={resolvePeerName} />
