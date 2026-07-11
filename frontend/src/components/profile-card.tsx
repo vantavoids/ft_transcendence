@@ -90,7 +90,7 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
                 Guild
               </span>
             </div>
-            <p className="mt-2 truncate text-sm font-semibold text-white">server_name</p>
+            <p className="mt-2 truncate text-sm font-semibold text-white">Guild name</p>
           </div>
         </div>
 
@@ -99,7 +99,7 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
           className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-aqua text-sm font-bold text-primary-bg transition hover:bg-white"
         >
           <MessageCircle className="h-4 w-4" strokeWidth={2} />
-          Message
+          Send message
         </button>
       </div>
     </section>

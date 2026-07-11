@@ -47,7 +47,7 @@ function formatRelativeTime(iso: string): string {
     return '';
   }
 
-  return date.toLocaleString('fr-FR', {
+  return date.toLocaleString('en-US', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

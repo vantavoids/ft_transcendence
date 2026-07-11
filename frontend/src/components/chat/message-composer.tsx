@@ -162,7 +162,7 @@ export function MessageComposer({
         </div>
       </div>
       <div className="mt-3 flex justify-between text-xs text-white/35">
-        <span>{chatMode === 'dm' ? 'Conversation directe locale' : 'Canal interactif local'}</span>
+        <span>{chatMode === 'dm' ? 'Local direct conversation' : 'Local channel'}</span>
         <button
           type="button"
           onClick={onShowMobileSidebar}

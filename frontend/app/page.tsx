@@ -9,26 +9,26 @@ const features = [
   {
     icon: Hash,
     accent: 'text-aqua',
-    title: 'Des guildes et des salons',
-    text: 'Crée ta guilde, organise-la en catégories et salons, et garde chaque sujet à sa place. Rôles, permissions et modération intégrés.'
+    title: 'Guilds and channels',
+    text: 'Create your guild, organize it into categories and channels, and keep every topic in its place. Roles, permissions, and moderation are built in.'
   },
   {
     icon: MessageCircle,
     accent: 'text-lavender',
-    title: 'Messages directs et amis',
-    text: 'Discute en temps réel avec tes amis, gère tes demandes et tes blocages, et retrouve tes conversations où tu les as laissées.'
+    title: 'Direct messages and friends',
+    text: 'Chat in real time with friends, manage requests and blocks, and pick up your conversations exactly where you left them.'
   },
   {
     icon: Video,
     accent: 'text-pink',
-    title: 'Appels voix et vidéo',
-    text: 'Passe en vocal ou en vidéo en un clic, directement depuis une conversation, grâce au WebRTC pair-à-pair.'
+    title: 'Voice and video calls',
+    text: 'Start an audio or video call in one click, straight from a conversation, with peer-to-peer WebRTC.'
   },
   {
     icon: Bell,
     accent: 'text-yellow',
-    title: 'Notifications en temps réel',
-    text: 'Mentions, demandes d’amis, invitations : tout arrive instantanément via WebSocket, sans recharger la page.'
+    title: 'Real-time notifications',
+    text: 'Mentions, friend requests, and invites arrive instantly over WebSocket without reloading the page.'
   }
 ];
 
@@ -50,35 +50,36 @@ export default async function HomePage() {
             href="/auth/login"
             className="rounded-full bg-white px-5 py-2 text-sm font-bold text-primary-bg transition hover:bg-aqua"
           >
-            Login
+            Log in
           </Link>
         )}
       </header>
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-20 pt-14 text-center md:pt-24">
-        <p className="mono-detail text-aqua">ft_transcendence · École 42</p>
+        <p className="mono-detail text-aqua">ft_transcendence · 42</p>
         <h1 className="mx-auto mt-5 max-w-4xl text-5xl font-extrabold uppercase tracking-[-0.05em] text-white md:text-8xl">
-          Un endroit pour échanger et se retrouver
+          A place to talk and reconnect
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-white/65">
-          ft_discord est une plateforme de communication en temps réel : guildes, salons, messages
-          directs, amis et appels. Un projet étudiant, mais une vraie place pour ta communauté.
+          ft_discord is a real-time communication platform: guilds, channels, direct messages,
+          friends, and calls. It is a student project, but it is still a real place for your
+          community.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           {isLoggedIn ? (
             <Link
               href="/chat"
-              className="inline-flex items-center gap-2 rounded-full bg-aqua px-7 py-3.5 text-base font-bold text-primary-bg shadow-glow transition hover:bg-white"
-            >
-              Ouvrir ft_discord dans le navigateur
+            className="inline-flex items-center gap-2 rounded-full bg-aqua px-7 py-3.5 text-base font-bold text-primary-bg shadow-glow transition hover:bg-white"
+          >
+              Open ft_discord in the browser
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </Link>
           ) : (
             <Link
               href="/auth/register"
-              className="inline-flex items-center gap-2 rounded-full bg-aqua px-7 py-3.5 text-base font-bold text-primary-bg shadow-glow transition hover:bg-white"
-            >
-              Créer un compte
+            className="inline-flex items-center gap-2 rounded-full bg-aqua px-7 py-3.5 text-base font-bold text-primary-bg shadow-glow transition hover:bg-white"
+          >
+              Create an account
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </Link>
           )}
@@ -104,7 +105,7 @@ export default async function HomePage() {
 
       <footer className="border-t border-white/8 bg-secondary-bg/70">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-sm text-white/40 sm:flex-row">
-          <p>© 2026 ft_discord - projet étudiant, École 42</p>
+          <p>© 2026 ft_discord - student project, 42</p>
           <div className="flex gap-5">
             <Link href="/terms" className="transition hover:text-white">
               Terms of Service

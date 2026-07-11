@@ -398,7 +398,7 @@ export function ChatWorkspace() {
     setReplyTarget(null);
 
     if (chatMode === 'dm') {
-      const previewTimestamp = new Date().toLocaleTimeString('fr-FR', {
+      const previewTimestamp = new Date().toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit'
       });

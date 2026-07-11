@@ -14,7 +14,7 @@ type MessageAccent = ChatMessageData['accent'];
 const MESSAGE_ACCENTS: MessageAccent[] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
 
 export function formatMessageTimestamp(isoTimestamp: string): string {
-  return new Date(isoTimestamp).toLocaleTimeString('fr-FR', {
+  return new Date(isoTimestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit'
   });

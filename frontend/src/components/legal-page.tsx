@@ -17,7 +17,7 @@ export function LegalPage({ eyebrow, title, lastUpdated, children }: LegalPagePr
           className="inline-flex items-center gap-2 text-sm font-semibold text-grey-link transition hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-          Retour à l’accueil
+          Back to home
         </Link>
         <header className="mt-8">
           <p className="mono-detail text-aqua">{eyebrow}</p>

@@ -106,7 +106,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
                     {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
                   </h3>
                   <p className="mono-detail mt-1 truncate text-sm text-white/40">
-                    {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                    {currentUser?.username ? `@${currentUser.username}` : 'Loading profile'}
                   </p>
                   <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
                     <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
@@ -150,7 +150,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
               />
               {isOAuthOnly ? (
                 <p className="px-1 text-xs leading-5 text-white/35">
-                  This account signs in with an OAuth provider, so it has no password to change
+                  This account signs in with an OAuth provider, so there is no password to change
                   here.
                 </p>
               ) : null}

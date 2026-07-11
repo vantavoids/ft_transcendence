@@ -45,7 +45,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Login"
-      subtitle="Reconnecte-toi au workspace pour reprendre tes conversations."
+      subtitle="Reconnect to the workspace and pick up your conversations."
       alternateHref="/auth/register"
       alternateLabel="Create account"
     >

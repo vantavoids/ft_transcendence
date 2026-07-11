@@ -14,7 +14,7 @@ export function formatDate(value: string | null | undefined) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? '—'
-    : date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    : date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 type GuildOverviewProps = {
