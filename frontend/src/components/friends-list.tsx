@@ -444,7 +444,7 @@ export function FriendsList({
                           <span className="block truncate text-[1rem] font-bold">
                             {user.display_name || user.username}
                           </span>
-                          <span className="mono-detail shrink-0 text-xs text-white/30">
+                          <span className="mono-detail min-w-0 truncate text-xs text-white/30">
                             @{user.username}
                           </span>
                         </div>
@@ -652,7 +652,7 @@ function RequestRow({
           <span className="block truncate text-[1rem] font-bold">
             {request.user.display_name || request.user.username}
           </span>
-          <span className="mono-detail shrink-0 text-xs text-white/30">
+          <span className="mono-detail min-w-0 truncate text-xs text-white/30">
             @{request.user.username}
           </span>
         </div>
