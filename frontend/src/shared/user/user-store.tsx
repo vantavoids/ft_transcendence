@@ -10,7 +10,8 @@ import {
   uploadBanner,
   removeBanner
 } from '../api/user';
-import { getAccessToken } from '../lib/session';
+import { clearSession, getAccessToken } from '../lib/session';
+import { ApiError } from '../api/client';
 import { dispatchProfileUpdated } from '../lib/profile-events';
 import { toCurrentUserProfile, type CurrentUserProfile } from '../mappers/user';
 import { validateProfileImageFile, validateProfileUpdateInput } from '../lib/validators/profile';
@@ -50,6 +51,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       setCurrentUser(toCurrentUserProfile(user));
     } catch (loadError) {
       setCurrentUser(null);
+      if (loadError instanceof ApiError && loadError.status === 404) {
+        clearSession();
+        setError(null);
+        return;
+      }
       setError(loadError instanceof Error ? loadError.message : 'Failed to load profile.');
     } finally {
       setIsLoading(false);

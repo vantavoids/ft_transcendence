@@ -11,8 +11,9 @@ import {
   type GuildDto,
   type MyGuildDto
 } from '../api/guild';
+import { ApiError } from '../api/client';
 import { getCurrentUser } from '../api/user';
-import { getAccessToken } from '../lib/session';
+import { clearSession, getAccessToken } from '../lib/session';
 
 export const LAST_GUILD_KEY = 'ft_transcendence_last_guild';
 
@@ -108,7 +109,12 @@ export function GuildProvider({ children }: { children: ReactNode }) {
     void refreshGuilds();
     getCurrentUser()
       .then((user) => setCurrentUserId(user.id))
-      .catch(() => setCurrentUserId(null));
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 404) {
+          clearSession();
+        }
+        setCurrentUserId(null);
+      });
   }, [refreshGuilds]);
 
   const selectGuild = useCallback((guildId: string) => {
