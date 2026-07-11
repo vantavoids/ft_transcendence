@@ -362,7 +362,7 @@ export function FriendsList({
               {pendingLoading && pendingIncoming.length === 0 ? (
                 <div className="h-20 animate-pulse rounded-md bg-panel/70" />
               ) : pendingIncoming.length === 0 ? (
-                <p className="rounded-md border border-white/8 bg-panel px-3 py-3 text-sm text-white/45">
+                <p className="rounded-md bg-panel px-3 py-3 text-sm text-white/45">
                   No incoming requests.
                 </p>
               ) : (
@@ -387,7 +387,7 @@ export function FriendsList({
               {pendingLoading && pendingOutgoing.length === 0 ? (
                 <div className="h-20 animate-pulse rounded-md bg-panel/70" />
               ) : pendingOutgoing.length === 0 ? (
-                <p className="rounded-md border border-white/8 bg-panel px-3 py-3 text-sm text-white/45">
+                <p className="rounded-md bg-panel px-3 py-3 text-sm text-white/45">
                   No outgoing requests.
                 </p>
               ) : (
@@ -409,7 +409,7 @@ export function FriendsList({
         ) : isDiscoverTab ? (
           <section className="grid gap-3">
             {search.trim().length < 2 ? (
-              <p className="rounded-md border border-white/8 bg-panel px-3 py-3 text-sm text-white/45">
+              <p className="rounded-md bg-panel px-3 py-3 text-sm text-white/45">
                 Type at least 2 characters to search users.
               </p>
             ) : discoverLoading ? (
@@ -419,7 +419,7 @@ export function FriendsList({
                 ))}
               </div>
             ) : discoverResults.length === 0 ? (
-              <p className="rounded-md border border-white/8 bg-panel px-3 py-3 text-sm text-white/45">
+              <p className="rounded-md bg-panel px-3 py-3 text-sm text-white/45">
                 No users found.
               </p>
             ) : (

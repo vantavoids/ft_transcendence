@@ -22,11 +22,8 @@ export function AuthCard({ title, subtitle, alternateHref, alternateLabel, child
     <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
       <div className="w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-5 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:p-7">
           <div className="mb-8 flex items-center justify-between gap-4">
-            <Link
-              href="/"
-              className="mono-detail text-[2rem] font-bold tracking-[-0.06em] text-white"
-            >
-              Logo<span className="text-aqua">_</span>
+            <Link href="/" aria-label="Home" className="text-white">
+              <FortyTwoIcon className="h-8 w-8" />
             </Link>
           </div>
 
