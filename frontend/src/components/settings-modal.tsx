@@ -13,22 +13,20 @@ import {
   Upload,
   X
 } from 'lucide-react';
-import {
-  deleteAccount,
-  getIdentity,
-  updateIdentity,
-  type AuthIdentity
-} from '../shared/api/auth';
+import { deleteAccount, getIdentity, updateIdentity, type AuthIdentity } from '../shared/api/auth';
 import { clearSession } from '../shared/lib/session';
-import {
-  describeAccountUpdateError,
-  describeDeleteAccountError
-} from '../shared/lib/auth-errors';
+import { describeAccountUpdateError, describeDeleteAccountError } from '../shared/lib/auth-errors';
 import { checkEmail, checkPassword } from '../shared/lib/validators/auth';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
 import { AvatarWithStatus } from './avatar-with-status';
 import { useCurrentUserProfile } from '../shared/user/user-store';
+import {
+  PROFILE_BIO_MAX_LENGTH,
+  PROFILE_DISPLAY_NAME_MAX_LENGTH,
+  validateProfileImageFile,
+  validateProfileUpdateInput
+} from '../shared/lib/validators/profile';
 
 type SettingsModalProps = {
   currentUser: CurrentUserProfile | null;
@@ -161,7 +159,8 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
               </button>
               {isOAuthOnly ? (
                 <p className="text-xs text-white/35">
-                  This account signs in with an OAuth provider, so it has no password to change here.
+                  This account signs in with an OAuth provider, so it has no password to change
+                  here.
                 </p>
               ) : null}
               <button
@@ -215,7 +214,9 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
   } = useCurrentUserProfile();
   const [displayName, setDisplayName] = useState(currentUser?.displayName ?? '');
   const [bio, setBio] = useState(currentUser?.bio ?? '');
-  const [status, setStatus] = useState<CurrentUserProfile['status']>(currentUser?.status ?? 'offline');
+  const [status, setStatus] = useState<CurrentUserProfile['status']>(
+    currentUser?.status ?? 'offline'
+  );
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -250,23 +251,17 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
   }
 
   async function handleSave() {
-    const trimmedDisplayName = displayName.trim();
-
     setError('');
     setSuccess('');
 
-    if (!trimmedDisplayName) {
-      setError('Display name is required.');
-      return;
-    }
-
     try {
       setIsSaving(true);
-      await updateCurrentUserProfile({
-        display_name: trimmedDisplayName,
-        bio: bio.trim() || undefined,
+      const payload = validateProfileUpdateInput({
+        display_name: displayName,
+        bio,
         status
       });
+      await updateCurrentUserProfile(payload);
       setSuccess('Profile updated.');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to update profile.');
@@ -287,6 +282,7 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
 
     try {
       setIsBusyAvatar(true);
+      validateProfileImageFile(file, 'avatar');
       await uploadCurrentUserAvatar(file);
       setSuccess('Avatar updated.');
     } catch (uploadError) {
@@ -308,6 +304,7 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
 
     try {
       setIsBusyBanner(true);
+      validateProfileImageFile(file, 'banner');
       await uploadCurrentUserBanner(file);
       setSuccess('Banner updated.');
     } catch (uploadError) {
@@ -351,7 +348,15 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
     <div className="mt-6 grid gap-3">
       <div
         className="overflow-hidden rounded-[1rem] border border-white/8 bg-panel"
-        style={currentUser.bannerUrl ? { backgroundImage: `url(${currentUser.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+        style={
+          currentUser.bannerUrl
+            ? {
+                backgroundImage: `url(${currentUser.bannerUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }
+            : undefined
+        }
       >
         <div className="flex h-28 items-end justify-between gap-4 bg-[linear-gradient(135deg,rgba(18,18,24,0.65),rgba(18,18,24,0.2))] px-4 py-4">
           <div className="flex items-center gap-3">
@@ -412,7 +417,7 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
         <input
           value={displayName}
           onChange={(event) => setDisplayName(event.target.value)}
-          maxLength={64}
+          maxLength={PROFILE_DISPLAY_NAME_MAX_LENGTH}
           className="h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
         />
       </div>
@@ -442,6 +447,7 @@ function ProfileForm({ currentUser, onBack }: ProfileFormProps) {
           onChange={(event) => setBio(event.target.value)}
           rows={4}
           placeholder="Tell people what you are up to"
+          maxLength={PROFILE_BIO_MAX_LENGTH}
           className="min-h-[6rem] w-full rounded-md border border-transparent bg-input-bg px-4 py-3 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
         />
       </div>
@@ -564,15 +570,37 @@ function CredentialsForm({ currentEmail, onBack }: CredentialsFormProps) {
 
   return (
     <form action={handleSubmit} className="mt-6 grid gap-3">
-      <Field name="email" label="New email" type="email" placeholder={currentEmail || 'you@example.com'} autoComplete="email" />
-      <Field name="new_password" label="New password" type="password" placeholder="leave blank to keep" autoComplete="new-password" />
-      <Field name="current_password" label="Current password" type="password" placeholder="required to confirm" autoComplete="current-password" />
+      <Field
+        name="email"
+        label="New email"
+        type="email"
+        placeholder={currentEmail || 'you@example.com'}
+        autoComplete="email"
+      />
+      <Field
+        name="new_password"
+        label="New password"
+        type="password"
+        placeholder="leave blank to keep"
+        autoComplete="new-password"
+      />
+      <Field
+        name="current_password"
+        label="Current password"
+        type="password"
+        placeholder="required to confirm"
+        autoComplete="current-password"
+      />
 
       {error ? (
-        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">{error}</p>
+        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
+          {error}
+        </p>
       ) : null}
       {success ? (
-        <p className="rounded-md border border-lime/25 bg-lime/10 px-3 py-2 text-sm text-lime">{success}</p>
+        <p className="rounded-md border border-lime/25 bg-lime/10 px-3 py-2 text-sm text-lime">
+          {success}
+        </p>
       ) : null}
 
       <div className="mt-1 grid grid-cols-2 gap-2.5">
@@ -619,11 +647,14 @@ function DeleteAccountPanel({ onBack, onDeleted }: DeleteAccountPanelProps) {
   return (
     <div className="mt-6 grid gap-3">
       <p className="text-sm leading-6 text-white/60">
-        This permanently deletes your account and frees your email for re-registration. This cannot be undone.
+        This permanently deletes your account and frees your email for re-registration. This cannot
+        be undone.
       </p>
 
       {error ? (
-        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">{error}</p>
+        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
+          {error}
+        </p>
       ) : null}
 
       <div className="grid grid-cols-2 gap-2.5">
@@ -660,7 +691,10 @@ type FieldProps = {
 function Field({ name, label, type, placeholder, autoComplete }: FieldProps) {
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={name} className="text-xs font-semibold uppercase tracking-[0.1em] text-white/45">
+      <label
+        htmlFor={name}
+        className="text-xs font-semibold uppercase tracking-[0.1em] text-white/45"
+      >
         {label}
       </label>
       <input
