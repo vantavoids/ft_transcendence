@@ -49,6 +49,7 @@ export type UserSummaryDto = {
   username: string;
   display_name: string;
   avatar_url?: string | null;
+  banner_url?: string | null;
   status: UserStatus;
   bio?: string | null;
 };

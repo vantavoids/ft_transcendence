@@ -251,7 +251,9 @@ export function ChatWorkspace() {
         status: activeDmDetails.status,
         accent: activeDmDetails.accent,
         activity: activeDmDetails.lastMessage,
-        bio: null
+        bio: activeDmDetails.bio ?? null,
+        avatarUrl: activeDmDetails.avatarUrl ?? null,
+        bannerUrl: activeDmDetails.bannerUrl ?? null
       }
     : null;
   const isSidePanelOpen =
@@ -513,7 +515,9 @@ export function ChatWorkspace() {
               status: directMessage.status,
               accent: directMessage.accent,
               activity: directMessage.lastMessage,
-              bio: null
+              bio: directMessage.bio ?? null,
+              avatarUrl: directMessage.avatarUrl ?? null,
+              bannerUrl: directMessage.bannerUrl ?? null
             }
           : isCurrentUserMessage && currentGuildMember
             ? toProfileMember(currentGuildMember)
@@ -524,7 +528,9 @@ export function ChatWorkspace() {
                 status: 'offline',
                 accent: message.accent,
                 activity: 'No recent activity',
-                bio: null
+                bio: null,
+                avatarUrl: null,
+                bannerUrl: null
               })
     );
   }

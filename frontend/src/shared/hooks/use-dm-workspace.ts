@@ -3,6 +3,7 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { hasDm, type DirectMessage } from '../../components/dm-list';
 import { archiveDirectMessageConversation, listDirectMessages } from '../api/chat';
+import { getUsersByIds } from '../api/user';
 import { onChatHubEvent } from '../api/chat-hub';
 import {
   accentForAuthor,
@@ -45,7 +46,29 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
           return;
         }
 
-        const mapped = dtos.map(mapDirectMessageConversation);
+        const users = await getUsersByIds(dtos.map((dto) => dto.partner_id));
+        if (cancelled) {
+          return;
+        }
+
+        const usersById = new Map(users.map((user) => [user.id, user]));
+        const mapped = dtos.map((dto) => {
+          const base = mapDirectMessageConversation(dto);
+          const user = usersById.get(dto.partner_id);
+
+          if (!user) {
+            return base;
+          }
+
+          return {
+            ...base,
+            name: user.display_name || user.username,
+            status: user.status === 'dnd' ? 'idle' : user.status,
+            avatarUrl: user.avatar_url ?? null,
+            bannerUrl: user.banner_url ?? null,
+            bio: user.bio ?? null
+          };
+        });
         setDmConversations(mapped);
 
         const storedDmId = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
@@ -94,7 +117,10 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
                   lastMessageAt,
                   lastActivityAt,
                   isArchived: false,
-                  unreadCount: isIncoming && partnerId !== activeDmRef.current ? dm.unreadCount + 1 : dm.unreadCount
+                  unreadCount:
+                    isIncoming && partnerId !== activeDmRef.current
+                      ? dm.unreadCount + 1
+                      : dm.unreadCount
                 }
               : dm
           );
@@ -113,7 +139,10 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
             lastMessageAt,
             lastActivityAt,
             unreadCount: isIncoming && partnerId !== activeDmRef.current ? 1 : 0,
-            isArchived: false
+            isArchived: false,
+            avatarUrl: null,
+            bannerUrl: null,
+            bio: null
           }
         ];
       });
