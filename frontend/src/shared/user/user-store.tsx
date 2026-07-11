@@ -2,9 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { getCurrentUser, updateUserProfile, uploadAvatar, removeAvatar, uploadBanner, removeBanner } from '../api/user';
+import {
+  getCurrentUser,
+  updateUserProfile,
+  uploadAvatar,
+  removeAvatar,
+  uploadBanner,
+  removeBanner
+} from '../api/user';
 import { getAccessToken } from '../lib/session';
 import { toCurrentUserProfile, type CurrentUserProfile } from '../mappers/user';
+import { validateProfileImageFile, validateProfileUpdateInput } from '../lib/validators/profile';
 
 type CurrentUserContextValue = {
   currentUser: CurrentUserProfile | null;
@@ -57,7 +65,8 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const updated = await updateUserProfile(currentUser.id, payload);
+      const validated = validateProfileUpdateInput(payload);
+      const updated = await updateUserProfile(currentUser.id, validated);
       setCurrentUser(toCurrentUserProfile(updated));
     },
     [currentUser]
@@ -69,6 +78,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      validateProfileImageFile(file, 'avatar');
       const updated = await uploadAvatar(currentUser.id, file);
       setCurrentUser((user) => (user ? { ...user, avatarUrl: updated.avatar_url } : user));
     },
@@ -90,6 +100,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      validateProfileImageFile(file, 'banner');
       const updated = await uploadBanner(currentUser.id, file);
       setCurrentUser((user) => (user ? { ...user, bannerUrl: updated.banner_url } : user));
     },
