@@ -51,6 +51,7 @@ type FriendsListProps = {
   // force the requests tab, then acknowledge so it doesn't stick on remounts
   focusRequests?: boolean;
   onRequestsFocused?: () => void;
+  onOpenProfile: (friend: Friend) => void;
 };
 
 type PendingRequest = FriendRequestDto & {
@@ -101,7 +102,8 @@ export function FriendsList({
   search,
   onSearchChange,
   focusRequests = false,
-  onRequestsFocused
+  onRequestsFocused,
+  onOpenProfile
 }: FriendsListProps) {
   const [friendName, setFriendName] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'discover'>(
@@ -564,6 +566,7 @@ export function FriendsList({
                   <button
                     key={friend.id}
                     type="button"
+                    onClick={() => onOpenProfile(friend)}
                     className="flex h-[4.25rem] w-full items-center gap-3 rounded-lg px-3 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
                   >
                     <AvatarWithStatus name={friend.name} accent={friend.accent} status={friend.status} />

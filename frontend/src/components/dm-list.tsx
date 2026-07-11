@@ -50,6 +50,7 @@ type DmListProps = {
   // switch the sidebar to the friends view and its requests tab
   focusFriendRequests?: boolean;
   onFriendRequestsFocused?: () => void;
+  onOpenFriendProfile: (friend: Friend) => void;
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
@@ -86,6 +87,7 @@ export function DmList({
   unreadNotifications,
   focusFriendRequests = false,
   onFriendRequestsFocused,
+  onOpenFriendProfile,
   onToggleDeafen,
   onToggleMicMute,
   onOpenNotifications,
@@ -217,6 +219,7 @@ export function DmList({
           onSearchChange={setSearch}
           focusRequests={focusFriendRequests}
           onRequestsFocused={onFriendRequestsFocused}
+          onOpenProfile={onOpenFriendProfile}
         />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">

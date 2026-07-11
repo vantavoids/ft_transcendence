@@ -702,6 +702,46 @@ export function ChatWorkspace() {
     );
   }
 
+  async function handleOpenFriendProfile(friend: Friend) {
+    const directMessage = dmWorkspace.dmConversations.find((dm) => dm.id === friend.id);
+    if (directMessage) {
+      setProfileMember({
+        id: directMessage.id,
+        name: directMessage.name,
+        role: 'Member',
+        status: directMessage.status,
+        accent: directMessage.accent,
+        activity: directMessage.lastMessage,
+        bio: directMessage.bio ?? null,
+        avatarUrl: directMessage.avatarUrl ?? null,
+        bannerUrl: directMessage.bannerUrl ?? null
+      });
+      return;
+    }
+
+    const cachedUser = userProfilesById[friend.id];
+    if (cachedUser) {
+      setProfileMember(toProfileMemberFromUser(cachedUser));
+      return;
+    }
+
+    const fetchedUsers = await getUsersByIds([friend.id]).catch(() => []);
+    const fetchedUser = fetchedUsers[0];
+    setProfileMember(
+      toProfileMemberFromUser(
+        fetchedUser ?? {
+          id: friend.id,
+          username: friend.name,
+          display_name: friend.name,
+          status: friend.status,
+          bio: null,
+          avatar_url: null,
+          banner_url: null
+        }
+      )
+    );
+  }
+
   // DmList and ChannelList render the same sidebar footer (account strip +
   // voice controls) regardless of chat mode, so they share this exact prop set.
   const sidebarFooterProps = {
@@ -738,6 +778,7 @@ export function ChatWorkspace() {
               friends={friends}
               focusFriendRequests={isFriendRequestsFocusPending}
               onFriendRequestsFocused={() => setIsFriendRequestsFocusPending(false)}
+              onOpenFriendProfile={handleOpenFriendProfile}
               onSelectDm={handleSelectDm}
               onToggleShowArchived={dmWorkspace.toggleShowArchivedDms}
               onArchiveDm={dmWorkspace.archiveDm}
