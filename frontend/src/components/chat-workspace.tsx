@@ -50,7 +50,7 @@ export function ChatWorkspace() {
   const router = useRouter();
   const { startCall } = useCall();
   const { currentUser, refreshCurrentUser, setCurrentUser } = useCurrentUserProfile();
-  const { selectedGuild, selectGuild } = useGuilds();
+  const { guilds, hasLoadedGuilds, selectedGuild, selectGuild } = useGuilds();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -127,6 +127,20 @@ export function ChatWorkspace() {
     setIsHydrated(true);
     void refreshCurrentUser();
   }, [refreshCurrentUser]);
+
+  // A user with no guilds has nothing to show in guild mode (the sidebar
+  // renders a placeholder guild); fall back to the DM view once the guild
+  // list has actually loaded. Not persisted: it's a fallback, not a
+  // preference.
+  useEffect(() => {
+    if (!isHydrated || !hasLoadedGuilds) {
+      return;
+    }
+
+    if (guilds.length === 0 && chatMode === 'guild') {
+      setChatMode('dm');
+    }
+  }, [isHydrated, hasLoadedGuilds, guilds.length, chatMode]);
 
   useEffect(() => {
     // Friends come straight from GET /users/{id}/friends; the DM list itself
