@@ -38,6 +38,7 @@ local_resource(
         '-e APP_ENV=development ' +
         '-e BASE_URL=' + root_env.get('BASE_URL', 'https://localhost:1443') + ' ' +
         '-e MINIO_ENDPOINT=http://minio:9000 ' +
+        '-e MINIO_PUBLIC_ENDPOINT=https://localhost:9443 ' +
         '-e MINIO_ACCESS_KEY=' + root_env.get('MINIO_ACCESS_KEY', 'minioadmin') + ' ' +
         '-e MINIO_SECRET_KEY=' + root_env.get('MINIO_SECRET_KEY', 'minioadmin') + ' ' +
         '-e MINIO_USER_BUCKET=' + root_env.get('MINIO_USER_BUCKET', 'user-avatars') + ' ' +
