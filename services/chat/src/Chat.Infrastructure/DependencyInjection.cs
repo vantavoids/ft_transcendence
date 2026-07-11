@@ -84,6 +84,7 @@ public static class DependencyInjection
 					RawSerializerOptions.AddTransportHeaders | RawSerializerOptions.CopyHeaders);
 
 				cfg.Message<ChatMessageSent>(m => m.SetEntityName("chat.message_sent"));
+				cfg.Message<ChatDmSent>(m => m.SetEntityName("chat.dm_sent"));
 				cfg.Message<CallIncoming>(m => m.SetEntityName("call.incoming"));
 				cfg.Message<UserOnline>(m => m.SetEntityName("user.online"));
 				cfg.Message<UserOffline>(m => m.SetEntityName("user.offline"));
