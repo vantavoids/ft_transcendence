@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import {
   createGuild as requestCreateGuild,
+  createGuildChannel,
   joinGuild,
   listMyGuilds,
   previewInvite,
@@ -125,6 +126,12 @@ export function GuildProvider({ children }: { children: ReactNode }) {
   const createGuild = useCallback(
     async (payload: CreateGuildPayload) => {
       const guild = await requestCreateGuild(payload);
+
+      try {
+        await createGuildChannel(guild.id, { name: 'general', type: 'text' });
+      } catch {
+        // best effort: the guild still exists even if the default channel failed to create
+      }
 
       try {
         applyGuilds(await listMyGuilds(), guild.id);
