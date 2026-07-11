@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Image as ImageIcon, LogOut, Mail, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
 import { deleteAccount, getIdentity, updateIdentity, type AuthIdentity } from '../shared/api/auth';
@@ -19,7 +19,7 @@ type SettingsModalProps = {
   onDisconnect: () => void;
 };
 
-type Panel = 'menu' | 'profile' | 'credentials' | 'delete';
+type Panel = 'profile' | 'credentials' | 'delete';
 
 export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsModalProps) {
   const router = useRouter();
@@ -31,7 +31,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
     removeCurrentUserBanner
   } = useCurrentUserProfile();
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
-  const [panel, setPanel] = useState<Panel>('menu');
+  const [panel, setPanel] = useState<Panel>('profile');
 
   useCloseOnEscape(onClose);
 
@@ -65,7 +65,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
         onClick={onClose}
         aria-label="Close settings"
       />
-      <section className="relative w-full max-w-[26rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <section className="relative w-full max-w-[78rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
         <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
@@ -90,105 +90,186 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
           </button>
         </div>
 
-        <div className="px-5 py-5">
-          <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
-            <div className="flex items-center gap-4">
-              <AvatarWithStatus
-                size="lg"
-                name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
-                accent="aqua"
-                status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
-                avatarUrl={currentUser?.avatarUrl}
-              />
-              <div className="min-w-0">
-                <h3 className="truncate text-[1.35rem] font-bold tracking-[-0.04em] text-white">
-                  {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
-                </h3>
-                <p className="mono-detail mt-1 truncate text-sm text-white/40">
-                  {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
-                  <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-                  {identity?.email ?? 'No email available'}
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
-                  <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
-                  {currentUser ? currentUser.status : 'offline'}
-                </p>
+        <div className="grid max-h-[calc(100vh-7rem)] min-h-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside className="border-b border-white/8 p-5 lg:border-b-0 lg:border-r">
+            <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
+              <div className="flex items-center gap-4">
+                <AvatarWithStatus
+                  size="lg"
+                  name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                  accent="aqua"
+                  status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
+                  avatarUrl={currentUser?.avatarUrl}
+                />
+                <div className="min-w-0">
+                  <h3 className="truncate text-[1.25rem] font-bold tracking-[-0.04em] text-white">
+                    {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
+                  </h3>
+                  <p className="mono-detail mt-1 truncate text-sm text-white/40">
+                    {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                    <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    {identity?.email ?? 'No email available'}
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-xs text-white/35">
+                    <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    {currentUser ? currentUser.status : 'offline'}
+                  </p>
+                </div>
               </div>
+              {currentUser?.bio ? (
+                <p className="mt-4 text-sm leading-6 text-white/60">{currentUser.bio}</p>
+              ) : (
+                <p className="mt-4 text-sm leading-6 text-white/35">No bio set.</p>
+              )}
             </div>
-            {currentUser?.bio ? (
-              <p className="mt-4 text-sm leading-6 text-white/60">{currentUser.bio}</p>
-            ) : (
-              <p className="mt-4 text-sm leading-6 text-white/35">No bio set.</p>
-            )}
-          </div>
 
-          {panel === 'menu' ? (
-            <div className="mt-6 grid gap-2.5">
-              <button
-                type="button"
+            <nav className="mt-5 grid gap-2.5">
+              <SidebarButton
+                active={panel === 'profile'}
+                icon={ImageIcon}
+                label="Profile"
+                description="Display name, bio, avatar, banner"
                 onClick={() => setPanel('profile')}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/80 transition hover:border-aqua/40 hover:text-white"
-              >
-                <ImageIcon className="h-4 w-4" strokeWidth={1.9} />
-                Edit profile
-              </button>
-              <button
-                type="button"
+              />
+              <SidebarButton
+                active={panel === 'credentials'}
+                label="Credentials"
+                description="Change email or password"
                 onClick={() => setPanel('credentials')}
                 disabled={isOAuthOnly}
-                className="flex h-11 w-full items-center justify-center rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/80 transition hover:border-aqua/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Change email or password
-              </button>
+              />
+              <SidebarButton
+                active={panel === 'delete'}
+                icon={Trash2}
+                label="Delete account"
+                description="Permanent account removal"
+                onClick={() => setPanel('delete')}
+                destructive
+              />
               {isOAuthOnly ? (
-                <p className="text-xs text-white/35">
+                <p className="px-1 text-xs leading-5 text-white/35">
                   This account signs in with an OAuth provider, so it has no password to change
                   here.
                 </p>
               ) : null}
-              <button
-                type="button"
-                onClick={onDisconnect}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-pink/25 bg-pink/10 text-sm font-bold text-pink transition hover:border-pink/45 hover:bg-pink/15"
+            </nav>
+
+            <button
+              type="button"
+              onClick={onDisconnect}
+              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md border border-pink/25 bg-pink/10 text-sm font-bold text-pink transition hover:border-pink/45 hover:bg-pink/15"
+            >
+              <LogOut className="h-4 w-4" strokeWidth={1.9} />
+              Disconnect
+            </button>
+          </aside>
+
+          <div className="min-h-0 min-w-0 overflow-y-auto p-5 lg:p-6">
+            {panel === 'profile' ? (
+              currentUser ? (
+                <ProfileEditorPanel
+                  currentUser={currentUser}
+                  onSaveProfile={updateCurrentUserProfile}
+                  onUploadAvatar={uploadCurrentUserAvatar}
+                  onRemoveAvatar={removeCurrentUserAvatar}
+                  onUploadBanner={uploadCurrentUserBanner}
+                  onRemoveBanner={removeCurrentUserBanner}
+                />
+              ) : (
+                <PanelSection
+                  title="Profile"
+                  description="Loading your profile data."
+                >
+                  <p className="text-sm leading-6 text-white/45">
+                    We are loading your profile right now. Try opening settings again in a moment.
+                  </p>
+                </PanelSection>
+              )
+            ) : null}
+
+            {panel === 'credentials' ? (
+              <PanelSection
+                title="Change email or password"
+                description="Use your current password to confirm account changes."
               >
-                <LogOut className="h-4 w-4" strokeWidth={1.9} />
-                Disconnect
-              </button>
-              <button
-                type="button"
-                onClick={() => setPanel('delete')}
-                className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold text-white/40 transition hover:text-pink"
+                <CredentialsForm onBack={() => setPanel('profile')} currentEmail={identity?.email ?? ''} />
+              </PanelSection>
+            ) : null}
+
+            {panel === 'delete' ? (
+              <PanelSection
+                title="Delete account"
+                description="This permanently deletes your account and frees your email for re-registration."
               >
-                <Trash2 className="h-4 w-4" strokeWidth={1.9} />
-                Delete account
-              </button>
-            </div>
-          ) : null}
-
-          {panel === 'profile' ? (
-            <ProfileEditorPanel
-              currentUser={currentUser}
-              onBack={() => setPanel('menu')}
-              onSaveProfile={updateCurrentUserProfile}
-              onUploadAvatar={uploadCurrentUserAvatar}
-              onRemoveAvatar={removeCurrentUserAvatar}
-              onUploadBanner={uploadCurrentUserBanner}
-              onRemoveBanner={removeCurrentUserBanner}
-            />
-          ) : null}
-
-          {panel === 'credentials' ? (
-            <CredentialsForm onBack={() => setPanel('menu')} currentEmail={identity?.email ?? ''} />
-          ) : null}
-
-          {panel === 'delete' ? (
-            <DeleteAccountPanel onBack={() => setPanel('menu')} onDeleted={handleAccountDeleted} />
-          ) : null}
+                <DeleteAccountPanel onBack={() => setPanel('profile')} onDeleted={handleAccountDeleted} />
+              </PanelSection>
+            ) : null}
+          </div>
         </div>
       </section>
     </div>
+  );
+}
+
+type SidebarButtonProps = {
+  active?: boolean;
+  destructive?: boolean;
+  disabled?: boolean;
+  icon?: typeof ImageIcon;
+  label: string;
+  description: string;
+  onClick: () => void;
+};
+
+function SidebarButton({
+  active,
+  destructive,
+  disabled,
+  icon: Icon,
+  label,
+  description,
+  onClick
+}: SidebarButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      className={`flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left transition ${
+        active
+          ? 'border-aqua/40 bg-aqua/10 text-white'
+          : destructive
+            ? 'border-pink/20 bg-pink/5 text-white/70 hover:border-pink/35 hover:text-white'
+            : 'border-white/10 bg-frame text-white/75 hover:border-aqua/30 hover:text-white'
+      } disabled:cursor-not-allowed disabled:opacity-40`}
+    >
+      {Icon ? <Icon className="h-4 w-4 shrink-0" strokeWidth={1.9} /> : null}
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="mt-0.5 block text-xs text-white/40">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+type PanelSectionProps = {
+  title: string;
+  description: string;
+  children: ReactNode;
+};
+
+function PanelSection({ title, description, children }: PanelSectionProps) {
+  return (
+    <section className="grid gap-4 rounded-[1rem] border border-white/8 bg-panel p-5 lg:p-6">
+      <div className="grid gap-1">
+        <h3 className="text-[1.35rem] font-bold tracking-[-0.04em] text-white">{title}</h3>
+        <p className="text-sm leading-6 text-white/45">{description}</p>
+      </div>
+      {children}
+    </section>
   );
 }
 

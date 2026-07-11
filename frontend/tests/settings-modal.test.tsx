@@ -17,11 +17,10 @@ const currentUser: CurrentUserProfile = {
 };
 
 describe('SettingsModal profile panel', () => {
-  it('renders avatar and banner controls for profile edits', () => {
+  it('renders a two-column profile editor with media controls', () => {
     const html = renderToStaticMarkup(
       <ProfileEditorPanel
         currentUser={currentUser}
-        onBack={() => undefined}
         onSaveProfile={async () => undefined}
         onUploadAvatar={async () => undefined}
         onRemoveAvatar={async () => undefined}
@@ -30,6 +29,9 @@ describe('SettingsModal profile panel', () => {
       />
     );
 
+    assert.ok(html.includes('Display name'));
+    assert.ok(html.includes('Status'));
+    assert.ok(html.includes('Bio'));
     assert.ok(html.includes('Avatar'));
     assert.ok(html.includes('Banner'));
     assert.ok(html.includes('Remove avatar'));
