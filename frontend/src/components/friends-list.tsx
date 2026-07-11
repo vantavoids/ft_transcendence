@@ -47,6 +47,10 @@ type FriendsListProps = {
   friends: Friend[];
   search: string;
   onSearchChange: (value: string) => void;
+  // one-shot deep-link (e.g. a friend_request notification click): while true,
+  // force the requests tab, then acknowledge so it doesn't stick on remounts
+  focusRequests?: boolean;
+  onRequestsFocused?: () => void;
 };
 
 type PendingRequest = FriendRequestDto & {
@@ -92,9 +96,24 @@ function resultActionsLabel(status: DiscoveryResult['relationship']) {
   }
 }
 
-export function FriendsList({ friends, search, onSearchChange }: FriendsListProps) {
+export function FriendsList({
+  friends,
+  search,
+  onSearchChange,
+  focusRequests = false,
+  onRequestsFocused
+}: FriendsListProps) {
   const [friendName, setFriendName] = useState('');
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'discover'>('friends');
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'discover'>(
+    focusRequests ? 'requests' : 'friends'
+  );
+
+  useEffect(() => {
+    if (focusRequests) {
+      setActiveTab('requests');
+      onRequestsFocused?.();
+    }
+  }, [focusRequests, onRequestsFocused]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [discoverResults, setDiscoverResults] = useState<DiscoveryResult[]>([]);

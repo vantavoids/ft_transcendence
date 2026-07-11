@@ -46,6 +46,10 @@ type DmListProps = {
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
+  // one-shot deep-link (e.g. a friend_request notification click): while true,
+  // switch the sidebar to the friends view and its requests tab
+  focusFriendRequests?: boolean;
+  onFriendRequestsFocused?: () => void;
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
@@ -80,6 +84,8 @@ export function DmList({
   isMicMuted,
   isDeafened,
   unreadNotifications,
+  focusFriendRequests = false,
+  onFriendRequestsFocused,
   onToggleDeafen,
   onToggleMicMute,
   onOpenNotifications,
@@ -89,7 +95,15 @@ export function DmList({
   onArchiveDm
 }: DmListProps) {
   const [search, setSearch] = useState('');
-  const [activeView, setActiveView] = useState<'dms' | 'friends'>('dms');
+  const [activeView, setActiveView] = useState<'dms' | 'friends'>(
+    focusFriendRequests ? 'friends' : 'dms'
+  );
+
+  useEffect(() => {
+    if (focusFriendRequests) {
+      setActiveView('friends');
+    }
+  }, [focusFriendRequests]);
   const [confirmingArchiveId, setConfirmingArchiveId] = useState<string | null>(null);
   const confirmArchiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -201,7 +215,13 @@ export function DmList({
       </div>
 
       {isFriendsView ? (
-        <FriendsList friends={friends} search={search} onSearchChange={setSearch} />
+        <FriendsList
+          friends={friends}
+          search={search}
+          onSearchChange={setSearch}
+          focusRequests={focusFriendRequests}
+          onRequestsFocused={onFriendRequestsFocused}
+        />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5">
           {filteredDms.length === 0 ? (

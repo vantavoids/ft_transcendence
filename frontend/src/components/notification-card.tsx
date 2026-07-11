@@ -44,16 +44,35 @@ type NotificationCardProps = {
   onOpenNotification: (notification: NotificationDto) => void;
 };
 
-// only message-backed notifications can deep-link to a conversation: the DM
-// partner is the actor, and a mention carries its guild/channel in the payload
-function hasConversationTarget(notification: NotificationDto): boolean {
+// which notifications can deep-link somewhere: a DM opens the sender's
+// conversation (the actor is the partner), a mention carries its guild/channel
+// in the payload, a friend request opens the requests tab, a guild invite
+// opens the join form and a welcome opens the guild (source_id is its id)
+function hasNotificationTarget(notification: NotificationDto): boolean {
   switch (notification.type) {
     case 'dm':
       return Boolean(notification.actor_id);
     case 'mention':
+    case 'friend_request':
+    case 'guild_invite':
       return true;
+    case 'guild_welcome':
+      return Boolean(notification.source_id);
     default:
       return false;
+  }
+}
+
+function getOpenActionLabel(notification: NotificationDto): string {
+  switch (notification.type) {
+    case 'friend_request':
+      return 'Voir la demande d ami';
+    case 'guild_invite':
+      return 'Voir l invitation';
+    case 'guild_welcome':
+      return 'Ouvrir la guilde';
+    default:
+      return 'Ouvrir la conversation';
   }
 }
 
@@ -188,7 +207,7 @@ function NotificationRow({
 }: NotificationRowProps) {
   const { title, detail, tone, Icon } = describeNotification(notification);
   const isDismissed = Boolean(notification.dismissed_at);
-  const isClickable = hasConversationTarget(notification);
+  const isClickable = hasNotificationTarget(notification);
   const muteScopes = getNotificationMuteScopes(notification).filter(
     (scope) => !isScopeMuted(preferences, scope.scopeType, scope.scopeId)
   );
@@ -208,8 +227,8 @@ function NotificationRow({
           type="button"
           onClick={() => onOpen(notification)}
           className="absolute inset-0 rounded-md"
-          aria-label="Ouvrir la conversation"
-          title="Ouvrir la conversation"
+          aria-label={getOpenActionLabel(notification)}
+          title={getOpenActionLabel(notification)}
         />
       ) : null}
       <div className="flex gap-3">

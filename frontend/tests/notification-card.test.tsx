@@ -25,6 +25,16 @@ const friendRequestNotification: NotificationDto = {
   created_at: '2026-07-11T00:00:00Z'
 };
 
+const incomingCallNotification: NotificationDto = {
+  id: '902',
+  type: 'incoming_call',
+  actor_id: '456',
+  source_id: null,
+  payload: { call_type: 'audio' },
+  read: false,
+  created_at: '2026-07-11T00:00:00Z'
+};
+
 function buildFeed(notifications: NotificationDto[]): UseNotificationsResult {
   return {
     notifications,
@@ -47,18 +57,21 @@ function buildFeed(notifications: NotificationDto[]): UseNotificationsResult {
 }
 
 describe('NotificationCard', () => {
-  it('renders an open-conversation link only for message-backed notifications', () => {
+  it('renders a typed open link for targetable notifications only', () => {
     const html = renderToStaticMarkup(
       <NotificationCard
-        feed={buildFeed([dmNotification, friendRequestNotification])}
+        feed={buildFeed([dmNotification, friendRequestNotification, incomingCallNotification])}
         onClose={() => undefined}
         onOpenNotification={() => undefined}
       />
     );
 
-    const openLinkCount = html.split('aria-label="Ouvrir la conversation"').length - 1;
-    assert.equal(openLinkCount, 1);
+    assert.equal(html.split('aria-label="Ouvrir la conversation"').length - 1, 1);
+    assert.equal(html.split('aria-label="Voir la demande d ami"').length - 1, 1);
+    // an incoming call has nowhere to deep-link to
+    assert.equal(html.split('aria-label="Ouvrir').length - 1, 1);
     assert.ok(html.includes('Message prive'));
     assert.ok(html.includes('Demande d ami'));
+    assert.ok(html.includes('Appel entrant'));
   });
 });

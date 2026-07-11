@@ -67,6 +67,9 @@ export function ChatWorkspace() {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
   const [isDmProfileOpen, setIsDmProfileOpen] = useState(false);
+  // set by a friend_request notification click, consumed by the sidebar once
+  // it has switched to the friends view / requests tab
+  const [isFriendRequestsFocusPending, setIsFriendRequestsFocusPending] = useState(false);
   const notificationFeed = useNotifications();
   const [replyTarget, setReplyTarget] = useState<ChatMessageData | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -551,9 +554,11 @@ export function ChatWorkspace() {
     }, 1600);
   }
 
-  // routes a clicked notification to its conversation: a DM opens the sender's
-  // conversation (the actor is the partner), a mention switches guild+channel;
-  // source_id carries the message snowflake to highlight once history loads
+  // routes a clicked notification to its target: a DM opens the sender's
+  // conversation (the actor is the partner) and a mention switches
+  // guild+channel, both highlighting the message carried by source_id; a
+  // friend request opens the friends requests tab, a guild invite the join
+  // form on /guilds, and a guild welcome the guild itself (source_id)
   function handleOpenNotification(notification: NotificationDto) {
     if (notification.type === 'dm') {
       if (!notification.actor_id) {
@@ -571,6 +576,21 @@ export function ChatWorkspace() {
         ? { conversationId: notification.payload.channel_id, messageId: notification.source_id }
         : null;
       handleSelectChannel(notification.payload.channel_id);
+    } else if (notification.type === 'friend_request') {
+      handleOpenDms();
+      setIsFriendRequestsFocusPending(true);
+      setMobilePane('channels');
+    } else if (notification.type === 'guild_invite') {
+      // no "invites addressed to me" endpoint exists, so the closest target
+      // is the join-a-guild form where the invite code is redeemed
+      router.push('/guilds#join-guild');
+    } else if (notification.type === 'guild_welcome') {
+      if (!notification.source_id) {
+        return;
+      }
+      selectGuild(notification.source_id);
+      handleOpenGuild();
+      setMobilePane('channels');
     } else {
       return;
     }
@@ -717,6 +737,8 @@ export function ChatWorkspace() {
               directMessages={dmWorkspace.dmConversations}
               showArchived={dmWorkspace.showArchivedDms}
               friends={friends}
+              focusFriendRequests={isFriendRequestsFocusPending}
+              onFriendRequestsFocused={() => setIsFriendRequestsFocusPending(false)}
               onSelectDm={handleSelectDm}
               onToggleShowArchived={dmWorkspace.toggleShowArchivedDms}
               onArchiveDm={dmWorkspace.archiveDm}
