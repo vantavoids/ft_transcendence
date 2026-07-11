@@ -1,14 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Check, Crown, Gavel, Pencil, UserX, X } from 'lucide-react';
-import { banGuildMember, kickGuildMember, updateGuildMemberNickname } from '../../shared/api/guild';
+import { Check, Crown, Gavel, Pencil, Shield, UserX, X } from 'lucide-react';
+import {
+  banGuildMember,
+  kickGuildMember,
+  updateGuildMemberNickname,
+  type GuildRoleDto
+} from '../../shared/api/guild';
 import { useGuilds } from '../../shared/guilds/guild-store';
 import { useGuildMembers, type HydratedGuildMember } from '../../shared/guilds/use-guild-members';
+import {
+  canManageMemberRoles,
+  effectivePermissions,
+  memberRank,
+  type RoleCaller
+} from '../../shared/guilds/role-permissions';
 import { formatDate } from './guild-overview';
 import { getGuildAccentClasses } from './guild-icon';
 import { FormError } from './guild-forms';
+import { MemberRoleChips, MemberRolesPopover } from './member-roles-popover';
 
 const iconButtonClasses =
   'flex h-8 w-8 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white';
@@ -41,14 +53,18 @@ function MemberAvatar({ member }: { member: HydratedGuildMember }) {
 type MemberRowProps = {
   guildId: string;
   member: HydratedGuildMember;
+  roles: GuildRoleDto[];
+  caller: RoleCaller | null;
   onChanged: () => void;
   onError: (message: string) => void;
 };
 
-function MemberRow({ guildId, member, onChanged, onError }: MemberRowProps) {
+function MemberRow({ guildId, member, roles, caller, onChanged, onError }: MemberRowProps) {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [isRolesOpen, setIsRolesOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState(member.nickname ?? '');
   const [isBusy, setIsBusy] = useState(false);
+  const rolesContainerRef = useRef<HTMLDivElement>(null);
 
   async function run(action: () => Promise<unknown>, fallbackMessage: string) {
     try {
@@ -145,16 +161,39 @@ function MemberRow({ guildId, member, onChanged, onError }: MemberRowProps) {
                   ? `@${member.username}`
                   : 'Member'}
               {member.nickname ? ` · nickname: ${member.nickname}` : ''}
-              {member.roles.length > 0
-                ? ` · ${member.roles.map((role) => role.name).join(', ')}`
-                : ''}
               {` · joined ${formatDate(member.joinedAt)}`}
             </p>
+            <MemberRoleChips roles={member.roles} />
           </>
         )}
       </div>
       {!isEditingNickname ? (
         <div className="flex shrink-0 items-center gap-1">
+          {caller ? (
+            <div className="relative" ref={rolesContainerRef}>
+              <button
+                type="button"
+                onClick={() => setIsRolesOpen((open) => !open)}
+                disabled={isBusy}
+                className={iconButtonClasses}
+                aria-label={`Manage roles of ${member.displayName}`}
+                title="Manage roles"
+              >
+                <Shield className="h-4 w-4 text-aqua" strokeWidth={1.9} />
+              </button>
+              {isRolesOpen ? (
+                <MemberRolesPopover
+                  guildId={guildId}
+                  member={member}
+                  roles={roles}
+                  caller={caller}
+                  containerRef={rolesContainerRef}
+                  onChanged={onChanged}
+                  onClose={() => setIsRolesOpen(false)}
+                />
+              ) : null}
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -203,12 +242,32 @@ type GuildMembersPanelProps = {
 };
 
 export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
-  const { selectedGuild } = useGuilds();
-  const { members, isLoading, error, refresh } = useGuildMembers(
+  const { selectedGuild, currentUserId } = useGuilds();
+  const { members, roles, isLoading, error, refresh } = useGuildMembers(
     guildId,
     selectedGuild?.id === guildId ? selectedGuild.owner_id : null
   );
   const [actionError, setActionError] = useState('');
+
+  // Gate the role controls to callers the server would authorize; the caller
+  // missing from the loaded members (pagination edge) safely hides them.
+  const caller = useMemo<RoleCaller | null>(() => {
+    const callerMember = members.find((member) => member.userId === currentUserId);
+    if (!callerMember) {
+      return null;
+    }
+
+    const permissions = effectivePermissions(callerMember.roles, roles, callerMember.isOwner);
+    if (!canManageMemberRoles(permissions, callerMember.isOwner)) {
+      return null;
+    }
+
+    return {
+      rank: memberRank(callerMember.roles, callerMember.isOwner),
+      permissions,
+      isOwner: callerMember.isOwner
+    };
+  }, [members, roles, currentUserId]);
 
   return (
     <div className="grid gap-3">
@@ -223,6 +282,8 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
               key={member.userId}
               guildId={guildId}
               member={member}
+              roles={roles}
+              caller={caller}
               onChanged={() => {
                 setActionError('');
                 void refresh();

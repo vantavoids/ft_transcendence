@@ -201,6 +201,18 @@ export function kickGuildMember(guildId: string, userId: string) {
   });
 }
 
+export function assignGuildMemberRole(guildId: string, userId: string, roleId: string) {
+  return apiFetch<void>('guild', `/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    method: 'PUT'
+  });
+}
+
+export function unassignGuildMemberRole(guildId: string, userId: string, roleId: string) {
+  return apiFetch<void>('guild', `/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    method: 'DELETE'
+  });
+}
+
 export function listGuildBans(guildId: string, query?: { limit?: number; after?: string }) {
   return apiFetch<GuildBanDto[]>('guild', `/guilds/${guildId}/bans`, { query });
 }
