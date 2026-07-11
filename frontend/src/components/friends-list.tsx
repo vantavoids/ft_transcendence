@@ -448,11 +448,11 @@ export function FriendsList({
                             @{user.username}
                           </span>
                         </div>
-                        <div className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
-                          <span className="block truncate text-sm text-white/35">
+                        <div className="mt-0.5 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                          <span className="block min-w-0 flex-1 truncate text-sm text-white/35">
                             {relationship} · {toUserStatusLabel(user.status)}
                           </span>
-                          <div className="flex shrink-0 items-center gap-2">
+                          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
                             {user.relationship === 'none' ? (
                               <button
                                 type="button"
@@ -656,11 +656,11 @@ function RequestRow({
             @{request.user.username}
           </span>
         </div>
-        <div className="mt-0.5 flex min-w-0 items-center justify-between gap-3">
-          <span className="block truncate text-sm text-white/35">
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <span className="block min-w-0 flex-1 truncate text-sm text-white/35">
             {outgoing ? 'Outgoing request' : 'Incoming request'}
           </span>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
             {outgoing ? null : (
               <button
                 type="button"
