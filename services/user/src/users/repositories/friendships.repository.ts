@@ -23,7 +23,9 @@ interface UserSummaryRow {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   status: UserSummaryResponse['status'];
+  bio: string | null;
 }
 
 interface FriendListRow extends UserSummaryRow {
@@ -93,7 +95,9 @@ export class FriendshipsRepository {
           profile.username,
           profile.display_name,
           profile.avatar_url,
+          profile.banner_url,
           profile.status,
+          profile.bio,
           CASE
             WHEN friendship.requester_id = $1::bigint THEN 'outgoing'
             ELSE 'incoming'
@@ -321,7 +325,9 @@ export class FriendshipsRepository {
         username: row.username,
         display_name: row.display_name,
         avatar_url: row.avatar_url,
+        banner_url: row.banner_url,
         status: row.status,
+        bio: row.bio,
       },
       created_at: row.created_at.toISOString(),
     };

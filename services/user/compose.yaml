@@ -13,7 +13,7 @@ services:
 
   user-migrate:
     container_name: user-migrate
-    image: user-migrate-service
+    image: user-migrate-service-prod
     pull_policy: never
     build:
       context: ${PWD}/services/user
@@ -28,7 +28,7 @@ services:
 
   user:
     container_name: user
-    image: user-service
+    image: user-service-prod
     pull_policy: never
     build:
       context: ${PWD}/services/user
