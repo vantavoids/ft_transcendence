@@ -19,19 +19,19 @@ local_resource(
 
 local_resource(
     'user-migrate',
-    cmd=DOCKER + ' build -t user-migrate-service -f Dockerfile.migrate . && ' +
+    cmd=DOCKER + ' build -t user-migrate-service-dev -f Dockerfile.migrate . && ' +
         DOCKER + ' run --rm --network ft_transcendence ' +
         '--env-file .env ' +
         '-e POSTGRES_HOST=user-db ' +
         '-e POSTGRES_PORT=5432 ' +
-        'user-migrate-service',
+        'user-migrate-service-dev',
     resource_deps=['user-db'],
     labels=['user'],
 )
 
 local_resource(
     'user',
-    cmd=DOCKER + ' build -t user-service -f Dockerfile.dev .',
+    cmd=DOCKER + ' build -t user-service-dev -f Dockerfile.dev .',
     serve_cmd=container_serve(DOCKER, FLAGS + '--init ', 'user',
         '--network ft_transcendence ' +
         '--env-file .env ' +
@@ -53,7 +53,7 @@ local_resource(
         '-v $(pwd)/package.json:/app/package.json ' +
         '-v $(pwd)/tsconfig.json:/app/tsconfig.json ' +
         '-v $(pwd)/tsconfig.build.json:/app/tsconfig.build.json ' +
-        'user-service npm run start:dev'
+        'user-service-dev npm run start:dev'
     ),
     deps=['Dockerfile.dev', 'Dockerfile', 'package.json', 'tsconfig.json', 'tsconfig.build.json'],
     resource_deps=['user-db', 'user-migrate'],
