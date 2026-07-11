@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { getAccentClasses, type ChatMessageData } from './chat-message';
 
 export type PresenceStatus = 'online' | 'idle' | 'offline';
@@ -58,12 +57,13 @@ export function AvatarWithStatus({
   return (
     <span className="relative shrink-0">
       {avatarUrl ? (
-        <Image
+        <img
           src={avatarUrl}
           alt=""
           width={dimension}
           height={dimension}
-          unoptimized
+          loading="lazy"
+          decoding="async"
           className={`rounded-full object-cover ${dimensionClassName}`}
         />
       ) : (
