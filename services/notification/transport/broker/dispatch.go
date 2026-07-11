@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	TypeMention       = "mention"
-	TypeDM            = "dm"
-	TypeFriendRequest = "friend_request"
-	TypeGuildInvite   = "guild_invite"
-	TypeGuildWelcome  = "guild_welcome"
-	TypeIncomingCall  = "incoming_call"
+	TypeMention                   = "mention"
+	TypeDM                        = "dm"
+	TypeFriendRequest             = "friend_request"
+	TypeGuildInvite               = "guild_invite"
+	TypeGuildWelcome              = "guild_welcome"
+	TypeIncomingCall              = "incoming_call"
+	TypeGuildOwnershipTransferred = "guild_ownership_transferred"
 )
 
 // Dispatch processes a single AMQP delivery and routes it to the appropriate notification handler via svc.
@@ -178,6 +179,20 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			Payload: GuildWelcomePayload{
 				GuildName: ev.GuildName,
 			},
+		})
+
+	case "guild.owner_transferred":
+		ev, err := parse[GuildOwnerTransferredEvent](d)
+		if err != nil {
+			return err
+		}
+
+		return orch.CreateNotif(ctx, core.CreateInput{
+			UserID:   ev.NewOwnerID,
+			Type:     TypeGuildOwnershipTransferred,
+			ActorID:  &ev.OldOwnerID,
+			SourceID: &ev.GuildID,
+			Payload:  GuildOwnershipTransferredPayload{},
 		})
 
 	case "call.incoming":

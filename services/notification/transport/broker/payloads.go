@@ -22,6 +22,12 @@ type GuildWelcomePayload struct {
 	GuildName string `json:"guild_name"`
 }
 
+// the actor (old owner) and source (guild) are already carried on the
+// notification row, so the payload stays empty; the frontend resolves the
+// guild name from the source id.
+type GuildOwnershipTransferredPayload struct {
+}
+
 type IncomingCallPayload struct {
 	CallType string `json:"call_type"`
 }
