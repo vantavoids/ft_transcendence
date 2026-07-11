@@ -161,10 +161,6 @@ export function DmList({
           <h2 className="min-w-0 truncate font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
             {isFriendsView ? 'Friends' : 'Direct Messages'}
           </h2>
-          <div className="flex shrink-0 items-center gap-3 text-[#8c8c90]">
-            <UserRound className="h-5 w-5" strokeWidth={1.8} />
-            <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
-          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2 rounded-md bg-panel p-1">
