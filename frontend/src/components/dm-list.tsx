@@ -41,6 +41,9 @@ type DmListProps = {
   directMessages: DirectMessage[];
   showArchived: boolean;
   friends: Friend[];
+  // re-fetch the friends list after a request is accepted/removed/blocked so the
+  // Friends tab updates live instead of waiting for a full page reload
+  onFriendshipsChanged?: () => void | Promise<void>;
   mobilePane: 'channels' | 'messages';
   currentUser: CurrentUserProfile | null;
   isMicMuted: boolean;
@@ -79,6 +82,7 @@ export function DmList({
   directMessages,
   showArchived,
   friends,
+  onFriendshipsChanged,
   mobilePane,
   currentUser,
   isMicMuted,
@@ -215,6 +219,7 @@ export function DmList({
           friends={friends}
           search={search}
           onSearchChange={setSearch}
+          onFriendshipsChanged={onFriendshipsChanged}
           focusRequests={focusFriendRequests}
           onRequestsFocused={onFriendRequestsFocused}
         />

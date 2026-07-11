@@ -22,7 +22,7 @@ import { SettingsModal } from './settings-modal';
 import type { Friend } from './friends-list';
 import type { NotificationDto } from '../shared/api/notification';
 import { useNotifications } from '../shared/lib/use-notifications';
-import { clearSession, getUserId } from '../shared/lib/session';
+import { clearSession } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { stopChatHub } from '../shared/api/chat-hub';
@@ -128,32 +128,21 @@ export function ChatWorkspace() {
     void refreshCurrentUser();
   }, [refreshCurrentUser]);
 
-  useEffect(() => {
-    // Friends come straight from GET /users/{id}/friends; the DM list itself
-    // is owned by useDmWorkspace. Best-effort: leave the list empty rather
-    // than surface a console error (III: zero console errors in Chrome).
-    let cancelled = false;
-
-    async function loadFriends() {
-      const userId = getUserId();
-      if (!userId) {
-        return;
-      }
-
-      const friendList = await listFriends(userId).catch(() => []);
-      if (cancelled) {
-        return;
-      }
-
-      setFriends(friendList.map(toFriend));
+  // Friends come straight from GET /users/{id}/friends; the DM list itself
+  // is owned by useDmWorkspace. Best-effort: leave the list empty rather
+  // than surface a console error (III: zero console errors in Chrome).
+  const refreshFriends = useCallback(async () => {
+    if (!currentUserId) {
+      return;
     }
 
-    void loadFriends();
+    const friendList = await listFriends(currentUserId).catch(() => []);
+    setFriends(friendList.map(toFriend));
+  }, [currentUserId]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useEffect(() => {
+    void refreshFriends();
+  }, [refreshFriends]);
 
   const activeDmDetails =
     chatMode === 'dm' && dmWorkspace.activeDm
@@ -737,6 +726,7 @@ export function ChatWorkspace() {
               directMessages={dmWorkspace.dmConversations}
               showArchived={dmWorkspace.showArchivedDms}
               friends={friends}
+              onFriendshipsChanged={refreshFriends}
               focusFriendRequests={isFriendRequestsFocusPending}
               onFriendRequestsFocused={() => setIsFriendRequestsFocusPending(false)}
               onSelectDm={handleSelectDm}

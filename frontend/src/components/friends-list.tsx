@@ -51,6 +51,9 @@ type FriendsListProps = {
   // force the requests tab, then acknowledge so it doesn't stick on remounts
   focusRequests?: boolean;
   onRequestsFocused?: () => void;
+  // re-fetch the parent-owned friends list after accept/decline/block so the
+  // Friends tab reflects the change without a full page reload
+  onFriendshipsChanged?: () => void | Promise<void>;
 };
 
 type PendingRequest = FriendRequestDto & {
@@ -101,7 +104,8 @@ export function FriendsList({
   search,
   onSearchChange,
   focusRequests = false,
-  onRequestsFocused
+  onRequestsFocused,
+  onFriendshipsChanged
 }: FriendsListProps) {
   const [friendName, setFriendName] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'discover'>(
@@ -214,8 +218,12 @@ export function FriendsList({
   }, [activeTab, search, loadDiscoveryResults]);
 
   const refreshEverything = useCallback(async () => {
-    await Promise.all([loadPendingRequests(), loadDiscoveryResults(search)]);
-  }, [loadDiscoveryResults, loadPendingRequests, search]);
+    await Promise.all([
+      loadPendingRequests(),
+      loadDiscoveryResults(search),
+      onFriendshipsChanged?.()
+    ]);
+  }, [loadDiscoveryResults, loadPendingRequests, onFriendshipsChanged, search]);
 
   async function handleAddByUsername() {
     const query = friendName.trim();
