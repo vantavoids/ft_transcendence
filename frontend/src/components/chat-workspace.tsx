@@ -135,12 +135,11 @@ export function ChatWorkspace() {
     let cancelled = false;
 
     async function loadFriends() {
-      const userId = getUserId();
-      if (!userId) {
+      if (!currentUserId) {
         return;
       }
 
-      const friendList = await listFriends(userId).catch(() => []);
+      const friendList = await listFriends(currentUserId).catch(() => []);
       if (cancelled) {
         return;
       }
@@ -153,7 +152,7 @@ export function ChatWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUserId]);
 
   const activeDmDetails =
     chatMode === 'dm' && dmWorkspace.activeDm
