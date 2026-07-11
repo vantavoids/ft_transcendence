@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessageData } from '../../components/chat-message';
 import {
   addReaction,
@@ -128,20 +128,23 @@ export function useConversationHistory(
     setUserProfilesById(merged);
   }
 
-  async function fetchAndCacheUserProfiles(userIds: string[]): Promise<Record<string, UserSummaryDto>> {
-    const ids = uniqueAuthorIds(userIds, currentUserId);
-    if (ids.length === 0) {
-      return {};
-    }
+  const fetchAndCacheUserProfiles = useCallback(
+    async (userIds: string[]): Promise<Record<string, UserSummaryDto>> => {
+      const ids = uniqueAuthorIds(userIds, currentUserId);
+      if (ids.length === 0) {
+        return {};
+      }
 
-    const users = await getUsersByIds(ids).catch(() => []);
-    const fetched = Object.fromEntries(users.map((user) => [user.id, user]));
-    if (Object.keys(fetched).length > 0) {
-      mergeUserProfiles(fetched);
-    }
+      const users = await getUsersByIds(ids).catch(() => []);
+      const fetched = Object.fromEntries(users.map((user) => [user.id, user]));
+      if (Object.keys(fetched).length > 0) {
+        mergeUserProfiles(fetched);
+      }
 
-    return fetched;
-  }
+      return fetched;
+    },
+    [currentUserId]
+  );
 
   useEffect(() => {
     if (!conversationId) {
@@ -207,7 +210,7 @@ export function useConversationHistory(
     return () => {
       cancelled = true;
     };
-  }, [mode, conversationId, currentUserId]);
+  }, [mode, conversationId, currentUserId, fetchAndCacheUserProfiles]);
 
   // real-time reconciliation - registered once (not per-conversation): the
   // hub delivers channel events to joined channels and DM events to the
@@ -333,7 +336,7 @@ export function useConversationHistory(
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
-  }, [currentUserId]);
+  }, [currentUserId, fetchAndCacheUserProfiles]);
 
   async function loadOlderChannelHistory(channelId: string) {
     if (isFetchingOlderHistory.current[channelId] || hasMoreChannelHistory.current[channelId] === false) {
