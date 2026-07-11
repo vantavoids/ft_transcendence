@@ -205,6 +205,7 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
   const groupByRole = useGroupMembersByRole();
 
   const memberGroups = buildMemberGroups(members, groupByRole);
+  const onlineCount = members.filter((member) => member.status !== 'offline').length;
 
   return (
     <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke xl:flex">
@@ -212,7 +213,7 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
         <div>
           <h2 className="text-[1.05rem] font-bold tracking-[-0.03em] text-white">Members</h2>
           <p className="font-category mt-1 text-[0.7rem] uppercase tracking-[0.14em] text-white/35">
-            {members.length} online and offline
+            {onlineCount} online · {members.length - onlineCount} offline
           </p>
         </div>
       </div>
