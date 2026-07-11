@@ -9,7 +9,7 @@ import {
 } from '@microsoft/signalr';
 import { API_BASE_URL } from '../config/env';
 import { refreshAccessToken } from '../api/client';
-import { getAccessToken, hasSession } from '../lib/session';
+import { getAccessToken, hasSession, invalidateSession } from '../lib/session';
 
 export type SignalingHubStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -65,14 +65,22 @@ function isTokenExpired(token: string | null): boolean {
 // fallback if the server still rejects it.
 async function startWithRefresh(connection: HubConnection): Promise<void> {
   if (isTokenExpired(getAccessToken())) {
-    await refreshAccessToken();
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      invalidateSession();
+      throw new Error('Failed to refresh signaling hub session.');
+    }
   }
   try {
     await connection.start();
   } catch (error) {
-    if (isAuthFailure(error) && (await refreshAccessToken())) {
-      await connection.start();
-      return;
+    if (isAuthFailure(error)) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        await connection.start();
+        return;
+      }
+      invalidateSession();
     }
     throw error;
   }

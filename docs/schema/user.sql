@@ -22,7 +22,8 @@ CREATE TABLE users_profile (
 );
 
 -- trigram index for `GET /users/search?q=...` (ILIKE / similarity matching on
--- username and display_name). pg_trgm is a contrib module shipped with
+-- username and display_name). display_name is created with a humanized default
+-- on registration and can later be customized by the user. pg_trgm is a contrib module shipped with
 -- Postgres core, no third-party dependency.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX idx_users_profile_username_trgm     ON users_profile USING gin (username     gin_trgm_ops);

@@ -5,6 +5,7 @@
 export const SESSION_ACCESS_TOKEN_KEY = "ft_transcendence_access_token";
 export const SESSION_USER_ID_KEY = "ft_transcendence_user_id";
 export const SESSION_COOKIE_KEY = "ft_transcendence_session";
+export const SESSION_INVALIDATED_EVENT = "ft_transcendence:session-invalidated";
 
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -62,4 +63,24 @@ export function clearSession(): void {
   if (typeof document !== "undefined") {
     document.cookie = `${SESSION_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
   }
+}
+
+export function invalidateSession(): void {
+  clearSession();
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SESSION_INVALIDATED_EVENT));
+  }
+}
+
+export function onSessionInvalidated(handler: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const listener = () => handler();
+  window.addEventListener(SESSION_INVALIDATED_EVENT, listener);
+  return () => {
+    window.removeEventListener(SESSION_INVALIDATED_EVENT, listener);
+  };
 }

@@ -114,12 +114,12 @@ export class ProfilesRepository {
       try {
         const result = await this.database.client.query<{ id: string }>(
           `
-            INSERT INTO users_profile (id, username, status)
-            VALUES ($1::bigint, $2, 'offline')
+            INSERT INTO users_profile (id, username, display_name, status)
+            VALUES ($1::bigint, $2, $3, 'offline')
             ON CONFLICT (id) DO NOTHING
             RETURNING id::text
           `,
-          [userId, username],
+          [userId, username, this.buildDefaultDisplayName(username)],
         );
 
         if ((result.rowCount ?? 0) > 0) {
@@ -208,6 +208,18 @@ export class ProfilesRepository {
       base.length <= 13 ? `${base}_${userId}` : `${base.slice(0, 13)}_${userId}`;
 
     return base === fallback ? [base] : [base, fallback];
+  }
+
+  private buildDefaultDisplayName(username: string): string {
+    const humanized = username
+      .replace(/[._-]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+
+    return humanized || 'User';
   }
 
   private toProfileResponse(row: UserProfileRow): UserProfileResponse {

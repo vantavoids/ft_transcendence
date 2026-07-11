@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config/env';
-import { clearSession, getAccessToken, setAccessToken } from '../lib/session';
+import { getAccessToken, invalidateSession, setAccessToken } from '../lib/session';
 
 export type Service = 'auth' | 'user' | 'guild' | 'chat' | 'notification';
 
@@ -115,7 +115,7 @@ export async function fetchAuthedResource(url: string, init?: RequestInit): Prom
     if (newToken) {
       res = await send(newToken);
     } else {
-      clearSession();
+      invalidateSession();
     }
   }
   return res;
@@ -166,7 +166,7 @@ export async function apiFetch<T>(
     if (newToken) {
       res = await performRequest(service, path, options, newToken);
     } else {
-      clearSession();
+      invalidateSession();
     }
   }
 

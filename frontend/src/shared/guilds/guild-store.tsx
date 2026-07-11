@@ -13,7 +13,7 @@ import {
 } from '../api/guild';
 import { ApiError } from '../api/client';
 import { getCurrentUser } from '../api/user';
-import { clearSession, getAccessToken } from '../lib/session';
+import { getAccessToken, invalidateSession } from '../lib/session';
 
 export const LAST_GUILD_KEY = 'ft_transcendence_last_guild';
 
@@ -111,7 +111,7 @@ export function GuildProvider({ children }: { children: ReactNode }) {
       .then((user) => setCurrentUserId(user.id))
       .catch((error) => {
         if (error instanceof ApiError && error.status === 404) {
-          clearSession();
+          invalidateSession();
         }
         setCurrentUserId(null);
       });
