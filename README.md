@@ -163,7 +163,13 @@ make down
 
 ### AI Usage
 
-to be defined
+Ahh, our beloved sixth member. AI was used throughout the project as a productivity and learning aid. We treated it as a fast pair-programmer and a searchable second opinion, never as an authority: every suggestion was read, understood and adapted before it entered the codebase, and the person who owns a service is accountable for all of its code regardless of how any individual line was drafted.
+
+Concretely, AI was used for:
+- **Debugging and rubber-ducking**. Explaining stack traces, narrowing down concurrency and cross-service bugs, and sanity-checking our reasoning on tricky flows (transactional outbox, permission resolution, SignalR connection tracking, ICE negotiation).
+- **Code review support**. A first-pass reviewer for diffs, in addition to the mandatory human review every PR still went through before the merge.
+
+Where we drew the line: all architectural decisions (the microservice split, service ownership, communication contracts, storage choices) were made by the team, not delegated to a model. No secrets or private keys were ever shared with an AI tool. AI output was never merged unread, and anything we could not explain ourselves did not ship. In the spirit of the 42 curriculum, the goal was to learn faster, not to skip the learning.
 
 ---
 
