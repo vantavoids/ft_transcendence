@@ -62,9 +62,18 @@ type RoleEditorProps = {
   onCancel?: () => void;
   submitLabel: string;
   isBusy: boolean;
+  isNameLocked?: boolean;
 };
 
-function RoleEditor({ draft, onChange, onSubmit, onCancel, submitLabel, isBusy }: RoleEditorProps) {
+function RoleEditor({
+  draft,
+  onChange,
+  onSubmit,
+  onCancel,
+  submitLabel,
+  isBusy,
+  isNameLocked = false
+}: RoleEditorProps) {
   return (
     <div className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -73,7 +82,9 @@ function RoleEditor({ draft, onChange, onSubmit, onCancel, submitLabel, isBusy }
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
           placeholder="role name"
           maxLength={100}
-          className={inputClasses}
+          disabled={isNameLocked}
+          title={isNameLocked ? 'The default role name cannot be changed.' : undefined}
+          className={`${inputClasses} disabled:cursor-not-allowed disabled:opacity-50`}
         />
         <label className="flex items-center gap-2 text-sm text-white/55">
           Color
@@ -208,7 +219,10 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   async function handleUpdate(roleId: string) {
     setError('');
 
-    if (!editDraft.name.trim()) {
+    const role = roles.find((r) => r.id === roleId);
+    const isDefault = role?.is_default ?? false;
+
+    if (!isDefault && !editDraft.name.trim()) {
       setError('Role name is required.');
       return;
     }
@@ -216,7 +230,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
     try {
       setIsBusy(true);
       await updateGuildRole(guildId, roleId, {
-        name: editDraft.name.trim(),
+        ...(isDefault ? {} : { name: editDraft.name.trim() }),
         color: editDraft.color,
         permissions: editDraft.permissions,
         is_hoisted: editDraft.isHoisted,
@@ -281,6 +295,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
                   onCancel={() => setEditingRoleId(null)}
                   submitLabel={isBusy ? 'Saving...' : 'Save role'}
                   isBusy={isBusy}
+                  isNameLocked={role.is_default}
                 />
               ) : (
                 <div className="flex items-center gap-3">
