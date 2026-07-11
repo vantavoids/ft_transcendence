@@ -11,6 +11,7 @@ import {
   type GuildInviteDto,
   type InvitePreviewDto
 } from '../../shared/api/guild';
+import { ApiError } from '../../shared/api/client';
 import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
 import { formatDate } from './guild-overview';
 import { GuildIcon } from './guild-icon';
@@ -28,6 +29,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   const [usersById, setUsersById] = useState<Map<string, UserSummaryDto>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [canViewInvites, setCanViewInvites] = useState(true);
   const [maxUses, setMaxUses] = useState('');
   const [expiresInHours, setExpiresInHours] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -54,11 +56,18 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
 
     try {
       const rows = await listGuildInvites(guildId);
+      setCanViewInvites(true);
       setInvites(rows);
 
       const users = await getUsersByIds(rows.map((invite) => invite.created_by));
       setUsersById(new Map(users.map((user) => [user.id, user])));
     } catch (loadError) {
+      if (loadError instanceof ApiError && loadError.status === 403) {
+        setCanViewInvites(false);
+        setInvites([]);
+        return;
+      }
+
       setError(loadError instanceof Error ? loadError.message : 'Failed to load invites.');
     } finally {
       setIsLoading(false);
@@ -203,6 +212,10 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
 
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-md bg-panel" />
+      ) : !canViewInvites ? (
+        <p className="text-sm text-white/35">
+          You don&apos;t have permission to view this guild&apos;s invite list.
+        </p>
       ) : invites.length === 0 ? (
         <p className="text-sm text-white/35">No active invites.</p>
       ) : (
