@@ -22,6 +22,15 @@ export type DmWorkspace = {
   showArchivedDms: boolean;
   activeDm: string | null;
   selectDm: (dmId: string) => void;
+  openDmWith: (profile: {
+    id: string;
+    name: string;
+    status: DirectMessage['status'];
+    accent: DirectMessage['accent'];
+    avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    bio?: string | null;
+  }) => void;
   clearActiveDm: () => void;
   toggleShowArchivedDms: () => void;
   archiveDm: (dmId: string) => Promise<void>;
@@ -148,6 +157,46 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
     window.sessionStorage.setItem(LAST_CHAT_DM_KEY, dmId);
   }
 
+  // opens a DM with a user who may not have an existing conversation yet -
+  // seeds an empty placeholder entry (mirrors the ReceiveDirectMessage
+  // first-message case above) so the composer isn't gated on dmConversations
+  // already containing this partner.
+  function openDmWith(profile: {
+    id: string;
+    name: string;
+    status: DirectMessage['status'];
+    accent: DirectMessage['accent'];
+    avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    bio?: string | null;
+  }) {
+    setDmConversations((current) => {
+      if (current.some((dm) => dm.id === profile.id)) {
+        return current;
+      }
+
+      return [
+        ...current,
+        {
+          id: profile.id,
+          name: profile.name,
+          status: profile.status,
+          accent: profile.accent,
+          lastMessage: '',
+          lastMessageAt: '',
+          lastActivityAt: Date.now(),
+          unreadCount: 0,
+          isArchived: false,
+          avatarUrl: profile.avatarUrl ?? null,
+          bannerUrl: profile.bannerUrl ?? null,
+          bio: profile.bio ?? null
+        }
+      ];
+    });
+
+    selectDm(profile.id);
+  }
+
   function clearActiveDm() {
     setActiveDm(null);
   }
@@ -180,6 +229,7 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
     showArchivedDms,
     activeDm,
     selectDm,
+    openDmWith,
     clearActiveDm,
     toggleShowArchivedDms,
     archiveDm
