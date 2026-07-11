@@ -193,12 +193,6 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
                 onDeleted={handleAccountDeleted}
               />
             ) : null}
-
-            {panel === 'menu' ? (
-              <div className="hidden min-h-[24rem] items-center justify-center rounded-[1rem] border border-dashed border-white/10 bg-panel px-8 text-center text-sm text-white/35 lg:flex">
-                Select a setting on the left to edit your account.
-              </div>
-            ) : null}
           </div>
         </div>
       </section>
