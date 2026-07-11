@@ -174,8 +174,8 @@ to be defined
 | `yandry` | Product Owner, Developer | Product backlog, Guild Service (incl. roles & permissions), Chat Service (primary, real-time messaging via SignalR + ScyllaDB + WebRTC signaling), infrastructure & devops (Docker Compose, Tilt, NGINX, RabbitMQ, Prometheus/Grafana monitoring) |
 | `tstephan` | Tech Lead, Developer | Technical architecture decisions, User Service (profiles, avatars, friends, presence), Frontend (shared with jramiro) |
 | `sliziard` | Project Manager, Developer | Sprint planning, Auth Service (register/login/OAuth/JWT/refresh), Chat Service (co-developer) |
-| `jramiro` | Developer | API Gateway, secret management tooling (`tools/secretman`), Frontend (shared with tstephan), monitoring (Prometheus/Grafana, shared with yandry) |
-| `achu` | Developer, UX | Notification Service, Chat Service (co-developer), Privacy Policy & ToS pages |
+| `jramiro` | Developer | API Gateway, secret management tooling (`tools/secretman`), Frontend (shared with tstephan), monitoring (Prometheus/Grafana, shared with yandry), Privacy Policy & ToS pages |
+| `achu` | Developer, UX | Notification Service (incl. mailer), Chat Service (co-developer) |
 
 ---
 
@@ -358,8 +358,8 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | Design system | Tailwind tokens (palette, typography, spacing, shadows) + 11 reusable components, lucide-react icons | `tstephan`, `jramiro` |
 | Voice calls | 1-on-1 real-time voice via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
 | Video calls | 1-on-1 real-time video via WebRTC P2P | `yandry` (signaling, frontend client + UI, coturn infra) |
-| Privacy Policy | Accessible from footer, project-relevant content | |
-| Terms of Service | Accessible from footer, project-relevant content | |
+| Privacy Policy | Accessible from footer, project-relevant content | `jramiro` |
+| Terms of Service | Accessible from footer, project-relevant content | `jramiro` |
 | GDPR: data export | "Download my data" button aggregates every service's data on the user into a single JSON bundle | all (cross-service) |
 | GDPR: account deletion | `DELETE /auth/me` with confirmation flow + cross-service cascade (Auth, User, Guild, Chat, Notification consume `user.deleted`) + confirmation email | all (cross-service) |
 
@@ -586,14 +586,14 @@ Finally, a smaller but real personal challenge: learning to work with GitHub pro
 - Implemented the **API Gateway** service in Go, including `/api/{service}/vN/...` routing, local JWT validation, dual rate limiting (per-IP and per-UID), OpenAPI-based request validation, and timeout middleware
 - Designed and built **`tools/secretman`** for encrypted secret workflows with SOPS: ensure/encrypt/decrypt/refresh flows, age key bootstrap for new contributors, `.sops.yaml` updates, archive + checksum helpers, sensitive output masking, and pre-commit leak-prevention hook setup
 - Provided targeted infrastructure support with **Yandry**
-- Drafted and integrated the project's **Terms of Service**
+- Drafted and integrated the project's **Privacy Policy** and **Terms of Service** pages
 
 **Challenges:** 
 - Life
 
 ---
 
-### `achu` - Notification Service
+### `achu` - Notification Service / Chat co-developer
 
 - Implemented the Notification Service in Go from scaffolding to production: PostgreSQL-backed persistence with the `notifications` table (actor, source, type, expiry, dismiss tracking) and `notification_preferences` table for per-user mute (per-guild and per-channel granularity)
 - Wired all five upstream consumers: `user.registered` (welcome notification), `friend.request_sent` (friend_request type), `chat.message_sent` with mention detection (mention type), `chat.dm_sent` (dm type), `call.incoming` (incoming_call type), and `user.deleted` (cascade purge of the user's notifications and preferences)
