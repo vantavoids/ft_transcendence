@@ -50,6 +50,7 @@ describe('DmList', () => {
         onToggleMicMute={() => undefined}
         onOpenNotifications={() => undefined}
         onOpenSettings={() => undefined}
+        onOpenFriendProfile={() => undefined}
         onSelectDm={() => undefined}
         onToggleShowArchived={() => undefined}
         onArchiveDm={() => undefined}
