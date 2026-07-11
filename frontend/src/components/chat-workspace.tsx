@@ -395,6 +395,27 @@ export function ChatWorkspace() {
     setMobilePane('messages');
   }
 
+  function handleSendMessageToProfile(member: GuildMember) {
+    if (member.id === currentUserId) {
+      setProfileMember(null);
+      return;
+    }
+
+    dmWorkspace.openDmWith({
+      id: member.id,
+      name: member.name,
+      status: member.status,
+      accent: member.accent,
+      avatarUrl: member.avatarUrl,
+      bannerUrl: member.bannerUrl,
+      bio: member.bio
+    });
+    setChatMode('dm');
+    setMobilePane('messages');
+    window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
+    setProfileMember(null);
+  }
+
   function handleToggleMicMute() {
     setIsMicMuted((current) => !current);
   }
@@ -872,7 +893,11 @@ export function ChatWorkspace() {
           ) : null}
 
           {profileMember ? (
-            <ProfileCard member={profileMember} onClose={handleCloseAuthorProfile} />
+            <ProfileCard
+              member={profileMember}
+              onClose={handleCloseAuthorProfile}
+              onSendMessage={handleSendMessageToProfile}
+            />
           ) : null}
 
           {isNotificationCardOpen ? (

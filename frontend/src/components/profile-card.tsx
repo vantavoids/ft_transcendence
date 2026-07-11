@@ -9,9 +9,10 @@ type ProfileCardProps = {
   member: GuildMember;
   variant?: 'modal' | 'side';
   onClose: () => void;
+  onSendMessage?: (member: GuildMember) => void;
 };
 
-export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardProps) {
+export function ProfileCard({ member, variant = 'modal', onClose, onSendMessage }: ProfileCardProps) {
   useCloseOnEscape(onClose);
 
   const card = (
@@ -71,13 +72,16 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
           </p>
         </div>
 
-        <button
-          type="button"
-          className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-aqua text-sm font-bold text-primary-bg transition hover:bg-white"
-        >
-          <MessageCircle className="h-4 w-4" strokeWidth={2} />
-          Send message
-        </button>
+        {onSendMessage ? (
+          <button
+            type="button"
+            onClick={() => onSendMessage(member)}
+            className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-aqua text-sm font-bold text-primary-bg transition hover:bg-white"
+          >
+            <MessageCircle className="h-4 w-4" strokeWidth={2} />
+            Send message
+          </button>
+        ) : null}
       </div>
     </section>
   );
