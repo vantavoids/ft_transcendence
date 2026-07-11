@@ -453,7 +453,7 @@ export function FriendsList({
                             {relationship} · {toUserStatusLabel(user.status)}
                           </span>
                           <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
-                            {user.relationship === 'none' ? (
+                            {user.relationship === 'none' || user.relationship === null ? (
                               <button
                                 type="button"
                                 onClick={() => void handleSendRequest(user)}
