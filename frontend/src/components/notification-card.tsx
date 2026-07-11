@@ -41,7 +41,21 @@ type NotificationView = {
 type NotificationCardProps = {
   feed: UseNotificationsResult;
   onClose: () => void;
+  onOpenNotification: (notification: NotificationDto) => void;
 };
+
+// only message-backed notifications can deep-link to a conversation: the DM
+// partner is the actor, and a mention carries its guild/channel in the payload
+function hasConversationTarget(notification: NotificationDto): boolean {
+  switch (notification.type) {
+    case 'dm':
+      return Boolean(notification.actor_id);
+    case 'mention':
+      return true;
+    default:
+      return false;
+  }
+}
 
 function getToneClasses(tone: NotificationTone) {
   switch (tone) {
@@ -161,6 +175,7 @@ type NotificationRowProps = {
   onMarkRead: (notificationId: string) => void;
   onDismiss: (notificationId: string) => void;
   onMute: (scope: NotificationMuteScope) => void;
+  onOpen: (notification: NotificationDto) => void;
 };
 
 function NotificationRow({
@@ -168,20 +183,35 @@ function NotificationRow({
   preferences,
   onMarkRead,
   onDismiss,
-  onMute
+  onMute,
+  onOpen
 }: NotificationRowProps) {
   const { title, detail, tone, Icon } = describeNotification(notification);
   const isDismissed = Boolean(notification.dismissed_at);
+  const isClickable = hasConversationTarget(notification);
   const muteScopes = getNotificationMuteScopes(notification).filter(
     (scope) => !isScopeMuted(preferences, scope.scopeType, scope.scopeId)
   );
 
   return (
     <article
-      className={`rounded-md border px-3 py-3 ${
+      className={`relative rounded-md border px-3 py-3 ${
         notification.read ? 'border-white/8' : 'border-aqua/25'
-      } bg-panel ${isDismissed ? 'opacity-55' : ''}`}
+      } bg-panel ${isDismissed ? 'opacity-55' : ''} ${
+        isClickable ? 'transition hover:border-aqua/45' : ''
+      }`}
     >
+      {isClickable ? (
+        // full-row overlay link; the action buttons below sit above it via
+        // their positioned container, so they keep their own click targets
+        <button
+          type="button"
+          onClick={() => onOpen(notification)}
+          className="absolute inset-0 rounded-md"
+          aria-label="Ouvrir la conversation"
+          title="Ouvrir la conversation"
+        />
+      ) : null}
       <div className="flex gap-3">
         <span
           className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${getToneClasses(
@@ -198,7 +228,7 @@ function NotificationRow({
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-aqua" aria-label="Unread" />
               ) : null}
             </h3>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="relative flex shrink-0 items-center gap-1.5">
               <span className="mono-detail text-xs text-white/30">
                 {formatRelativeTime(notification.created_at)}
               </span>
@@ -418,7 +448,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
   );
 }
 
-export function NotificationCard({ feed, onClose }: NotificationCardProps) {
+export function NotificationCard({ feed, onClose, onOpenNotification }: NotificationCardProps) {
   const {
     notifications,
     unreadCount,
@@ -558,6 +588,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                   onMute={(scope) => {
                     void handleRowMute(scope);
                   }}
+                  onOpen={onOpenNotification}
                 />
               ))}
               {hasMore ? (

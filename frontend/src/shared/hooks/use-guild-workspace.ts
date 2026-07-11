@@ -62,7 +62,7 @@ export type GuildWorkspace = {
 // GuildProvider (shared/guilds/guild-store.tsx) since it's also needed by the
 // /guilds management pages, not just chat.
 export function useGuildWorkspace(): GuildWorkspace {
-  const { selectedGuildId, refreshGuilds } = useGuilds();
+  const { selectedGuildId, refreshGuilds, currentUserId } = useGuilds();
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([]);
   const [channels, setChannels] = useState<TextChannel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
@@ -223,7 +223,7 @@ export function useGuildWorkspace(): GuildWorkspace {
       unsubscribeReadState();
       unsubscribeReceiveMessage();
     };
-  }, []);
+  }, [currentUserId]);
 
   function markChannelReadLocally(channelId: string, messageId: string) {
     setChannelReadStates((current) => ({

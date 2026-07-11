@@ -20,6 +20,7 @@ import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
 import type { Friend } from './friends-list';
+import type { NotificationDto } from '../shared/api/notification';
 import { useNotifications } from '../shared/lib/use-notifications';
 import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
@@ -49,7 +50,7 @@ export function ChatWorkspace() {
   const router = useRouter();
   const { startCall } = useCall();
   const { currentUser, refreshCurrentUser, setCurrentUser } = useCurrentUserProfile();
-  const { selectedGuild } = useGuilds();
+  const { selectedGuild, selectGuild } = useGuilds();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
   const [isHydrated, setIsHydrated] = useState(false);
   const [draftsByConversation, setDraftsByConversation] = useState<Record<string, string>>({});
@@ -71,6 +72,17 @@ export function ChatWorkspace() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  // message to highlight after a notification click, once its conversation is
+  // active and its history window is loaded
+  const pendingNotificationJumpRef = useRef<{ conversationId: string; messageId: string } | null>(
+    null
+  );
+  // last message whose DM read cursor was pushed to the server, so the same
+  // message isn't re-marked on every scroll event
+  const dmLastMarkedReadRef = useRef<Record<string, string>>({});
+  // bell notifications already marked read because their DM conversation was
+  // open - avoids retrying in a loop when the PATCH fails
+  const consumedDmNotificationIdsRef = useRef<Set<string>>(new Set());
 
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
@@ -223,11 +235,15 @@ export function ChatWorkspace() {
         });
     } else {
       const partnerId = activeConversationId;
-      const currentUnreadCount =
-        dmWorkspace.dmConversations.find((dm) => dm.id === partnerId)?.unreadCount ?? 0;
-      if (currentUnreadCount === 0) {
+      // always advance the server-side read cursor, even when the local badge
+      // already shows 0: a message received while the conversation is open
+      // never increments the local count, but the server did - skipping the
+      // call here left a phantom unread that resurfaced the sender's badge on
+      // the next refetch/reload
+      if (dmLastMarkedReadRef.current[partnerId] === latestMessage.id) {
         return;
       }
+      dmLastMarkedReadRef.current[partnerId] = latestMessage.id;
 
       markDirectMessageRead(partnerId, latestMessage.id)
         .then(() => {
@@ -237,6 +253,7 @@ export function ChatWorkspace() {
         })
         .catch(() => {
           // best effort: retry next time the viewport is at the bottom
+          delete dmLastMarkedReadRef.current[partnerId];
         });
     }
     // guildWorkspace/dmWorkspace are fresh objects every render (not memoized) -
@@ -247,9 +264,52 @@ export function ChatWorkspace() {
     activeConversationId,
     scroll.isNearBottom,
     activeMessages,
-    guildWorkspace.channelReadStates,
-    dmWorkspace.dmConversations
+    guildWorkspace.channelReadStates
   ]);
+
+  // reading a DM in place consumes its bell notifications too: without this,
+  // messages already seen in the open conversation kept counting toward the
+  // bell badge until the user cleared them by hand
+  useEffect(() => {
+    if (chatMode !== 'dm' || !activeConversationId || !scroll.isNearBottom) {
+      return;
+    }
+
+    for (const notification of notificationFeed.notifications) {
+      if (
+        notification.type === 'dm' &&
+        !notification.read &&
+        notification.actor_id === activeConversationId &&
+        !consumedDmNotificationIdsRef.current.has(notification.id)
+      ) {
+        consumedDmNotificationIdsRef.current.add(notification.id);
+        void notificationFeed.markRead(notification.id);
+      }
+    }
+    // notificationFeed is a fresh object every render - depend on its data,
+    // not the whole object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatMode, activeConversationId, scroll.isNearBottom, notificationFeed.notifications]);
+
+  // after a notification click, jump to the linked message once its
+  // conversation is the active one and the message is in the loaded window
+  useEffect(() => {
+    const pending = pendingNotificationJumpRef.current;
+    if (!pending) {
+      return;
+    }
+    if (pending.conversationId !== activeConversationId) {
+      // the user navigated somewhere else before the jump could happen
+      pendingNotificationJumpRef.current = null;
+      return;
+    }
+    if (activeMessages.some((message) => message.id === pending.messageId)) {
+      pendingNotificationJumpRef.current = null;
+      handleJumpToMessage(pending.messageId);
+    }
+    // handleJumpToMessage is stable in behavior but recreated every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, activeMessages]);
 
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
   const isComposerDisabled = !activeConversationId;
@@ -491,6 +551,34 @@ export function ChatWorkspace() {
     }, 1600);
   }
 
+  // routes a clicked notification to its conversation: a DM opens the sender's
+  // conversation (the actor is the partner), a mention switches guild+channel;
+  // source_id carries the message snowflake to highlight once history loads
+  function handleOpenNotification(notification: NotificationDto) {
+    if (notification.type === 'dm') {
+      if (!notification.actor_id) {
+        return;
+      }
+      pendingNotificationJumpRef.current = notification.source_id
+        ? { conversationId: notification.actor_id, messageId: notification.source_id }
+        : null;
+      handleSelectDm(notification.actor_id);
+    } else if (notification.type === 'mention') {
+      if (notification.payload.guild_id !== selectedGuild?.id) {
+        selectGuild(notification.payload.guild_id);
+      }
+      pendingNotificationJumpRef.current = notification.source_id
+        ? { conversationId: notification.payload.channel_id, messageId: notification.source_id }
+        : null;
+      handleSelectChannel(notification.payload.channel_id);
+    } else {
+      return;
+    }
+
+    void notificationFeed.markRead(notification.id);
+    handleCloseNotifications();
+  }
+
   async function handleSaveEdit(messageId: string) {
     const content = editingDraft.trim();
     if (!content) {
@@ -726,7 +814,11 @@ export function ChatWorkspace() {
           ) : null}
 
           {isNotificationCardOpen ? (
-            <NotificationCard feed={notificationFeed} onClose={handleCloseNotifications} />
+            <NotificationCard
+              feed={notificationFeed}
+              onClose={handleCloseNotifications}
+              onOpenNotification={handleOpenNotification}
+            />
           ) : null}
 
           {isSettingsOpen ? (
