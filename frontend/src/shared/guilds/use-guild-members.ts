@@ -7,7 +7,7 @@ import {
   type GuildMemberDto,
   type GuildRoleDto
 } from '../api/guild';
-import { getUsersByIds, type UserStatus } from '../api/user';
+import { getUser, getUsersByIds, type UserStatus, type UserSummaryDto } from '../api/user';
 import { subscribeProfileUpdated } from '../lib/profile-events';
 
 const MEMBERS_PAGE_SIZE = 100;
@@ -29,6 +29,14 @@ export type HydratedGuildMember = {
   isDeleted: boolean;
 };
 
+type HydrationInput = {
+  memberRows: GuildMemberDto[];
+  guildRoles: GuildRoleDto[];
+  users: UserSummaryDto[];
+  deletedUserIds?: Set<string>;
+  ownerId?: string | null;
+};
+
 async function fetchAllMembers(guildId: string) {
   const members: GuildMemberDto[] = [];
   let after: string | undefined;
@@ -45,6 +53,73 @@ async function fetchAllMembers(guildId: string) {
   }
 
   return members;
+}
+
+async function fetchMemberUsers(memberRows: GuildMemberDto[]) {
+  const batchUsers = await getUsersByIds(memberRows.map((member) => member.user_id)).catch(
+    () => []
+  );
+  const usersById = new Map(batchUsers.map((user) => [user.id, user]));
+  const missingIds = memberRows
+    .map((member) => member.user_id)
+    .filter((userId) => !usersById.has(userId));
+
+  const fallbackUsers = await Promise.all(
+    missingIds.map(async (userId) => {
+      try {
+        return await getUser(userId);
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  for (const user of fallbackUsers) {
+    if (user) {
+      usersById.set(user.id, user);
+    }
+  }
+
+  return {
+    users: Array.from(usersById.values()),
+    deletedUserIds: new Set(missingIds.filter((userId) => !usersById.has(userId)))
+  };
+}
+
+export function hydrateGuildMembers({
+  memberRows,
+  guildRoles,
+  users,
+  deletedUserIds = new Set(),
+  ownerId = null
+}: HydrationInput): HydratedGuildMember[] {
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  const rolesById = new Map(guildRoles.map((role) => [role.id, role]));
+
+  return memberRows.map<HydratedGuildMember>((member) => {
+    const user = usersById.get(member.user_id);
+    const memberRoles = member.roles
+      .map((roleId) => rolesById.get(roleId))
+      .filter((role): role is GuildRoleDto => Boolean(role))
+      .sort((a, b) => b.position - a.position);
+
+    const isDeleted = deletedUserIds.has(member.user_id) && !user;
+
+    return {
+      userId: member.user_id,
+      displayName: member.nickname ?? user?.display_name ?? (isDeleted ? 'Deleted User' : 'Member'),
+      username: user?.username ?? null,
+      avatarUrl: user?.avatar_url ?? null,
+      bannerUrl: user?.banner_url ?? null,
+      bio: user?.bio ?? null,
+      nickname: member.nickname ?? null,
+      status: user?.status ?? 'offline',
+      roles: memberRoles,
+      joinedAt: member.joined_at,
+      isOwner: Boolean(ownerId) && member.user_id === ownerId,
+      isDeleted
+    };
+  });
 }
 
 export function useGuildMembers(guildId: string | null, ownerId?: string | null) {
@@ -68,31 +143,13 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
         fetchAllMembers(guildId),
         listGuildRoles(guildId)
       ]);
-      const users = await getUsersByIds(memberRows.map((member) => member.user_id));
-      const usersById = new Map(users.map((user) => [user.id, user]));
-      const rolesById = new Map(guildRoles.map((role) => [role.id, role]));
-
-      const hydrated = memberRows.map<HydratedGuildMember>((member) => {
-        const user = usersById.get(member.user_id);
-        const memberRoles = member.roles
-          .map((roleId) => rolesById.get(roleId))
-          .filter((role): role is GuildRoleDto => Boolean(role))
-          .sort((a, b) => b.position - a.position);
-
-        return {
-          userId: member.user_id,
-          displayName: member.nickname ?? user?.display_name ?? 'Deleted User',
-          username: user?.username ?? null,
-          avatarUrl: user?.avatar_url ?? null,
-          bannerUrl: user?.banner_url ?? null,
-          bio: user?.bio ?? null,
-          nickname: member.nickname ?? null,
-          status: user?.status ?? 'offline',
-          roles: memberRoles,
-          joinedAt: member.joined_at,
-          isOwner: Boolean(ownerId) && member.user_id === ownerId,
-          isDeleted: !user
-        };
+      const { users, deletedUserIds } = await fetchMemberUsers(memberRows);
+      const hydrated = hydrateGuildMembers({
+        memberRows,
+        guildRoles,
+        users,
+        deletedUserIds,
+        ownerId
       });
 
       setRoles(guildRoles);
