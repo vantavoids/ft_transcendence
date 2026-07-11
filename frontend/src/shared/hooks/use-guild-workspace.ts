@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { hasChannel, type ChannelCategory, type TextChannel } from '../../components/channel-list';
 import {
   listGuildCategories,
@@ -67,6 +67,8 @@ export function useGuildWorkspace(): GuildWorkspace {
   const [channels, setChannels] = useState<TextChannel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [channelReadStates, setChannelReadStates] = useState<Record<string, ChannelReadState>>({});
+  const activeChannelRef = useRef<string | null>(null);
+  activeChannelRef.current = activeChannel;
 
   useEffect(() => {
     const unsubscribeJoined = onChatHubEvent('GuildJoined', () => {
@@ -199,8 +201,12 @@ export function useGuildWorkspace(): GuildWorkspace {
 
     // ReadStateUpdated only self-syncs when *you* mark something read - it
     // never fires just because a new message arrived, so update unread counts
-    // locally on new messages. This fires for all active guild channels.
+    // locally on new messages. This fires for all active guild channels, so
+    // skip the channel the user currently has open.
     const unsubscribeReceiveMessage = onChatHubEvent('ReceiveMessage', (event) => {
+      if (event.channel_id === activeChannelRef.current) {
+        return;
+      }
       setChannelReadStates((current) => {
         const existing = current[event.channel_id];
         return {
