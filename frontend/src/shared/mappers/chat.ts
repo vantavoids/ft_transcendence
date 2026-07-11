@@ -6,6 +6,7 @@ import type {
   DirectMessageDto,
   MessageReactionDto
 } from '../api/chat';
+import type { UserSummaryDto } from '../api/user';
 import { hashToIndex } from '../lib/hash';
 
 type MessageAccent = ChatMessageData['accent'];
@@ -27,9 +28,21 @@ export function accentForAuthor(authorId: string): MessageAccent {
   return MESSAGE_ACCENTS[hashToIndex(authorId, MESSAGE_ACCENTS.length)];
 }
 
-// TODO: GET /users/{id} hydration yet (epic 2) - fall back to a raw-id placeholder
-export function authorLabel(authorId: string, currentUserId: string | null): string {
-  return authorId === currentUserId ? 'You' : `User ${authorId}`;
+export function authorLabel(
+  authorId: string,
+  currentUserId: string | null,
+  usersById: Record<string, UserSummaryDto> = {}
+): string {
+  if (authorId === currentUserId) {
+    return 'You';
+  }
+
+  const profile = usersById[authorId];
+  if (profile) {
+    return profile.display_name || profile.username || `User ${authorId}`;
+  }
+
+  return `User ${authorId}`;
 }
 
 function mapReactions(reactions: MessageReactionDto[]): ReactionSummary[] | undefined {
@@ -46,12 +59,13 @@ function mapReactions(reactions: MessageReactionDto[]): ReactionSummary[] | unde
 
 export function mapChannelMessage(
   dto: ChannelMessageDto,
-  currentUserId: string | null
+  currentUserId: string | null,
+  usersById: Record<string, UserSummaryDto> = {}
 ): ChatMessageData {
   return {
     id: dto.id,
     authorId: dto.author_id,
-    author: authorLabel(dto.author_id, currentUserId),
+    author: authorLabel(dto.author_id, currentUserId, usersById),
     accent: accentForAuthor(dto.author_id),
     content: splitMessageLines(dto.content ?? ''),
     timestamp: formatMessageTimestamp(dto.created_at),
@@ -64,11 +78,15 @@ export function mapChannelMessage(
 }
 
 // DMs never carry edited_at or reactions in this response shape (docs/contracts/chat.md)
-export function mapDirectMessage(dto: DirectMessageDto, currentUserId: string | null): ChatMessageData {
+export function mapDirectMessage(
+  dto: DirectMessageDto,
+  currentUserId: string | null,
+  usersById: Record<string, UserSummaryDto> = {}
+): ChatMessageData {
   return {
     id: dto.id,
     authorId: dto.sender_id,
-    author: authorLabel(dto.sender_id, currentUserId),
+    author: authorLabel(dto.sender_id, currentUserId, usersById),
     accent: accentForAuthor(dto.sender_id),
     content: splitMessageLines(dto.content ?? ''),
     timestamp: formatMessageTimestamp(dto.created_at),
@@ -78,11 +96,14 @@ export function mapDirectMessage(dto: DirectMessageDto, currentUserId: string | 
   };
 }
 
-// TODO: GET /users/{id} hydration yet (epic 2) - render the raw partner id as a placeholder name
-export function mapDirectMessageConversation(dto: DirectMessageConversationDto): DirectMessage {
+export function mapDirectMessageConversation(
+  dto: DirectMessageConversationDto,
+  usersById: Record<string, UserSummaryDto> = {}
+): DirectMessage {
+  const profile = usersById[dto.partner_id];
   return {
     id: dto.partner_id,
-    name: `User ${dto.partner_id}`,
+    name: profile?.display_name || profile?.username || `User ${dto.partner_id}`,
     status: 'offline',
     accent: accentForAuthor(dto.partner_id),
     lastMessage: dto.last_preview,

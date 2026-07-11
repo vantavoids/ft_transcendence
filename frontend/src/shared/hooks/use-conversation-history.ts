@@ -15,6 +15,7 @@ import {
   type SendMessagePayload
 } from '../api/chat';
 import { ApiError } from '../api/client';
+import { getUsersByIds, type UserSummaryDto } from '../api/user';
 import { onChatHubEvent } from '../api/chat-hub';
 import {
   accentForAuthor,
@@ -91,7 +92,12 @@ export type ConversationHistory = {
   pendingAttachments: PendingAttachment[];
   uploadAttachments: (files: File[]) => void;
   removePendingAttachment: (attachmentId: string) => void;
+  userProfilesById: Record<string, UserSummaryDto>;
 };
+
+function uniqueAuthorIds(ids: string[], currentUserId: string | null): string[] {
+  return Array.from(new Set(ids.filter((id) => id.length > 0 && id !== currentUserId)));
+}
 
 // loads history for whichever conversation is active - channel and DM
 // history are the same concern (fetch, map, store) just against a
@@ -108,11 +114,34 @@ export function useConversationHistory(
   const [pendingAttachmentsByConversation, setPendingAttachmentsByConversation] = useState<
     Record<string, PendingAttachment[]>
   >({});
+  const [userProfilesById, setUserProfilesById] = useState<Record<string, UserSummaryDto>>({});
   const isFetchingOlderHistory = useRef<Record<string, boolean>>({});
   const hasMoreChannelHistory = useRef<Record<string, boolean>>({});
   // attachment ids aren't kept on the (optimistic) ChatMessageData itself, so a
   // retry needs its own record of what was actually attached to a given send
   const pendingSendAttachmentIds = useRef<Record<string, string[]>>({});
+  const userProfilesByIdRef = useRef<Record<string, UserSummaryDto>>({});
+
+  function mergeUserProfiles(nextProfiles: Record<string, UserSummaryDto>) {
+    const merged = { ...userProfilesByIdRef.current, ...nextProfiles };
+    userProfilesByIdRef.current = merged;
+    setUserProfilesById(merged);
+  }
+
+  async function fetchAndCacheUserProfiles(userIds: string[]): Promise<Record<string, UserSummaryDto>> {
+    const ids = uniqueAuthorIds(userIds, currentUserId);
+    if (ids.length === 0) {
+      return {};
+    }
+
+    const users = await getUsersByIds(ids).catch(() => []);
+    const fetched = Object.fromEntries(users.map((user) => [user.id, user]));
+    if (Object.keys(fetched).length > 0) {
+      mergeUserProfiles(fetched);
+    }
+
+    return fetched;
+  }
 
   useEffect(() => {
     if (!conversationId) {
@@ -128,7 +157,14 @@ export function useConversationHistory(
       }
 
       hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
-      const mapped = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
+      const fetchedUsers = await fetchAndCacheUserProfiles(dtos.map((dto) => dto.author_id));
+      if (cancelled) {
+        return;
+      }
+
+      const mapped = [...dtos]
+        .reverse()
+        .map((dto) => mapChannelMessage(dto, currentUserId, { ...userProfilesByIdRef.current, ...fetchedUsers }));
       setMessagesByConversation((current) => ({ ...current, [channelId]: mapped }));
     }
 
@@ -139,7 +175,14 @@ export function useConversationHistory(
           return;
         }
 
-        const mapped = [...dtos].reverse().map((dto) => mapDirectMessage(dto, currentUserId));
+        const fetchedUsers = await fetchAndCacheUserProfiles(dtos.map((dto) => dto.sender_id));
+        if (cancelled) {
+          return;
+        }
+
+        const mapped = [...dtos]
+          .reverse()
+          .map((dto) => mapDirectMessage(dto, currentUserId, { ...userProfilesByIdRef.current, ...fetchedUsers }));
         setMessagesByConversation((current) => ({ ...current, [partnerId]: mapped }));
       } catch (error) {
         if (cancelled) {
@@ -172,8 +215,12 @@ export function useConversationHistory(
   // so every event carries its own container id to route the state patch.
   useEffect(() => {
     const unsubscribers = [
-      onChatHubEvent('ReceiveMessage', (event) => {
-        const mapped = mapChannelMessage(event, currentUserId);
+      onChatHubEvent('ReceiveMessage', async (event) => {
+        const fetchedUsers = await fetchAndCacheUserProfiles([event.author_id]);
+        const mapped = mapChannelMessage(event, currentUserId, {
+          ...userProfilesByIdRef.current,
+          ...fetchedUsers
+        });
         setMessagesByConversation((current) => ({
           ...current,
           [event.channel_id]: reconcileIncomingMessage(
@@ -183,8 +230,13 @@ export function useConversationHistory(
           )
         }));
       }),
-      onChatHubEvent('ReceiveDirectMessage', (event) => {
-        const mapped = mapDirectMessage(event, currentUserId);
+      onChatHubEvent('ReceiveDirectMessage', async (event) => {
+        const senderId = event.sender_id === currentUserId ? null : event.sender_id;
+        const fetchedUsers = senderId ? await fetchAndCacheUserProfiles([senderId]) : {};
+        const mapped = mapDirectMessage(event, currentUserId, {
+          ...userProfilesByIdRef.current,
+          ...fetchedUsers
+        });
         const conversationKey = event.sender_id === currentUserId ? event.recipient_id : event.sender_id;
         setMessagesByConversation((current) => ({
           ...current,
@@ -304,7 +356,10 @@ export function useConversationHistory(
       hasMoreChannelHistory.current[channelId] = dtos.length >= MESSAGE_HISTORY_PAGE_SIZE;
 
       if (dtos.length > 0) {
-        const olderMessages = [...dtos].reverse().map((dto) => mapChannelMessage(dto, currentUserId));
+        const fetchedUsers = await fetchAndCacheUserProfiles(dtos.map((dto) => dto.author_id));
+        const olderMessages = [...dtos]
+          .reverse()
+          .map((dto) => mapChannelMessage(dto, currentUserId, { ...userProfilesByIdRef.current, ...fetchedUsers }));
         setMessagesByConversation((current) => ({
           ...current,
           [channelId]: [...olderMessages, ...(current[channelId] ?? [])]
@@ -586,6 +641,7 @@ export function useConversationHistory(
     toggleReaction,
     pendingAttachments: conversationId ? (pendingAttachmentsByConversation[conversationId] ?? []) : [],
     uploadAttachments,
-    removePendingAttachment
+    removePendingAttachment,
+    userProfilesById
   };
 }

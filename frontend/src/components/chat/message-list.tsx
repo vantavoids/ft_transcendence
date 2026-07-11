@@ -82,7 +82,8 @@ export function MessageList({
     return activeMessages.map((message, index) => {
       const previousMessage = activeMessages[index - 1];
       const isGrouped =
-        previousMessage?.author === message.author &&
+        (previousMessage?.authorId ?? previousMessage?.author) ===
+          (message.authorId ?? message.author) &&
         getMinutesBetween(previousMessage.timestamp, message.timestamp) <=
           MESSAGE_GROUP_THRESHOLD_MINUTES;
 

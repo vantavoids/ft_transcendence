@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { mapChannelMessage, mapDirectMessage, mapDirectMessageConversation } from '../src/shared/mappers/chat';
+import type { ChannelMessageDto, DirectMessageConversationDto, DirectMessageDto } from '../src/shared/api/chat';
+import type { UserSummaryDto } from '../src/shared/api/user';
+
+const usersById: Record<string, UserSummaryDto> = {
+  '123': {
+    id: '123',
+    username: 'tstephan',
+    display_name: 'TStephan',
+    avatar_url: 'https://cdn.example/avatar.png',
+    banner_url: 'https://cdn.example/banner.png',
+    status: 'online',
+    bio: 'Shipping.'
+  }
+};
+
+describe('chat mappers', () => {
+  it('hydrates channel message authors from user profiles', () => {
+    const dto: ChannelMessageDto = {
+      id: 'm1',
+      channel_id: 'c1',
+      author_id: '123',
+      content: 'hello',
+      reply_to_id: null,
+      edited_at: null,
+      created_at: '2026-07-11T00:00:00Z',
+      attachments: [],
+      reactions: []
+    };
+
+    const mapped = mapChannelMessage(dto, null, usersById);
+
+    assert.equal(mapped.author, 'TStephan');
+  });
+
+  it('hydrates direct message authors and conversations from user profiles', () => {
+    const message: DirectMessageDto = {
+      id: 'm2',
+      sender_id: '123',
+      recipient_id: '999',
+      content: 'hi',
+      reply_to_id: null,
+      created_at: '2026-07-11T00:00:00Z',
+      attachments: []
+    };
+    const conversation: DirectMessageConversationDto = {
+      partner_id: '123',
+      last_preview: 'hi',
+      last_message_at: '2026-07-11T00:00:00Z',
+      unread_count: 0,
+      is_archived: false
+    };
+
+    assert.equal(mapDirectMessage(message, null, usersById).author, 'TStephan');
+    assert.equal(mapDirectMessageConversation(conversation, usersById).name, 'TStephan');
+  });
+});
