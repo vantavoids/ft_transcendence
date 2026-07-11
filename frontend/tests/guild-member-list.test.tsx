@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { toProfileMember } from '../src/components/guild-member-list';
+import { buildMemberGroups, toProfileMember } from '../src/components/guild-member-list';
 import type { HydratedGuildMember } from '../src/shared/guilds/use-guild-members';
 import type { GuildRoleDto } from '../src/shared/api/guild';
 
@@ -61,5 +61,74 @@ describe('toProfileMember', () => {
 
     assert.equal(profile.role, 'Member');
     assert.equal(profile.roleColor, null);
+  });
+});
+
+describe('buildMemberGroups', () => {
+  const test = makeRole({ id: 'r-test', name: 'test', color: '#ff6188', permissions: '4095' });
+  const plouf = makeRole({ id: 'r-plouf', name: 'plouf', color: '#a9dc76', permissions: '0' });
+  const tester = makeMember({ userId: 'u-tester', displayName: 'Tester', roles: [test] });
+  const ploufer = makeMember({ userId: 'u-ploufer', displayName: 'Ploufer', roles: [plouf] });
+  const owner = makeMember({ userId: 'u-owner', displayName: 'Owner', isOwner: true });
+  const nobody = makeMember({ userId: 'u-nobody', displayName: 'Anna' });
+
+  it('groups each member under their top role, ordered by permission count', () => {
+    const groups = buildMemberGroups([nobody, ploufer, tester], true);
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['test', 'plouf', 'Members']
+    );
+    assert.equal(groups[0].roleColor, '#ff6188');
+    assert.deepEqual(
+      groups[0].members.map((member) => member.displayName),
+      ['Tester']
+    );
+    assert.deepEqual(
+      groups[2].members.map((member) => member.displayName),
+      ['Anna']
+    );
+  });
+
+  it('puts a role-less owner in the Members group', () => {
+    const groups = buildMemberGroups([owner, tester], true);
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['test', 'Members']
+    );
+    assert.deepEqual(
+      groups[1].members.map((member) => member.displayName),
+      ['Owner']
+    );
+  });
+
+  it('breaks equal permission counts alphabetically', () => {
+    const zeta = makeRole({ id: 'r-z', name: 'zeta', permissions: '1' });
+    const alpha = makeRole({ id: 'r-a', name: 'alpha', permissions: '2' });
+    const groups = buildMemberGroups(
+      [makeMember({ userId: 'u-1', roles: [zeta] }), makeMember({ userId: 'u-2', roles: [alpha] })],
+      true
+    );
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['alpha', 'zeta']
+    );
+  });
+
+  it('merges everyone into one alphabetical list when grouping is off', () => {
+    const groups = buildMemberGroups([tester, nobody, ploufer], false);
+
+    assert.equal(groups.length, 1);
+    assert.deepEqual(
+      groups[0].members.map((member) => member.displayName),
+      ['Anna', 'Ploufer', 'Tester']
+    );
+  });
+
+  it('returns no groups for an empty member list', () => {
+    assert.deepEqual(buildMemberGroups([], false), []);
+    assert.deepEqual(buildMemberGroups([], true), []);
   });
 });
