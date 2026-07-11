@@ -49,19 +49,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to create a snowflake generator: %s", err)
 	}
-	// userClient, err := client.NewClient(
-	// 	os.Getenv("USER_SERVICE_URL"),
-	// 	&http.Client{Timeout: 5 * time.Second},
-	// )
-	fakeUserTunnel, err := tunnel.NewFakeTunnel(
-		os.Getenv("USER_SERVICE_URL"),
+
+	userTunnel, err := tunnel.NewTunnel(
+		userServiceURL,
 		&http.Client{Timeout: 5 * time.Second},
 	)
 	if err != nil {
-		log.Fatalf("Unable to create an user client: %s", err)
+		log.Fatalf("Unable to create an user tunnel: %s", err)
 	}
 
-	orch, err := core.NewOrchestrator(pool, hub, queries, sflkGen, fakeUserTunnel)
+	orch, err := core.NewOrchestrator(pool, hub, queries, sflkGen, userTunnel)
 	if err != nil {
 		log.Fatalf("Unable to create a service: %s", err)
 	}
