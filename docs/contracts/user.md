@@ -621,7 +621,7 @@ The user's User-owned data for a GDPR self-serve export: profile, friends, and t
 
 | Event | Action |
 |-------|--------|
-| `user.registered` | Create profile row with defaults (username = email prefix, status = offline) |
+| `user.registered` | Create profile row with defaults (username = email prefix, display_name = humanized username, status = offline) |
 | `user.online` | Update `status = online` |
 | `user.offline` | Update `status = offline` |
 | `user.deleted` | Delete the `users_profile` row. `ON DELETE CASCADE` on `friendships` and `user_blocks` removes all friendship and block records the user is part of. |

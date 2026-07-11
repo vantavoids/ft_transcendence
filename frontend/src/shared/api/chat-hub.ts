@@ -1,6 +1,7 @@
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../config/env';
-import { getAccessToken } from '../lib/session';
+import { getAccessToken, invalidateSession } from '../lib/session';
+import { refreshAccessToken } from './client';
 import type { SendChannelMessageResponse, SendDirectMessageResponse } from './chat';
 
 export type MessageEditedEvent = {
@@ -96,6 +97,50 @@ export type ChatHubEvents = {
 // removable Set instead of calling onreconnected() per subscriber.
 const reconnectHandlers = new Set<() => void>();
 
+function isAuthFailure(error: unknown): boolean {
+  const message = String(error).toLowerCase();
+  return message.includes('401') || message.includes('unauthorized') || message.includes('missing authorization header');
+}
+
+function isTokenExpired(token: string | null): boolean {
+  if (!token) {
+    return true;
+  }
+
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof decoded.exp === 'number' && decoded.exp * 1000 <= Date.now() + 5000;
+  } catch {
+    return false;
+  }
+}
+
+async function startWithRefresh(connection: signalR.HubConnection): Promise<void> {
+  const token = getAccessToken();
+  if (isTokenExpired(token)) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      invalidateSession();
+      throw new Error('Failed to refresh chat hub session.');
+    }
+  }
+
+  try {
+    await connection.start();
+  } catch (error) {
+    if (isAuthFailure(error)) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        await connection.start();
+        return;
+      }
+      invalidateSession();
+    }
+    throw error;
+  }
+}
+
 function buildConnection(): signalR.HubConnection {
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(`${API_BASE_URL}/chat/v1/hubs/chat`, {
@@ -123,7 +168,12 @@ let connectionPromise: Promise<signalR.HubConnection> | null = null;
 function getChatHubConnection(): Promise<signalR.HubConnection> {
   if (!connectionPromise) {
     const connection = buildConnection();
-    connectionPromise = connection.start().then(() => connection);
+    connectionPromise = startWithRefresh(connection)
+      .then(() => connection)
+      .catch((error) => {
+        connectionPromise = null;
+        throw error;
+      });
   }
   return connectionPromise;
 }
