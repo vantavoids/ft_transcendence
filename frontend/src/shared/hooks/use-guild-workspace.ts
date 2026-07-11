@@ -54,6 +54,7 @@ export type GuildWorkspace = {
   channelReadStates: Record<string, ChannelReadState>;
   selectChannel: (channelId: string) => void;
   markChannelReadLocally: (channelId: string, messageId: string) => void;
+  refreshChannels: () => void;
 };
 
 // owns the active guild's channels/categories, read states, and the SignalR
@@ -69,6 +70,7 @@ export function useGuildWorkspace(): GuildWorkspace {
   const [channelReadStates, setChannelReadStates] = useState<Record<string, ChannelReadState>>({});
   const activeChannelRef = useRef<string | null>(null);
   activeChannelRef.current = activeChannel;
+  const [channelsRefreshKey, setChannelsRefreshKey] = useState(0);
 
   useEffect(() => {
     const unsubscribeJoined = onChatHubEvent('GuildJoined', () => {
@@ -111,12 +113,15 @@ export function useGuildWorkspace(): GuildWorkspace {
         setChannelCategories(buildChannelCategories(channelDtos, categoryDtos));
         setChannels(flatChannels);
 
-        const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
-        const initialChannelId =
-          storedChannelId && hasChannel(storedChannelId, flatChannels)
+        setActiveChannel((current) => {
+          if (current && hasChannel(current, flatChannels)) {
+            return current;
+          }
+          const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
+          return storedChannelId && hasChannel(storedChannelId, flatChannels)
             ? storedChannelId
             : (flatChannels[0]?.id ?? null);
-        setActiveChannel(initialChannelId);
+        });
       } catch {
         if (!cancelled) {
           setChannelCategories([]);
@@ -130,7 +135,7 @@ export function useGuildWorkspace(): GuildWorkspace {
     return () => {
       cancelled = true;
     };
-  }, [selectedGuildId]);
+  }, [selectedGuildId, channelsRefreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,12 +242,17 @@ export function useGuildWorkspace(): GuildWorkspace {
     window.sessionStorage.setItem(LAST_CHAT_CHANNEL_KEY, channelId);
   }
 
+  function refreshChannels() {
+    setChannelsRefreshKey((key) => key + 1);
+  }
+
   return {
     channelCategories,
     channels,
     activeChannel,
     channelReadStates,
     selectChannel,
-    markChannelReadLocally
+    markChannelReadLocally,
+    refreshChannels
   };
 }

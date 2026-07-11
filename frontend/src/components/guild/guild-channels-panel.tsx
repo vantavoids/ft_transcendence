@@ -36,6 +36,7 @@ type EditDraft = {
 
 type GuildChannelsPanelProps = {
   guildId: string;
+  onChannelsChanged?: () => void;
 };
 
 function categoryName(categoryId: string | null | undefined, categories: GuildCategoryDto[]) {
@@ -45,7 +46,7 @@ function categoryName(categoryId: string | null | undefined, categories: GuildCa
   return categories.find((category) => category.id === categoryId)?.name ?? 'Uncategorised';
 }
 
-export function GuildChannelsPanel({ guildId }: GuildChannelsPanelProps) {
+export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannelsPanelProps) {
   const [channels, setChannels] = useState<GuildChannelDto[]>([]);
   const [categories, setCategories] = useState<GuildCategoryDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +95,7 @@ export function GuildChannelsPanel({ guildId }: GuildChannelsPanelProps) {
       setNewName('');
       setNewType('text');
       await load();
+      onChannelsChanged?.();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Failed to create channel.');
     } finally {
@@ -155,6 +157,7 @@ export function GuildChannelsPanel({ guildId }: GuildChannelsPanelProps) {
       });
       cancelEdit();
       await load();
+      onChannelsChanged?.();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'Failed to update channel.');
     } finally {
@@ -173,6 +176,7 @@ export function GuildChannelsPanel({ guildId }: GuildChannelsPanelProps) {
       setIsBusy(true);
       await deleteGuildChannel(guildId, channel.id);
       await load();
+      onChannelsChanged?.();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete channel.');
     } finally {

@@ -852,7 +852,11 @@ export function ChatWorkspace() {
           ) : null}
 
           {isGuildSettingsOpen && selectedGuild ? (
-            <GuildSettingsModal guildId={selectedGuild.id} onClose={handleCloseGuildSettings} />
+            <GuildSettingsModal
+              guildId={selectedGuild.id}
+              onClose={handleCloseGuildSettings}
+              onChannelsChanged={guildWorkspace.refreshChannels}
+            />
           ) : null}
 
           <IncomingCallOverlay resolvePeerName={resolvePeerName} />
