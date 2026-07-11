@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AtSign,
   Bell,
@@ -21,6 +21,7 @@ import type {
   NotificationPreferenceDto,
   NotificationScopeType
 } from '../shared/api/notification';
+import { getUsersByIds } from '../shared/api/user';
 import {
   getNotificationMuteScopes,
   isScopeMuted,
@@ -87,18 +88,24 @@ function getToneClasses(tone: NotificationTone) {
   }
 }
 
-function describeNotification(notification: NotificationDto): NotificationView {
+// actorName is the resolved display name behind actor_id (the message author,
+// requester, inviter, or caller); null while unresolved, so every branch keeps
+// an actor-less fallback.
+export function describeNotification(
+  notification: NotificationDto,
+  actorName: string | null
+): NotificationView {
   switch (notification.type) {
     case 'mention':
       return {
-        title: 'New mention',
+        title: actorName ? `Mention from ${actorName}` : 'New mention',
         detail: notification.payload.preview,
         tone: 'aqua',
         Icon: AtSign
       };
     case 'dm':
       return {
-        title: 'Private message',
+        title: actorName ? `Private message from ${actorName}` : 'Private message',
         detail: notification.payload.preview,
         tone: 'aqua',
         Icon: MessageCircle
@@ -106,14 +113,18 @@ function describeNotification(notification: NotificationDto): NotificationView {
     case 'friend_request':
       return {
         title: 'Friend request',
-        detail: 'Someone wants to add you as a friend.',
+        detail: actorName
+          ? `${actorName} wants to add you as a friend.`
+          : 'Someone wants to add you as a friend.',
         tone: 'pink',
         Icon: UserPlus
       };
     case 'guild_invite':
       return {
         title: 'Guild invite',
-        detail: `You have been invited to ${notification.payload.guild_name}.`,
+        detail: actorName
+          ? `${actorName} invited you to ${notification.payload.guild_name}.`
+          : `You have been invited to ${notification.payload.guild_name}.`,
         tone: 'yellow',
         Icon: Mail
       };
@@ -124,16 +135,15 @@ function describeNotification(notification: NotificationDto): NotificationView {
         tone: 'yellow',
         Icon: Sparkles
       };
-    case 'incoming_call':
+    case 'incoming_call': {
+      const kind = notification.payload.call_type === 'video' ? 'video' : 'audio';
       return {
         title: 'Incoming call',
-        detail:
-          notification.payload.call_type === 'video'
-            ? 'Incoming video call.'
-            : 'Incoming audio call.',
+        detail: actorName ? `Incoming ${kind} call from ${actorName}.` : `Incoming ${kind} call.`,
         tone: 'pink',
         Icon: Phone
       };
+    }
   }
 }
 
@@ -190,6 +200,7 @@ function getScopeLabel(scopeType: NotificationScopeType) {
 
 type NotificationRowProps = {
   notification: NotificationDto;
+  actorName: string | null;
   preferences: NotificationPreferenceDto[];
   onMarkRead: (notificationId: string) => void;
   onDismiss: (notificationId: string) => void;
@@ -199,13 +210,14 @@ type NotificationRowProps = {
 
 function NotificationRow({
   notification,
+  actorName,
   preferences,
   onMarkRead,
   onDismiss,
   onMute,
   onOpen
 }: NotificationRowProps) {
-  const { title, detail, tone, Icon } = describeNotification(notification);
+  const { title, detail, tone, Icon } = describeNotification(notification, actorName);
   const isDismissed = Boolean(notification.dismissed_at);
   const isClickable = hasNotificationTarget(notification);
   const muteScopes = getNotificationMuteScopes(notification).filter(
@@ -488,6 +500,46 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
   } = feed;
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
   const [muteError, setMuteError] = useState('');
+  const [actorNamesById, setActorNamesById] = useState<Map<string, string>>(new Map());
+  // ids already requested (found or not), so deleted actors aren't refetched
+  // on every render; rows fall back to actor-less copy for them
+  const requestedActorIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const missingIds = notifications
+      .map((notification) => notification.actor_id)
+      .filter((actorId): actorId is string => Boolean(actorId))
+      .filter((actorId) => !requestedActorIdsRef.current.has(actorId));
+
+    if (missingIds.length === 0) {
+      return;
+    }
+
+    for (const actorId of missingIds) {
+      requestedActorIdsRef.current.add(actorId);
+    }
+
+    // no cancellation on cleanup: the merge below is idempotent, and Strict
+    // Mode's mount/unmount/mount cycle would otherwise discard the response
+    // (the second effect run skips ids the first one already marked requested)
+    getUsersByIds(missingIds)
+      .then((users) => {
+        if (users.length === 0) {
+          return;
+        }
+
+        setActorNamesById((previous) => {
+          const next = new Map(previous);
+          for (const user of users) {
+            next.set(user.id, user.display_name || user.username);
+          }
+          return next;
+        });
+      })
+      .catch(() => {
+        // best effort: rows keep their actor-less wording
+      });
+  }, [notifications]);
 
   async function handleRowMute(scope: NotificationMuteScope) {
     setMuteError('');
@@ -601,6 +653,11 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
                 <NotificationRow
                   key={notification.id}
                   notification={notification}
+                  actorName={
+                    notification.actor_id
+                      ? (actorNamesById.get(notification.actor_id) ?? null)
+                      : null
+                  }
                   preferences={preferences}
                   onMarkRead={markRead}
                   onDismiss={dismiss}
