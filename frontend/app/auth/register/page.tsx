@@ -46,7 +46,7 @@ export default function RegisterPage() {
   return (
     <AuthCard
       title="Register"
-      subtitle="Cree ton profil pour tester le chat et les guildes."
+      subtitle="Create your profile to try chat and guilds."
       alternateHref="/auth/login"
       alternateLabel="Login"
     >

@@ -328,7 +328,7 @@ export function DmList({
                 {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
               </span>
               <span className="mono-detail block truncate text-xs text-white/35">
-                {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                {currentUser?.username ? `@${currentUser.username}` : 'Loading profile'}
               </span>
             </span>
           </div>

@@ -38,7 +38,7 @@ function toClockLabel(iso: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 export function toDirectMessage(

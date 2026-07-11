@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <h2>1. Who is responsible for your data</h2>
       <p>
         ft_discord is a non-commercial student project built by the ft_discord team to satisfy the
-        ft_transcendence project of the École 42 common core. The data controller for this policy is
+        ft_transcendence project of the 42 common core. The data controller for this policy is
         Yanis Andry, contactable at <a href="mailto:yandry@student.42.fr">yandry@student.42.fr</a>.
         There is no separate corporate entity behind the Service.
       </p>
@@ -159,8 +159,8 @@ export default function PrivacyPage() {
         <a href="mailto:yandry@student.42.fr">yandry@student.42.fr</a>
       </p>
       <p>
-        You also have the right to lodge a complaint with the CNIL (Commission Nationale de
-        l&rsquo;Informatique et des Libertés), the French data protection authority, at{' '}
+        You also have the right to lodge a complaint with the CNIL, the French data protection
+        authority, at{' '}
         <a href="https://www.cnil.fr" target="_blank" rel="noreferrer">
           www.cnil.fr
         </a>

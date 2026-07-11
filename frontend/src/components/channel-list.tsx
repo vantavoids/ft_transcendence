@@ -104,7 +104,7 @@ export function ChannelList({
             Logo<span className="text-aqua">_</span>
           </Link>
           <h2 className="min-w-0 truncate font-display text-[2rem] font-medium tracking-[-0.05em] text-aqua sm:text-[2.2rem]">
-            {selectedGuild?.name ?? 'server_name'}
+            {selectedGuild?.name ?? 'Guild name'}
           </h2>
           <div className="flex shrink-0 items-center gap-3 text-[#8c8c90]">
             <button
@@ -183,7 +183,7 @@ export function ChannelList({
                 {currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
               </span>
               <span className="mono-detail block truncate text-xs text-white/35">
-                {currentUser?.username ? `@${currentUser.username}` : 'profile loading'}
+                {currentUser?.username ? `@${currentUser.username}` : 'Loading profile'}
               </span>
             </span>
           </div>

@@ -4,7 +4,7 @@ import { LegalPage } from '../../src/components/legal-page';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - ft_discord',
-  description: 'Terms of Service for ft_discord, a student project built at École 42.'
+  description: 'Terms of Service for ft_discord, a student project built at 42.'
 };
 
 export default function TermsPage() {
@@ -13,7 +13,7 @@ export default function TermsPage() {
       <h2>1. What this is</h2>
       <p>
         ft_discord (&ldquo;the Service&rdquo;) is a student project built to fulfill the
-        ft_transcendence project of the École 42 common core curriculum. It is a real-time
+        ft_transcendence project of the 42 common core curriculum. It is a real-time
         communication platform (accounts, guilds/channels, direct messages, friends, notifications)
         built for educational purposes: to demonstrate microservice architecture, authentication,
         WebSocket handling, and related engineering practice.

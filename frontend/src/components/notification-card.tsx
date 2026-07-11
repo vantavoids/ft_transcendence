@@ -58,46 +58,46 @@ function describeNotification(notification: NotificationDto): NotificationView {
   switch (notification.type) {
     case 'mention':
       return {
-        title: 'Nouvelle mention',
+        title: 'New mention',
         detail: notification.payload.preview,
         tone: 'aqua',
         Icon: AtSign
       };
     case 'dm':
       return {
-        title: 'Message prive',
+        title: 'Private message',
         detail: notification.payload.preview,
         tone: 'aqua',
         Icon: MessageCircle
       };
     case 'friend_request':
       return {
-        title: 'Demande d ami',
-        detail: 'Quelqu un veut t ajouter en ami.',
+        title: 'Friend request',
+        detail: 'Someone wants to add you as a friend.',
         tone: 'pink',
         Icon: UserPlus
       };
     case 'guild_invite':
       return {
-        title: 'Invitation de guilde',
-        detail: `Tu es invite dans ${notification.payload.guild_name}.`,
+        title: 'Guild invite',
+        detail: `You have been invited to ${notification.payload.guild_name}.`,
         tone: 'yellow',
         Icon: Mail
       };
     case 'guild_welcome':
       return {
-        title: 'Bienvenue',
-        detail: `Te voila membre de ${notification.payload.guild_name} !`,
+        title: 'Welcome',
+        detail: `You are now a member of ${notification.payload.guild_name}!`,
         tone: 'yellow',
         Icon: Sparkles
       };
     case 'incoming_call':
       return {
-        title: 'Appel entrant',
+        title: 'Incoming call',
         detail:
           notification.payload.call_type === 'video'
-            ? 'Appel video entrant.'
-            : 'Appel audio entrant.',
+            ? 'Incoming video call.'
+            : 'Incoming audio call.',
         tone: 'pink',
         Icon: Phone
       };
@@ -112,20 +112,20 @@ export function formatRelativeTime(isoDate: string): string {
 
   const elapsedMinutes = Math.floor((Date.now() - timestamp) / 60_000);
   if (elapsedMinutes < 1) {
-    return 'a l instant';
+    return 'just now';
   }
   if (elapsedMinutes < 60) {
-    return `${elapsedMinutes} min`;
+    return `${elapsedMinutes}m`;
   }
   const elapsedHours = Math.floor(elapsedMinutes / 60);
   if (elapsedHours < 24) {
-    return `${elapsedHours} h`;
+    return `${elapsedHours}h`;
   }
   const elapsedDays = Math.floor(elapsedHours / 24);
   if (elapsedDays < 7) {
-    return `${elapsedDays} j`;
+    return `${elapsedDays}d`;
   }
-  return new Date(timestamp).toLocaleDateString('fr-FR');
+  return new Date(timestamp).toLocaleDateString('en-US');
 }
 
 type FilterChipProps = {
@@ -152,7 +152,7 @@ function FilterChip({ active, label, onClick }: FilterChipProps) {
 }
 
 function getScopeLabel(scopeType: NotificationScopeType) {
-  return scopeType === 'guild' ? 'la guilde' : 'le salon';
+  return scopeType === 'guild' ? 'the guild' : 'the channel';
 }
 
 type NotificationRowProps = {
@@ -195,7 +195,7 @@ function NotificationRow({
             <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold text-white">
               <span className="truncate">{title}</span>
               {!notification.read ? (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-aqua" aria-label="Non lue" />
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-aqua" aria-label="Unread" />
               ) : null}
             </h3>
             <div className="flex shrink-0 items-center gap-1.5">
@@ -207,8 +207,8 @@ function NotificationRow({
                   type="button"
                   onClick={() => onMarkRead(notification.id)}
                   className="flex h-6 w-6 items-center justify-center rounded text-white/35 transition hover:bg-frame hover:text-aqua"
-                  aria-label="Marquer comme lu"
-                  title="Marquer comme lu"
+                  aria-label="Mark as read"
+                  title="Mark as read"
                 >
                   <Check className="h-3.5 w-3.5" strokeWidth={2} />
                 </button>
@@ -219,8 +219,8 @@ function NotificationRow({
                   type="button"
                   onClick={() => onMute(scope)}
                   className="flex h-6 w-6 items-center justify-center rounded text-white/35 transition hover:bg-frame hover:text-yellow"
-                  aria-label={`Muter ${getScopeLabel(scope.scopeType)}`}
-                  title={`Muter ${getScopeLabel(scope.scopeType)}`}
+                  aria-label={`Mute ${getScopeLabel(scope.scopeType)}`}
+                  title={`Mute ${getScopeLabel(scope.scopeType)}`}
                 >
                   <BellOff className="h-3.5 w-3.5" strokeWidth={2} />
                 </button>
@@ -246,10 +246,10 @@ function NotificationRow({
 }
 
 const muteDurations = [
-  { value: '1h', label: '1 h', hours: 1 },
-  { value: '8h', label: '8 h', hours: 8 },
-  { value: '24h', label: '24 h', hours: 24 },
-  { value: 'forever', label: 'Indefinie', hours: null }
+  { value: '1h', label: '1h', hours: 1 },
+  { value: '8h', label: '8h', hours: 8 },
+  { value: '24h', label: '24h', hours: 24 },
+  { value: 'forever', label: 'Forever', hours: null }
 ] as const;
 
 type MuteDuration = (typeof muteDurations)[number]['value'];
@@ -261,17 +261,17 @@ function muteDurationToIso(duration: MuteDuration): string | null {
 
 function describeMuteState(preference: NotificationPreferenceDto): string {
   if (!preference.muted) {
-    return 'Inactive';
+    return 'Not muted';
   }
   const expiry = preference.muted_until == null ? NaN : Date.parse(preference.muted_until);
   if (Number.isNaN(expiry)) {
     // no expiry or an unparseable one: never render Invalid Date
-    return 'Indefinie';
+    return 'No expiry';
   }
   if (expiry <= Date.now()) {
-    return 'Expiree';
+    return 'Expired';
   }
-  return `Jusqu au ${new Date(expiry).toLocaleString('fr-FR', {
+  return `Until ${new Date(expiry).toLocaleString('en-US', {
     dateStyle: 'short',
     timeStyle: 'short'
   })}`;
@@ -297,7 +297,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
   async function handleAddMute() {
     const trimmedId = scopeId.trim();
     if (!/^\d+$/.test(trimmedId)) {
-      setFormError('Entre l identifiant (snowflake) de la guilde ou du salon.');
+      setFormError('Enter the guild or channel snowflake ID.');
       return;
     }
 
@@ -307,7 +307,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
       await onMute(scopeType, trimmedId, muteDurationToIso(duration));
       setScopeId('');
     } catch {
-      setFormError('Impossible d enregistrer la sourdine.');
+      setFormError('Could not save the mute.');
     } finally {
       setIsSubmitting(false);
     }
@@ -317,7 +317,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
     <div className="space-y-4">
       <div className="rounded-md border border-white/8 bg-panel px-3 py-3">
         <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
-          Nouvelle sourdine
+          New mute
         </p>
         <div className="mt-2.5 flex gap-2">
           {(['guild', 'channel'] as const).map((option) => (
@@ -331,15 +331,15 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
                   ? 'border-aqua/45 bg-aqua/10 text-aqua'
                   : 'border-white/10 text-white/40 hover:text-white/70'
               }`}
-            >
-              {option === 'guild' ? 'Guilde' : 'Salon'}
+              >
+              {option === 'guild' ? 'Guild' : 'Channel'}
             </button>
           ))}
         </div>
         <input
           value={scopeId}
           onChange={(event) => setScopeId(event.target.value)}
-          placeholder={`Identifiant ${scopeType === 'guild' ? 'de la guilde' : 'du salon'}`}
+          placeholder={`ID of the ${scopeType === 'guild' ? 'guild' : 'channel'}`}
           className="mono-detail mt-2 h-9 w-full rounded-md bg-input-bg px-3 text-sm text-white outline-none placeholder:text-input-placeholder focus:ring-1 focus:ring-aqua/35"
         />
         <div className="mt-2 flex gap-2">
@@ -367,12 +367,12 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
           className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-frame text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
         >
           <BellOff className="h-4 w-4" strokeWidth={1.9} />
-          {isSubmitting ? 'Enregistrement...' : 'Muter'}
+          {isSubmitting ? 'Saving...' : 'Mute'}
         </button>
       </div>
 
       {preferences.length === 0 ? (
-        <p className="py-3 text-center text-sm text-white/40">Aucune sourdine configuree.</p>
+        <p className="py-3 text-center text-sm text-white/40">No mutes configured.</p>
       ) : (
         <div className="space-y-2">
           {preferences.map((preference) => (
@@ -391,7 +391,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white">
-                  {preference.scope_type === 'guild' ? 'Guilde' : 'Salon'}
+                  {preference.scope_type === 'guild' ? 'Guild' : 'Channel'}
                   <span className="mono-detail ml-2 text-xs font-normal text-white/35">
                     {preference.scope_id}
                   </span>
@@ -408,7 +408,7 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
                 className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-2.5 text-xs font-semibold text-white/50 transition hover:border-aqua/40 hover:text-aqua"
               >
                 <Bell className="h-3.5 w-3.5" strokeWidth={1.9} />
-                Reactiver
+                Unmute
               </button>
             </div>
           ))}
@@ -445,7 +445,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
     try {
       await mute(scope.scopeType, scope.scopeId, null);
     } catch {
-      setMuteError('Impossible d enregistrer la sourdine.');
+      setMuteError('Could not save the mute.');
     }
   }
 
@@ -470,7 +470,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                 Notifications
               </h2>
               <p className="font-category text-[0.7rem] uppercase tracking-[0.14em] text-white/35">
-                {unreadCount} non lue{unreadCount === 1 ? '' : 's'}
+                {unreadCount} unread
               </p>
             </div>
           </div>
@@ -487,12 +487,12 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
         <div className="flex items-center gap-2 border-b border-white/8 px-5 py-3">
           <FilterChip
             active={filter.unreadOnly}
-            label="Non lues"
+            label="Unread"
             onClick={() => setFilter({ ...filter, unreadOnly: !filter.unreadOnly })}
           />
           <FilterChip
             active={filter.includeDismissed}
-            label="Ignorees"
+            label="Dismissed"
             onClick={() => setFilter({ ...filter, includeDismissed: !filter.includeDismissed })}
           />
           <button
@@ -506,7 +506,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
             }`}
           >
             <BellOff className="h-3.5 w-3.5" strokeWidth={1.9} />
-            Sourdines
+            Mutes
           </button>
         </div>
 
@@ -514,7 +514,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
           {view === 'mutes' ? (
             <MutePanel preferences={preferences} onMute={mute} onUnmute={unmute} />
           ) : isLoading ? (
-            <div className="space-y-2" aria-label="Chargement des notifications">
+            <div className="space-y-2" aria-label="Loading notifications">
               {[0, 1, 2].map((index) => (
                 <div
                   key={index}
@@ -531,7 +531,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                 className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-frame px-4 text-sm font-semibold text-white/70 transition hover:text-white"
               >
                 <RotateCw className="h-4 w-4" strokeWidth={1.9} />
-                Reessayer
+                Retry
               </button>
             </div>
           ) : notifications.length === 0 ? (
@@ -539,7 +539,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-panel text-[#8b8b8f]">
                 <Bell className="h-5 w-5" strokeWidth={1.8} />
               </span>
-              <p className="text-sm text-white/45">Aucune notification.</p>
+              <p className="text-sm text-white/45">No notifications.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -567,7 +567,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
                   disabled={isLoadingMore}
                   className="flex h-10 w-full items-center justify-center rounded-md border border-white/10 text-sm font-semibold text-white/50 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isLoadingMore ? 'Chargement...' : 'Charger plus'}
+                  {isLoadingMore ? 'Loading...' : 'Load more'}
                 </button>
               ) : null}
             </div>
@@ -582,7 +582,7 @@ export function NotificationCard({ feed, onClose }: NotificationCardProps) {
             className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-frame text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
           >
             <CheckCheck className="h-4 w-4" strokeWidth={1.9} />
-            Tout marquer comme lu
+            Mark all as read
           </button>
         </div>
       </section>
