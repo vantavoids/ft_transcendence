@@ -69,11 +69,20 @@ internal sealed class GuildRepository(GuildDbContext context) : IGuildRepository
 		// change committing between the two selects can leave a member listed with
 		// stale RoleIds. acceptable eventual consistency for a paginated list; a
 		// fresh page reflects the change.
+		// role ids are emitted most-recently-assigned first (name breaks exact
+		// AssignedAt ties) so clients can use the order as assignment recency.
 		var userIds = members.Select(m => m.UserId).ToList();
 		var assignments = await context.MemberRoles
 			.AsNoTracking()
 			.Where(mr => mr.GuildId == guildId && userIds.Contains(mr.UserId))
-			.Select(mr => new { mr.UserId, mr.RoleId })
+			.Join(
+				context.Roles,
+				mr => new { mr.GuildId, RoleId = mr.RoleId },
+				r => new { r.GuildId, RoleId = r.Id },
+				(mr, r) => new { mr.UserId, mr.RoleId, mr.AssignedAt, r.Name })
+			.OrderByDescending(a => a.AssignedAt)
+			.ThenBy(a => a.Name)
+			.Select(a => new { a.UserId, a.RoleId })
 			.ToListAsync(cancellationToken);
 
 		var rolesByUser = assignments

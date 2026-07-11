@@ -72,4 +72,21 @@ describe('hydrateGuildMembers', () => {
     assert.equal(hydrated[0].displayName, 'Member');
     assert.equal(hydrated[0].isDeleted, false);
   });
+
+  it('orders member roles by permission count, not position', () => {
+    const roles: GuildRoleDto[] = [
+      { ...guildRoles[0], id: 'r-high-pos', name: 'plouf', permissions: '0', position: 10 },
+      { ...guildRoles[0], id: 'r-full', name: 'test', permissions: '4095', position: 2 }
+    ];
+    const hydrated = hydrateGuildMembers({
+      memberRows: [{ ...memberRows[0], roles: ['r-high-pos', 'r-full'] }],
+      guildRoles: roles,
+      users: [user]
+    });
+
+    assert.deepEqual(
+      hydrated[0].roles.map((role) => role.name),
+      ['test', 'plouf']
+    );
+  });
 });
