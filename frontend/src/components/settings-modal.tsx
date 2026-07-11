@@ -2,8 +2,19 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Image as ImageIcon, LogOut, Mail, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  LogOut,
+  Mail,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
+  X
+} from 'lucide-react';
 import { deleteAccount, getIdentity, updateIdentity, type AuthIdentity } from '../shared/api/auth';
+import { setGroupMembersByRole } from '../shared/lib/preferences';
+import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { clearSession } from '../shared/lib/session';
 import { describeAccountUpdateError, describeDeleteAccountError } from '../shared/lib/auth-errors';
 import { checkEmail, checkPassword } from '../shared/lib/validators/auth';
@@ -19,7 +30,7 @@ type SettingsModalProps = {
   onDisconnect: () => void;
 };
 
-type Panel = 'profile' | 'credentials' | 'delete';
+type Panel = 'profile' | 'credentials' | 'preferences' | 'delete';
 
 export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsModalProps) {
   const router = useRouter();
@@ -32,6 +43,7 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
   } = useCurrentUserProfile();
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
   const [panel, setPanel] = useState<Panel>('profile');
+  const groupMembersByRole = useGroupMembersByRole();
 
   useCloseOnEscape(onClose);
 
@@ -141,6 +153,13 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
                 disabled={isOAuthOnly}
               />
               <SidebarButton
+                active={panel === 'preferences'}
+                icon={SlidersHorizontal}
+                label="Preferences"
+                description="Display options"
+                onClick={() => setPanel('preferences')}
+              />
+              <SidebarButton
                 active={panel === 'delete'}
                 icon={Trash2}
                 label="Delete account"
@@ -198,6 +217,20 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
               </PanelSection>
             ) : null}
 
+            {panel === 'preferences' ? (
+              <PanelSection
+                title="Preferences"
+                description="Tune how the app displays things for you."
+              >
+                <PreferenceToggle
+                  label="Group members by role"
+                  description="Sections the guild member list by each member's top role. Turn off to merge everyone into a single list."
+                  checked={groupMembersByRole}
+                  onChange={setGroupMembersByRole}
+                />
+              </PanelSection>
+            ) : null}
+
             {panel === 'delete' ? (
               <PanelSection
                 title="Delete account"
@@ -250,6 +283,41 @@ function SidebarButton({
       <span className="min-w-0">
         <span className="block text-sm font-semibold">{label}</span>
         <span className="mt-0.5 block text-xs text-white/40">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+type PreferenceToggleProps = {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+
+function PreferenceToggle({ label, description, checked, onChange }: PreferenceToggleProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-4 rounded-md border border-stroke bg-frame px-4 py-3 text-left transition hover:border-aqua/30"
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-white/85">{label}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-white/40">{description}</span>
+      </span>
+      <span
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? 'bg-aqua' : 'bg-input-bg'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full transition-all ${
+            checked ? 'left-[1.375rem] bg-primary-bg' : 'left-0.5 bg-white/45'
+          }`}
+        />
       </span>
     </button>
   );

@@ -5,9 +5,12 @@ import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import type { DirectMessage } from './dm-list';
 import { guildMembers } from './mocks/guild-member-mocks';
+import type { GuildRoleDto } from '../shared/api/guild';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
+import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
+import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { hashToIndex } from '../shared/lib/hash';
 
 export type GuildMember = {
@@ -121,6 +124,63 @@ function MemberRow({
   );
 }
 
+export type MemberGroup = {
+  id: string;
+  title: string;
+  roleColor: string | null;
+  members: HydratedGuildMember[];
+};
+
+// Sections members under their top role (most permissions first, matching the
+// display priority of the roles themselves); role-less members go last under
+// "Members". With grouping off, everyone merges into one alphabetical list.
+export function buildMemberGroups(
+  members: HydratedGuildMember[],
+  groupByRole: boolean
+): MemberGroup[] {
+  if (!groupByRole) {
+    const merged = [...members].sort((a, b) => a.displayName.localeCompare(b.displayName));
+    return merged.length > 0
+      ? [{ id: 'all', title: 'Members', roleColor: null, members: merged }]
+      : [];
+  }
+
+  const groupsByRole = new Map<
+    string,
+    { role: GuildRoleDto | null; members: HydratedGuildMember[] }
+  >();
+
+  for (const member of members) {
+    const topRole = member.roles[0] ?? null;
+    const key = topRole?.id ?? 'members';
+    const group = groupsByRole.get(key) ?? { role: topRole, members: [] };
+    group.members.push(member);
+    groupsByRole.set(key, group);
+  }
+
+  return [...groupsByRole.values()]
+    .sort((a, b) => {
+      if (!a.role || !b.role) {
+        return a.role ? -1 : b.role ? 1 : 0;
+      }
+
+      const byPermissionCount =
+        countPermissionBits(rolePermissionBits(b.role)) -
+        countPermissionBits(rolePermissionBits(a.role));
+      if (byPermissionCount !== 0) {
+        return byPermissionCount;
+      }
+
+      return a.role.name.localeCompare(b.role.name);
+    })
+    .map((group) => ({
+      id: group.role?.id ?? 'members',
+      title: group.role?.name ?? 'Members',
+      roleColor: group.role?.color ?? null,
+      members: group.members
+    }));
+}
+
 type GuildMemberListProps = {
   onOpenProfile: (member: GuildMember) => void;
 };
@@ -131,13 +191,9 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
     selectedGuild?.id ?? null,
     selectedGuild?.owner_id ?? null
   );
+  const groupByRole = useGroupMembersByRole();
 
-  const staff = members.filter((member) => member.isOwner || member.roles.length > 0);
-  const regulars = members.filter((member) => !member.isOwner && member.roles.length === 0);
-  const memberGroups = [
-    { id: 'staff', title: 'Staff', members: staff },
-    { id: 'members', title: 'Members', members: regulars }
-  ].filter((group) => group.members.length > 0);
+  const memberGroups = buildMemberGroups(members, groupByRole);
 
   return (
     <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke xl:flex">
@@ -167,9 +223,17 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
           <div className="space-y-6">
             {memberGroups.map((group) => (
               <section key={group.id}>
-                <p className="font-category px-1 text-[0.72rem] uppercase tracking-[0.16em] text-category">
-                  {group.title} - {group.members.length}
-                </p>
+                {groupByRole ? (
+                  <p className="font-category flex items-center gap-1.5 px-1 text-[0.72rem] uppercase tracking-[0.16em] text-category">
+                    {group.roleColor ? (
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: group.roleColor }}
+                      />
+                    ) : null}
+                    {group.title} - {group.members.length}
+                  </p>
+                ) : null}
                 <div className="mt-2 space-y-1">
                   {group.members.map((member) => (
                     <MemberRow key={member.userId} member={member} onOpenProfile={onOpenProfile} />
