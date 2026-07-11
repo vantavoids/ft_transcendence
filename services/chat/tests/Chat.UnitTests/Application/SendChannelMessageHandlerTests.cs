@@ -147,6 +147,29 @@ public sealed class SendChannelMessageHandlerTests
 	}
 
 	[Fact]
+	public async Task Mentions_ParsedFromContent_Deduped_ExcludingAuthor()
+	{
+		var (h, handler) = BuildHandler(userId: 42);
+		h.GuildClient.Result = new ChannelMembership(IsMember: true, GuildId: 9, Permissions: SendMessagesPermission);
+
+		var result = await handler.HandleAsync(new SendChannelMessageCommand(
+			ChannelId: 100,
+			Content: "hey <@7> and <@8>, also <@42> (self) and <@7> again",
+			ReplyToId: null,
+			AttachmentIds: [],
+			Nonce: null));
+
+		Assert.True(result.Succeeded);
+		var evt = Assert.Single(h.EventBus.PublishedOf<ChatMessageSent>());
+
+		// parsed and deduped; the author (42) never self-mentions
+		Assert.Equal(2, evt.Mentions.Length);
+		Assert.Contains(7L, evt.Mentions);
+		Assert.Contains(8L, evt.Mentions);
+		Assert.DoesNotContain(42L, evt.Mentions);
+	}
+
+	[Fact]
 	public async Task Nonce64Chars_MaxAllowed_Succeeds()
 	{
 		var (h, handler) = BuildHandler();
