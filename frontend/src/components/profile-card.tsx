@@ -71,29 +71,6 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-md border border-white/8 bg-panel px-3 py-3">
-            <div className="flex items-center gap-2 text-aqua">
-              <Shield className="h-4 w-4" strokeWidth={1.8} />
-              <span className="font-category text-[0.68rem] uppercase tracking-[0.14em]">
-                Status
-              </span>
-            </div>
-            <p className="mt-2 truncate text-sm font-semibold capitalize text-white">
-              {member.status}
-            </p>
-          </div>
-          <div className="rounded-md border border-white/8 bg-panel px-3 py-3">
-            <div className="flex items-center gap-2 text-yellow">
-              <Trophy className="h-4 w-4" strokeWidth={1.8} />
-              <span className="font-category text-[0.68rem] uppercase tracking-[0.14em]">
-                Guild
-              </span>
-            </div>
-            <p className="mt-2 truncate text-sm font-semibold text-white">Guild name</p>
-          </div>
-        </div>
-
         <button
           type="button"
           className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-aqua text-sm font-bold text-primary-bg transition hover:bg-white"
