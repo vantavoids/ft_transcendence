@@ -73,7 +73,10 @@ Update own profile. Can only update your own profile (`{id}` must match JWT `sub
 }
 ```
 
-`status` must be one of: `online`, `idle`, `dnd`, `offline`
+Validation rules:
+- `display_name`: trimmed, 1 to 64 characters
+- `bio`: trimmed, up to 280 characters
+- `status`: one of `online`, `idle`, `dnd`, `offline`
 
 `avatar_url` and `banner_url` are **not accepted** here. All image changes go through the dedicated upload endpoints (`POST /users/{id}/avatar`, `POST /users/{id}/banner`) so the service owns storage end-to-end and clients cannot point the profile at arbitrary URLs.
 
@@ -94,6 +97,7 @@ Upload a new avatar image. Multipart form data. Replaces the existing avatar if 
 
 **Request:** `Content-Type: multipart/form-data`
 - Field `avatar`: image file (JPEG/PNG/WebP, max 5MB)
+- Accepted MIME types: `image/jpeg`, `image/png`, `image/webp`
 
 **Response `200`:**
 ```json
@@ -130,6 +134,7 @@ Upload a new profile banner image. Multipart form data. Replaces the existing ba
 
 **Request:** `Content-Type: multipart/form-data`
 - Field `banner`: image file (JPEG/PNG/WebP, max 8MB)
+- Accepted MIME types: `image/jpeg`, `image/png`, `image/webp`
 
 The size cap is higher than for avatars because banners are wider (typically 600x240 or larger) and benefit from a less aggressive quality floor.
 
@@ -616,4 +621,3 @@ The user's User-owned data for a GDPR self-serve export: profile, friends, and t
 | `user.online` | Update `status = online` |
 | `user.offline` | Update `status = offline` |
 | `user.deleted` | Delete the `users_profile` row. `ON DELETE CASCADE` on `friendships` and `user_blocks` removes all friendship and block records the user is part of. |
-

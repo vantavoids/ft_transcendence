@@ -60,6 +60,7 @@ Goal: replace all local friend/profile placeholders with real user-service data.
   - [x] wire `PATCH /users/{id}` for display name, bio, and status
   - [x] wire avatar upload and avatar removal
   - [x] wire banner upload and banner removal
+  - [x] add shared profile validation rules for display name, bio, avatar, and banner limits
 - [x] Friend discovery
   - [x] wire `GET /users/search?q=`
   - [x] allow friend-add by username via `POST /friends`
