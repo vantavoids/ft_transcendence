@@ -45,6 +45,9 @@ services:
     environment:
       BASE_URL: ${BASE_URL}
       MINIO_ENDPOINT: http://minio:9000
+      # browser-reachable S3 endpoint used only to sign data-export download
+      # URLs (nginx :9443 proxies to MinIO, preserving Host+path so SigV4 holds)
+      MINIO_PUBLIC_ENDPOINT: https://localhost:9443
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_USER_BUCKET: ${MINIO_USER_BUCKET}

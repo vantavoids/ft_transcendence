@@ -9,6 +9,7 @@ export interface ValidatedEnv {
   JWT_SECRET: string;
   BASE_URL: string;
   MINIO_ENDPOINT: string;
+  MINIO_PUBLIC_ENDPOINT: string;
   MINIO_ACCESS_KEY: string;
   MINIO_SECRET_KEY: string;
   MINIO_USER_BUCKET: string;
@@ -46,6 +47,10 @@ export function validateEnv(env: EnvInput): ValidatedEnv {
     JWT_SECRET: required('JWT_SECRET', env.JWT_SECRET),
     BASE_URL: required('BASE_URL', env.BASE_URL),
     MINIO_ENDPOINT: required('MINIO_ENDPOINT', env.MINIO_ENDPOINT),
+    MINIO_PUBLIC_ENDPOINT: required(
+      'MINIO_PUBLIC_ENDPOINT',
+      env.MINIO_PUBLIC_ENDPOINT,
+    ),
     MINIO_ACCESS_KEY: required('MINIO_ACCESS_KEY', env.MINIO_ACCESS_KEY),
     MINIO_SECRET_KEY: required('MINIO_SECRET_KEY', env.MINIO_SECRET_KEY),
     MINIO_USER_BUCKET: required('MINIO_USER_BUCKET', env.MINIO_USER_BUCKET),
