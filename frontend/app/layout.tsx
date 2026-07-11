@@ -14,13 +14,15 @@ const inter = Inter({
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',
-  display: 'swap'
+  display: 'swap',
+  preload: false
 });
 
 const jetBrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono',
-  display: 'swap'
+  display: 'swap',
+  preload: false
 });
 
 export const metadata: Metadata = {
