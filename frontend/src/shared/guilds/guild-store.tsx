@@ -21,6 +21,8 @@ export const LAST_GUILD_KEY = 'ft_transcendence_last_guild';
 type GuildStoreValue = {
   guilds: MyGuildDto[];
   isLoading: boolean;
+  /** True once the guild list has been fetched successfully at least once. */
+  hasLoadedGuilds: boolean;
   error: string | null;
   selectedGuildId: string | null;
   selectedGuild: MyGuildDto | null;
@@ -70,6 +72,7 @@ function sortByJoinedAt(guilds: MyGuildDto[]) {
 export function GuildProvider({ children }: { children: ReactNode }) {
   const [guilds, setGuilds] = useState<MyGuildDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedGuilds, setHasLoadedGuilds] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -95,6 +98,7 @@ export function GuildProvider({ children }: { children: ReactNode }) {
 
     try {
       applyGuilds(await listMyGuilds());
+      setHasLoadedGuilds(true);
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : 'Failed to load guilds.');
     } finally {
@@ -177,6 +181,7 @@ export function GuildProvider({ children }: { children: ReactNode }) {
     () => ({
       guilds,
       isLoading,
+      hasLoadedGuilds,
       error,
       selectedGuildId,
       selectedGuild,
@@ -189,6 +194,7 @@ export function GuildProvider({ children }: { children: ReactNode }) {
     [
       guilds,
       isLoading,
+      hasLoadedGuilds,
       error,
       selectedGuildId,
       selectedGuild,
