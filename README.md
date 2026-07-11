@@ -266,6 +266,7 @@ The polyglot architecture lets each service pick the best tool for the job. Serv
 | Grafana | Metrics dashboards |
 | coturn | Self-hosted STUN/TURN server for WebRTC NAT traversal |
 | MailHog | SMTP capture for confirmation emails (account deletion, data export ready); swapped for a real SMTP provider in prod |
+| MinIO | Object storage for avatars, banners, chat attachments and data export |
 
 ### Why These Choices
 
@@ -376,7 +377,7 @@ Full DDL lives in [`docs/schema/`](docs/schema/). Summary below.
 | --- | --- | --- | --- | --- | --- |
 | 1 | Frameworks for frontend and backend (Next.js + ASP.NET Core + NestJS) | Web | Major | 2 | `tstephan`, `jramiro` (Next.js frontend), `yandry`, `sliziard` (ASP.NET backends), `tstephan` (NestJS backend) |
 | 2 | Real-time features (WebSockets via SignalR) | Web | Major | 2 | `yandry`, `sliziard` |
-| 3 | User Interaction (chat, profiles, friends, presence) | Web | Major | 2 | `tstephan` (profiles + friends), `yandry`, `sliziard`, (chat) |
+| 3 | User Interaction (chat, profiles, friends, presence) | Web | Major | 2 | `tstephan` (profiles + friends), `yandry`, `sliziard` (chat) |
 | 4 | Backend as microservices | Devops | Major | 2 | `yandry` (architecture + infra), `jramiro` (API Gateway) |
 | 5 | Standard user management (profiles, avatars, friends, online status) | User Management | Major | 2 | `tstephan` |
 | 6 | Organization system (guilds with channels and membership) | User Management | Major | 2 | `yandry` |
@@ -427,7 +428,7 @@ Discord "servers" map directly to organizations: users create guilds, invite mem
 
 **Module 7 - OAuth 2.0:**
 
-The Auth Service implements the OAuth 2.0 Authorization Code flow with three providers: Google, GitHub, and 42. New OAuth identities are linked to an account (existing or newly created); a user may attach multiple providers to the same account. Tokens are exchanged server-side; the frontend never sees provider credentials.
+The Auth Service implements the OAuth 2.0 Authorization Code flow with three providers: Google, GitHub, and 42. Each OAuth identity is matched strictly by `(provider, provider_id)` and maps to exactly one account; tokens are exchanged server-side and the frontend never sees provider credentials. Linking multiple providers onto a single existing account (or unlinking one) is a deliberate future feature, out of scope for this submission. Logging in with a second provider under the same email creates a separate account rather than merging into the existing one.
 
 **Module 8 - Notification system:**
 
@@ -578,7 +579,6 @@ On Chat, SignalR itself was a big learning curve: the connection-per-user paradi
 Finally, a smaller but real personal challenge: learning to work with GitHub project management properly, use the board ("The Holy Board") with categorized issues, iterations and statuses, and the PR workflow itself. It took real time to get comfortable with git and GitHub at first, but our workflow today feels genuinely clean, and I kept learning throughout the project (git history/manipulation, GitHub interactions, reviewing, branch organization).
 
 ---
-
 
 ### `jramiro` - Art Direction / Frontend Wireframes / API Gateway / Secret Management / Infra Support / Terms of Service
 
