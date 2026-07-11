@@ -90,6 +90,7 @@ export class UsersLookupRepository {
           profile.username ILIKE $2 ESCAPE '\\'
           OR COALESCE(profile.display_name, '') ILIKE $2 ESCAPE '\\'
         )
+        AND profile.id <> $1::bigint
         AND NOT EXISTS (
           SELECT 1
           FROM user_blocks AS block
