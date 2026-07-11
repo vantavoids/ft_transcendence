@@ -131,9 +131,11 @@ export type MemberGroup = {
   members: HydratedGuildMember[];
 };
 
-// Sections members under their top role (most permissions first, matching the
-// display priority of the roles themselves); role-less members go last under
-// "Members". With grouping off, everyone merges into one alphabetical list.
+// The guild owner is pinned first in a dedicated "Owner" section no matter
+// what roles they hold. Everyone else sections under their top role (most
+// permissions first, matching the display priority of the roles themselves);
+// role-less members go last under "Members". With grouping off, everyone
+// merges into one alphabetical list.
 export function buildMemberGroups(
   members: HydratedGuildMember[],
   groupByRole: boolean
@@ -145,12 +147,17 @@ export function buildMemberGroups(
       : [];
   }
 
+  const owners = members.filter((member) => member.isOwner);
   const groupsByRole = new Map<
     string,
     { role: GuildRoleDto | null; members: HydratedGuildMember[] }
   >();
 
   for (const member of members) {
+    if (member.isOwner) {
+      continue;
+    }
+
     const topRole = member.roles[0] ?? null;
     const key = topRole?.id ?? 'members';
     const group = groupsByRole.get(key) ?? { role: topRole, members: [] };
@@ -158,7 +165,7 @@ export function buildMemberGroups(
     groupsByRole.set(key, group);
   }
 
-  return [...groupsByRole.values()]
+  const roleGroups = [...groupsByRole.values()]
     .sort((a, b) => {
       if (!a.role || !b.role) {
         return a.role ? -1 : b.role ? 1 : 0;
@@ -179,6 +186,10 @@ export function buildMemberGroups(
       roleColor: group.role?.color ?? null,
       members: group.members
     }));
+
+  return owners.length > 0
+    ? [{ id: 'owner', title: 'Owner', roleColor: null, members: owners }, ...roleGroups]
+    : roleGroups;
 }
 
 type GuildMemberListProps = {

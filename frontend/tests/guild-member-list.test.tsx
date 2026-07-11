@@ -90,16 +90,34 @@ describe('buildMemberGroups', () => {
     );
   });
 
-  it('puts a role-less owner in the Members group', () => {
-    const groups = buildMemberGroups([owner, tester], true);
+  it('pins the owner in an Owner group at the top', () => {
+    const groups = buildMemberGroups([tester, owner], true);
 
     assert.deepEqual(
       groups.map((group) => group.title),
-      ['test', 'Members']
+      ['Owner', 'test']
     );
     assert.deepEqual(
-      groups[1].members.map((member) => member.displayName),
+      groups[0].members.map((member) => member.displayName),
       ['Owner']
+    );
+  });
+
+  it('keeps the owner on top even when another role grants more permissions', () => {
+    const adminRole = makeRole({ id: 'r-admin', name: 'Administrator', permissions: '256' });
+    const richOwner = makeMember({
+      userId: 'u-owner',
+      displayName: 'Owner',
+      isOwner: true,
+      roles: [adminRole]
+    });
+
+    // "test" has all 12 permission flags; the owner's Administrator role has 1
+    const groups = buildMemberGroups([tester, richOwner], true);
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['Owner', 'test']
     );
   });
 
