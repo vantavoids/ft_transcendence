@@ -33,7 +33,7 @@ export default function GuildsPage() {
 
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10">
-      <div className="w-full rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-10">
+      <div className="w-full rounded-[2rem] border border-stroke bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="mono-detail text-aqua">Guilds</p>
@@ -65,7 +65,7 @@ export default function GuildsPage() {
                 className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-4 text-sm font-semibold transition ${
                   guild.id === selectedGuildId
                     ? 'border-aqua/60 bg-aqua/10 text-aqua'
-                    : 'border-white/10 bg-panel text-white/60 hover:text-white'
+                    : 'border-stroke bg-panel text-white/60 hover:text-white'
                 }`}
               >
                 <GuildIcon
@@ -121,7 +121,7 @@ export default function GuildsPage() {
         </div>
 
         <div className="mt-10 grid gap-8 md:grid-cols-2">
-          <div className="rounded-[1rem] border border-white/8 bg-panel p-6">
+          <div className="rounded-[1rem] border border-stroke bg-panel p-6">
             <h2 className="text-xl font-bold tracking-[-0.03em] text-white">Create a guild</h2>
             <p className="mt-1 text-sm text-white/45">
               Démarre une nouvelle guilde dont tu seras propriétaire.
@@ -132,7 +132,7 @@ export default function GuildsPage() {
           </div>
           <div
             id="join-guild"
-            className="scroll-mt-6 rounded-[1rem] border border-white/8 bg-panel p-6"
+            className="scroll-mt-6 rounded-[1rem] border border-stroke bg-panel p-6"
           >
             <h2 className="text-xl font-bold tracking-[-0.03em] text-white">Join a guild</h2>
             <p className="mt-1 text-sm text-white/45">

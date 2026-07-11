@@ -121,7 +121,7 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
     <div className="grid gap-5">
       <form
         onSubmit={handleCreate}
-        className="grid gap-3 rounded-md border border-white/8 bg-panel p-4"
+        className="grid gap-3 rounded-md border border-stroke bg-panel p-4"
       >
         <h3 className="flex items-center gap-2 text-base font-bold text-white">
           <FolderPlus className="h-4 w-4 text-aqua" strokeWidth={1.9} />
@@ -156,7 +156,7 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
           {categories.map((category) => (
             <li
               key={category.id}
-              className="flex items-center gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
+              className="flex items-center gap-3 rounded-md border border-stroke bg-panel px-3 py-2.5"
             >
               {editingId === category.id ? (
                 <>

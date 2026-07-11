@@ -20,7 +20,7 @@ const OAUTH_PROVIDERS: { slug: string; label: string; Icon: ComponentType<{ clas
 export function AuthCard({ title, subtitle, alternateHref, alternateLabel, children }: AuthCardProps) {
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-5 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:p-7">
+      <div className="w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-5 shadow-2xl shadow-black/40 ring-1 ring-stroke sm:p-7">
           <div className="mb-8 flex items-center justify-between gap-4">
             <Link href="/" aria-label="Home" className="text-white">
               <FortyTwoIcon className="h-8 w-8" />

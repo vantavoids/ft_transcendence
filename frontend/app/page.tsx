@@ -91,7 +91,7 @@ export default async function HomePage() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-10"
+              className="rounded-[2rem] border border-stroke bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-10"
             >
               <feature.icon className={`h-8 w-8 ${feature.accent}`} strokeWidth={1.75} />
               <h2 className="mt-5 text-2xl font-bold tracking-[-0.04em] text-white md:text-3xl">
@@ -103,7 +103,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-white/8 bg-secondary-bg/70">
+      <footer className="border-t border-stroke bg-secondary-bg/70">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-sm text-white/40 sm:flex-row">
           <p>© 2026 ft_discord - student project, 42</p>
           <div className="flex gap-5">

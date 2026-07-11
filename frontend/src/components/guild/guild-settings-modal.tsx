@@ -118,7 +118,7 @@ export function GuildSettingsModal({ guildId, onClose, onChannelsChanged }: Guil
         return <GuildSettingsPanel guildId={guildId} />;
       case 'create':
         return (
-          <div className="rounded-[1rem] border border-white/8 bg-panel p-5">
+          <div className="rounded-[1rem] border border-stroke bg-panel p-5">
             <h3 className="text-xl font-bold tracking-[-0.03em] text-white">Create a guild</h3>
             <p className="mt-1 text-sm text-white/45">
               Start a new guild without leaving the chat workspace.
@@ -130,7 +130,7 @@ export function GuildSettingsModal({ guildId, onClose, onChannelsChanged }: Guil
         );
       case 'join':
         return (
-          <div className="rounded-[1rem] border border-white/8 bg-panel p-5">
+          <div className="rounded-[1rem] border border-stroke bg-panel p-5">
             <h3 className="text-xl font-bold tracking-[-0.03em] text-white">Join a guild</h3>
             <p className="mt-1 text-sm text-white/45">
               Use an invite code to join an existing guild.
@@ -151,8 +151,8 @@ export function GuildSettingsModal({ guildId, onClose, onChannelsChanged }: Guil
         onClick={onClose}
         aria-label="Close guild manager"
       />
-      <section className="relative w-full max-w-[86rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
-        <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
+      <section className="relative w-full max-w-[86rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
+        <div className="flex h-[4.75rem] items-center justify-between border-b border-stroke px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
               <Settings className="h-5 w-5" strokeWidth={1.9} />
@@ -177,8 +177,8 @@ export function GuildSettingsModal({ guildId, onClose, onChannelsChanged }: Guil
         </div>
 
         <div className="grid max-h-[calc(100vh-7rem)] min-h-0 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside className="border-b border-white/8 p-5 lg:min-h-0 lg:border-b-0 lg:border-r">
-            <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
+          <aside className="border-b border-stroke p-5 lg:min-h-0 lg:border-b-0 lg:border-r">
+            <div className="rounded-[1rem] border border-stroke bg-panel p-4">
               <div className="flex items-center gap-3">
                 <GuildIcon
                   guildId={guildId}

@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function GuildsNotFound() {
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-6 py-12">
-      <div className="w-full rounded-[2rem] border border-white/8 bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-12">
+      <div className="w-full rounded-[2rem] border border-stroke bg-secondary-bg/90 p-8 shadow-2xl shadow-black/40 md:p-12">
         <p className="mono-detail text-aqua">404</p>
         <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.07em] text-white md:text-5xl">
           Guilds moved to chat

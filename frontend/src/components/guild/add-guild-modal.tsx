@@ -22,8 +22,8 @@ export function AddGuildModal({ onClose }: AddGuildModalProps) {
         onClick={onClose}
         aria-label="Close add guild"
       />
-      <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
-        <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
+      <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
+        <div className="flex h-[4.75rem] items-center justify-between border-b border-stroke px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
               <Plus className="h-5 w-5" strokeWidth={1.9} />

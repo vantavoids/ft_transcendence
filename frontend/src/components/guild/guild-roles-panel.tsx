@@ -92,7 +92,7 @@ function RoleEditor({
             type="color"
             value={draft.color}
             onChange={(event) => onChange({ ...draft, color: event.target.value })}
-            className="h-10 w-14 cursor-pointer rounded-md border border-white/10 bg-input-bg p-1"
+            className="h-10 w-14 cursor-pointer rounded-md border border-stroke bg-input-bg p-1"
           />
         </label>
       </div>
@@ -149,7 +149,7 @@ function RoleEditor({
           <button
             type="button"
             onClick={onCancel}
-            className="h-10 rounded-md border border-white/10 px-5 text-sm font-bold text-white/60 transition hover:text-white"
+            className="h-10 rounded-md border border-stroke px-5 text-sm font-bold text-white/60 transition hover:text-white"
           >
             Cancel
           </button>
@@ -265,7 +265,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-3 rounded-md border border-white/8 bg-panel p-4">
+      <div className="grid gap-3 rounded-md border border-stroke bg-panel p-4">
         <h3 className="flex items-center gap-2 text-base font-bold text-white">
           <ShieldPlus className="h-4 w-4 text-aqua" strokeWidth={1.9} />
           Create a role
@@ -286,7 +286,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
       ) : (
         <ul className="grid gap-2">
           {roles.map((role) => (
-            <li key={role.id} className="rounded-md border border-white/8 bg-panel px-3 py-2.5">
+            <li key={role.id} className="rounded-md border border-stroke bg-panel px-3 py-2.5">
               {editingRoleId === role.id ? (
                 <RoleEditor
                   draft={editDraft}
@@ -324,7 +324,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
                       setEditDraft(draftFromRole(role));
                       setEditingRoleId(role.id);
                     }}
-                    className="h-8 shrink-0 rounded-md border border-white/10 px-3 text-xs font-bold text-white/60 transition hover:border-aqua/40 hover:text-aqua"
+                    className="h-8 shrink-0 rounded-md border border-stroke px-3 text-xs font-bold text-white/60 transition hover:border-aqua/40 hover:text-aqua"
                   >
                     Edit
                   </button>

@@ -49,10 +49,10 @@ export function MessageComposer({
   onShowMobileSidebar
 }: MessageComposerProps) {
   return (
-    <div className="shrink-0 border-t border-white/8 px-4 py-4 sm:px-5">
+    <div className="shrink-0 border-t border-stroke px-4 py-4 sm:px-5">
       <input ref={fileInputRef} type="file" multiple onChange={onFilesSelected} className="hidden" />
       {replyTarget ? (
-        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-white/10 bg-panel px-3 py-2 text-xs text-white/60">
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-stroke bg-panel px-3 py-2 text-xs text-white/60">
           <span className="flex min-w-0 items-center gap-1.5">
             <CornerUpLeft className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
             <span className="truncate">
@@ -78,7 +78,7 @@ export function MessageComposer({
               className={`flex h-8 items-center gap-2 rounded-full border px-3 text-xs ${
                 attachment.status === 'error'
                   ? 'border-pink/40 text-pink'
-                  : 'border-white/10 text-white/70'
+                  : 'border-stroke text-white/70'
               }`}
             >
               <span className="max-w-[10rem] truncate">{attachment.filename}</span>
@@ -97,7 +97,7 @@ export function MessageComposer({
         </div>
       ) : null}
       {isEmojiOpen ? (
-        <div className="mb-3 rounded-xl border border-white/10 bg-panel p-3">
+        <div className="mb-3 rounded-xl border border-stroke bg-panel p-3">
           <div className="grid grid-cols-6 gap-2">
             {emojiOptions.map((emoji) => (
               <button

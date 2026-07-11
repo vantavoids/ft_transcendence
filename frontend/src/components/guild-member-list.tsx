@@ -140,8 +140,8 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
   ].filter((group) => group.members.length > 0);
 
   return (
-    <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 xl:flex">
-      <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-white/8 px-5">
+    <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke xl:flex">
+      <div className="flex h-[4.9rem] shrink-0 items-center justify-between border-b border-stroke px-5">
         <div>
           <h2 className="text-[1.05rem] font-bold tracking-[-0.03em] text-white">Members</h2>
           <p className="font-category mt-1 text-[0.7rem] uppercase tracking-[0.14em] text-white/35">

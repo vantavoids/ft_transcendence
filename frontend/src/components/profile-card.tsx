@@ -22,7 +22,7 @@ export function ProfileCard({
 
   const card = (
     <section
-      className={`relative w-full overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10 ${
+      className={`relative w-full overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke ${
         variant === 'modal' ? 'max-w-[23rem]' : 'min-h-0 max-w-none'
       }`}
     >
@@ -57,7 +57,7 @@ export function ProfileCard({
             avatarUrl={member.avatarUrl ?? undefined}
           />
           <span
-            className="font-category mb-2 max-w-[11rem] truncate rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
+            className="font-category mb-2 max-w-[11rem] truncate rounded-full border border-stroke bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
             style={
               member.roleColor
                 ? {
@@ -80,7 +80,7 @@ export function ProfileCard({
           <p className="mt-1 text-sm text-white/45">{member.activity}</p>
         </div>
 
-        <div className="mt-4 rounded-md border border-white/8 bg-panel px-3 py-3">
+        <div className="mt-4 rounded-md border border-stroke bg-panel px-3 py-3">
           <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
             Bio
           </p>

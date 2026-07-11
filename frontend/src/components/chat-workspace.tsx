@@ -795,7 +795,7 @@ export function ChatWorkspace() {
   return (
     <div className="mx-auto flex h-screen w-full gap-4 px-3 py-4 md:px-5 md:py-9">
       {!isHydrated ? (
-        <div className="flex min-h-0 flex-1 rounded-[1rem] bg-secondary-bg ring-1 ring-white/5" />
+        <div className="flex min-h-0 flex-1 rounded-[1rem] bg-secondary-bg ring-1 ring-stroke" />
       ) : (
         <>
           <GuildSidebar
@@ -831,7 +831,7 @@ export function ChatWorkspace() {
           <section
             className={`${
               mobilePane === 'messages' ? 'flex' : 'hidden'
-            } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-white/5 md:flex`}
+            } min-h-0 flex-1 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke md:flex`}
           >
             <ConversationHeader
               chatMode={chatMode}

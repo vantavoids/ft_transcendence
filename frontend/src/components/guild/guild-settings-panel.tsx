@@ -117,7 +117,7 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
     <div className="grid gap-5">
       <form
         onSubmit={handleSave}
-        className="grid gap-3 rounded-md border border-white/8 bg-panel p-4"
+        className="grid gap-3 rounded-md border border-stroke bg-panel p-4"
       >
         <h3 className="text-base font-bold text-white">Guild settings</h3>
         <label className="grid gap-2">

@@ -65,8 +65,8 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
         onClick={onClose}
         aria-label="Close settings"
       />
-      <section className="relative w-full max-w-[78rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
-        <div className="flex h-[4.75rem] items-center justify-between border-b border-white/8 px-5">
+      <section className="relative w-full max-w-[78rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
+        <div className="flex h-[4.75rem] items-center justify-between border-b border-stroke px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
               <Settings className="h-5 w-5" strokeWidth={1.9} />
@@ -91,8 +91,8 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
         </div>
 
         <div className="grid max-h-[calc(100vh-7rem)] min-h-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
-          <aside className="border-b border-white/8 p-5 lg:border-b-0 lg:border-r">
-            <div className="rounded-[1rem] border border-white/8 bg-panel p-4">
+          <aside className="border-b border-stroke p-5 lg:border-b-0 lg:border-r">
+            <div className="rounded-[1rem] border border-stroke bg-panel p-4">
               <div className="flex items-center gap-4">
                 <AvatarWithStatus
                   size="lg"
@@ -243,7 +243,7 @@ function SidebarButton({
           ? 'border-aqua/40 bg-aqua/10 text-white'
           : destructive
             ? 'border-pink/20 bg-pink/5 text-white/70 hover:border-pink/35 hover:text-white'
-            : 'border-white/10 bg-frame text-white/75 hover:border-aqua/30 hover:text-white'
+            : 'border-stroke bg-frame text-white/75 hover:border-aqua/30 hover:text-white'
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {Icon ? <Icon className="h-4 w-4 shrink-0" strokeWidth={1.9} /> : null}
@@ -263,7 +263,7 @@ type PanelSectionProps = {
 
 function PanelSection({ title, description, children }: PanelSectionProps) {
   return (
-    <section className="grid gap-4 rounded-[1rem] border border-white/8 bg-panel p-5 lg:p-6">
+    <section className="grid gap-4 rounded-[1rem] border border-stroke bg-panel p-5 lg:p-6">
       <div className="grid gap-1">
         <h3 className="text-[1.35rem] font-bold tracking-[-0.04em] text-white">{title}</h3>
         <p className="text-sm leading-6 text-white/45">{description}</p>
@@ -371,7 +371,7 @@ function CredentialsForm({ currentEmail, onBack }: CredentialsFormProps) {
         <button
           type="button"
           onClick={onBack}
-          className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/70 transition hover:text-white"
+          className="flex h-11 items-center justify-center rounded-md border border-stroke bg-frame text-sm font-semibold text-white/70 transition hover:text-white"
         >
           Back
         </button>
@@ -426,7 +426,7 @@ function DeleteAccountPanel({ onBack, onDeleted }: DeleteAccountPanelProps) {
           type="button"
           onClick={onBack}
           disabled={isSubmitting}
-          className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:opacity-50"
+          className="flex h-11 items-center justify-center rounded-md border border-stroke bg-frame text-sm font-semibold text-white/70 transition hover:text-white disabled:opacity-50"
         >
           Cancel
         </button>

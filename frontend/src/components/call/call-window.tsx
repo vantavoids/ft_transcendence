@@ -42,8 +42,8 @@ function CallTile({
   const tileRing = speaking
     ? SPEAKING_RING
     : ringing
-      ? 'ring-1 ring-white/10 opacity-80'
-      : 'ring-1 ring-white/10';
+      ? 'ring-1 ring-stroke opacity-80'
+      : 'ring-1 ring-stroke';
 
   const avatarSize = compact ? 'h-14 w-14 text-xl' : 'h-24 w-24 text-3xl';
 
@@ -134,7 +134,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
       } ${
         state.isMicMuted
           ? 'bg-pink/15 text-pink ring-pink/40 hover:bg-pink/25'
-          : 'bg-white/10 text-white ring-white/15 hover:bg-white/20'
+          : 'bg-white/10 text-white ring-stroke hover:bg-white/20'
       }`}
       aria-label={state.isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
       aria-pressed={state.isMicMuted}
@@ -166,7 +166,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
       <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
       {minimized ? (
-        <div className="fixed bottom-4 right-4 z-[55] w-72 overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-white/10">
+        <div className="fixed bottom-4 right-4 z-[55] w-72 overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
           <button
             type="button"
             onClick={() => setMinimized(false)}
@@ -206,7 +206,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
           <button
             type="button"
             onClick={() => setMinimized(true)}
-            className="absolute right-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 transition hover:bg-white/20"
+            className="absolute right-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-stroke transition hover:bg-white/20"
             aria-label="Minimize call"
           >
             <Minimize2 className="h-5 w-5" strokeWidth={2} />
@@ -250,7 +250,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
                 className={`flex h-14 w-14 items-center justify-center rounded-full ring-1 transition ${
                   state.isCameraOff
                     ? 'bg-pink/15 text-pink ring-pink/40 hover:bg-pink/25'
-                    : 'bg-white/10 text-white ring-white/15 hover:bg-white/20'
+                    : 'bg-white/10 text-white ring-stroke hover:bg-white/20'
                 }`}
                 aria-label={state.isCameraOff ? 'Turn camera on' : 'Turn camera off'}
                 aria-pressed={state.isCameraOff}

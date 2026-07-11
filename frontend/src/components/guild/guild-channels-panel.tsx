@@ -188,7 +188,7 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
     <div className="grid gap-5">
       <form
         onSubmit={handleCreate}
-        className="grid gap-3 rounded-md border border-white/8 bg-panel p-4"
+        className="grid gap-3 rounded-md border border-stroke bg-panel p-4"
       >
         <h3 className="flex items-center gap-2 text-base font-bold text-white">
           <Hash className="h-4 w-4 text-aqua" strokeWidth={1.9} />
@@ -231,7 +231,7 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
           {channels.map((channel) => (
             <li
               key={channel.id}
-              className="grid gap-3 rounded-md border border-white/8 bg-panel px-3 py-2.5"
+              className="grid gap-3 rounded-md border border-stroke bg-panel px-3 py-2.5"
             >
               {editingId === channel.id && editDraft ? (
                 <div className="grid gap-3">

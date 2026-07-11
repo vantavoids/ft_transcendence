@@ -69,7 +69,7 @@ export function GuildOverview({ guildId }: GuildOverviewProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-[1rem] border border-white/8 bg-panel">
+    <div className="overflow-hidden rounded-[1rem] border border-stroke bg-panel">
       <div
         className="h-28 bg-[linear-gradient(135deg,#232329_0%,#2b3141_38%,#24545b_68%,#78dce8_100%)] bg-cover bg-center"
         style={guild.banner_url ? { backgroundImage: `url(${guild.banner_url})` } : undefined}
