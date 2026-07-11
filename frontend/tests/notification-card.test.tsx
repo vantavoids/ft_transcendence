@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { NotificationCard } from '../src/components/notification-card';
+import { NotificationCard, describeNotification } from '../src/components/notification-card';
 import type { NotificationDto } from '../src/shared/api/notification';
 import type { UseNotificationsResult } from '../src/shared/lib/use-notifications';
 
@@ -70,8 +70,46 @@ describe('NotificationCard', () => {
     assert.equal(html.split('aria-label="Voir la demande d ami"').length - 1, 1);
     // an incoming call has nowhere to deep-link to
     assert.equal(html.split('aria-label="Ouvrir').length - 1, 1);
-    assert.ok(html.includes('Message prive'));
-    assert.ok(html.includes('Demande d ami'));
-    assert.ok(html.includes('Appel entrant'));
+    assert.ok(html.includes('Private message'));
+    assert.ok(html.includes('Friend request'));
+    assert.ok(html.includes('Incoming call'));
+  });
+});
+
+describe('describeNotification', () => {
+  it('names the author when the actor is resolved', () => {
+    assert.equal(describeNotification(dmNotification, 'Testa').title, 'Private message from Testa');
+    assert.equal(
+      describeNotification(friendRequestNotification, 'Testa').detail,
+      'Testa wants to add you as a friend.'
+    );
+    assert.equal(
+      describeNotification(incomingCallNotification, 'Testa').detail,
+      'Incoming audio call from Testa.'
+    );
+    assert.equal(
+      describeNotification(
+        {
+          ...dmNotification,
+          id: '903',
+          type: 'mention',
+          payload: { channel_id: '1', guild_id: '2', preview: 'hey' }
+        },
+        'Testa'
+      ).title,
+      'Mention from Testa'
+    );
+  });
+
+  it('keeps actor-less wording while the author is unresolved', () => {
+    assert.equal(describeNotification(dmNotification, null).title, 'Private message');
+    assert.equal(
+      describeNotification(friendRequestNotification, null).detail,
+      'Someone wants to add you as a friend.'
+    );
+    assert.equal(
+      describeNotification(incomingCallNotification, null).detail,
+      'Incoming audio call.'
+    );
   });
 });
