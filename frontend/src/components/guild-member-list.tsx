@@ -48,7 +48,7 @@ function formatJoinedAt(joinedAt: string) {
 }
 
 export function toProfileMember(member: HydratedGuildMember): GuildMember {
-  // roles come sorted by position descending, so [0] is the highest role
+  // roles come sorted by display priority, so [0] is the highest role
   const topRole = member.roles[0] ?? null;
 
   return {

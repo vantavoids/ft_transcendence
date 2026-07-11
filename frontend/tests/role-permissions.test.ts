@@ -4,9 +4,11 @@ import {
   PERMISSIONS,
   canManageMemberRoles,
   canToggleRole,
+  countPermissionBits,
   effectivePermissions,
   hasPermission,
   memberRank,
+  sortRolesByDisplayPriority,
   type RoleCaller
 } from '../src/shared/guilds/role-permissions';
 import type { GuildRoleDto } from '../src/shared/api/guild';
@@ -87,6 +89,55 @@ describe('canManageMemberRoles', () => {
 
   it('rejects everyone else', () => {
     assert.equal(canManageMemberRoles(515, false), false);
+  });
+});
+
+describe('countPermissionBits', () => {
+  it('counts the permission flags set on a mask', () => {
+    assert.equal(countPermissionBits(0), 0);
+    assert.equal(countPermissionBits(256), 1);
+    assert.equal(countPermissionBits(64 | 16 | 32), 3);
+    assert.equal(countPermissionBits(4095), 12);
+  });
+});
+
+describe('sortRolesByDisplayPriority', () => {
+  it('puts the role with the most permissions first, regardless of position', () => {
+    const full = makeRole({ id: 'r-full', name: 'test', permissions: '4095', position: 1 });
+    const none = makeRole({ id: 'r-none', name: 'plouf', permissions: '0', position: 9 });
+    const some = makeRole({ id: 'r-some', name: 'mid', permissions: '112', position: 5 });
+
+    const sorted = sortRolesByDisplayPriority([none, some, full], []);
+
+    assert.deepEqual(
+      sorted.map((role) => role.name),
+      ['test', 'mid', 'plouf']
+    );
+  });
+
+  it('breaks permission-count ties by assignment recency (API order)', () => {
+    const older = makeRole({ id: 'r-older', name: 'older', permissions: '3' });
+    const newer = makeRole({ id: 'r-newer', name: 'newer', permissions: '5' });
+
+    // the API lists role ids most-recently-assigned first
+    const sorted = sortRolesByDisplayPriority([older, newer], ['r-newer', 'r-older']);
+
+    assert.deepEqual(
+      sorted.map((role) => role.name),
+      ['newer', 'older']
+    );
+  });
+
+  it('falls back to alphabetical order when count and recency do not separate', () => {
+    const zeta = makeRole({ id: 'r-z', name: 'zeta', permissions: '1' });
+    const alpha = makeRole({ id: 'r-a', name: 'alpha', permissions: '2' });
+
+    const sorted = sortRolesByDisplayPriority([zeta, alpha], []);
+
+    assert.deepEqual(
+      sorted.map((role) => role.name),
+      ['alpha', 'zeta']
+    );
   });
 });
 

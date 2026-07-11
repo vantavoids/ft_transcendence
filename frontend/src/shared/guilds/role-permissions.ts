@@ -20,6 +20,45 @@ export function hasPermission(mask: number, bits: number): boolean {
   return (mask & bits) === bits;
 }
 
+export function countPermissionBits(mask: number): number {
+  let count = 0;
+  let rest = mask;
+
+  while (rest !== 0) {
+    count += rest & 1;
+    rest >>>= 1;
+  }
+
+  return count;
+}
+
+// Display priority of a member's roles: the role granting the most
+// permissions wins; on a tie, the most recently assigned one (the API lists
+// a member's role ids most-recently-assigned first, name-alphabetical when
+// assigned at the same instant); name as a final fallback.
+export function sortRolesByDisplayPriority(
+  roles: GuildRoleDto[],
+  assignmentOrder: string[]
+): GuildRoleDto[] {
+  const recencyIndex = new Map(assignmentOrder.map((roleId, index) => [roleId, index]));
+
+  return [...roles].sort((a, b) => {
+    const byPermissionCount =
+      countPermissionBits(rolePermissionBits(b)) - countPermissionBits(rolePermissionBits(a));
+    if (byPermissionCount !== 0) {
+      return byPermissionCount;
+    }
+
+    const aRecency = recencyIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const bRecency = recencyIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    if (aRecency !== bRecency) {
+      return aRecency - bRecency;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+}
+
 // Union of the @everyone role (from allRoles) and the member's assigned roles.
 // The owner resolves to Administrator, which grants everything.
 export function effectivePermissions(

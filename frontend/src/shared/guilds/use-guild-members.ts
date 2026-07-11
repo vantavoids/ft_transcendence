@@ -8,6 +8,7 @@ import {
   type GuildRoleDto
 } from '../api/guild';
 import { getUser, getUsersByIds, type UserStatus, type UserSummaryDto } from '../api/user';
+import { sortRolesByDisplayPriority } from './role-permissions';
 import { subscribeProfileUpdated } from '../lib/profile-events';
 
 const MEMBERS_PAGE_SIZE = 100;
@@ -98,10 +99,12 @@ export function hydrateGuildMembers({
 
   return memberRows.map<HydratedGuildMember>((member) => {
     const user = usersById.get(member.user_id);
-    const memberRoles = member.roles
-      .map((roleId) => rolesById.get(roleId))
-      .filter((role): role is GuildRoleDto => Boolean(role))
-      .sort((a, b) => b.position - a.position);
+    const memberRoles = sortRolesByDisplayPriority(
+      member.roles
+        .map((roleId) => rolesById.get(roleId))
+        .filter((role): role is GuildRoleDto => Boolean(role)),
+      member.roles
+    );
 
     const isDeleted = deletedUserIds.has(member.user_id) && !user;
 
