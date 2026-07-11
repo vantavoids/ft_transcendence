@@ -8,6 +8,7 @@ import {
   type GuildRoleDto
 } from '../api/guild';
 import { getUsersByIds, type UserStatus } from '../api/user';
+import { subscribeProfileUpdated } from '../lib/profile-events';
 
 const MEMBERS_PAGE_SIZE = 100;
 const MEMBERS_MAX_PAGES = 10;
@@ -105,6 +106,12 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    return subscribeProfileUpdated(() => {
+      void load();
+    });
   }, [load]);
 
   return { members, roles, isLoading, error, refresh: load };

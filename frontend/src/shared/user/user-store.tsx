@@ -11,6 +11,7 @@ import {
   removeBanner
 } from '../api/user';
 import { getAccessToken } from '../lib/session';
+import { dispatchProfileUpdated } from '../lib/profile-events';
 import { toCurrentUserProfile, type CurrentUserProfile } from '../mappers/user';
 import { validateProfileImageFile, validateProfileUpdateInput } from '../lib/validators/profile';
 
@@ -68,8 +69,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       const validated = validateProfileUpdateInput(payload);
       const updated = await updateUserProfile(currentUser.id, validated);
       setCurrentUser(toCurrentUserProfile(updated));
+      dispatchProfileUpdated(updated.id);
+      await refreshCurrentUser();
     },
-    [currentUser]
+    [currentUser, refreshCurrentUser]
   );
 
   const uploadCurrentUserAvatar = useCallback(
@@ -81,8 +84,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       validateProfileImageFile(file, 'avatar');
       const updated = await uploadAvatar(currentUser.id, file);
       setCurrentUser((user) => (user ? { ...user, avatarUrl: updated.avatar_url } : user));
+      dispatchProfileUpdated(currentUser.id);
+      await refreshCurrentUser();
     },
-    [currentUser]
+    [currentUser, refreshCurrentUser]
   );
 
   const removeCurrentUserAvatar = useCallback(async () => {
@@ -92,7 +97,9 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
     await removeAvatar(currentUser.id);
     setCurrentUser((user) => (user ? { ...user, avatarUrl: null } : user));
-  }, [currentUser]);
+    dispatchProfileUpdated(currentUser.id);
+    await refreshCurrentUser();
+  }, [currentUser, refreshCurrentUser]);
 
   const uploadCurrentUserBanner = useCallback(
     async (file: File) => {
@@ -103,8 +110,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       validateProfileImageFile(file, 'banner');
       const updated = await uploadBanner(currentUser.id, file);
       setCurrentUser((user) => (user ? { ...user, bannerUrl: updated.banner_url } : user));
+      dispatchProfileUpdated(currentUser.id);
+      await refreshCurrentUser();
     },
-    [currentUser]
+    [currentUser, refreshCurrentUser]
   );
 
   const removeCurrentUserBanner = useCallback(async () => {
@@ -114,7 +123,9 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
     await removeBanner(currentUser.id);
     setCurrentUser((user) => (user ? { ...user, bannerUrl: null } : user));
-  }, [currentUser]);
+    dispatchProfileUpdated(currentUser.id);
+    await refreshCurrentUser();
+  }, [currentUser, refreshCurrentUser]);
 
   const value = useMemo(
     () => ({

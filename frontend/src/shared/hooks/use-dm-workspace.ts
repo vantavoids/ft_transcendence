@@ -1,10 +1,11 @@
 'use client';
 
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { hasDm, type DirectMessage } from '../../components/dm-list';
 import { archiveDirectMessageConversation, listDirectMessages } from '../api/chat';
 import { getUsersByIds } from '../api/user';
 import { onChatHubEvent } from '../api/chat-hub';
+import { subscribeProfileUpdated } from '../lib/profile-events';
 import {
   accentForAuthor,
   authorLabel,
@@ -36,56 +37,43 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
   const activeDmRef = useRef<string | null>(null);
   activeDmRef.current = activeDm;
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadDms = useCallback(async () => {
+    try {
+      const dtos = await listDirectMessages({ include_archived: showArchivedDms });
+      const users = await getUsersByIds(dtos.map((dto) => dto.partner_id));
 
-    async function loadDms() {
-      try {
-        const dtos = await listDirectMessages({ include_archived: showArchivedDms });
-        if (cancelled) {
-          return;
+      const usersById = new Map(users.map((user) => [user.id, user]));
+      const mapped = dtos.map((dto) => {
+        const base = mapDirectMessageConversation(dto);
+        const user = usersById.get(dto.partner_id);
+
+        if (!user) {
+          return base;
         }
 
-        const users = await getUsersByIds(dtos.map((dto) => dto.partner_id));
-        if (cancelled) {
-          return;
-        }
+        return {
+          ...base,
+          name: user.display_name || user.username,
+          status: user.status === 'dnd' ? 'idle' : user.status,
+          avatarUrl: user.avatar_url ?? null,
+          bannerUrl: user.banner_url ?? null,
+          bio: user.bio ?? null
+        };
+      });
+      setDmConversations(mapped);
 
-        const usersById = new Map(users.map((user) => [user.id, user]));
-        const mapped = dtos.map((dto) => {
-          const base = mapDirectMessageConversation(dto);
-          const user = usersById.get(dto.partner_id);
-
-          if (!user) {
-            return base;
-          }
-
-          return {
-            ...base,
-            name: user.display_name || user.username,
-            status: user.status === 'dnd' ? 'idle' : user.status,
-            avatarUrl: user.avatar_url ?? null,
-            bannerUrl: user.banner_url ?? null,
-            bio: user.bio ?? null
-          };
-        });
-        setDmConversations(mapped);
-
-        const storedDmId = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
-        if (storedDmId && hasDm(storedDmId, mapped)) {
-          setActiveDm(storedDmId);
-        }
-      } catch {
-        // best effort: leave the DM list empty if the chat service is unreachable
+      const storedDmId = window.sessionStorage.getItem(LAST_CHAT_DM_KEY);
+      if (storedDmId && hasDm(storedDmId, mapped)) {
+        setActiveDm(storedDmId);
       }
+    } catch {
+      // best effort: leave the DM list empty if the chat service is unreachable
     }
-
-    loadDms();
-
-    return () => {
-      cancelled = true;
-    };
   }, [showArchivedDms]);
+
+  useEffect(() => {
+    void loadDms();
+  }, [loadDms]);
 
   useEffect(() => {
     return onChatHubEvent('DmReadStateUpdated', (event) => {
@@ -148,6 +136,12 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
       });
     });
   }, [currentUserId]);
+
+  useEffect(() => {
+    return subscribeProfileUpdated(() => {
+      void loadDms();
+    });
+  }, [loadDms]);
 
   function selectDm(dmId: string) {
     setActiveDm(dmId);
