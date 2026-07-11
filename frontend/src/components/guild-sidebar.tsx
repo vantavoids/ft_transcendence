@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
@@ -15,11 +15,44 @@ type GuildSidebarProps = {
   onOpenGuild: () => void;
 };
 
+// glow bars shown at the edges where the guild list is cropped, hinting that
+// scrolling reveals more; a couple px of slack so they hide at the extremes
+const SCROLL_EDGE_SLACK_PX = 4;
+
 export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
   const [isAddGuildOpen, setIsAddGuildOpen] = useState(false);
+  const [croppedEdges, setCroppedEdges] = useState({ top: false, bottom: false });
+
+  const updateCroppedEdges = useCallback(() => {
+    const list = scrollRef.current;
+    if (!list) {
+      return;
+    }
+
+    const top = list.scrollTop > SCROLL_EDGE_SLACK_PX;
+    const bottom = list.scrollTop + list.clientHeight < list.scrollHeight - SCROLL_EDGE_SLACK_PX;
+    setCroppedEdges((previous) =>
+      previous.top === top && previous.bottom === bottom ? previous : { top, bottom }
+    );
+  }, []);
+
+  useEffect(() => {
+    updateCroppedEdges();
+
+    const list = scrollRef.current;
+    if (!list || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(updateCroppedEdges);
+    observer.observe(list);
+    return () => observer.disconnect();
+    // re-measure when the list content changes, not just on resize
+  }, [updateCroppedEdges, guilds.length, isLoading]);
 
   function handleSelectGuild(guildId: string) {
     selectGuild(guildId);
@@ -49,65 +82,83 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         <FortyTwoIcon className="h-8 w-8" />
       </Link>
       <div className="mx-1 mt-5 border-t border-stroke" />
-      <div
-        className="mt-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
-        onScroll={() => setTooltip(null)}
-      >
-        <button
-          type="button"
-          onClick={onOpenDms}
-          onMouseEnter={(event) => handleShowLabel('Direct Messages', event)}
-          onMouseLeave={() => setTooltip(null)}
-          className={`flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl border transition ${
-            activeMode === 'dm'
-              ? 'border-aqua bg-panel text-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
-              : 'border-frame bg-panel text-[#8b8b8f] hover:text-white'
-          }`}
-          aria-label="Direct messages"
+      <div className="relative mt-6 flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
+          onScroll={() => {
+            setTooltip(null);
+            updateCroppedEdges();
+          }}
         >
-          <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
-        </button>
-        <div className="mx-1 border-t border-stroke" />
-        {isLoading && guilds.length === 0 ? (
-          <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
-        ) : null}
-        {error && guilds.length === 0 ? (
-          <p className="px-1 text-center text-xs text-pink/80" title={error}>
-            Guilds unavailable
-          </p>
-        ) : null}
-        {guilds.map((guild) => (
           <button
-            key={guild.id}
             type="button"
-            onClick={() => handleSelectGuild(guild.id)}
-            onMouseEnter={(event) => handleShowLabel(guild.name, event)}
+            onClick={onOpenDms}
+            onMouseEnter={(event) => handleShowLabel('Direct Messages', event)}
             onMouseLeave={() => setTooltip(null)}
-            className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
-              guild.id === selectedGuildId && activeMode === 'guild'
-                ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
-                : 'border-frame'
+            className={`flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl border transition ${
+              activeMode === 'dm'
+                ? 'border-aqua bg-panel text-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
+                : 'border-frame bg-panel text-[#8b8b8f] hover:text-white'
             }`}
-            aria-label={guild.name}
+            aria-label="Direct messages"
           >
-            <GuildIcon
-              guildId={guild.id}
-              name={guild.name}
-              iconUrl={guild.icon_url}
-              className="h-full w-full text-2xl"
-            />
+            <MessageCircle className="h-8 w-8" strokeWidth={1.7} />
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setIsAddGuildOpen(true)}
-          onMouseEnter={(event) => handleShowLabel('Add a guild', event)}
-          onMouseLeave={() => setTooltip(null)}
-          className="flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
-          aria-label="Add guild"
-        >
-          <Plus className="h-8 w-8" strokeWidth={1.5} />
-        </button>
+          <div className="mx-1 border-t border-stroke" />
+          {isLoading && guilds.length === 0 ? (
+            <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
+          ) : null}
+          {error && guilds.length === 0 ? (
+            <p className="px-1 text-center text-xs text-pink/80" title={error}>
+              Guilds unavailable
+            </p>
+          ) : null}
+          {guilds.map((guild) => (
+            <button
+              key={guild.id}
+              type="button"
+              onClick={() => handleSelectGuild(guild.id)}
+              onMouseEnter={(event) => handleShowLabel(guild.name, event)}
+              onMouseLeave={() => setTooltip(null)}
+              className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
+                guild.id === selectedGuildId && activeMode === 'guild'
+                  ? 'border-aqua shadow-[0_0_0_1px_rgba(120,220,232,0.2)]'
+                  : 'border-frame'
+              }`}
+              aria-label={guild.name}
+            >
+              <GuildIcon
+                guildId={guild.id}
+                name={guild.name}
+                iconUrl={guild.icon_url}
+                className="h-full w-full text-2xl"
+              />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setIsAddGuildOpen(true)}
+            onMouseEnter={(event) => handleShowLabel('Add a guild', event)}
+            onMouseLeave={() => setTooltip(null)}
+            className="flex h-[4.9rem] shrink-0 items-center justify-center rounded-xl bg-panel text-[#535353] transition hover:text-white"
+            aria-label="Add guild"
+          >
+            <Plus className="h-8 w-8" strokeWidth={1.5} />
+          </button>
+        </div>
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-1 top-0 h-[3px] rounded-full bg-aqua/45 shadow-[0_0_10px_2px_rgba(120,220,232,0.35)] transition-opacity duration-300 ${
+            croppedEdges.top ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-1 bottom-0 h-[3px] rounded-full bg-aqua/45 shadow-[0_0_10px_2px_rgba(120,220,232,0.35)] transition-opacity duration-300 ${
+            croppedEdges.bottom ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
       </div>
       {tooltip ? (
         <div
