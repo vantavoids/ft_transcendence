@@ -82,10 +82,10 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         <FortyTwoIcon className="h-8 w-8" />
       </Link>
       <div className="mx-1 mt-5 border-t border-stroke" />
-      <div className="relative mt-6 flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           ref={scrollRef}
-          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pt-4"
           onScroll={() => {
             setTooltip(null);
             updateCroppedEdges();
@@ -149,13 +149,13 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         </div>
         <div
           aria-hidden
-          className={`pointer-events-none absolute inset-x-1 top-0 h-[3px] rounded-full bg-aqua/45 shadow-[0_0_10px_2px_rgba(120,220,232,0.35)] transition-opacity duration-300 ${
+          className={`pointer-events-none absolute inset-x-0 top-0 h-px rounded-full bg-aqua shadow-[0_0_9px_2px_rgba(120,220,232,0.45)] transition-opacity duration-300 ${
             croppedEdges.top ? 'opacity-100' : 'opacity-0'
           }`}
         />
         <div
           aria-hidden
-          className={`pointer-events-none absolute inset-x-1 bottom-0 h-[3px] rounded-full bg-aqua/45 shadow-[0_0_10px_2px_rgba(120,220,232,0.35)] transition-opacity duration-300 ${
+          className={`pointer-events-none absolute inset-x-0 bottom-0 h-px rounded-full bg-aqua shadow-[0_0_9px_2px_rgba(120,220,232,0.45)] transition-opacity duration-300 ${
             croppedEdges.bottom ? 'opacity-100' : 'opacity-0'
           }`}
         />
