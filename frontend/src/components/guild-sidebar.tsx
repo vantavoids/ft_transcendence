@@ -45,7 +45,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
       ref={sidebarRef}
       className="relative hidden min-h-0 w-[7.25rem] flex-col rounded-[1rem] bg-secondary-bg px-5 py-6 ring-1 ring-white/5 md:flex"
     >
-      <Link href="/" aria-label="Home" className="block w-fit text-white">
+      <Link href="/" aria-label="Home" className="mx-auto block w-fit text-white">
         <FortyTwoIcon className="h-8 w-8" />
       </Link>
       <div className="mx-1 mt-5 border-t border-white/10" />
