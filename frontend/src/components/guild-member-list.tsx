@@ -13,7 +13,10 @@ import { hashToIndex } from '../shared/lib/hash';
 export type GuildMember = {
   id: string;
   name: string;
-  role: 'Owner' | 'Admin' | 'Member';
+  /** 'Owner', 'Member', or the member's highest guild role name. */
+  role: string;
+  /** The highest role's color, used to tint the role token. */
+  roleColor?: string | null;
   status: DirectMessage['status'];
   accent: ChatMessageData['accent'];
   activity: string;
@@ -45,10 +48,14 @@ function formatJoinedAt(joinedAt: string) {
 }
 
 export function toProfileMember(member: HydratedGuildMember): GuildMember {
+  // roles come sorted by position descending, so [0] is the highest role
+  const topRole = member.roles[0] ?? null;
+
   return {
     id: member.userId,
     name: member.displayName,
-    role: member.isOwner ? 'Owner' : member.roles.length > 0 ? 'Admin' : 'Member',
+    role: member.isOwner ? 'Owner' : (topRole?.name ?? 'Member'),
+    roleColor: member.isOwner ? null : (topRole?.color ?? null),
     status: toSidebarStatus(member.status),
     accent: getAccentForId(member.userId),
     activity: member.joinedAt ? `Joined ${formatJoinedAt(member.joinedAt)}` : 'Member',
@@ -63,8 +70,15 @@ function RoleIcon({ member }: { member: HydratedGuildMember }) {
     return <Crown className="h-3.5 w-3.5 shrink-0 text-yellow" strokeWidth={1.9} />;
   }
 
+  const topRoleColor = member.roles[0]?.color;
   if (member.roles.length > 0) {
-    return <Shield className="h-3.5 w-3.5 shrink-0 text-aqua" strokeWidth={1.9} />;
+    return (
+      <Shield
+        className="h-3.5 w-3.5 shrink-0 text-aqua"
+        strokeWidth={1.9}
+        style={topRoleColor ? { color: topRoleColor } : undefined}
+      />
+    );
   }
 
   return null;

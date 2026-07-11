@@ -12,7 +12,12 @@ type ProfileCardProps = {
   onSendMessage?: (member: GuildMember) => void;
 };
 
-export function ProfileCard({ member, variant = 'modal', onClose, onSendMessage }: ProfileCardProps) {
+export function ProfileCard({
+  member,
+  variant = 'modal',
+  onClose,
+  onSendMessage
+}: ProfileCardProps) {
   useCloseOnEscape(onClose);
 
   const card = (
@@ -51,7 +56,19 @@ export function ProfileCard({ member, variant = 'modal', onClose, onSendMessage 
             status={member.status}
             avatarUrl={member.avatarUrl ?? undefined}
           />
-          <span className="font-category mb-2 rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45">
+          <span
+            className="font-category mb-2 max-w-[11rem] truncate rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
+            style={
+              member.roleColor
+                ? {
+                    color: member.roleColor,
+                    borderColor: `${member.roleColor}59`,
+                    backgroundColor: `${member.roleColor}1a`
+                  }
+                : undefined
+            }
+            title={member.role}
+          >
             {member.role}
           </span>
         </div>

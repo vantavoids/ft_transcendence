@@ -32,4 +32,25 @@ describe('ProfileCard', () => {
 
     assert.ok(fallbackHtml.includes('No bio set.'));
   });
+
+  it('renders the actual role name tinted with the role color', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={{ ...member, role: 'test', roleColor: '#ff6188' }}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(html.includes('>test</span>'));
+    assert.ok(html.includes('color:#ff6188'));
+    assert.ok(html.includes('border-color:#ff618859'));
+    assert.ok(html.includes('background-color:#ff61881a'));
+  });
+
+  it('keeps the neutral token when no role color is set', () => {
+    const html = renderToStaticMarkup(<ProfileCard member={member} onClose={() => undefined} />);
+
+    assert.ok(html.includes('>Owner</span>'));
+    assert.ok(!html.includes('border-color'));
+  });
 });
