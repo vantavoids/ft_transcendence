@@ -98,7 +98,6 @@ export function ConversationHeader({
         >
           <UserRound className="h-5 w-5" strokeWidth={1.8} />
         </button>
-        <CircleEllipsis className="h-5 w-5" strokeWidth={1.8} />
       </div>
     </div>
   );
