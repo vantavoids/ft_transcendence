@@ -32,7 +32,12 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
 
       <div className="px-5 pb-5">
         <div className="-mt-10 flex items-end justify-between gap-4">
-          <AvatarWithStatus size="lg" name={member.name} accent={member.accent} status={member.status} />
+          <AvatarWithStatus
+            size="lg"
+            name={member.name}
+            accent={member.accent}
+            status={member.status}
+          />
           <span className="font-category mb-2 rounded-full border border-white/10 bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45">
             {member.role}
           </span>
@@ -43,6 +48,15 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
             {member.name}
           </h2>
           <p className="mt-1 text-sm text-white/45">{member.activity}</p>
+        </div>
+
+        <div className="mt-4 rounded-md border border-white/8 bg-panel px-3 py-3">
+          <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
+            Bio
+          </p>
+          <p className="mt-2 text-sm leading-6 text-white/70">
+            {member.bio ? member.bio : 'No bio set.'}
+          </p>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
@@ -81,9 +95,7 @@ export function ProfileCard({ member, variant = 'modal', onClose }: ProfileCardP
 
   if (variant === 'side') {
     return (
-      <aside className="hidden min-h-0 w-[20rem] shrink-0 overflow-hidden xl:flex">
-        {card}
-      </aside>
+      <aside className="hidden min-h-0 w-[20rem] shrink-0 overflow-hidden xl:flex">{card}</aside>
     );
   }
 

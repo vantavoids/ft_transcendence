@@ -50,6 +50,7 @@ export type UserSummaryDto = {
   display_name: string;
   avatar_url?: string | null;
   status: UserStatus;
+  bio?: string | null;
 };
 
 export type FriendRequestDto = {

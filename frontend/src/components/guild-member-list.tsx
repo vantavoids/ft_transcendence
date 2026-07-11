@@ -17,6 +17,7 @@ export type GuildMember = {
   status: DirectMessage['status'];
   accent: ChatMessageData['accent'];
   activity: string;
+  bio?: string | null;
 };
 
 // TODO(api:chat): message authors still come from mocks until Epic 4 wires real chat history.
@@ -48,7 +49,8 @@ export function toProfileMember(member: HydratedGuildMember): GuildMember {
     role: member.isOwner ? 'Owner' : member.roles.length > 0 ? 'Admin' : 'Member',
     status: toSidebarStatus(member.status),
     accent: getAccentForId(member.userId),
-    activity: member.joinedAt ? `Joined ${formatJoinedAt(member.joinedAt)}` : 'Member'
+    activity: member.joinedAt ? `Joined ${formatJoinedAt(member.joinedAt)}` : 'Member',
+    bio: member.bio
   };
 }
 

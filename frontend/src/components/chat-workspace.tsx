@@ -158,7 +158,10 @@ export function ChatWorkspace() {
   }, [activeConversationId]);
 
   const activeMessages = useMemo(
-    () => (activeConversationId ? (conversationHistory.messagesByConversation[activeConversationId] ?? []) : []),
+    () =>
+      activeConversationId
+        ? (conversationHistory.messagesByConversation[activeConversationId] ?? [])
+        : [],
     [activeConversationId, conversationHistory.messagesByConversation]
   );
 
@@ -247,7 +250,8 @@ export function ChatWorkspace() {
         role: 'Member',
         status: activeDmDetails.status,
         accent: activeDmDetails.accent,
-        activity: activeDmDetails.lastMessage
+        activity: activeDmDetails.lastMessage,
+        bio: null
       }
     : null;
   const isSidePanelOpen =
@@ -268,7 +272,12 @@ export function ChatWorkspace() {
 
     const viewport = scroll.messagesViewportRef.current;
     const activeChannel = guildWorkspace.activeChannel;
-    if (chatMode === 'guild' && activeChannel && viewport && viewport.scrollTop <= TOP_THRESHOLD_PX) {
+    if (
+      chatMode === 'guild' &&
+      activeChannel &&
+      viewport &&
+      viewport.scrollTop <= TOP_THRESHOLD_PX
+    ) {
       conversationHistory.loadOlderChannelHistory(activeChannel);
     }
   }
@@ -503,18 +512,20 @@ export function ChatWorkspace() {
               role: 'Member',
               status: directMessage.status,
               accent: directMessage.accent,
-              activity: directMessage.lastMessage
+              activity: directMessage.lastMessage,
+              bio: null
             }
           : isCurrentUserMessage && currentGuildMember
             ? toProfileMember(currentGuildMember)
-          : {
-              id: message.author.toLowerCase(),
-              name: message.author,
-              role: 'Member',
-              status: 'offline',
-              accent: message.accent,
-              activity: 'No recent activity'
-            })
+            : {
+                id: message.author.toLowerCase(),
+                name: message.author,
+                role: 'Member',
+                status: 'offline',
+                accent: message.accent,
+                activity: 'No recent activity',
+                bio: null
+              })
     );
   }
 

@@ -186,6 +186,7 @@ Exactly one of `ids` or `q` (see `GET /users/search`) must be set. The two query
     "username": "skaf_angel",
     "display_name": "Skaf",
     "avatar_url": "https://...",
+    "bio": "I live in the terminal.",
     "status": "online"
   }
 ]
@@ -274,6 +275,7 @@ List pending friend requests involving the caller, in both directions. Backs the
       "username": "tstephan",
       "display_name": "SkyDogzz",
       "avatar_url": "https://...",
+      "bio": "I live in the terminal.",
       "status": "online"
     },
     "created_at": "2026-03-09T00:00:00Z"
