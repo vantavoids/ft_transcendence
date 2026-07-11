@@ -30,6 +30,7 @@ import { GuildIcon } from './guild-icon';
 type GuildSettingsModalProps = {
   guildId: string;
   onClose: () => void;
+  onChannelsChanged?: () => void;
 };
 
 type TabId =
@@ -91,7 +92,7 @@ function SidebarButton({
   );
 }
 
-export function GuildSettingsModal({ guildId, onClose }: GuildSettingsModalProps) {
+export function GuildSettingsModal({ guildId, onClose, onChannelsChanged }: GuildSettingsModalProps) {
   const { selectedGuild } = useGuilds();
   const [tab, setTab] = useState<TabId>('overview');
 
@@ -112,7 +113,7 @@ export function GuildSettingsModal({ guildId, onClose }: GuildSettingsModalProps
       case 'categories':
         return <GuildCategoriesPanel guildId={guildId} />;
       case 'channels':
-        return <GuildChannelsPanel guildId={guildId} />;
+        return <GuildChannelsPanel guildId={guildId} onChannelsChanged={onChannelsChanged} />;
       case 'settings':
         return <GuildSettingsPanel guildId={guildId} />;
       case 'create':
