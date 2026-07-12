@@ -69,6 +69,15 @@ internal sealed class SignalRUserBroadcaster(
 	public Task BroadcastMemberLeftAsync(long guildId, long userId, CancellationToken ct) =>
 		hub.Clients.Group($"guild:{guildId}").MemberLeft(new GuildMemberEvent(guildId.ToString(), userId.ToString()));
 
+	public Task BroadcastCategoryCreatedAsync(long guildId, GuildCategoryDto category, CancellationToken ct) =>
+		hub.Clients.Group($"guild:{guildId}").CategoryCreated(category);
+
+	public Task BroadcastCategoryUpdatedAsync(long guildId, GuildCategoryDto category, CancellationToken ct) =>
+		hub.Clients.Group($"guild:{guildId}").CategoryUpdated(category);
+
+	public Task BroadcastCategoryDeletedAsync(long guildId, long categoryId, CancellationToken ct) =>
+		hub.Clients.Group($"guild:{guildId}").CategoryDeleted(new CategoryDeletedEvent(guildId.ToString(), categoryId.ToString()));
+
 	public async Task<int> EvictFromGuildChannelsAsync(long userId, long guildId, CancellationToken ct)
 	{
 		var subscriptions = tracker.ConnectionsInGuild(userId, guildId);

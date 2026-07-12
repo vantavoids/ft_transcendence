@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Categories.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -12,6 +13,7 @@ namespace Guild.Application.Features.Categories.CreateCategory;
 internal sealed class CreateCategoryHandler(
 	IGuildRepository guilds,
 	IChannelCategoryRepository categories,
+	IEventBus eventBus,
 	IIdGenerator ids,
 	IClock clock,
 	ICurrentUser currentUser,
@@ -50,6 +52,11 @@ internal sealed class CreateCategoryHandler(
 			return categoryResult.Error;
 
 		categories.Add(categoryResult.Value);
+
+		await eventBus.PublishAsync(
+			new GuildCategoryCreated(command.GuildId, CategoryPayload.From(categoryResult.Value)),
+			cancellationToken);
+
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return CategoryResponse.From(categoryResult.Value);

@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Categories.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -12,6 +13,7 @@ namespace Guild.Application.Features.Categories.UpdateCategory;
 internal sealed class UpdateCategoryHandler(
 	IGuildRepository guilds,
 	IChannelCategoryRepository categories,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -48,6 +50,11 @@ internal sealed class UpdateCategoryHandler(
 		}
 
 		categories.Update(category);
+
+		await eventBus.PublishAsync(
+			new GuildCategoryUpdated(command.GuildId, CategoryPayload.From(category)),
+			cancellationToken);
+
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return CategoryResponse.From(category);
