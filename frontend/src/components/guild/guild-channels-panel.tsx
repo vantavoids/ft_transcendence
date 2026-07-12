@@ -12,6 +12,7 @@ import {
   type GuildCategoryDto,
   type GuildChannelDto
 } from '../../shared/api/guild';
+import { ActionModal } from '../action-modal';
 import { FormError } from './guild-forms';
 
 const inputClasses =
@@ -56,6 +57,7 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GuildChannelDto | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -166,7 +168,11 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
   }
 
   async function handleDelete(channel: GuildChannelDto) {
-    if (!window.confirm(`Delete channel "${channel.name}"? This cannot be undone.`)) {
+    setDeleteTarget(channel);
+  }
+
+  async function confirmDeleteChannel() {
+    if (!deleteTarget) {
       return;
     }
 
@@ -174,9 +180,10 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
 
     try {
       setIsBusy(true);
-      await deleteGuildChannel(guildId, channel.id);
+      await deleteGuildChannel(guildId, deleteTarget.id);
       await load();
       onChannelsChanged?.();
+      setDeleteTarget(null);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete channel.');
     } finally {
@@ -360,6 +367,18 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
           ))}
         </ul>
       )}
+
+      {deleteTarget ? (
+        <ActionModal
+          title={`Delete channel "${deleteTarget.name}"?`}
+          description="This cannot be undone. Any messages in the channel will remain linked to the deleted channel."
+          confirmLabel="Delete channel"
+          destructive
+          isBusy={isBusy}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDeleteChannel}
+        />
+      ) : null}
     </div>
   );
 }

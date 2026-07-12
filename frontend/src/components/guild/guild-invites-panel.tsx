@@ -13,6 +13,7 @@ import {
 } from '../../shared/api/guild';
 import { ApiError } from '../../shared/api/client';
 import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
+import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
 import { GuildIcon } from './guild-icon';
 import { FormError } from './guild-forms';
@@ -39,6 +40,8 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   const [previewError, setPreviewError] = useState('');
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [copiedCode, setCopiedCode] = useState('');
+  const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
 
   async function handleCopyCode(code: string) {
     try {
@@ -112,17 +115,25 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   }
 
   async function handleRevoke(code: string) {
-    if (!window.confirm(`Revoke invite ${code}? It becomes unusable immediately.`)) {
+    setRevokeTarget(code);
+  }
+
+  async function confirmRevokeInvite() {
+    if (!revokeTarget) {
       return;
     }
 
     setError('');
 
     try {
-      await revokeGuildInvite(guildId, code);
+      setIsRevoking(true);
+      await revokeGuildInvite(guildId, revokeTarget);
       await load();
+      setRevokeTarget(null);
     } catch (revokeError) {
       setError(revokeError instanceof Error ? revokeError.message : 'Failed to revoke invite.');
+    } finally {
+      setIsRevoking(false);
     }
   }
 
@@ -258,6 +269,18 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
           ))}
         </ul>
       )}
+
+      {revokeTarget ? (
+        <ActionModal
+          title={`Revoke invite ${revokeTarget}?`}
+          description="This invite will stop working immediately."
+          confirmLabel="Revoke invite"
+          destructive
+          isBusy={isRevoking}
+          onClose={() => setRevokeTarget(null)}
+          onConfirm={confirmRevokeInvite}
+        />
+      ) : null}
 
       <form
         onSubmit={handlePreview}

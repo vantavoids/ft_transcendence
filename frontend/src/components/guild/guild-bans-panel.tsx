@@ -10,6 +10,7 @@ import {
   type GuildBanDto
 } from '../../shared/api/guild';
 import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
+import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
 import { FormError } from './guild-forms';
 
@@ -28,6 +29,8 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   const [banUserId, setBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [unbanTarget, setUnbanTarget] = useState<string | null>(null);
+  const [isUnbanning, setIsUnbanning] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -86,17 +89,25 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   }
 
   async function handleUnban(userId: string) {
-    if (!window.confirm(`Unban ${describeUser(userId)}?`)) {
+    setUnbanTarget(userId);
+  }
+
+  async function confirmUnban() {
+    if (!unbanTarget) {
       return;
     }
 
     setError('');
 
     try {
-      await unbanGuildMember(guildId, userId);
+      setIsUnbanning(true);
+      await unbanGuildMember(guildId, unbanTarget);
       await load();
+      setUnbanTarget(null);
     } catch (unbanError) {
       setError(unbanError instanceof Error ? unbanError.message : 'Failed to unban user.');
+    } finally {
+      setIsUnbanning(false);
     }
   }
 
@@ -167,6 +178,17 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
           ))}
         </ul>
       )}
+
+      {unbanTarget ? (
+        <ActionModal
+          title={`Unban ${describeUser(unbanTarget)}?`}
+          description="This will restore the user's access to the guild immediately."
+          confirmLabel="Unban user"
+          isBusy={isUnbanning}
+          onClose={() => setUnbanTarget(null)}
+          onConfirm={confirmUnban}
+        />
+      ) : null}
     </div>
   );
 }

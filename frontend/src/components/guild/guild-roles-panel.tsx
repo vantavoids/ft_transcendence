@@ -9,6 +9,7 @@ import {
   updateGuildRole,
   type GuildRoleDto
 } from '../../shared/api/guild';
+import { ActionModal } from '../action-modal';
 import { FormError } from './guild-forms';
 
 const inputClasses =
@@ -171,6 +172,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<RoleDraft>(emptyDraft);
   const [isBusy, setIsBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GuildRoleDto | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -246,7 +248,11 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   }
 
   async function handleDelete(role: GuildRoleDto) {
-    if (!window.confirm(`Delete role "${role.name}"?`)) {
+    setDeleteTarget(role);
+  }
+
+  async function confirmDeleteRole() {
+    if (!deleteTarget) {
       return;
     }
 
@@ -254,8 +260,9 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
 
     try {
       setIsBusy(true);
-      await deleteGuildRole(guildId, role.id);
+      await deleteGuildRole(guildId, deleteTarget.id);
       await load();
+      setDeleteTarget(null);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete role.');
     } finally {
@@ -345,6 +352,18 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
           ))}
         </ul>
       )}
+
+      {deleteTarget ? (
+        <ActionModal
+          title={`Delete role "${deleteTarget.name}"?`}
+          description="This will remove the role from the guild and from every member who has it."
+          confirmLabel="Delete role"
+          destructive
+          isBusy={isBusy}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDeleteRole}
+        />
+      ) : null}
     </div>
   );
 }
