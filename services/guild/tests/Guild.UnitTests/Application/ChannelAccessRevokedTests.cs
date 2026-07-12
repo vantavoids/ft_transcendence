@@ -77,7 +77,7 @@ public sealed class ChannelAccessRevokedTests
 		var result = await handler.HandleAsync(new DeleteOverwriteCommand(ChannelId, Member));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(bus.Published);
+		Assert.False(bus.Has<ChannelAccessRevoked>());
 	}
 
 	[Fact]
@@ -135,7 +135,7 @@ public sealed class ChannelAccessRevokedTests
 		var result = await handler.HandleAsync(new AssignRoleCommand(100, Member, 200));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(bus.Published);
+		Assert.False(bus.Has<ChannelAccessRevoked>());
 	}
 
 	[Fact]
@@ -170,7 +170,7 @@ public sealed class ChannelAccessRevokedTests
 		var result = await handler.HandleAsync(new UnassignRoleCommand(100, Member, 200));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(bus.Published);
+		Assert.False(bus.Has<ChannelAccessRevoked>());
 	}
 
 	[Fact]
@@ -223,7 +223,7 @@ public sealed class ChannelAccessRevokedTests
 			100, 200, Name: null, Color: null, Permissions: Read, IsHoisted: null, IsMentionable: null));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(bus.Published);
+		Assert.False(bus.Has<ChannelAccessRevoked>());
 	}
 
 	[Fact]
@@ -238,6 +238,6 @@ public sealed class ChannelAccessRevokedTests
 		var result = await handler.HandleAsync(new DeleteRoleCommand(100, 200));
 
 		Assert.True(result.Succeeded);
-		Assert.Empty(bus.Published);
+		Assert.False(bus.Has<ChannelAccessRevoked>());
 	}
 }

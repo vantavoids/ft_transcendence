@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Roles.Common;
 using Guild.Application.Features.Roles.ListRoles;
 using Guild.Domain.Guild;
@@ -12,6 +13,7 @@ namespace Guild.Application.Features.Roles.ReorderRoles;
 
 internal sealed class ReorderRolesHandler(
 	IGuildRepository guilds,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -54,6 +56,8 @@ internal sealed class ReorderRolesHandler(
 		var result = guild.ReorderRoles(moves, clock.UtcNow);
 		if (result.IsFailure)
 			return result.Error;
+
+		await eventBus.PublishAsync(new GuildRolesChanged(command.GuildId), cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -121,6 +121,8 @@ export type ChatHubEvents = {
   CategoryDeleted: (event: CategoryDeletedEvent) => void;
   MemberJoined: (event: GuildMemberEvent) => void;
   MemberLeft: (event: GuildMemberEvent) => void;
+  MemberUpdated: (event: GuildMemberEvent) => void;
+  RolesChanged: (guildId: string) => void;
   Error: (event: ChatHubErrorEvent) => void;
 };
 

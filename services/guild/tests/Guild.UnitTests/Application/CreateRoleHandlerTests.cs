@@ -124,7 +124,7 @@ public sealed class CreateRoleHandlerTests
 			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
 		guilds.Add(guild);
 		var handler = HandlerFactory.CreateCommand<CreateRoleCommand, Result<RoleResponse>>(
-			guilds, new FakeIdGenerator(seed: 1000), new FakeClock(Now),
+			guilds, new FakeEventBus(), new FakeIdGenerator(seed: 1000), new FakeClock(Now),
 			new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}

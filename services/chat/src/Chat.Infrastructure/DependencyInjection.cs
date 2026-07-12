@@ -56,6 +56,8 @@ public static class DependencyInjection
 			x.AddConsumer<GuildMemberLeftConsumer>();
 			x.AddConsumer<GuildDeletedConsumer>();
 			x.AddConsumer<GuildUpdatedConsumer>();
+			x.AddConsumer<GuildRolesChangedConsumer>();
+			x.AddConsumer<GuildMemberUpdatedConsumer>();
 			x.AddConsumer<ChannelAccessRevokedConsumer>();
 			x.AddConsumer<GuildChannelCreatedConsumer>();
 			x.AddConsumer<GuildChannelUpdatedConsumer>();
@@ -100,6 +102,8 @@ public static class DependencyInjection
 				cfg.Message<GuildMemberLeft>(m => m.SetEntityName("guild.member_left"));
 				cfg.Message<GuildDeleted>(m => m.SetEntityName("guild.deleted"));
 				cfg.Message<GuildUpdated>(m => m.SetEntityName("guild.updated"));
+				cfg.Message<GuildRolesChanged>(m => m.SetEntityName("guild.roles_changed"));
+				cfg.Message<GuildMemberUpdated>(m => m.SetEntityName("guild.member_updated"));
 				cfg.Message<ChannelAccessRevoked>(m => m.SetEntityName("channel.access_revoked"));
 				cfg.Message<GuildChannelCreated>(m => m.SetEntityName("channel.created"));
 				cfg.Message<GuildChannelUpdated>(m => m.SetEntityName("channel.updated"));

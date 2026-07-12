@@ -1,7 +1,9 @@
+using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Membership.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -10,6 +12,7 @@ namespace Guild.Application.Features.Membership.UpdateNickname;
 
 internal sealed class UpdateNicknameHandler(
 	IGuildRepository guilds,
+	IEventBus eventBus,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
 	: ICommandHandler<UpdateNicknameCommand, Result<MemberResponse>>
@@ -39,6 +42,9 @@ internal sealed class UpdateNicknameHandler(
 		var updateResult = guild.UpdateMemberNickname(command.TargetUserId, command.Nickname);
 		if (updateResult.IsFailure)
 			return updateResult.Error;
+
+		await eventBus.PublishAsync(
+			new GuildMemberUpdated(guild.Id, command.TargetUserId), cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

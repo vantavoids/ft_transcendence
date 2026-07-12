@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Roles.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -72,6 +73,8 @@ internal sealed class UpdateRoleHandler(
 
 		if (snapshot is { } snap)
 			await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snap, cancellationToken);
+
+		await eventBus.PublishAsync(new GuildRolesChanged(command.GuildId), cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

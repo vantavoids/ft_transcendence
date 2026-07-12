@@ -68,6 +68,13 @@ public interface IUserBroadcaster
 	Task BroadcastCategoryDeletedAsync(long guildId, long categoryId, CancellationToken ct);
 
 	/// <summary>
+	/// signals the guild:{guildId} group that its role set changed / a single
+	/// member's roles or nickname changed, so clients re-fetch the affected view.
+	/// </summary>
+	Task BroadcastRolesChangedAsync(long guildId, CancellationToken ct);
+	Task BroadcastMemberUpdatedAsync(long guildId, long userId, CancellationToken ct);
+
+	/// <summary>
 	/// force-terminates every active connection of <paramref name="userId"/> at
 	/// the transport level, regardless of client cooperation. used for
 	/// user.logged_out/user.deleted so a stale or malicious client can't keep

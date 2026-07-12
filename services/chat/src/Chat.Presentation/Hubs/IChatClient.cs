@@ -37,6 +37,9 @@ public interface IChatClient
 
 	Task MemberJoined(GuildMemberEvent evt);
 	Task MemberLeft(GuildMemberEvent evt);
+	Task MemberUpdated(GuildMemberEvent evt);
+
+	Task RolesChanged(string guildId);
 
 	Task UserPresence(UserPresenceEvent evt);
 

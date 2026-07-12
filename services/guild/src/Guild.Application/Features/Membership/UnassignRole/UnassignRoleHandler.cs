@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
@@ -43,6 +44,9 @@ internal sealed class UnassignRoleHandler(
 			return unassignResult.Error;
 
 		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, cancellationToken);
+
+		await eventBus.PublishAsync(
+			new GuildMemberUpdated(command.GuildId, command.TargetUserId), cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
