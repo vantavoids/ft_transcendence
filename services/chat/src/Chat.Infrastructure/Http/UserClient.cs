@@ -26,4 +26,10 @@ internal sealed class UserClient(HttpClient http) : IUserClient
 			return null;
 		}
 	}
+
+	public async Task<IReadOnlyList<long>> GetFriendIdsAsync(long userId, CancellationToken ct)
+	{
+		var ids = await http.GetFromJsonAsync<List<string>>($"users/{userId}/friend-ids", JsonOptions, ct);
+		return ids?.Select(long.Parse).ToList() ?? [];
+	}
 }

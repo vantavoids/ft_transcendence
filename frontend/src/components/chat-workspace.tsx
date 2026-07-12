@@ -25,7 +25,7 @@ import { useNotifications } from '../shared/lib/use-notifications';
 import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
-import { stopChatHub } from '../shared/api/chat-hub';
+import { onChatHubEvent, stopChatHub } from '../shared/api/chat-hub';
 import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
@@ -167,6 +167,25 @@ export function ChatWorkspace() {
       cancelled = true;
     };
   }, [currentUserId]);
+
+  // live presence: patch a friend's status dot when they go online/offline,
+  // instead of only reflecting the status fetched at load.
+  useEffect(() => {
+    return onChatHubEvent('UserPresence', (event) => {
+      const status = event.status === 'dnd' ? 'idle' : event.status;
+      setFriends((current) => {
+        let changed = false;
+        const next = current.map((friend) => {
+          if (friend.id !== event.user_id || friend.status === status) {
+            return friend;
+          }
+          changed = true;
+          return { ...friend, status };
+        });
+        return changed ? next : current;
+      });
+    });
+  }, []);
 
   const activeDmDetails =
     chatMode === 'dm' && dmWorkspace.activeDm
