@@ -74,12 +74,18 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
   }
 
   function handleOpenContextMenu(
-    guild: { id: string; name: string },
+    guild: { id: string; name: string; owner_id: string },
     event: MouseEvent<HTMLButtonElement>
   ) {
     event.preventDefault();
     setTooltip(null);
-    setContextMenu({ guildId: guild.id, guildName: guild.name, x: event.clientX, y: event.clientY });
+    setContextMenu({
+      guildId: guild.id,
+      guildName: guild.name,
+      ownerId: guild.owner_id,
+      x: event.clientX,
+      y: event.clientY
+    });
   }
 
   function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {

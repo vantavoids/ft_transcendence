@@ -25,6 +25,7 @@ import { getUsersByIds } from '../shared/api/user';
 import { type UseNotificationsResult } from '../shared/lib/use-notifications';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { useToast } from '../shared/ui/toast';
+import { muteDurations, muteDurationToIso, type MuteDuration } from '../shared/lib/mute-durations';
 
 type NotificationTone = 'aqua' | 'yellow' | 'pink';
 
