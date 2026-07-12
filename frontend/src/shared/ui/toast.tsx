@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
 
 type ToastTone = 'error' | 'success' | 'info';
@@ -22,8 +30,8 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-function getToastClasses(tone: ToastTone) {
-  switch (tone) {
+function getToastClasses(tone?: ToastTone) {
+  switch (tone ?? 'error') {
     case 'success':
       return {
         shell: 'border-lime/25 bg-[rgba(14,18,16,0.96)] text-lime',
@@ -62,7 +70,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const pushToast = useCallback(
     ({ durationMs = 5000, tone = 'error', ...toast }: ToastInput) => {
       const id = `toast-${++idRef.current}`;
-      setToasts((current) => [...current, { id, tone, durationMs, ...toast }]);
+      const resolvedTone: ToastTone = tone ?? 'error';
+      setToasts((current) => [...current, { id, tone: resolvedTone, durationMs, ...toast }]);
 
       const timer = window.setTimeout(() => {
         dismissToast(id);
