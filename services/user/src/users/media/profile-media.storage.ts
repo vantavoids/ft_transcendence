@@ -17,7 +17,6 @@ export type ProfileMediaKind = 'avatar' | 'banner';
 @Injectable()
 export class ProfileMediaStorageService {
   private readonly client: S3Client;
-  private readonly baseUrl: string;
   private readonly bucket: string;
 
   constructor(private readonly config: ConfigService<ValidatedEnv, true>) {
@@ -30,7 +29,6 @@ export class ProfileMediaStorageService {
         secretAccessKey: this.config.getOrThrow('MINIO_SECRET_KEY'),
       },
     });
-    this.baseUrl = this.config.getOrThrow('BASE_URL').replace(/\/$/, '');
     this.bucket = this.config.getOrThrow('MINIO_USER_BUCKET');
   }
 
@@ -69,7 +67,9 @@ export class ProfileMediaStorageService {
 
   extractKeyFromUrl(url: string, kind: ProfileMediaKind, userId: string): string | null {
     try {
-      const parsed = new URL(url);
+      // a placeholder base lets this parse both legacy absolute URLs and the new
+      // origin-relative ones (/s3/...); the base is ignored for absolute inputs.
+      const parsed = new URL(url, 'http://placeholder');
       const prefix = `/s3/${this.bucket}/${this.buildKeyPrefix(kind, userId)}`;
       if (!parsed.pathname.startsWith(prefix)) {
         return null;
@@ -89,7 +89,9 @@ export class ProfileMediaStorageService {
     return `${kind}s/${userId}/`;
   }
 
+  // origin-relative so the browser loads media from whatever host it opened the
+  // app on (not a hardcoded localhost), keeping avatars/banners same-origin.
   private buildPublicUrl(key: string): string {
-    return `${this.baseUrl}/s3/${this.bucket}/${key}`;
+    return `/s3/${this.bucket}/${key}`;
   }
 }
