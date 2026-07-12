@@ -71,6 +71,18 @@ func (o *Orchestrator) CreateNotif(ctx context.Context, in CreateInput) error {
 	return nil
 }
 
+// PushFriendsChanged sends a transient signal (no persisted row, no badge) telling
+// the user's client that their friend graph changed so it re-fetches the friends
+// list. used for unfriends, which we do not surface to the removed user as a
+// visible notification. the client recognises the sentinel type and reloads.
+func (o *Orchestrator) PushFriendsChanged(userID int64) {
+	o.hub.Push(userID, NotificationSSE{
+		ID:      "0",
+		Type:    "friends_changed",
+		Payload: json.RawMessage("{}"),
+	})
+}
+
 type ListInput struct {
 	Read             *bool
 	IncludeDismissed *bool

@@ -619,6 +619,7 @@ The user's User-owned data for a GDPR self-serve export: profile, friends, and t
 |-------|---------|---------|
 | `friend.request_sent` | `{ friendship_id, requester_id, addressee_id }` | Friend request sent |
 | `friend.accepted` | `{ friendship_id, requester_id, addressee_id }` | A pending friend request was accepted by the addressee. Consumed by Notification (`friend_accept` notification to the requester), which pushes it over SSE so the requester's friends list refreshes. |
+| `friend.removed` | `{ requester_id, addressee_id }` | An **accepted** friendship was deleted (unfriend). Consumed by Notification, which pushes a transient `friends_changed` SSE signal (no stored notification) to both parties so their friends lists re-fetch. Not published for declining/cancelling a pending request. |
 | `data.export_ready` | `{ user_id, email, download_url, expires_at }` | An async data-export job finished and the bundle is stored. Consumed by Notification to email the presigned download link. `email` is the recipient address (owned by Auth; the aggregator already holds it from Auth's export leg); `download_url` is a presigned MinIO GET URL; `expires_at` is its expiry. |
 
 ## RabbitMQ Events Consumed

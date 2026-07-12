@@ -275,6 +275,7 @@ This is the internal-perspective twin of `GET /notifications/preferences`: every
 | `call.incoming` | Always | `type: incoming_call` for `callee_id` - prompts them to open the app |
 | `friend.request_sent` | Always | `type: friend_request` for `addressee_id` |
 | `friend.accepted` | Always | `type: friend_accept` for `requester_id` - tells them their request was accepted |
+| `friend.removed` | Always | no stored notification; pushes a transient `friends_changed` SSE signal to both `requester_id` and `addressee_id` so their friends lists re-fetch |
 | `guild.invite_created` | `invited_user_id` is present | `type: guild_invite` for `invited_user_id` |
 | `guild.member_joined` | Always | `type: guild_welcome` for the joining user |
 | `user.deleted` | Always | Delete every notification row where `user_id` or `actor_id` matches the deleted user, and drop the user's `notification_preferences` rows. Also sends the `account_deleted` confirmation email (see [Email delivery](#email-delivery)). |

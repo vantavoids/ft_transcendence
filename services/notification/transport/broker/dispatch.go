@@ -155,6 +155,19 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			Payload:  FriendAcceptPayload{},
 		})
 
+	case "friend.removed":
+		ev, err := parse[FriendRemovedEvent](d)
+		if err != nil {
+			return err
+		}
+
+		// unfriend is not a visible notification; push a transient "friends
+		// changed" signal to both parties so their friends lists re-fetch. the
+		// actor already updated optimistically, so their re-fetch is a no-op.
+		orch.PushFriendsChanged(ev.RequesterID)
+		orch.PushFriendsChanged(ev.AddresseeID)
+		return nil
+
 	case "guild.invite_created":
 		ev, err := parse[GuildInviteCreatedEvent](d)
 		if err != nil {
