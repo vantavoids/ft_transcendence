@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Channels.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -13,6 +14,8 @@ internal sealed class UpdateChannelHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
 	IChannelCategoryRepository categories,
+	IChannelPermissionOverwriteRepository overwrites,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -70,6 +73,16 @@ internal sealed class UpdateChannelHandler(
 		}
 
 		channels.Update(channel);
+
+		// eligibility can shift when a rename/move is combined with existing
+		// overwrites, so re-resolve against the channel's current overwrites and
+		// let Chat reconcile the visible set for each targeted member.
+		var channelOverwrites = await overwrites.GetForChannelAsync(channel.Id, cancellationToken);
+		var eligible = ChannelAccess.ReadersOf(guild, channel.Id, channelOverwrites);
+		await eventBus.PublishAsync(
+			new GuildChannelUpdated(command.GuildId, ChannelPayload.From(channel), eligible),
+			cancellationToken);
+
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return ChannelResponse.From(channel);

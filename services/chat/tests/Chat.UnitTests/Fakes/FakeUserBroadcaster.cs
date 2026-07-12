@@ -62,6 +62,48 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 		return Task.CompletedTask;
 	}
 
+	private readonly List<(IReadOnlyList<long> UserIds, GuildChannelDto Channel)> _channelCreatedCalls = [];
+	private readonly List<(IReadOnlyList<long> UserIds, GuildChannelDto Channel)> _channelUpdatedCalls = [];
+	private readonly List<(IReadOnlyList<long> UserIds, long GuildId, long ChannelId)> _channelDeletedCalls = [];
+	private readonly List<(long GuildId, long UserId)> _memberJoinedCalls = [];
+	private readonly List<(long GuildId, long UserId)> _memberLeftCalls = [];
+
+	public IReadOnlyList<(IReadOnlyList<long> UserIds, GuildChannelDto Channel)> ChannelCreatedCalls => _channelCreatedCalls;
+	public IReadOnlyList<(IReadOnlyList<long> UserIds, GuildChannelDto Channel)> ChannelUpdatedCalls => _channelUpdatedCalls;
+	public IReadOnlyList<(IReadOnlyList<long> UserIds, long GuildId, long ChannelId)> ChannelDeletedCalls => _channelDeletedCalls;
+	public IReadOnlyList<(long GuildId, long UserId)> MemberJoinedCalls => _memberJoinedCalls;
+	public IReadOnlyList<(long GuildId, long UserId)> MemberLeftCalls => _memberLeftCalls;
+
+	public Task BroadcastChannelCreatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct)
+	{
+		_channelCreatedCalls.Add((userIds, channel));
+		return Task.CompletedTask;
+	}
+
+	public Task BroadcastChannelUpdatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct)
+	{
+		_channelUpdatedCalls.Add((userIds, channel));
+		return Task.CompletedTask;
+	}
+
+	public Task BroadcastChannelDeletedAsync(IReadOnlyList<long> userIds, long guildId, long channelId, CancellationToken ct)
+	{
+		_channelDeletedCalls.Add((userIds, guildId, channelId));
+		return Task.CompletedTask;
+	}
+
+	public Task BroadcastMemberJoinedAsync(long guildId, long userId, CancellationToken ct)
+	{
+		_memberJoinedCalls.Add((guildId, userId));
+		return Task.CompletedTask;
+	}
+
+	public Task BroadcastMemberLeftAsync(long guildId, long userId, CancellationToken ct)
+	{
+		_memberLeftCalls.Add((guildId, userId));
+		return Task.CompletedTask;
+	}
+
 	// EvictedCount is returned from both evict methods so consumer tests can
 	// exercise whatever the caller does with the purged-subscription count.
 	public int EvictedCount { get; set; }

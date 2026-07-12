@@ -53,6 +53,22 @@ internal static class ChannelAccess
 		CancellationToken cancellationToken) =>
 		PublishRevocationsAsync(eventBus, guild, snapshot, Group(channelId, afterChannelOverwrites), cancellationToken);
 
+	// members whose effective permissions include ReadMessages for the channel,
+	// given its current overwrites. feeds the eligible-user set on channel
+	// lifecycle events so Chat can target only members who may see the channel.
+	public static IReadOnlyList<long> ReadersOf(
+		GuildEntity guild, long channelId, IReadOnlyList<ChannelPermissionOverwrite> channelOverwrites)
+	{
+		var byChannel = Group(channelId, channelOverwrites);
+		var readers = new List<long>();
+		foreach (var member in guild.Members)
+		{
+			if (CanRead(guild, channelId, member.UserId, byChannel))
+				readers.Add(member.UserId);
+		}
+		return readers;
+	}
+
 	public static IEnumerable<long> MembersAffectedBy(
 		GuildEntity guild, OverwriteTargetType targetType, long targetId)
 	{

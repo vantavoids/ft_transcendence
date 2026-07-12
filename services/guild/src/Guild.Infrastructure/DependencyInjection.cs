@@ -82,6 +82,9 @@ public static class DependencyInjection
 				cfg.Message<GuildDeleted>(m => m.SetEntityName("guild.deleted"));
 				cfg.Message<GuildOwnerTransferred>(m => m.SetEntityName("guild.owner_transferred"));
 				cfg.Message<ChannelAccessRevoked>(m => m.SetEntityName("channel.access_revoked"));
+				cfg.Message<GuildChannelCreated>(m => m.SetEntityName("channel.created"));
+				cfg.Message<GuildChannelUpdated>(m => m.SetEntityName("channel.updated"));
+				cfg.Message<GuildChannelDeleted>(m => m.SetEntityName("channel.deleted"));
 
 				// inbound: bind the consumer's receive endpoint to Auth's user.deleted
 				// exchange. must match the SetEntityName Auth publishes under.

@@ -50,6 +50,22 @@ internal sealed class SignalRUserBroadcaster(
 	public Task BroadcastDmReadStateUpdatedAsync(long userId, DmReadStateResponse response, CancellationToken ct) =>
 		hub.Clients.User(userId.ToString()).DmReadStateUpdated(response);
 
+	public Task BroadcastChannelCreatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct) =>
+		hub.Clients.Users(userIds.Select(id => id.ToString()).ToList()).ChannelCreated(channel);
+
+	public Task BroadcastChannelUpdatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct) =>
+		hub.Clients.Users(userIds.Select(id => id.ToString()).ToList()).ChannelUpdated(channel);
+
+	public Task BroadcastChannelDeletedAsync(IReadOnlyList<long> userIds, long guildId, long channelId, CancellationToken ct) =>
+		hub.Clients.Users(userIds.Select(id => id.ToString()).ToList())
+			.ChannelDeleted(new ChannelDeletedEvent(guildId.ToString(), channelId.ToString()));
+
+	public Task BroadcastMemberJoinedAsync(long guildId, long userId, CancellationToken ct) =>
+		hub.Clients.Group($"guild:{guildId}").MemberJoined(new GuildMemberEvent(guildId.ToString(), userId.ToString()));
+
+	public Task BroadcastMemberLeftAsync(long guildId, long userId, CancellationToken ct) =>
+		hub.Clients.Group($"guild:{guildId}").MemberLeft(new GuildMemberEvent(guildId.ToString(), userId.ToString()));
+
 	public async Task<int> EvictFromGuildChannelsAsync(long userId, long guildId, CancellationToken ct)
 	{
 		var subscriptions = tracker.ConnectionsInGuild(userId, guildId);

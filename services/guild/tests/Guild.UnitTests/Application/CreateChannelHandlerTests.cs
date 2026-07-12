@@ -1,4 +1,5 @@
 using System.Reflection;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Channels.Common;
 using Guild.Application.Features.Channels.CreateChannel;
 using Guild.Domain.Guild;
@@ -51,7 +52,7 @@ public sealed class CreateChannelHandlerTests
 		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guildRepo, channelRepo, categoryRepo,
+			guildRepo, channelRepo, categoryRepo, new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
@@ -60,6 +61,33 @@ public sealed class CreateChannelHandlerTests
 
 		Assert.True(result.IsFailure);
 		Assert.Equal("Guild.MissingPermission", result.Error.Code);
+	}
+
+	[Fact]
+	public async Task HappyPath_PublishesChannelCreated_WithCreatorEligible()
+	{
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var cats = new FakeChannelCategoryRepository();
+		var bus = new FakeEventBus();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		guilds.Add(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, cats, bus,
+			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "general", Type: "text",
+				CategoryId: null, Topic: null, Position: 0));
+
+		Assert.True(result.Succeeded);
+		var evt = bus.Single<GuildChannelCreated>();
+		Assert.Equal(100, evt.GuildId);
+		Assert.Equal(result.Value.Id, evt.Channel.Id);
+		Assert.Contains(1L, evt.EligibleUserIds);
 	}
 
 	[Fact]
@@ -197,7 +225,7 @@ public sealed class CreateChannelHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, cats,
+			guilds, channels, cats, new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
@@ -228,7 +256,7 @@ public sealed class CreateChannelHandlerTests
 		}
 
 		return HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, categories,
+			guilds, channels, categories, new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = currentUser });
 	}
 

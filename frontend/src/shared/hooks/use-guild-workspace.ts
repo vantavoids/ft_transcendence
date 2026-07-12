@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { hasChannel, type ChannelCategory, type TextChannel } from '../../components/channel-list';
 import {
   listGuildCategories,
@@ -64,17 +64,38 @@ export type GuildWorkspace = {
 // /guilds management pages, not just chat.
 export function useGuildWorkspace(): GuildWorkspace {
   const { selectedGuildId, refreshGuilds, currentUserId } = useGuilds();
-  const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([]);
-  const [channels, setChannels] = useState<TextChannel[]>([]);
+  // raw server DTOs are kept so real-time channel events can be spliced in
+  // without a refetch; the sidebar-shaped views below are derived from them.
+  const [rawChannels, setRawChannels] = useState<GuildChannelDto[]>([]);
+  const [rawCategories, setRawCategories] = useState<GuildCategoryDto[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [channelReadStates, setChannelReadStates] = useState<Record<string, ChannelReadState>>({});
   const activeChannelRef = useRef<string | null>(null);
   activeChannelRef.current = activeChannel;
+  const selectedGuildIdRef = useRef<string | null>(selectedGuildId);
+  selectedGuildIdRef.current = selectedGuildId;
   const [channelsRefreshKey, setChannelsRefreshKey] = useState(0);
 
+  const channelCategories = useMemo(
+    () => buildChannelCategories(rawChannels, rawCategories),
+    [rawChannels, rawCategories]
+  );
+  const channels = useMemo<TextChannel[]>(
+    () => rawChannels.map((channel) => ({ id: channel.id, name: channel.name })),
+    [rawChannels]
+  );
+  // stable identity of the channel set: the join/leave-all effect keys off this
+  // so a rename (same ids) doesn't tear down and re-join every SignalR group.
+  const channelIdsKey = useMemo(() => channels.map((channel) => channel.id).join(','), [channels]);
+
   useEffect(() => {
-    const unsubscribeJoined = onChatHubEvent('GuildJoined', () => {
+    const unsubscribeJoined = onChatHubEvent('GuildJoined', (event) => {
       void refreshGuilds();
+      // if the just-joined guild is the one on screen, its channel load may have
+      // raced the membership commit and 403'd; re-load now that we are a member.
+      if (event.guild_id === selectedGuildIdRef.current) {
+        setChannelsRefreshKey((key) => key + 1);
+      }
     });
 
     const unsubscribeLeft = onChatHubEvent('GuildLeft', () => {
@@ -89,8 +110,8 @@ export function useGuildWorkspace(): GuildWorkspace {
 
   useEffect(() => {
     if (!selectedGuildId) {
-      setChannelCategories([]);
-      setChannels([]);
+      setRawChannels([]);
+      setRawCategories([]);
       return;
     }
 
@@ -106,26 +127,12 @@ export function useGuildWorkspace(): GuildWorkspace {
           return;
         }
 
-        const flatChannels: TextChannel[] = channelDtos.map((channel) => ({
-          id: channel.id,
-          name: channel.name
-        }));
-        setChannelCategories(buildChannelCategories(channelDtos, categoryDtos));
-        setChannels(flatChannels);
-
-        setActiveChannel((current) => {
-          if (current && hasChannel(current, flatChannels)) {
-            return current;
-          }
-          const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
-          return storedChannelId && hasChannel(storedChannelId, flatChannels)
-            ? storedChannelId
-            : (flatChannels[0]?.id ?? null);
-        });
+        setRawChannels(channelDtos);
+        setRawCategories(categoryDtos);
       } catch {
         if (!cancelled) {
-          setChannelCategories([]);
-          setChannels([]);
+          setRawChannels([]);
+          setRawCategories([]);
         }
       }
     }
@@ -136,6 +143,56 @@ export function useGuildWorkspace(): GuildWorkspace {
       cancelled = true;
     };
   }, [selectedGuildId, channelsRefreshKey]);
+
+  // keep the active channel valid as the channel set changes (initial load, a
+  // live create/delete). when the open channel is removed, fall back to the
+  // last-used or first available channel.
+  useEffect(() => {
+    setActiveChannel((current) => {
+      if (current && hasChannel(current, channels)) {
+        return current;
+      }
+      const storedChannelId = window.sessionStorage.getItem(LAST_CHAT_CHANNEL_KEY);
+      return storedChannelId && hasChannel(storedChannelId, channels)
+        ? storedChannelId
+        : (channels[0]?.id ?? null);
+    });
+  }, [channels]);
+
+  // splice live channel lifecycle events into the raw set. Guild targets these
+  // only at members who may read the channel, so anything that arrives is
+  // something the current user is allowed to see.
+  useEffect(() => {
+    const upsert = (channel: GuildChannelDto) => {
+      if (channel.guild_id !== selectedGuildIdRef.current) {
+        return;
+      }
+      setRawChannels((current) => {
+        const index = current.findIndex((existing) => existing.id === channel.id);
+        if (index === -1) {
+          return [...current, channel];
+        }
+        const next = [...current];
+        next[index] = channel;
+        return next;
+      });
+    };
+
+    const unsubscribeCreated = onChatHubEvent('ChannelCreated', upsert);
+    const unsubscribeUpdated = onChatHubEvent('ChannelUpdated', upsert);
+    const unsubscribeDeleted = onChatHubEvent('ChannelDeleted', (event) => {
+      if (event.guild_id !== selectedGuildIdRef.current) {
+        return;
+      }
+      setRawChannels((current) => current.filter((channel) => channel.id !== event.channel_id));
+    });
+
+    return () => {
+      unsubscribeCreated();
+      unsubscribeUpdated();
+      unsubscribeDeleted();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,13 +222,14 @@ export function useGuildWorkspace(): GuildWorkspace {
   }, []);
 
   // join every channel of the active guild (not just the one being viewed),
-  // so unread badges for other channels update live too.
+  // so unread badges for other channels update live too. keyed off the stable
+  // id set so a live rename (same ids) does not re-join everything.
   useEffect(() => {
-    if (channels.length === 0) {
+    if (!channelIdsKey) {
       return;
     }
 
-    const channelIds = channels.map((channel) => channel.id);
+    const channelIds = channelIdsKey.split(',');
 
     function joinAll() {
       for (const channelId of channelIds) {
@@ -191,7 +249,7 @@ export function useGuildWorkspace(): GuildWorkspace {
         leaveChatChannel(channelId).catch(() => {});
       }
     };
-  }, [channels]);
+  }, [channelIdsKey]);
 
   useEffect(() => {
     const unsubscribeReadState = onChatHubEvent('ReadStateUpdated', (event) => {

@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../config/env';
 import { getAccessToken, invalidateSession } from '../lib/session';
 import { refreshAccessToken } from './client';
 import type { SendChannelMessageResponse, SendDirectMessageResponse } from './chat';
+import type { GuildChannelDto } from './guild';
 
 export type MessageEditedEvent = {
   id: string;
@@ -69,6 +70,16 @@ export type GuildLeftEvent = {
   guild_id: string;
 };
 
+export type ChannelDeletedEvent = {
+  guild_id: string;
+  channel_id: string;
+};
+
+export type GuildMemberEvent = {
+  guild_id: string;
+  user_id: string;
+};
+
 export type ChatHubErrorEvent = {
   code: string;
   message: string;
@@ -89,6 +100,11 @@ export type ChatHubEvents = {
   UserPresence: (event: UserPresenceEvent) => void;
   GuildJoined: (event: GuildJoinedEvent) => void;
   GuildLeft: (event: GuildLeftEvent) => void;
+  ChannelCreated: (event: GuildChannelDto) => void;
+  ChannelUpdated: (event: GuildChannelDto) => void;
+  ChannelDeleted: (event: ChannelDeletedEvent) => void;
+  MemberJoined: (event: GuildMemberEvent) => void;
+  MemberLeft: (event: GuildMemberEvent) => void;
   Error: (event: ChatHubErrorEvent) => void;
 };
 

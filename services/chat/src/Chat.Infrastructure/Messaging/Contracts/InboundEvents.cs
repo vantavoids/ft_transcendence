@@ -18,6 +18,28 @@ public sealed record GuildMemberLeft(long GuildId, long UserId);
 [MessageUrn("Guild.Application.Contracts:ChannelAccessRevoked")]
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
 
+[MessageUrn("Guild.Application.Contracts:GuildChannelCreated")]
+public sealed record GuildChannelCreated(long GuildId, ChannelPayload Channel, IReadOnlyList<long> EligibleUserIds);
+
+[MessageUrn("Guild.Application.Contracts:GuildChannelUpdated")]
+public sealed record GuildChannelUpdated(long GuildId, ChannelPayload Channel, IReadOnlyList<long> EligibleUserIds);
+
+[MessageUrn("Guild.Application.Contracts:GuildChannelDeleted")]
+public sealed record GuildChannelDeleted(long GuildId, long ChannelId, IReadOnlyList<long> EligibleUserIds);
+
+// mirrors Guild's ChannelPayload wire shape (snake_case, snowflake ids as
+// quoted strings). property names must match the publisher exactly.
+public sealed record ChannelPayload(
+	string Id,
+	string GuildId,
+	string? CategoryId,
+	string Name,
+	string? Topic,
+	string Type,
+	int Position,
+	bool IsNsfw,
+	int SlowmodeSeconds);
+
 [MessageUrn("Auth.Application.Contracts:UserLoggedOut")]
 public sealed record UserLoggedOut(long UserId);
 
