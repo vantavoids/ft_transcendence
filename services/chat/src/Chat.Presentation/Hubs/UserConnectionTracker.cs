@@ -121,6 +121,19 @@ public sealed class UserConnectionTracker
 		return matches;
 	}
 
+	// snapshot of every open connection id for the user. used to add/remove all
+	// of a user's connections to a guild:{id} group when they join/leave a guild
+	// while already connected (guild-group membership is derived from guild
+	// membership, so it needs no per-connection bookkeeping of its own).
+	public IReadOnlyList<string> ConnectionIds(long userId)
+	{
+		if (!_users.TryGetValue(userId, out var state))
+			return [];
+
+		lock (state)
+			return state.Connections.Keys.ToList();
+	}
+
 	public IReadOnlyList<string> ConnectionsInChannel(long userId, long channelId)
 	{
 		if (!_users.TryGetValue(userId, out var state))

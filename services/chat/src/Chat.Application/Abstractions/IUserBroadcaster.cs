@@ -13,6 +13,20 @@ public interface IUserBroadcaster
 	Task BroadcastGuildJoinedAsync(long userId, long guildId, string guildName, CancellationToken ct);
 	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
 
+	/// <summary>
+	/// subscribes every open connection of <paramref name="userId"/> to the
+	/// <c>guild:{guildId}</c> group so they receive that guild's real-time
+	/// broadcasts. called when the user joins a guild while already connected
+	/// (connect-time subscription is handled by the hub itself).
+	/// </summary>
+	Task AddUserToGuildGroupAsync(long userId, long guildId, CancellationToken ct);
+
+	/// <summary>
+	/// removes every open connection of <paramref name="userId"/> from the
+	/// <c>guild:{guildId}</c> group when they leave / are kicked from the guild.
+	/// </summary>
+	Task RemoveUserFromGuildGroupAsync(long userId, long guildId, CancellationToken ct);
+
 	Task BroadcastChannelReadStateUpdatedAsync(long userId, ChannelReadStateResponse response, CancellationToken ct);
 	Task BroadcastDmReadStateUpdatedAsync(long userId, DmReadStateResponse response, CancellationToken ct);
 

@@ -28,6 +28,23 @@ public sealed class ChatHub(
 	{
 		if (connectionTracker.TrackConnected(Context.GetUserId(), Context.ConnectionId, Context))
 			await eventBus.PublishAsync(new UserOnline(Context.GetUserId()), CancellationToken.None);
+
+		// subscribe this connection to the guild:{id} group of every guild the
+		// user belongs to, so guild-scoped broadcasts (channel/member/role
+		// changes, presence) reach them. a Guild outage must not reject the
+		// connection: log-and-continue, the client still gets DMs + channel
+		// broadcasts it explicitly joins.
+		try
+		{
+			var guildIds = await guildClient.GetUserGuildIdsAsync(Context.GetUserId(), Context.ConnectionAborted);
+			foreach (var guildId in guildIds)
+				await Groups.AddToGroupAsync(Context.ConnectionId, $"guild:{guildId}", Context.ConnectionAborted);
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			// swallow: guild-group membership is best-effort real-time sugar
+		}
+
 		await base.OnConnectedAsync();
 	}
 

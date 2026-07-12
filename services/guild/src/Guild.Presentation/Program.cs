@@ -168,6 +168,7 @@ ChannelMembershipEndpoint.MapInternalRoutes(internalRoutes);
 OwnedGuildsCountEndpoint.MapInternalRoutes(internalRoutes);
 UserDataExportEndpoint.MapInternalRoutes(internalRoutes);
 VisibleChannelsEndpoint.MapInternalRoutes(internalRoutes);
+UserGuildsEndpoint.MapInternalRoutes(internalRoutes);
 
 app.Run();
 

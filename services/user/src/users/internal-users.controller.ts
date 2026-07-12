@@ -52,4 +52,13 @@ export class InternalUsersController {
   ): Promise<UserDataExportResponse> {
     return this.users.getInternalDataExport(userId);
   }
+
+  // accepted-friend ids for the Chat Service's real-time fan-out (presence,
+  // profile, social). ids are quoted strings to match the wire policy.
+  @Get(':userId/friend-ids')
+  async getFriendIds(
+    @Param('userId', ParseSnowflakePipe) userId: string,
+  ): Promise<string[]> {
+    return this.users.listFriendIds(userId);
+  }
 }
