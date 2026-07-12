@@ -71,6 +71,24 @@ public sealed class GuildMemberLeftConsumer(
 	}
 }
 
+public sealed class GuildDeletedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildDeletedConsumer> logger)
+	: IConsumer<GuildDeleted>
+{
+	public async Task Consume(ConsumeContext<GuildDeleted> context)
+	{
+		var msg = context.Message;
+
+		// notify every connected member (the guild group) that the guild is gone
+		// so their client drops it live. server-side group membership becomes
+		// stale but harmless: no further broadcasts target a deleted guild.
+		await broadcaster.BroadcastGuildDeletedAsync(msg.GuildId, context.CancellationToken);
+
+		logger.LogDebug("guild.deleted consumed: guild_id={GuildId}", msg.GuildId);
+	}
+}
+
 public sealed class ChannelAccessRevokedConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<ChannelAccessRevokedConsumer> logger)

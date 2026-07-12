@@ -100,6 +100,7 @@ export type ChatHubEvents = {
   UserPresence: (event: UserPresenceEvent) => void;
   GuildJoined: (event: GuildJoinedEvent) => void;
   GuildLeft: (event: GuildLeftEvent) => void;
+  GuildDeleted: (guildId: string) => void;
   ChannelCreated: (event: GuildChannelDto) => void;
   ChannelUpdated: (event: GuildChannelDto) => void;
   ChannelDeleted: (event: ChannelDeletedEvent) => void;

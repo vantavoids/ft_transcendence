@@ -38,6 +38,15 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 		return Task.CompletedTask;
 	}
 
+	private readonly List<long> _guildDeletedCalls = [];
+	public IReadOnlyList<long> GuildDeletedCalls => _guildDeletedCalls;
+
+	public Task BroadcastGuildDeletedAsync(long guildId, CancellationToken ct)
+	{
+		_guildDeletedCalls.Add(guildId);
+		return Task.CompletedTask;
+	}
+
 	public Task AddUserToGuildGroupAsync(long userId, long guildId, CancellationToken ct)
 	{
 		_addGuildGroupCalls.Add((userId, guildId));
