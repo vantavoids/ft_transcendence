@@ -82,12 +82,3 @@ export function toUserStatusLabel(status: UserStatus): string {
   }
 }
 
-export function toFriend(friend: { id: string; username: string; display_name: string; status: UserStatus; friendship_status: 'accepted' | 'pending' | 'blocked'; }): Friend {
-  return {
-    id: friend.id,
-    name: friend.display_name || friend.username,
-    status: toSidebarStatus(friend.status),
-    accent: accentForUserId(friend.id),
-    note: friend.friendship_status === 'pending' ? 'Pending request' : ''
-  };
-}

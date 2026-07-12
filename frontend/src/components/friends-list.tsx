@@ -35,9 +35,11 @@ import {
   type SearchUserDto
 } from '../shared/api/user';
 import { useToast } from '../shared/ui/toast';
+import { dispatchFriendsChanged } from '../shared/lib/friends-events';
 
 export type Friend = {
   id: string;
+  friendshipId: string;
   name: string;
   status: DirectMessage['status'];
   accent: ChatMessageData['accent'];
@@ -264,6 +266,10 @@ export function FriendsList({
     try {
       await updateFriendship(friendshipId, 'accepted');
       setActionSuccess('Friend request accepted.');
+      // reload our friends list (the accepter's side): refreshEverything only
+      // reloads requests + discovery, so the new friend would otherwise not
+      // appear until a manual refresh.
+      dispatchFriendsChanged();
       await refreshEverything();
     } catch (acceptError) {
       setActionError(acceptError instanceof Error ? acceptError.message : 'Failed to accept.');

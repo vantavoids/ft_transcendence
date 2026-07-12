@@ -246,6 +246,7 @@ List a user's friends.
 [
   {
     "id": "<snowflake>",
+    "friendship_id": "<snowflake>",
     "username": "tstephan",
     "display_name": "SkyDogzz",
     "avatar_url": "https://...",
@@ -254,6 +255,8 @@ List a user's friends.
   }
 ]
 ```
+
+`friendship_id` is the `friendships` row id, so the UI can `DELETE /friends/{id}` to unfriend without a separate lookup.
 
 ---
 

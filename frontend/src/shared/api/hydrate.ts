@@ -61,6 +61,7 @@ export function toDirectMessage(
 export function toFriend(friend: FriendDto): Friend {
   return {
     id: friend.id,
+    friendshipId: friend.friendship_id,
     name: friend.display_name || friend.username,
     status: toSidebarStatus(friend.status),
     accent: accentForId(friend.id),

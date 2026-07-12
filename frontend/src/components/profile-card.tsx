@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageCircle, Shield, Trophy, X } from 'lucide-react';
+import { MessageCircle, Shield, Trophy, UserMinus, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import type { GuildMember } from './guild-member-list';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
@@ -10,13 +10,15 @@ type ProfileCardProps = {
   variant?: 'modal' | 'side';
   onClose: () => void;
   onSendMessage?: (member: GuildMember) => void;
+  onUnfriend?: (member: GuildMember) => void;
 };
 
 export function ProfileCard({
   member,
   variant = 'modal',
   onClose,
-  onSendMessage
+  onSendMessage,
+  onUnfriend
 }: ProfileCardProps) {
   useCloseOnEscape(onClose);
 
@@ -97,6 +99,17 @@ export function ProfileCard({
           >
             <MessageCircle className="h-4 w-4" strokeWidth={2} />
             Send message
+          </button>
+        ) : null}
+
+        {onUnfriend ? (
+          <button
+            type="button"
+            onClick={() => onUnfriend(member)}
+            className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-md border border-pink/40 bg-pink/10 text-sm font-bold text-pink transition hover:bg-pink/20"
+          >
+            <UserMinus className="h-4 w-4" strokeWidth={2} />
+            Unfriend
           </button>
         ) : null}
       </div>

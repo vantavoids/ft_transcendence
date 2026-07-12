@@ -347,6 +347,7 @@ export class FriendshipsRepository {
   private toFriendSummary(row: FriendListRow): FriendSummaryResponse {
     return {
       id: row.id,
+      friendship_id: row.friendship_id,
       username: row.username,
       display_name: row.display_name,
       avatar_url: row.avatar_url,
