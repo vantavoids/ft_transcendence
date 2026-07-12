@@ -26,7 +26,8 @@ public sealed class ChatHub(
 
 	public override async Task OnConnectedAsync()
 	{
-		if (connectionTracker.TrackConnected(Context.GetUserId(), Context.ConnectionId, Context))
+		var isFirstConnection = connectionTracker.TrackConnected(Context.GetUserId(), Context.ConnectionId, Context);
+		if (isFirstConnection)
 			await eventBus.PublishAsync(new UserOnline(Context.GetUserId()), CancellationToken.None);
 
 		// subscribe this connection to the guild:{id} group of every guild the
@@ -39,10 +40,15 @@ public sealed class ChatHub(
 			var guildIds = await guildClient.GetUserGuildIdsAsync(Context.GetUserId(), Context.ConnectionAborted);
 			foreach (var guildId in guildIds)
 				await Groups.AddToGroupAsync(Context.ConnectionId, $"guild:{guildId}", Context.ConnectionAborted);
+
+			// only the first connection flips the user to online; extra tabs are
+			// already covered. tell co-guild-members and friends live.
+			if (isFirstConnection)
+				await BroadcastPresenceAsync(Context.GetUserId(), "online", guildIds, Context.ConnectionAborted);
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			// swallow: guild-group membership is best-effort real-time sugar
+			// swallow: guild-group membership + presence are best-effort real-time sugar
 		}
 
 		await base.OnConnectedAsync();
@@ -51,8 +57,39 @@ public sealed class ChatHub(
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
 		if (connectionTracker.TrackDisconnected(Context.GetUserId(), Context.ConnectionId))
+		{
 			await eventBus.PublishAsync(new UserOffline(Context.GetUserId()), CancellationToken.None);
+
+			// last connection closed: the user is now offline for everyone who can
+			// see them. best-effort, must not throw out of the disconnect path.
+			try
+			{
+				var guildIds = await guildClient.GetUserGuildIdsAsync(Context.GetUserId(), CancellationToken.None);
+				await BroadcastPresenceAsync(Context.GetUserId(), "offline", guildIds, CancellationToken.None);
+			}
+			catch
+			{
+				// swallow: presence is best-effort
+			}
+		}
+
 		await base.OnDisconnectedAsync(exception);
+	}
+
+	// fans a presence change out to everyone who may see the user: every guild
+	// group they belong to (co-members) plus their friends (who may share no
+	// guild). a friend who is also a co-member receives it twice; the client
+	// handler is idempotent so that is harmless.
+	private async Task BroadcastPresenceAsync(long userId, string status, IReadOnlyList<long> guildIds, CancellationToken ct)
+	{
+		var evt = new UserPresenceEvent(userId.ToString(), status);
+
+		foreach (var guildId in guildIds)
+			await Clients.Group($"guild:{guildId}").UserPresence(evt);
+
+		var friendIds = await userClient.GetFriendIdsAsync(userId, ct);
+		if (friendIds.Count > 0)
+			await Clients.Users(friendIds.Select(id => id.ToString()).ToList()).UserPresence(evt);
 	}
 
 	public async Task JoinChannel(long channelId)

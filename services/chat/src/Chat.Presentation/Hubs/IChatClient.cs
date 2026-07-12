@@ -33,8 +33,11 @@ public interface IChatClient
 	Task MemberJoined(GuildMemberEvent evt);
 	Task MemberLeft(GuildMemberEvent evt);
 
+	Task UserPresence(UserPresenceEvent evt);
+
 	Task Error(string code, string message);
 }
 
 public sealed record ChannelDeletedEvent(string GuildId, string ChannelId);
 public sealed record GuildMemberEvent(string GuildId, string UserId);
+public sealed record UserPresenceEvent(string UserId, string Status);

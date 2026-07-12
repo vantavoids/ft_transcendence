@@ -198,5 +198,22 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
     };
   }, [guildId, load]);
 
+  // live presence: update a member's status dot without re-fetching the roster.
+  useEffect(() => {
+    return onChatHubEvent('UserPresence', (event) => {
+      setMembers((current) => {
+        let changed = false;
+        const next = current.map((member) => {
+          if (member.userId !== event.user_id || member.status === event.status) {
+            return member;
+          }
+          changed = true;
+          return { ...member, status: event.status };
+        });
+        return changed ? next : current;
+      });
+    });
+  }, []);
+
   return { members, roles, isLoading, error, refresh: load };
 }
