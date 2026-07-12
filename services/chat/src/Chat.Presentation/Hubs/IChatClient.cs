@@ -24,5 +24,16 @@ public interface IChatClient
 
 	Task GuildJoined(string guildId, string guildName);
 	Task GuildLeft(string guildId);
+
+	Task ChannelCreated(GuildChannelDto channel);
+	Task ChannelUpdated(GuildChannelDto channel);
+	Task ChannelDeleted(ChannelDeletedEvent evt);
+
+	Task MemberJoined(GuildMemberEvent evt);
+	Task MemberLeft(GuildMemberEvent evt);
+
 	Task Error(string code, string message);
 }
+
+public sealed record ChannelDeletedEvent(string GuildId, string ChannelId);
+public sealed record GuildMemberEvent(string GuildId, string UserId);

@@ -31,6 +31,22 @@ public interface IUserBroadcaster
 	Task BroadcastDmReadStateUpdatedAsync(long userId, DmReadStateResponse response, CancellationToken ct);
 
 	/// <summary>
+	/// pushes a channel create/update to exactly the members who may read it
+	/// (<paramref name="userIds"/>), so private channels never surface to members
+	/// without read access.
+	/// </summary>
+	Task BroadcastChannelCreatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct);
+	Task BroadcastChannelUpdatedAsync(IReadOnlyList<long> userIds, GuildChannelDto channel, CancellationToken ct);
+	Task BroadcastChannelDeletedAsync(IReadOnlyList<long> userIds, long guildId, long channelId, CancellationToken ct);
+
+	/// <summary>
+	/// notifies the guild:{guildId} group that a member joined / left, so every
+	/// current member's roster updates live.
+	/// </summary>
+	Task BroadcastMemberJoinedAsync(long guildId, long userId, CancellationToken ct);
+	Task BroadcastMemberLeftAsync(long guildId, long userId, CancellationToken ct);
+
+	/// <summary>
 	/// force-terminates every active connection of <paramref name="userId"/> at
 	/// the transport level, regardless of client cooperation. used for
 	/// user.logged_out/user.deleted so a stale or malicious client can't keep

@@ -1,3 +1,4 @@
+using Guild.Application.Contracts;
 using Guild.Application.Features.Channels.DeleteChannel;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -33,6 +34,30 @@ public sealed class DeleteChannelHandlerTests
 
 		Assert.True(result.Succeeded);
 		Assert.Empty(channels.Store);
+	}
+
+	[Fact]
+	public async Task HappyPath_PublishesChannelDeleted()
+	{
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var bus = new FakeEventBus();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		guilds.Add(guild);
+		channels.Seed(Channel.Create(5, 100, null, "g", null, ChannelType.Text, 0, Now).Value);
+
+		var handler = HandlerFactory.CreateCommand<DeleteChannelCommand, Result>(
+			guilds, channels, new FakeChannelPermissionOverwriteRepository(), bus,
+			new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(new DeleteChannelCommand(100, 5));
+
+		Assert.True(result.Succeeded);
+		var evt = bus.Single<GuildChannelDeleted>();
+		Assert.Equal(5, evt.ChannelId);
+		Assert.Contains(1L, evt.EligibleUserIds);
 	}
 
 	[Fact]
@@ -74,7 +99,8 @@ public sealed class DeleteChannelHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<DeleteChannelCommand, Result>(
-			guilds, channels, new FakeCurrentUser { Id = currentUser });
+			guilds, channels, new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(),
+			new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds, channels);
 	}
 }

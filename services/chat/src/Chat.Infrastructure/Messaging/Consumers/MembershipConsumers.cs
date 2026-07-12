@@ -20,6 +20,10 @@ public sealed class GuildMemberJoinedConsumer(
 		// without reconnecting. connect-time subscription is handled by the hub.
 		await broadcaster.AddUserToGuildGroupAsync(msg.UserId, msg.GuildId, context.CancellationToken);
 
+		// tell the rest of the guild's members (the guild group) that the roster
+		// gained a member, so their member list updates without a refresh.
+		await broadcaster.BroadcastMemberJoinedAsync(msg.GuildId, msg.UserId, context.CancellationToken);
+
 		await broadcaster.BroadcastGuildJoinedAsync(
 			userId: msg.UserId,
 			guildId: msg.GuildId,
@@ -49,8 +53,11 @@ public sealed class GuildMemberLeftConsumer(
 			guildId: msg.GuildId,
 			ct: context.CancellationToken);
 
-		// drop the member from the guild group so they stop receiving that guild's
-		// structure/presence broadcasts server-side, even if the client lingers.
+		// tell the remaining members the roster shrank (while the leaver is still
+		// in the group is fine; they also get GuildLeft below), then drop the
+		// leaver from the guild group so they stop receiving its broadcasts
+		// server-side even if the client lingers.
+		await broadcaster.BroadcastMemberLeftAsync(msg.GuildId, msg.UserId, context.CancellationToken);
 		await broadcaster.RemoveUserFromGuildGroupAsync(msg.UserId, msg.GuildId, context.CancellationToken);
 
 		await broadcaster.BroadcastGuildLeftAsync(

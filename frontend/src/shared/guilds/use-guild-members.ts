@@ -10,6 +10,7 @@ import {
 import { getUser, getUsersByIds, type UserStatus, type UserSummaryDto } from '../api/user';
 import { sortRolesByDisplayPriority } from './role-permissions';
 import { subscribeProfileUpdated } from '../lib/profile-events';
+import { onChatHubEvent } from '../api/chat-hub';
 
 const MEMBERS_PAGE_SIZE = 100;
 const MEMBERS_MAX_PAGES = 10;
@@ -173,6 +174,29 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
       void load();
     });
   }, [load]);
+
+  // roster changes for this guild (someone joined or left, including the
+  // current user's own just-committed join) re-hydrate the member list so it
+  // reflects membership without a manual refresh.
+  useEffect(() => {
+    if (!guildId) {
+      return;
+    }
+
+    const reloadIfThisGuild = (event: { guild_id: string }) => {
+      if (event.guild_id === guildId) {
+        void load();
+      }
+    };
+
+    const unsubscribeJoined = onChatHubEvent('MemberJoined', reloadIfThisGuild);
+    const unsubscribeLeft = onChatHubEvent('MemberLeft', reloadIfThisGuild);
+
+    return () => {
+      unsubscribeJoined();
+      unsubscribeLeft();
+    };
+  }, [guildId, load]);
 
   return { members, roles, isLoading, error, refresh: load };
 }

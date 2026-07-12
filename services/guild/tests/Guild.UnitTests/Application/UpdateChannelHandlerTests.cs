@@ -1,3 +1,4 @@
+using Guild.Application.Contracts;
 using Guild.Application.Features.Channels.Common;
 using Guild.Application.Features.Channels.UpdateChannel;
 using Guild.Domain.Guild;
@@ -174,6 +175,34 @@ public sealed class UpdateChannelHandlerTests
 		Assert.Null(result.Value.CategoryId);
 	}
 
+	[Fact]
+	public async Task HappyPath_PublishesChannelUpdated()
+	{
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var categories = new FakeChannelCategoryRepository();
+		var bus = new FakeEventBus();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		guilds.Add(guild);
+		channels.Seed(Channel.Create(5, 100, null, "old", null, ChannelType.Text, 0, Now).Value);
+
+		var handler = HandlerFactory.CreateCommand<UpdateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, categories, new FakeChannelPermissionOverwriteRepository(), bus,
+			new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new UpdateChannelCommand(100, 5, Name: "new", Topic: null,
+				Position: null, CategoryId: null, CategoryIdProvided: false, TopicProvided: false));
+
+		Assert.True(result.Succeeded);
+		var evt = bus.Single<GuildChannelUpdated>();
+		Assert.Equal("5", evt.Channel.Id);
+		Assert.Equal("new", evt.Channel.Name);
+		Assert.Contains(1L, evt.EligibleUserIds);
+	}
+
 	private static (
 		Guild.Application.Abstractions.Messaging.ICommandHandler<UpdateChannelCommand, Result<ChannelResponse>> Handler,
 		FakeGuildRepository Guilds,
@@ -193,7 +222,7 @@ public sealed class UpdateChannelHandlerTests
 		}
 
 		var handler = HandlerFactory.CreateCommand<UpdateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, categories,
+			guilds, channels, categories, new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(),
 			new FakeClock(), new FakeCurrentUser { Id = currentUser });
 
 		return (handler, guilds, channels);

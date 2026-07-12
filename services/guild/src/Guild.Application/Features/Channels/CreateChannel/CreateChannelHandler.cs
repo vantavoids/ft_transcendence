@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Channels.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -13,6 +14,7 @@ internal sealed class CreateChannelHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
 	IChannelCategoryRepository categories,
+	IEventBus eventBus,
 	IIdGenerator ids,
 	IClock clock,
 	ICurrentUser currentUser,
@@ -67,6 +69,15 @@ internal sealed class CreateChannelHandler(
 			return channelResult.Error;
 
 		channels.Add(channelResult.Value);
+
+		// a freshly-created channel has no overwrites yet, so eligibility is the
+		// base-permission ReadMessages set. publish before SaveChanges so the
+		// outbox binds the event to the same transaction as the insert.
+		var eligible = ChannelAccess.ReadersOf(guild, channelResult.Value.Id, []);
+		await eventBus.PublishAsync(
+			new GuildChannelCreated(command.GuildId, ChannelPayload.From(channelResult.Value), eligible),
+			cancellationToken);
+
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return ChannelResponse.From(channelResult.Value);
