@@ -203,3 +203,21 @@ export function removeBanner(userId: string) {
     method: 'DELETE'
   });
 }
+
+export type DataExportStatusResponse = {
+  export_id: string;
+  status: 'pending' | 'ready' | 'failed';
+  download_url?: string;
+  expires_at?: string;
+  error?: string;
+};
+
+export function requestDataExport() {
+  return apiFetch<DataExportStatusResponse>('user', '/users/me/data-export', {
+    method: 'POST'
+  });
+}
+
+export function getDataExportStatus(exportId: string) {
+  return apiFetch<DataExportStatusResponse>('user', `/users/me/data-export/${exportId}`);
+}

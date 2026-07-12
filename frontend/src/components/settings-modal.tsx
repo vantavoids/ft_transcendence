@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Download,
   Image as ImageIcon,
   LogOut,
   Mail,
@@ -13,6 +14,8 @@ import {
   X
 } from 'lucide-react';
 import { deleteAccount, getIdentity, updateIdentity, type AuthIdentity } from '../shared/api/auth';
+import { getDataExportStatus, requestDataExport } from '../shared/api/user';
+import { downloadAuthedAttachment } from '../shared/lib/attachments';
 import { setGroupMembersByRole } from '../shared/lib/preferences';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { clearSession } from '../shared/lib/session';
@@ -44,6 +47,8 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
   const [identity, setIdentity] = useState<AuthIdentity | null>(null);
   const [panel, setPanel] = useState<Panel>('profile');
   const groupMembersByRole = useGroupMembersByRole();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useCloseOnEscape(onClose);
 
@@ -67,6 +72,28 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
     clearSession();
     router.push('/auth/login');
     router.refresh();
+  }
+
+  async function handleDownloadData() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const created = await requestDataExport();
+      let status = created;
+      for (let i = 0; i < 30 && status.status === 'pending'; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        status = await getDataExportStatus(created.export_id);
+      }
+      if (status.status === 'ready' && status.download_url) {
+        await downloadAuthedAttachment(status.download_url, 'data-export.json');
+      } else {
+        setExportError('Could not prepare your export. Please try again.');
+      }
+    } catch {
+      setExportError('Could not prepare your export. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -167,6 +194,16 @@ export function SettingsModal({ currentUser, onClose, onDisconnect }: SettingsMo
                 onClick={() => setPanel('delete')}
                 destructive
               />
+              <SidebarButton
+                icon={Download}
+                label={exporting ? 'Preparing export…' : 'Download my data'}
+                description="Export everything we store about you (GDPR)"
+                onClick={handleDownloadData}
+                disabled={exporting}
+              />
+              {exportError ? (
+                <p className="px-1 text-xs leading-5 text-pink">{exportError}</p>
+              ) : null}
               {isOAuthOnly ? (
                 <p className="px-1 text-xs leading-5 text-white/35">
                   This account signs in with an OAuth provider, so there is no password to change

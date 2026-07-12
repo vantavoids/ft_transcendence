@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -52,6 +53,28 @@ export class DataExportStorageService {
         ContentType: 'application/json',
       }),
     );
+  }
+
+  // streams the bundle straight from MinIO over the internal client, so the app
+  // can serve the download itself (same-origin, JWT-authed) instead of handing
+  // the browser an absolute presigned URL. used by the in-app "download my data".
+  async getObjectStream(
+    objectKey: string,
+  ): Promise<{ body: Readable; contentType: string } | null> {
+    try {
+      const res = await this.client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+      );
+      if (!res.Body) {
+        return null;
+      }
+      return {
+        body: res.Body as Readable,
+        contentType: res.ContentType ?? 'application/json',
+      };
+    } catch {
+      return null;
+    }
   }
 
   async createDownloadUrl(
