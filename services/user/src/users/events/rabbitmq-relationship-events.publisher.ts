@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { ChannelModel, ConfirmChannel, connect } from 'amqplib';
-import { FriendRequestSentEvent } from '../users.types';
+import { FriendAcceptedEvent, FriendRequestSentEvent } from '../users.types';
 import { RelationshipEventsPublisher } from './relationship-events.publisher';
 
 @Injectable()
@@ -16,10 +16,18 @@ export class RabbitMqRelationshipEventsPublisher
   async publishFriendRequestSent(
     event: FriendRequestSentEvent,
   ): Promise<void> {
+    await this.publish('friend.request_sent', event);
+  }
+
+  async publishFriendAccepted(event: FriendAcceptedEvent): Promise<void> {
+    await this.publish('friend.accepted', event);
+  }
+
+  private async publish(routingKey: string, event: unknown): Promise<void> {
     const channel = await this.ensureChannel();
     channel.publish(
       RabbitMqRelationshipEventsPublisher.exchangeName,
-      'friend.request_sent',
+      routingKey,
       Buffer.from(JSON.stringify(event), 'utf8'),
       {
         contentType: 'application/json',

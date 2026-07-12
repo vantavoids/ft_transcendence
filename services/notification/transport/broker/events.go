@@ -78,6 +78,25 @@ func (e FriendRequestSentEvent) Validate() error {
 	return nil
 }
 
+type FriendAcceptedEvent struct {
+	FriendshipID int64 `json:"friendship_id,string"`
+	RequesterID  int64 `json:"requester_id,string"`
+	AddresseeID  int64 `json:"addressee_id,string"`
+}
+
+func (e FriendAcceptedEvent) Validate() error {
+	if e.FriendshipID == 0 {
+		return fmt.Errorf("friend.accepted: missing friendship_id")
+	}
+	if e.RequesterID == 0 {
+		return fmt.Errorf("friend.accepted: missing requester_id")
+	}
+	if e.AddresseeID == 0 {
+		return fmt.Errorf("friend.accepted: missing addressee_id")
+	}
+	return nil
+}
+
 type GuildInviteCreatedEvent struct {
 	GuildID         int64  `json:"guild_id,string"`
 	GuildName       string `json:"guild_name"`
