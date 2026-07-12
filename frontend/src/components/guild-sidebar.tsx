@@ -5,6 +5,7 @@ import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import { MessageCircle, Plus } from 'lucide-react';
 import { AddGuildModal } from './guild/add-guild-modal';
+import { GuildContextMenu, type GuildContextMenuTarget } from './guild/guild-context-menu';
 import { GuildIcon } from './guild/guild-icon';
 import { FortyTwoIcon } from './icons/brand-icons';
 import { useGuilds } from '../shared/guilds/guild-store';
@@ -23,8 +24,9 @@ const SCROLL_EDGE_SLACK_PX = 4;
 export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
+  const { guilds, isLoading, error, selectedGuildId, selectGuild, refreshGuilds } = useGuilds();
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<GuildContextMenuTarget | null>(null);
   const [isAddGuildOpen, setIsAddGuildOpen] = useState(false);
   const [croppedEdges, setCroppedEdges] = useState({ top: false, bottom: false });
   const { pushToast } = useToast();
@@ -69,6 +71,15 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
   function handleSelectGuild(guildId: string) {
     selectGuild(guildId);
     onOpenGuild();
+  }
+
+  function handleOpenContextMenu(
+    guild: { id: string; name: string },
+    event: MouseEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+    setTooltip(null);
+    setContextMenu({ guildId: guild.id, guildName: guild.name, x: event.clientX, y: event.clientY });
   }
 
   function handleShowLabel(name: string, event: MouseEvent<HTMLButtonElement>) {
@@ -131,6 +142,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
               key={guild.id}
               type="button"
               onClick={() => handleSelectGuild(guild.id)}
+              onContextMenu={(event) => handleOpenContextMenu(guild, event)}
               onMouseEnter={(event) => handleShowLabel(guild.name, event)}
               onMouseLeave={() => setTooltip(null)}
               className={`h-[4.9rem] shrink-0 overflow-hidden rounded-xl border transition ${
@@ -181,6 +193,18 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
         </div>
       ) : null}
       {isAddGuildOpen ? <AddGuildModal onClose={() => setIsAddGuildOpen(false)} /> : null}
+      {contextMenu ? (
+        <GuildContextMenu
+          target={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onLeft={(guildId) => {
+            if (guildId === selectedGuildId) {
+              onOpenDms();
+            }
+            void refreshGuilds();
+          }}
+        />
+      ) : null}
     </aside>
   );
 }
