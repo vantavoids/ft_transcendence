@@ -26,9 +26,21 @@ if ! command -v openssl >/dev/null 2>&1; then
 fi
 
 mkdir -p "$CERT_DIR"
+
+SANS="DNS:localhost,IP:127.0.0.1"
+if [ -n "$LAN_HOST" ]; then
+	SANS="$SANS,DNS:$LAN_HOST"
+fi
+
+# Add local IP as well, for direct IP access
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ -n "$LAN_IP" ]; then
+	SANS="$SANS,IP:$LAN_IP"
+fi
+
 openssl req -x509 -newkey rsa:4096 -nodes \
 	-keyout "$CERT_DIR/key.pem" -out "$CERT_DIR/cert.pem" \
 	-days 365 -subj '/CN=localhost' \
-	-addext 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+	-addext "subjectAltName=$SANS"
 
 printf "TLS certs generated in ${BLUE}%s/${RESET}\n" "$CERT_DIR"
