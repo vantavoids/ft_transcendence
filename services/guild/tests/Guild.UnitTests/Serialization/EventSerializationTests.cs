@@ -83,18 +83,20 @@ public sealed class EventSerializationTests
 	[Fact]
 	public void GuildDeleted_SerializesWith_SnakeCaseFields()
 	{
-		var json = JsonSerializer.Serialize(new GuildDeleted(100), Wire);
+		var json = JsonSerializer.Serialize(new GuildDeleted(100, [10, 20]), Wire);
 
-		Assert.Equal("{\"guild_id\":\"100\"}", json);
+		Assert.Equal("{\"guild_id\":\"100\",\"channel_ids\":[\"10\",\"20\"]}", json);
 	}
 
 	[Fact]
 	public void GuildDeleted_RoundTrips()
 	{
-		var original = new GuildDeleted(100);
+		var original = new GuildDeleted(100, [10, 20]);
 		var json = JsonSerializer.Serialize(original, Wire);
 
-		Assert.Equal(original, JsonSerializer.Deserialize<GuildDeleted>(json, Wire));
+		var deserialized = JsonSerializer.Deserialize<GuildDeleted>(json, Wire)!;
+		Assert.Equal(original.GuildId, deserialized.GuildId);
+		Assert.Equal(original.ChannelIds, deserialized.ChannelIds);
 	}
 
 	[Fact]

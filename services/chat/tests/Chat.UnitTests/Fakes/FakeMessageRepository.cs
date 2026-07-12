@@ -129,6 +129,15 @@ public sealed class FakeMessageRepository : IMessageRepository
 		return Task.CompletedTask;
 	}
 
+	private readonly List<long> _deletedChannelMessagesFor = [];
+	public IReadOnlyList<long> DeletedChannelMessagesFor => _deletedChannelMessagesFor;
+
+	public Task DeleteChannelMessagesAsync(long channelId, CancellationToken ct)
+	{
+		_deletedChannelMessagesFor.Add(channelId);
+		return Task.CompletedTask;
+	}
+
 	public Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct)
 	{
 		var result = _conversationSummaries

@@ -73,6 +73,7 @@ public sealed class GuildMemberLeftConsumer(
 
 public sealed class GuildDeletedConsumer(
 	IUserBroadcaster broadcaster,
+	IMessageRepository messages,
 	ILogger<GuildDeletedConsumer> logger)
 	: IConsumer<GuildDeleted>
 {
@@ -80,12 +81,19 @@ public sealed class GuildDeletedConsumer(
 	{
 		var msg = context.Message;
 
+		// purge each deleted channel's message history so it does not outlive the
+		// guild. the ids come on the event because Chat cannot read Guild's DB.
+		foreach (var channelId in msg.ChannelIds)
+			await messages.DeleteChannelMessagesAsync(channelId, context.CancellationToken);
+
 		// notify every connected member (the guild group) that the guild is gone
 		// so their client drops it live. server-side group membership becomes
 		// stale but harmless: no further broadcasts target a deleted guild.
 		await broadcaster.BroadcastGuildDeletedAsync(msg.GuildId, context.CancellationToken);
 
-		logger.LogDebug("guild.deleted consumed: guild_id={GuildId}", msg.GuildId);
+		logger.LogDebug(
+			"guild.deleted consumed: guild_id={GuildId} purged_channels={PurgedChannels}",
+			msg.GuildId, msg.ChannelIds.Count);
 	}
 }
 
