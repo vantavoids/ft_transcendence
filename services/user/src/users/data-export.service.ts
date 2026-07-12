@@ -228,7 +228,26 @@ export class DataExportService {
   }
 
   private async safeUserExport(userId: string): Promise<DataExportBundle['services']['user']> {
-    return this.users.getInternalDataExport(userId);
+    const data = await this.users.getInternalDataExport(userId);
+    const baseUrl = this.config.getOrThrow('BASE_URL').replace(/\/$/, '');
+    // media URLs are stored origin-relative (so in-app rendering is same-origin),
+    // but a data export is a portable file with no origin to resolve against, so
+    // make them absolute here. already-absolute (legacy) URLs pass through.
+    return {
+      ...data,
+      profile: {
+        ...data.profile,
+        avatar_url: this.toAbsoluteMediaUrl(data.profile.avatar_url, baseUrl),
+        banner_url: this.toAbsoluteMediaUrl(data.profile.banner_url, baseUrl),
+      },
+    };
+  }
+
+  private toAbsoluteMediaUrl(url: string | null, baseUrl: string): string | null {
+    if (!url) {
+      return null;
+    }
+    return url.startsWith('/') ? `${baseUrl}${url}` : url;
   }
 
   private extractEmail(value: AuthExportResponse | undefined): string | null {
