@@ -17,6 +17,10 @@ public sealed record GuildUpdated(long GuildId, string Name, string? IconUrl);
 public sealed record GuildRolesChanged(long GuildId);
 public sealed record GuildMemberUpdated(long GuildId, long UserId);
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
+// mirror of ChannelAccessRevoked: a member gained read access to a channel (via
+// a role/overwrite change) without joining the guild. carries GuildId so Chat
+// can tell the member's client which guild's channel list to refresh.
+public sealed record ChannelAccessGranted(long ChannelId, long GuildId, long UserId);
 
 // channel-lifecycle events consumed by Chat to push real-time structure updates.
 // EligibleUserIds are the members whose effective permissions include

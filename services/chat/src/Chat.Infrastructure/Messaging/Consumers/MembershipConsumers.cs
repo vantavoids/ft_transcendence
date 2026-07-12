@@ -160,6 +160,28 @@ public sealed class ChannelAccessRevokedConsumer(
 	}
 }
 
+public sealed class ChannelAccessGrantedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<ChannelAccessGrantedConsumer> logger)
+	: IConsumer<ChannelAccessGranted>
+{
+	public async Task Consume(ConsumeContext<ChannelAccessGranted> context)
+	{
+		var msg = context.Message;
+
+		// read access to a channel was granted (role/overwrite change) without the
+		// member joining the guild. tell their client to refresh the guild's
+		// channel list so the newly-visible channel appears; the client then joins
+		// the channel group itself on next load.
+		await broadcaster.BroadcastChannelAccessGrantedAsync(
+			msg.UserId, msg.GuildId, msg.ChannelId, context.CancellationToken);
+
+		logger.LogDebug(
+			"channel.access_granted consumed: channel_id={ChannelId} guild_id={GuildId} user_id={UserId}",
+			msg.ChannelId, msg.GuildId, msg.UserId);
+	}
+}
+
 public sealed class UserLoggedOutConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<UserLoggedOutConsumer> logger): IConsumer<UserLoggedOut>

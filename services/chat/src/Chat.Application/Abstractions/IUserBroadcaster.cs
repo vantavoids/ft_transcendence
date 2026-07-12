@@ -75,6 +75,13 @@ public interface IUserBroadcaster
 	Task BroadcastMemberUpdatedAsync(long guildId, long userId, CancellationToken ct);
 
 	/// <summary>
+	/// tells a single user they gained read access to a channel so their client
+	/// refreshes the guild's channel list and the newly-visible channel appears.
+	/// mirror of the channel.access_revoked eviction.
+	/// </summary>
+	Task BroadcastChannelAccessGrantedAsync(long userId, long guildId, long channelId, CancellationToken ct);
+
+	/// <summary>
 	/// force-terminates every active connection of <paramref name="userId"/> at
 	/// the transport level, regardless of client cooperation. used for
 	/// user.logged_out/user.deleted so a stale or malicious client can't keep

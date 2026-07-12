@@ -7,9 +7,11 @@ using GuildEntity = Guild.Domain.Guild.Guild;
 namespace Guild.Application.Authorization;
 
 // read-access captured before a mutation, diffed against the after-state by
-// PublishRevocationsAsync to emit revocations.
+// PublishAccessChangesAsync to emit revocations and grants. Candidates is the
+// full (channel, user) set considered; Before is the subset readable pre-change.
 internal readonly record struct ChannelReadSnapshot(
 	HashSet<(long ChannelId, long UserId)> Before,
+	IReadOnlyList<(long ChannelId, long UserId)> Candidates,
 	IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> Overwrites);
 
 internal static class ChannelAccess
@@ -42,16 +44,16 @@ internal static class ChannelAccess
 		Capture(guild, Pairs([channelId], affectedUserIds), Group(channelId, channelOverwrites));
 
 	// role mutations: overwrites are unchanged, so the snapshot's set is the after-state.
-	public static Task PublishRevocationsAsync(
+	public static Task PublishAccessChangesAsync(
 		IEventBus eventBus, GuildEntity guild, ChannelReadSnapshot snapshot, CancellationToken cancellationToken) =>
-		PublishRevocationsAsync(eventBus, guild, snapshot, snapshot.Overwrites, cancellationToken);
+		PublishAccessChangesAsync(eventBus, guild, snapshot, snapshot.Overwrites, cancellationToken);
 
 	// overwrite mutations: one channel's overwrites changed.
-	public static Task PublishRevocationsAsync(
+	public static Task PublishAccessChangesAsync(
 		IEventBus eventBus, GuildEntity guild, ChannelReadSnapshot snapshot,
 		long channelId, IReadOnlyList<ChannelPermissionOverwrite> afterChannelOverwrites,
 		CancellationToken cancellationToken) =>
-		PublishRevocationsAsync(eventBus, guild, snapshot, Group(channelId, afterChannelOverwrites), cancellationToken);
+		PublishAccessChangesAsync(eventBus, guild, snapshot, Group(channelId, afterChannelOverwrites), cancellationToken);
 
 	// members whose effective permissions include ReadMessages for the channel,
 	// given its current overwrites. feeds the eligible-user set on channel
@@ -84,25 +86,34 @@ internal static class ChannelAccess
 			: guild.MemberRoles.Where(mr => mr.RoleId == targetId).Select(mr => mr.UserId);
 	}
 
-	private static async Task PublishRevocationsAsync(
+	private static async Task PublishAccessChangesAsync(
 		IEventBus eventBus, GuildEntity guild, ChannelReadSnapshot snapshot,
 		IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> afterOverwrites,
 		CancellationToken cancellationToken)
 	{
-		// a revocation can only come from a pair that could read before; re-resolve
-		// each once and publish the moment it has flipped to denied.
-		foreach (var (channelId, userId) in snapshot.Before)
+		// re-resolve each candidate once and publish only on a transition: a pair
+		// readable before but not after is a revocation; not before but after is a
+		// grant (the member gains a newly-visible channel).
+		foreach (var (channelId, userId) in snapshot.Candidates)
 		{
-			if (!CanRead(guild, channelId, userId, afterOverwrites))
+			var wasReadable = snapshot.Before.Contains((channelId, userId));
+			var isReadable = CanRead(guild, channelId, userId, afterOverwrites);
+
+			if (wasReadable && !isReadable)
 				await eventBus.PublishAsync(new ChannelAccessRevoked(channelId, userId), cancellationToken);
+			else if (!wasReadable && isReadable)
+				await eventBus.PublishAsync(new ChannelAccessGranted(channelId, guild.Id, userId), cancellationToken);
 		}
 	}
 
 	private static ChannelReadSnapshot Capture(
 		GuildEntity guild,
 		IEnumerable<(long ChannelId, long UserId)> candidates,
-		IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> overwrites) =>
-		new(ReadableIn(guild, candidates, overwrites), overwrites);
+		IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> overwrites)
+	{
+		var candidateList = candidates.ToList();
+		return new(ReadableIn(guild, candidateList, overwrites), candidateList, overwrites);
+	}
 
 	private static HashSet<(long ChannelId, long UserId)> ReadableIn(
 		GuildEntity guild,

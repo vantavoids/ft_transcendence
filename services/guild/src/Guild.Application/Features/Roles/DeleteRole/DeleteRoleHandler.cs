@@ -57,7 +57,7 @@ internal sealed class DeleteRoleHandler(
 			return removeResult.Error;
 
 		if (snapshot is { } snap)
-			await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snap, cancellationToken);
+			await ChannelAccess.PublishAccessChangesAsync(eventBus, guild, snap, cancellationToken);
 
 		await eventBus.PublishAsync(new GuildRolesChanged(command.GuildId), cancellationToken);
 

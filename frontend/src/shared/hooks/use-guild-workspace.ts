@@ -115,11 +115,20 @@ export function useGuildWorkspace(): GuildWorkspace {
       void refreshGuilds();
     });
 
+    // gained read access to a channel (role/overwrite change): re-load the
+    // selected guild's channels so the newly-visible channel appears.
+    const unsubscribeAccessGranted = onChatHubEvent('ChannelAccessGranted', (event) => {
+      if (event.guild_id === selectedGuildIdRef.current) {
+        setChannelsRefreshKey((key) => key + 1);
+      }
+    });
+
     return () => {
       unsubscribeJoined();
       unsubscribeLeft();
       unsubscribeDeleted();
       unsubscribeUpdated();
+      unsubscribeAccessGranted();
     };
   }, [refreshGuilds]);
 
