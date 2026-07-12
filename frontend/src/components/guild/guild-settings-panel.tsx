@@ -5,8 +5,8 @@ import type { FormEvent } from 'react';
 import { AlertTriangle, Save } from 'lucide-react';
 import { deleteGuild, getGuild, updateGuild, type GuildDto } from '../../shared/api/guild';
 import { useGuilds } from '../../shared/guilds/guild-store';
-import { FormError } from './guild-forms';
 import { ActionModal } from '../action-modal';
+import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
   'h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -29,6 +29,7 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const { pushToast } = useToast();
 
   useEffect(() => {
     let isCancelled = false;
@@ -55,6 +56,26 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
       isCancelled = true;
     };
   }, [guildId]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Guild settings',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
+
+  useEffect(() => {
+    if (deleteError) {
+      pushToast({
+        title: 'Guild deletion',
+        description: deleteError,
+        tone: 'error'
+      });
+    }
+  }, [deleteError, pushToast]);
 
   // The server enforces ownership; without a resolved current user we still
   // show the section so the fake-session dev flow can exercise it.
@@ -167,7 +188,6 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
             />
           </label>
         </div>
-        {error ? <FormError message={error} /> : null}
         {savedMessage ? (
           <p className="rounded-md border border-lime/30 bg-lime/10 px-3 py-2 text-sm text-lime">
             {savedMessage}
@@ -211,7 +231,6 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
               {isDeleting ? 'Deleting...' : 'Delete guild'}
             </button>
           </div>
-          {deleteError ? <FormError message={deleteError} /> : null}
         </form>
       ) : null}
 

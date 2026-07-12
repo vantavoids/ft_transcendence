@@ -11,6 +11,7 @@ import {
   validateProfileImageFile,
   validateProfileUpdateInput
 } from '../shared/lib/validators/profile';
+import { useToast } from '../shared/ui/toast';
 
 type ProfileEditorPanelProps = {
   currentUser: CurrentUserProfile;
@@ -45,12 +46,23 @@ export function ProfileEditorPanel({
   const [isBusyBanner, setIsBusyBanner] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const { pushToast } = useToast();
 
   useEffect(() => {
     setDisplayName(currentUser.displayName);
     setBio(currentUser.bio ?? '');
     setStatus(currentUser.status);
   }, [currentUser]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Profile',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function handleSave() {
     setError('');
@@ -305,11 +317,6 @@ export function ProfileEditorPanel({
           </button>
         </div>
 
-        {error ? (
-          <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-            {error}
-          </p>
-        ) : null}
         {success ? (
           <p className="rounded-md border border-lime/25 bg-lime/10 px-3 py-2 text-sm text-lime">
             {success}

@@ -34,6 +34,7 @@ import {
   type FriendshipStateDto,
   type SearchUserDto
 } from '../shared/api/user';
+import { useToast } from '../shared/ui/toast';
 
 export type Friend = {
   id: string;
@@ -122,6 +123,7 @@ export function FriendsList({
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+  const { pushToast } = useToast();
 
   const term = search.trim().toLowerCase();
 
@@ -200,6 +202,16 @@ export function FriendsList({
   useEffect(() => {
     void loadPendingRequests();
   }, [loadPendingRequests]);
+
+  useEffect(() => {
+    if (actionError) {
+      pushToast({
+        title: 'Friends',
+        description: actionError,
+        tone: 'error'
+      });
+    }
+  }, [actionError, pushToast]);
 
   useEffect(() => {
     if (activeTab !== 'discover') {
@@ -610,11 +622,6 @@ export function FriendsList({
             <UserPlus className="h-4 w-4" strokeWidth={2} />
           </button>
         </form>
-        {actionError ? (
-          <p className="mt-2 rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-            {actionError}
-          </p>
-        ) : null}
         {actionSuccess ? (
           <p className="mt-2 rounded-md border border-lime/25 bg-lime/10 px-3 py-2 text-sm text-lime">
             {actionSuccess}

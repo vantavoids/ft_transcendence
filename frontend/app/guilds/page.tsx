@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GuildIcon } from '../../src/components/guild/guild-icon';
 import { GuildBansPanel } from '../../src/components/guild/guild-bans-panel';
@@ -13,6 +13,7 @@ import { GuildOverview } from '../../src/components/guild/guild-overview';
 import { GuildRolesPanel } from '../../src/components/guild/guild-roles-panel';
 import { GuildSettingsPanel } from '../../src/components/guild/guild-settings-panel';
 import { useGuilds } from '../../src/shared/guilds/guild-store';
+import { useToast } from '../../src/shared/ui/toast';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -30,6 +31,17 @@ type TabId = (typeof TABS)[number]['id'];
 export default function GuildsPage() {
   const { guilds, isLoading, error, selectedGuildId, selectGuild } = useGuilds();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Guilds',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10">
@@ -50,8 +62,8 @@ export default function GuildsPage() {
         </div>
 
         {error && guilds.length === 0 ? (
-          <p className="mt-6 rounded-md border border-pink/25 bg-pink/10 px-4 py-3 text-sm text-pink">
-            {error}
+          <p className="mt-6 rounded-md border border-stroke bg-frame px-4 py-3 text-sm text-white/45">
+            Guilds unavailable.
           </p>
         ) : null}
 

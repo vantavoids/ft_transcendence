@@ -8,6 +8,7 @@ import { AddGuildModal } from './guild/add-guild-modal';
 import { GuildIcon } from './guild/guild-icon';
 import { FortyTwoIcon } from './icons/brand-icons';
 import { useGuilds } from '../shared/guilds/guild-store';
+import { useToast } from '../shared/ui/toast';
 
 type GuildSidebarProps = {
   activeMode: 'guild' | 'dm';
@@ -26,6 +27,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
   const [tooltip, setTooltip] = useState<{ name: string; top: number } | null>(null);
   const [isAddGuildOpen, setIsAddGuildOpen] = useState(false);
   const [croppedEdges, setCroppedEdges] = useState({ top: false, bottom: false });
+  const { pushToast } = useToast();
 
   const updateCroppedEdges = useCallback(() => {
     const list = scrollRef.current;
@@ -39,6 +41,16 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
       previous.top === top && previous.bottom === bottom ? previous : { top, bottom }
     );
   }, []);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Guild list',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   useEffect(() => {
     updateCroppedEdges();
@@ -110,7 +122,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
             <div className="h-[4.9rem] shrink-0 animate-pulse rounded-xl border border-frame bg-panel" />
           ) : null}
           {error && guilds.length === 0 ? (
-            <p className="px-1 text-center text-xs text-pink/80" title={error}>
+            <p className="px-1 text-center text-xs text-white/45" title={error}>
               Guilds unavailable
             </p>
           ) : null}

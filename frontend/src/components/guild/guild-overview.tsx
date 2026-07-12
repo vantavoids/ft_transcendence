@@ -5,6 +5,7 @@ import { Crown, Users } from 'lucide-react';
 import { getGuild, type GuildDto } from '../../shared/api/guild';
 import { useGuilds } from '../../shared/guilds/guild-store';
 import { GuildIcon } from './guild-icon';
+import { useToast } from '../../shared/ui/toast';
 
 export function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -26,6 +27,7 @@ export function GuildOverview({ guildId }: GuildOverviewProps) {
   const [guild, setGuild] = useState<GuildDto | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const { pushToast } = useToast();
 
   useEffect(() => {
     let isCancelled = false;
@@ -56,13 +58,23 @@ export function GuildOverview({ guildId }: GuildOverviewProps) {
     };
   }, [guildId]);
 
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Guild overview',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
+
   if (isLoading) {
     return <div className="h-48 animate-pulse rounded-[1rem] bg-panel" />;
   }
 
   if (error || !guild) {
     return (
-      <p className="rounded-md border border-pink/25 bg-pink/10 px-4 py-3 text-sm text-pink">
+      <p className="rounded-md border border-stroke bg-frame px-4 py-3 text-sm text-white/45">
         {error || 'Guild not found.'}
       </p>
     );

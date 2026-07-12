@@ -16,7 +16,7 @@ import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
 import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
 import { GuildIcon } from './guild-icon';
-import { FormError } from './guild-forms';
+import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
   'h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -42,6 +42,7 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   const [copiedCode, setCopiedCode] = useState('');
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
+  const { pushToast } = useToast();
 
   async function handleCopyCode(code: string) {
     try {
@@ -80,6 +81,26 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Invites',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
+
+  useEffect(() => {
+    if (previewError) {
+      pushToast({
+        title: 'Invite preview',
+        description: previewError,
+        tone: 'error'
+      });
+    }
+  }, [previewError, pushToast]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -219,8 +240,6 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
         </div>
       </form>
 
-      {error ? <FormError message={error} /> : null}
-
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-md bg-panel" />
       ) : !canViewInvites ? (
@@ -305,7 +324,6 @@ export function GuildInvitesPanel({ guildId }: GuildInvitesPanelProps) {
             {isPreviewing ? 'Looking up...' : 'Preview'}
           </button>
         </div>
-        {previewError ? <FormError message={previewError} /> : null}
         {preview ? (
           <div className="flex items-center gap-3 rounded-md border border-stroke bg-frame/50 px-3 py-2.5">
             <GuildIcon

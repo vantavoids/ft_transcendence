@@ -12,7 +12,7 @@ import {
 import { getUsersByIds, type UserSummaryDto } from '../../shared/api/user';
 import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
-import { FormError } from './guild-forms';
+import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
   'h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -31,6 +31,7 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [unbanTarget, setUnbanTarget] = useState<string | null>(null);
   const [isUnbanning, setIsUnbanning] = useState(false);
+  const { pushToast } = useToast();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +56,16 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Bans',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   function describeUser(userId: string | null) {
     if (!userId) {
@@ -144,8 +155,6 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
           {isSubmitting ? 'Banning...' : 'Ban user'}
         </button>
       </form>
-
-      {error ? <FormError message={error} /> : null}
 
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-md bg-panel" />
