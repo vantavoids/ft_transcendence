@@ -41,6 +41,13 @@ public interface IMessageRepository
 
 	Task DeleteConversationAsync(long userId, CancellationToken ct);
 
+	/// <summary>
+	/// hard-deletes every message in <paramref name="channelId"/> (a single-
+	/// partition delete). called when the owning guild is deleted so its
+	/// channels' history does not outlive the guild.
+	/// </summary>
+	Task DeleteChannelMessagesAsync(long channelId, CancellationToken ct);
+
 	/// <summary>every DM thread for this user, from their own user_conversations partition</summary>
 	Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct);
 

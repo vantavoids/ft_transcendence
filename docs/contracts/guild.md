@@ -1040,7 +1040,7 @@ Same shape as `GET /guilds/{id}/channels`. A channel is included when the user's
 | `guild.member_joined` | `{ guild_id, guild_name, user_id }` | User joins a guild |
 | `guild.member_left` | `{ guild_id, user_id }` | User leaves, is kicked, or banned |
 | `guild.invite_created` | `{ guild_id, guild_name, invited_by_user_id, invited_user_id? }` | Invite created; `invited_user_id` present only for targeted invites |
-| `guild.deleted` | `{ guild_id }` | Guild deleted by its owner. Downstream services cascade their own cleanup by `guild_id` (Chat channels/messages, Notification rows, membership references). |
+| `guild.deleted` | `{ guild_id, channel_ids }` | Guild deleted by its owner. `channel_ids` lists the guild's channels at deletion time so Chat (which cannot read Guild's DB) can purge each channel's message history. Chat also broadcasts `GuildDeleted` over SignalR so members' clients drop the guild live. Other downstream services cascade their own cleanup by `guild_id` (Notification rows, membership references). |
 | `guild.owner_transferred` | `{ guild_id, old_owner_id, new_owner_id }` | Ownership transferred to another member. At least Notification reacts (notify old and/or new owner). |
 | `channel.access_revoked` | `{ channel_id, user_id }` | A member lost `READ_MESSAGES` on a channel via a role or overwrite change (role permission update, role assignment or unassignment, role deletion, or a channel-overwrite put/delete). One event per (channel, member) whose effective read flipped from allowed to denied. Chat consumes it to evict the member's live SignalR subscription (`EvictFromChannelAsync`). |
 

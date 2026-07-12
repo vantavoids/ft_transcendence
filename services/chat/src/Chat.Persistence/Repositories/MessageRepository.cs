@@ -252,6 +252,12 @@ internal sealed class MessageRepository(ISession session, MessageStatements stat
 		await session.ExecuteAsync(stmt.Bind(userId));
 	}
 
+	public async Task DeleteChannelMessagesAsync(long channelId, CancellationToken ct)
+	{
+		var stmt = await statements.DeleteChannelMessages.Value;
+		await session.ExecuteAsync(stmt.Bind(channelId));
+	}
+
 	public async Task<IReadOnlyList<DmConversation>> GetConversationsAsync(long userId, CancellationToken ct)
 	{
 		var stmt = await statements.SelectConversationsByUser.Value;

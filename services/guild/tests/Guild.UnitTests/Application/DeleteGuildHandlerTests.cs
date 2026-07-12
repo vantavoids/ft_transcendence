@@ -1,5 +1,6 @@
 using Guild.Application.Contracts;
 using Guild.Application.Features.Guilds.DeleteGuild;
+using Guild.Domain.Guild;
 using Guild.Domain.Results;
 using Guild.UnitTests.Fakes;
 using Xunit;
@@ -17,7 +18,7 @@ public sealed class DeleteGuildHandlerTests
 	{
 		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, bus, new FakeCurrentUser { Id = 1 });
+			repo, new FakeChannelRepository(), bus, new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 999));
 
@@ -32,7 +33,7 @@ public sealed class DeleteGuildHandlerTests
 		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		Seed(repo, ownerId: 1);
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, bus, new FakeCurrentUser { Id = 99 });
+			repo, new FakeChannelRepository(), bus, new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 100));
 
@@ -46,14 +47,18 @@ public sealed class DeleteGuildHandlerTests
 	{
 		var (repo, bus) = (new FakeGuildRepository(), new FakeEventBus());
 		Seed(repo, ownerId: 1);
+		var channels = new FakeChannelRepository();
+		channels.Seed(Channel.Create(5, 100, null, "general", null, ChannelType.Text, 0, Now).Value);
 		var handler = HandlerFactory.CreateCommand<DeleteGuildCommand, Result>(
-			repo, bus, new FakeCurrentUser { Id = 1 });
+			repo, channels, bus, new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(new DeleteGuildCommand(GuildId: 100));
 
 		Assert.True(result.Succeeded);
 		Assert.Empty(repo.Store);
-		Assert.Equal(100, bus.Single<GuildDeleted>().GuildId);
+		var evt = bus.Single<GuildDeleted>();
+		Assert.Equal(100, evt.GuildId);
+		Assert.Equal(new long[] { 5 }, evt.ChannelIds);
 	}
 
 	private static void Seed(FakeGuildRepository repo, long ownerId)

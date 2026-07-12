@@ -1,4 +1,5 @@
 using Chat.Application.Abstractions;
+using Chat.Application.Abstractions.Persistence;
 using Chat.Infrastructure.Messaging.Consumers;
 using Chat.Infrastructure.Messaging.Contracts;
 using Chat.UnitTests.Fakes;
@@ -66,21 +67,24 @@ public sealed class GuildMemberLeftConsumerTests
 public sealed class GuildDeletedConsumerTests
 {
 	[Fact]
-	public async Task Consume_BroadcastsGuildDeletedToGroup()
+	public async Task Consume_PurgesChannelMessages_AndBroadcastsGuildDeleted()
 	{
 		var broadcaster = new FakeUserBroadcaster();
+		var messages = new FakeMessageRepository();
 		await using var provider = new ServiceCollection()
 			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddSingleton<IMessageRepository>(messages)
 			.AddMassTransitTestHarness(x => x.AddConsumer<GuildDeletedConsumer>())
 			.BuildServiceProvider(true);
 
 		var harness = provider.GetRequiredService<ITestHarness>();
 		await harness.Start();
 
-		await harness.Bus.Publish(new GuildDeleted(GuildId: 100));
+		await harness.Bus.Publish(new GuildDeleted(GuildId: 100, ChannelIds: [10, 20]));
 
 		Assert.True(await harness.Consumed.Any<GuildDeleted>());
 
+		Assert.Equal(new long[] { 10, 20 }, messages.DeletedChannelMessagesFor);
 		var guildId = Assert.Single(broadcaster.GuildDeletedCalls);
 		Assert.Equal(100L, guildId);
 	}

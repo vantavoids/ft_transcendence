@@ -44,6 +44,12 @@ internal sealed class MessageStatements(ISession session)
 		"UPDATE messages SET is_deleted = true " +
 		"WHERE channel_id = ? AND created_at = ? AND id = ?"));
 
+	// partition delete: messages are partitioned by channel_id, so removing a
+	// whole channel's history is a single-partition delete. used when a guild
+	// (and thus its channels) is deleted.
+	public Lazy<Task<PreparedStatement>> DeleteChannelMessages { get; } = new(() => session.PrepareAsync(
+		"DELETE FROM messages WHERE channel_id = ?"));
+
 	public Lazy<Task<PreparedStatement>> SelectChannelMessage { get; } = new(() => session.PrepareAsync(
 		"SELECT channel_id, created_at, id, author_id, content, edited_at, is_deleted, reply_to_id " +
 		"FROM messages WHERE channel_id = ? AND created_at = ? AND id = ?"));
