@@ -82,6 +82,8 @@ public static class DependencyInjection
 				cfg.Message<GuildDeleted>(m => m.SetEntityName("guild.deleted"));
 				cfg.Message<GuildOwnerTransferred>(m => m.SetEntityName("guild.owner_transferred"));
 				cfg.Message<GuildUpdated>(m => m.SetEntityName("guild.updated"));
+				cfg.Message<GuildRolesChanged>(m => m.SetEntityName("guild.roles_changed"));
+				cfg.Message<GuildMemberUpdated>(m => m.SetEntityName("guild.member_updated"));
 				cfg.Message<ChannelAccessRevoked>(m => m.SetEntityName("channel.access_revoked"));
 				cfg.Message<GuildChannelCreated>(m => m.SetEntityName("channel.created"));
 				cfg.Message<GuildChannelUpdated>(m => m.SetEntityName("channel.updated"));

@@ -148,6 +148,23 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 		return Task.CompletedTask;
 	}
 
+	private readonly List<long> _rolesChangedCalls = [];
+	private readonly List<(long GuildId, long UserId)> _memberUpdatedCalls = [];
+	public IReadOnlyList<long> RolesChangedCalls => _rolesChangedCalls;
+	public IReadOnlyList<(long GuildId, long UserId)> MemberUpdatedCalls => _memberUpdatedCalls;
+
+	public Task BroadcastRolesChangedAsync(long guildId, CancellationToken ct)
+	{
+		_rolesChangedCalls.Add(guildId);
+		return Task.CompletedTask;
+	}
+
+	public Task BroadcastMemberUpdatedAsync(long guildId, long userId, CancellationToken ct)
+	{
+		_memberUpdatedCalls.Add((guildId, userId));
+		return Task.CompletedTask;
+	}
+
 	// EvictedCount is returned from both evict methods so consumer tests can
 	// exercise whatever the caller does with the purged-subscription count.
 	public int EvictedCount { get; set; }

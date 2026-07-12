@@ -10,6 +10,12 @@ public sealed record GuildInviteCreated(long GuildId, string GuildName, long Inv
 public sealed record GuildDeleted(long GuildId, IReadOnlyList<long> ChannelIds);
 public sealed record GuildOwnerTransferred(long GuildId, long OldOwnerId, long NewOwnerId);
 public sealed record GuildUpdated(long GuildId, string Name, string? IconUrl);
+
+// coalesced structure events: the frontend re-fetches the affected guild's roles
+// / roster rather than patching bitmasks and hierarchy, so a single "something
+// changed" signal per family is enough.
+public sealed record GuildRolesChanged(long GuildId);
+public sealed record GuildMemberUpdated(long GuildId, long UserId);
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
 
 // channel-lifecycle events consumed by Chat to push real-time structure updates.

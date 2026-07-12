@@ -110,6 +110,32 @@ public sealed class GuildUpdatedConsumer(
 	}
 }
 
+public sealed class GuildRolesChangedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildRolesChangedConsumer> logger)
+	: IConsumer<GuildRolesChanged>
+{
+	public async Task Consume(ConsumeContext<GuildRolesChanged> context)
+	{
+		var msg = context.Message;
+		await broadcaster.BroadcastRolesChangedAsync(msg.GuildId, context.CancellationToken);
+		logger.LogDebug("guild.roles_changed consumed: guild_id={GuildId}", msg.GuildId);
+	}
+}
+
+public sealed class GuildMemberUpdatedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildMemberUpdatedConsumer> logger)
+	: IConsumer<GuildMemberUpdated>
+{
+	public async Task Consume(ConsumeContext<GuildMemberUpdated> context)
+	{
+		var msg = context.Message;
+		await broadcaster.BroadcastMemberUpdatedAsync(msg.GuildId, msg.UserId, context.CancellationToken);
+		logger.LogDebug("guild.member_updated consumed: guild_id={GuildId} user_id={UserId}", msg.GuildId, msg.UserId);
+	}
+}
+
 public sealed class ChannelAccessRevokedConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<ChannelAccessRevokedConsumer> logger)

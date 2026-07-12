@@ -187,7 +187,7 @@ public sealed class UpdateNicknameHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateNicknameCommand, Result<MemberResponse>>(
-			guilds, new FakeCurrentUser { Id = currentUser });
+			guilds, new FakeEventBus(), new FakeCurrentUser { Id = currentUser });
 		return (handler, guilds);
 	}
 }

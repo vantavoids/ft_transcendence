@@ -191,10 +191,21 @@ export function useGuildMembers(guildId: string | null, ownerId?: string | null)
 
     const unsubscribeJoined = onChatHubEvent('MemberJoined', reloadIfThisGuild);
     const unsubscribeLeft = onChatHubEvent('MemberLeft', reloadIfThisGuild);
+    // nickname / role assignment change for a member, and role set changes
+    // (create/update/delete/reorder), both re-hydrate the roster so displayed
+    // nicknames, role colours and role membership stay current.
+    const unsubscribeMemberUpdated = onChatHubEvent('MemberUpdated', reloadIfThisGuild);
+    const unsubscribeRolesChanged = onChatHubEvent('RolesChanged', (changedGuildId) => {
+      if (changedGuildId === guildId) {
+        void load();
+      }
+    });
 
     return () => {
       unsubscribeJoined();
       unsubscribeLeft();
+      unsubscribeMemberUpdated();
+      unsubscribeRolesChanged();
     };
   }, [guildId, load]);
 
