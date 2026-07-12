@@ -15,6 +15,9 @@ public sealed record GuildMemberJoined(long GuildId, string GuildName, long User
 [MessageUrn("Guild.Application.Contracts:GuildMemberLeft")]
 public sealed record GuildMemberLeft(long GuildId, long UserId);
 
+[MessageUrn("Guild.Application.Contracts:GuildDeleted")]
+public sealed record GuildDeleted(long GuildId);
+
 [MessageUrn("Guild.Application.Contracts:ChannelAccessRevoked")]
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
 

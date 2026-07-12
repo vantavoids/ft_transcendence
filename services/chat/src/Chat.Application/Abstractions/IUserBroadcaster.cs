@@ -14,6 +14,13 @@ public interface IUserBroadcaster
 	Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct);
 
 	/// <summary>
+	/// tells every member of the guild:{guildId} group the guild was deleted so
+	/// their client removes it live instead of showing a stale guild until
+	/// refresh.
+	/// </summary>
+	Task BroadcastGuildDeletedAsync(long guildId, CancellationToken ct);
+
+	/// <summary>
 	/// subscribes every open connection of <paramref name="userId"/> to the
 	/// <c>guild:{guildId}</c> group so they receive that guild's real-time
 	/// broadcasts. called when the user joins a guild while already connected

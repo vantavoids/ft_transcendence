@@ -63,6 +63,29 @@ public sealed class GuildMemberLeftConsumerTests
 	}
 }
 
+public sealed class GuildDeletedConsumerTests
+{
+	[Fact]
+	public async Task Consume_BroadcastsGuildDeletedToGroup()
+	{
+		var broadcaster = new FakeUserBroadcaster();
+		await using var provider = new ServiceCollection()
+			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddMassTransitTestHarness(x => x.AddConsumer<GuildDeletedConsumer>())
+			.BuildServiceProvider(true);
+
+		var harness = provider.GetRequiredService<ITestHarness>();
+		await harness.Start();
+
+		await harness.Bus.Publish(new GuildDeleted(GuildId: 100));
+
+		Assert.True(await harness.Consumed.Any<GuildDeleted>());
+
+		var guildId = Assert.Single(broadcaster.GuildDeletedCalls);
+		Assert.Equal(100L, guildId);
+	}
+}
+
 public sealed class ChannelAccessRevokedConsumerTests
 {
 	[Fact]

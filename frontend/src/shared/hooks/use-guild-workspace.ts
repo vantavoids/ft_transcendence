@@ -102,9 +102,17 @@ export function useGuildWorkspace(): GuildWorkspace {
       void refreshGuilds();
     });
 
+    // a deleted guild is dropped from listMyGuilds, so refreshing the list also
+    // reconciles the selection (applyGuilds falls back to another guild/none)
+    // and clears the now-gone guild's channels.
+    const unsubscribeDeleted = onChatHubEvent('GuildDeleted', () => {
+      void refreshGuilds();
+    });
+
     return () => {
       unsubscribeJoined();
       unsubscribeLeft();
+      unsubscribeDeleted();
     };
   }, [refreshGuilds]);
 
