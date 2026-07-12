@@ -19,10 +19,20 @@ export function getIceServers(): RTCIceServer[] {
     return [];
   }
 
-  // strip any turn:/turns:/stun: scheme so we can derive both from the bare host
-  const host = url.replace(/^(turns?|stun):/i, '');
+  // strip any turn:/turns:/stun: scheme, then split host:port
+  const hostPort = url.replace(/^(turns?|stun):/i, '');
   const isSecure = /^turns:/i.test(url);
   const turnScheme = isSecure ? 'turns' : 'turn';
+
+  // coturn is co-located with the app, so target it on whatever host the browser
+  // used to reach the app (localhost, a hostname, the evaluator's IP) rather than
+  // the build-time host baked into NEXT_PUBLIC_TURN_URL - only the port/scheme are
+  // taken from config. SSR (no window) keeps the configured host.
+  const lastColon = hostPort.lastIndexOf(':');
+  const configuredHost = lastColon > -1 ? hostPort.slice(0, lastColon) : hostPort;
+  const port = lastColon > -1 ? hostPort.slice(lastColon + 1) : '';
+  const runtimeHost = typeof window !== 'undefined' ? window.location.hostname : configuredHost;
+  const host = port ? `${runtimeHost}:${port}` : runtimeHost;
 
   const servers: RTCIceServer[] = [{ urls: `stun:${host}` }];
 
