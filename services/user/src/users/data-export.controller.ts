@@ -4,6 +4,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUserId } from '../auth/current-user.decorator';
@@ -35,5 +36,21 @@ export class DataExportController {
     }
 
     return job;
+  }
+
+  @Get('me/data-export/:exportId/download')
+  async downloadExport(
+    @CurrentUserId() userId: string,
+    @Param('exportId', ParseSnowflakePipe) exportId: string,
+  ): Promise<StreamableFile> {
+    const result = await this.dataExport.downloadExport(userId, exportId);
+    if (!result) {
+      throw new NotFoundException('Export not ready');
+    }
+
+    return new StreamableFile(result.body, {
+      type: result.contentType,
+      disposition: `attachment; filename="${result.filename}"`,
+    });
   }
 }

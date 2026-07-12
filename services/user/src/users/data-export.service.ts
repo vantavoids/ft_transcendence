@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SnowflakeIdGenerator } from '../common/snowflake-id.generator';
@@ -82,11 +83,34 @@ export class DataExportService {
     return {
       export_id: job.id,
       status: 'ready',
-      download_url: await this.storage.createDownloadUrl(
-        job.object_key,
-        secondsRemaining,
-      ),
+      // origin-relative, JWT-authed streaming endpoint so the in-app download is
+      // same-origin (works from any host). the emailed link stays presigned +
+      // absolute, since an email link can't rely on the app session.
+      download_url: `/api/user/v1/users/me/data-export/${job.id}/download`,
       expires_at: job.expires_at.toISOString(),
+    };
+  }
+
+  // resolves a ready export to a streamable object for the same-origin download
+  // endpoint; enforces ownership (getExportById is scoped to userId).
+  async downloadExport(
+    userId: string,
+    exportId: string,
+  ): Promise<{ body: Readable; contentType: string; filename: string } | null> {
+    const job = await this.repository.getExportById(userId, exportId);
+    if (!job || job.status !== 'ready' || !job.object_key) {
+      return null;
+    }
+
+    const obj = await this.storage.getObjectStream(job.object_key);
+    if (!obj) {
+      return null;
+    }
+
+    return {
+      body: obj.body,
+      contentType: obj.contentType,
+      filename: `data-export-${exportId}.json`,
     };
   }
 
