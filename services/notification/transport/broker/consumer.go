@@ -23,6 +23,7 @@ const (
 var directEvents = []string{
 	"friend.request_sent",
 	"friend.accepted",
+	"friend.removed",
 	"data.export_ready",
 }
 

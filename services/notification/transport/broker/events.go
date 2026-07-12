@@ -97,6 +97,21 @@ func (e FriendAcceptedEvent) Validate() error {
 	return nil
 }
 
+type FriendRemovedEvent struct {
+	RequesterID int64 `json:"requester_id,string"`
+	AddresseeID int64 `json:"addressee_id,string"`
+}
+
+func (e FriendRemovedEvent) Validate() error {
+	if e.RequesterID == 0 {
+		return fmt.Errorf("friend.removed: missing requester_id")
+	}
+	if e.AddresseeID == 0 {
+		return fmt.Errorf("friend.removed: missing addressee_id")
+	}
+	return nil
+}
+
 type GuildInviteCreatedEvent struct {
 	GuildID         int64  `json:"guild_id,string"`
 	GuildName       string `json:"guild_name"`

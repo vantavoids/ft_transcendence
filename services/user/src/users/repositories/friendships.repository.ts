@@ -307,7 +307,11 @@ export class FriendshipsRepository {
   async deleteFriendRequest(
     friendshipId: string,
     callerId: string,
-  ): Promise<'not_found' | 'forbidden' | 'deleted'> {
+  ): Promise<
+    | 'not_found'
+    | 'forbidden'
+    | { requesterId: string; addresseeId: string; wasAccepted: boolean }
+  > {
     const friendship = await this.database.client.query<FriendshipRow>(
       `
         SELECT
@@ -341,7 +345,11 @@ export class FriendshipsRepository {
       [friendshipId],
     );
 
-    return 'deleted';
+    return {
+      requesterId: row.requester_id,
+      addresseeId: row.addressee_id,
+      wasAccepted: row.status === 'accepted',
+    };
   }
 
   private toFriendSummary(row: FriendListRow): FriendSummaryResponse {

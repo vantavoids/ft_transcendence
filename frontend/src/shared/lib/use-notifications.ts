@@ -212,6 +212,14 @@ export function useNotifications() {
         return;
       }
 
+      // transient "friends changed" signal (e.g. we were unfriended): not a
+      // persisted notification, so re-fetch the friends list and stop before the
+      // list/badge bookkeeping.
+      if ((notification.type as string) === 'friends_changed') {
+        dispatchFriendsChanged();
+        return;
+      }
+
       // belt and braces: the server already skips muted inserts, but a mute
       // set in this tab may not have reached it before the push
       if (isSuppressedByMute(notification, preferencesRef.current)) {

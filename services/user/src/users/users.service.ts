@@ -319,7 +319,24 @@ export class UsersService {
     friendshipId: string,
     callerId: string,
   ): Promise<'not_found' | 'forbidden' | 'deleted'> {
-    return this.friendshipsRepository.deleteFriendRequest(friendshipId, callerId);
+    const result = await this.friendshipsRepository.deleteFriendRequest(
+      friendshipId,
+      callerId,
+    );
+    if (typeof result === 'string') {
+      return result;
+    }
+
+    // only an actual unfriend (an accepted friendship being removed) needs to
+    // tell the other party; declining/cancelling a pending request does not.
+    if (result.wasAccepted) {
+      await this.relationshipEventsPublisher.publishFriendRemoved({
+        requester_id: result.requesterId,
+        addressee_id: result.addresseeId,
+      });
+    }
+
+    return 'deleted';
   }
 
   async listBlockedUsers(viewerId: string): Promise<BlockListItemResponse[]> {

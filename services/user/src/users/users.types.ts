@@ -83,6 +83,11 @@ export interface FriendAcceptedEvent {
   addressee_id: string;
 }
 
+export interface FriendRemovedEvent {
+  requester_id: string;
+  addressee_id: string;
+}
+
 export type UserDataExportFriendState =
   | 'accepted'
   | 'pending_outgoing'
