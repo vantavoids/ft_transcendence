@@ -15,6 +15,11 @@ public sealed class GuildMemberJoinedConsumer(
 	{
 		var msg = context.Message;
 
+		// subscribe the (already-connected) member's connections to the guild
+		// group so they start receiving that guild's structure/presence broadcasts
+		// without reconnecting. connect-time subscription is handled by the hub.
+		await broadcaster.AddUserToGuildGroupAsync(msg.UserId, msg.GuildId, context.CancellationToken);
+
 		await broadcaster.BroadcastGuildJoinedAsync(
 			userId: msg.UserId,
 			guildId: msg.GuildId,
@@ -43,6 +48,10 @@ public sealed class GuildMemberLeftConsumer(
 			userId: msg.UserId,
 			guildId: msg.GuildId,
 			ct: context.CancellationToken);
+
+		// drop the member from the guild group so they stop receiving that guild's
+		// structure/presence broadcasts server-side, even if the client lingers.
+		await broadcaster.RemoveUserFromGuildGroupAsync(msg.UserId, msg.GuildId, context.CancellationToken);
 
 		await broadcaster.BroadcastGuildLeftAsync(
 			userId: msg.UserId,

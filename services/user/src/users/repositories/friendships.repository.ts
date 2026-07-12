@@ -83,6 +83,45 @@ export class FriendshipsRepository {
     return result.rows.map((row) => this.toFriendSummary(row));
   }
 
+  // accepted-friend ids for real-time fan-out (presence, profile, social).
+  // excludes either-direction blocks so a blocked user never receives the
+  // subject's presence, matching listFriends' visibility rules.
+  async listFriendIds(userId: string): Promise<string[]> {
+    const result = await this.database.client.query<{ id: string }>(
+      `
+        SELECT
+          CASE
+            WHEN friendship.requester_id = $1::bigint THEN friendship.addressee_id::text
+            ELSE friendship.requester_id::text
+          END AS id
+        FROM friendships AS friendship
+        WHERE friendship.status = 'accepted'
+          AND (friendship.requester_id = $1::bigint OR friendship.addressee_id = $1::bigint)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM user_blocks AS block
+            WHERE block.blocker_id = $1::bigint
+              AND block.blocked_id = CASE
+                WHEN friendship.requester_id = $1::bigint THEN friendship.addressee_id
+                ELSE friendship.requester_id
+              END
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM user_blocks AS block
+            WHERE block.blocked_id = $1::bigint
+              AND block.blocker_id = CASE
+                WHEN friendship.requester_id = $1::bigint THEN friendship.addressee_id
+                ELSE friendship.requester_id
+              END
+          )
+      `,
+      [userId],
+    );
+
+    return result.rows.map((row) => row.id);
+  }
+
   async listFriendRequests(
     viewerId: string,
     direction: FriendRequestDirection,

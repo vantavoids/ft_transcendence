@@ -262,6 +262,10 @@ export class UsersService {
     return this.friendshipsRepository.listFriendRequests(viewerId, direction);
   }
 
+  async listFriendIds(userId: string): Promise<string[]> {
+    return this.friendshipsRepository.listFriendIds(userId);
+  }
+
   async createFriendRequest(
     requesterId: string,
     addresseeId: string,

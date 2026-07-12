@@ -33,5 +33,11 @@ internal sealed class GuildClient(HttpClient http) : IGuildClient
 		return channels?.Select(c => long.Parse(c.Id)).ToList() ?? [];
 	}
 
+	public async Task<IReadOnlyList<long>> GetUserGuildIdsAsync(long userId, CancellationToken ct)
+	{
+		var ids = await http.GetFromJsonAsync<List<string>>($"users/{userId}/guilds", JsonOptions, ct);
+		return ids?.Select(long.Parse).ToList() ?? [];
+	}
+
 	private sealed record ChannelSummary(string Id);
 }

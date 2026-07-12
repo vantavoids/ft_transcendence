@@ -8,6 +8,8 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 {
 	private readonly List<(long UserId, long GuildId, string GuildName)> _joinCalls = [];
 	private readonly List<(long UserId, long GuildId)> _leftCalls = [];
+	private readonly List<(long UserId, long GuildId)> _addGuildGroupCalls = [];
+	private readonly List<(long UserId, long GuildId)> _removeGuildGroupCalls = [];
 	private readonly List<(long UserId, long GuildId)> _evictGuildCalls = [];
 	private readonly List<(long UserId, long ChannelId)> _evictChannelCalls = [];
 	private readonly List<long> _disconnectCalls = [];
@@ -16,6 +18,8 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 
 	public IReadOnlyList<(long UserId, long GuildId, string GuildName)> JoinCalls => _joinCalls;
 	public IReadOnlyList<(long UserId, long GuildId)> LeftCalls => _leftCalls;
+	public IReadOnlyList<(long UserId, long GuildId)> AddGuildGroupCalls => _addGuildGroupCalls;
+	public IReadOnlyList<(long UserId, long GuildId)> RemoveGuildGroupCalls => _removeGuildGroupCalls;
 	public IReadOnlyList<(long UserId, long GuildId)> EvictGuildCalls => _evictGuildCalls;
 	public IReadOnlyList<(long UserId, long ChannelId)> EvictChannelCalls => _evictChannelCalls;
 	public IReadOnlyList<long> DisconnectCalls => _disconnectCalls;
@@ -31,6 +35,18 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 	public Task BroadcastGuildLeftAsync(long userId, long guildId, CancellationToken ct)
 	{
 		_leftCalls.Add((userId, guildId));
+		return Task.CompletedTask;
+	}
+
+	public Task AddUserToGuildGroupAsync(long userId, long guildId, CancellationToken ct)
+	{
+		_addGuildGroupCalls.Add((userId, guildId));
+		return Task.CompletedTask;
+	}
+
+	public Task RemoveUserFromGuildGroupAsync(long userId, long guildId, CancellationToken ct)
+	{
+		_removeGuildGroupCalls.Add((userId, guildId));
 		return Task.CompletedTask;
 	}
 
