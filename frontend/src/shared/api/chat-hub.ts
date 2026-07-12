@@ -70,6 +70,12 @@ export type GuildLeftEvent = {
   guild_id: string;
 };
 
+export type GuildUpdatedEvent = {
+  guild_id: string;
+  name: string;
+  icon_url?: string | null;
+};
+
 export type ChannelDeletedEvent = {
   guild_id: string;
   channel_id: string;
@@ -106,6 +112,7 @@ export type ChatHubEvents = {
   GuildJoined: (event: GuildJoinedEvent) => void;
   GuildLeft: (event: GuildLeftEvent) => void;
   GuildDeleted: (guildId: string) => void;
+  GuildUpdated: (event: GuildUpdatedEvent) => void;
   ChannelCreated: (event: GuildChannelDto) => void;
   ChannelUpdated: (event: GuildChannelDto) => void;
   ChannelDeleted: (event: ChannelDeletedEvent) => void;
