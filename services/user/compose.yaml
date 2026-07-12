@@ -13,6 +13,7 @@ services:
 
   user-migrate:
     container_name: user-migrate
+    profiles: ["migrate"]
     image: user-migrate-service-prod
     pull_policy: never
     build:
@@ -62,8 +63,6 @@ services:
     depends_on:
       user-db:
         condition: service_healthy
-      user-migrate:
-        condition: service_completed_successfully
 
 volumes:
   user_db_data:
