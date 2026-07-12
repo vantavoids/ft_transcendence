@@ -43,6 +43,17 @@ public sealed record ChannelPayload(
 	bool IsNsfw,
 	int SlowmodeSeconds);
 
+[MessageUrn("Guild.Application.Contracts:GuildCategoryCreated")]
+public sealed record GuildCategoryCreated(long GuildId, CategoryPayload Category);
+
+[MessageUrn("Guild.Application.Contracts:GuildCategoryUpdated")]
+public sealed record GuildCategoryUpdated(long GuildId, CategoryPayload Category);
+
+[MessageUrn("Guild.Application.Contracts:GuildCategoryDeleted")]
+public sealed record GuildCategoryDeleted(long GuildId, long CategoryId);
+
+public sealed record CategoryPayload(string Id, string GuildId, string Name, int Position);
+
 [MessageUrn("Auth.Application.Contracts:UserLoggedOut")]
 public sealed record UserLoggedOut(long UserId);
 

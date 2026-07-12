@@ -30,6 +30,10 @@ public interface IChatClient
 	Task ChannelUpdated(GuildChannelDto channel);
 	Task ChannelDeleted(ChannelDeletedEvent evt);
 
+	Task CategoryCreated(GuildCategoryDto category);
+	Task CategoryUpdated(GuildCategoryDto category);
+	Task CategoryDeleted(CategoryDeletedEvent evt);
+
 	Task MemberJoined(GuildMemberEvent evt);
 	Task MemberLeft(GuildMemberEvent evt);
 
@@ -39,5 +43,6 @@ public interface IChatClient
 }
 
 public sealed record ChannelDeletedEvent(string GuildId, string ChannelId);
+public sealed record CategoryDeletedEvent(string GuildId, string CategoryId);
 public sealed record GuildMemberEvent(string GuildId, string UserId);
 public sealed record UserPresenceEvent(string UserId, string Status);

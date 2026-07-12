@@ -54,6 +54,14 @@ public interface IUserBroadcaster
 	Task BroadcastMemberLeftAsync(long guildId, long userId, CancellationToken ct);
 
 	/// <summary>
+	/// category lifecycle to the guild:{guildId} group. categories carry no
+	/// per-member read restriction, so every member receives them.
+	/// </summary>
+	Task BroadcastCategoryCreatedAsync(long guildId, GuildCategoryDto category, CancellationToken ct);
+	Task BroadcastCategoryUpdatedAsync(long guildId, GuildCategoryDto category, CancellationToken ct);
+	Task BroadcastCategoryDeletedAsync(long guildId, long categoryId, CancellationToken ct);
+
+	/// <summary>
 	/// force-terminates every active connection of <paramref name="userId"/> at
 	/// the transport level, regardless of client cooperation. used for
 	/// user.logged_out/user.deleted so a stale or malicious client can't keep

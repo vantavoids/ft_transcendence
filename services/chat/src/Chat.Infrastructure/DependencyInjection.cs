@@ -59,6 +59,9 @@ public static class DependencyInjection
 			x.AddConsumer<GuildChannelCreatedConsumer>();
 			x.AddConsumer<GuildChannelUpdatedConsumer>();
 			x.AddConsumer<GuildChannelDeletedConsumer>();
+			x.AddConsumer<GuildCategoryCreatedConsumer>();
+			x.AddConsumer<GuildCategoryUpdatedConsumer>();
+			x.AddConsumer<GuildCategoryDeletedConsumer>();
 			x.AddConsumer<UserLoggedOutConsumer>();
 			x.AddConsumer<UserDeletedConsumer>();
 
@@ -99,6 +102,9 @@ public static class DependencyInjection
 				cfg.Message<GuildChannelCreated>(m => m.SetEntityName("channel.created"));
 				cfg.Message<GuildChannelUpdated>(m => m.SetEntityName("channel.updated"));
 				cfg.Message<GuildChannelDeleted>(m => m.SetEntityName("channel.deleted"));
+				cfg.Message<GuildCategoryCreated>(m => m.SetEntityName("category.created"));
+				cfg.Message<GuildCategoryUpdated>(m => m.SetEntityName("category.updated"));
+				cfg.Message<GuildCategoryDeleted>(m => m.SetEntityName("category.deleted"));
 				cfg.Message<UserLoggedOut>(m => m.SetEntityName("user.logged_out"));
 
 				cfg.ConfigureEndpoints(ctx);

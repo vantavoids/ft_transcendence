@@ -195,10 +195,37 @@ export function useGuildWorkspace(): GuildWorkspace {
       setRawChannels((current) => current.filter((channel) => channel.id !== event.channel_id));
     });
 
+    const upsertCategory = (category: GuildCategoryDto) => {
+      if (category.guild_id !== selectedGuildIdRef.current) {
+        return;
+      }
+      setRawCategories((current) => {
+        const index = current.findIndex((existing) => existing.id === category.id);
+        if (index === -1) {
+          return [...current, category];
+        }
+        const next = [...current];
+        next[index] = category;
+        return next;
+      });
+    };
+
+    const unsubscribeCategoryCreated = onChatHubEvent('CategoryCreated', upsertCategory);
+    const unsubscribeCategoryUpdated = onChatHubEvent('CategoryUpdated', upsertCategory);
+    const unsubscribeCategoryDeleted = onChatHubEvent('CategoryDeleted', (event) => {
+      if (event.guild_id !== selectedGuildIdRef.current) {
+        return;
+      }
+      setRawCategories((current) => current.filter((category) => category.id !== event.category_id));
+    });
+
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
       unsubscribeDeleted();
+      unsubscribeCategoryCreated();
+      unsubscribeCategoryUpdated();
+      unsubscribeCategoryDeleted();
     };
   }, []);
 

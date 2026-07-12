@@ -20,7 +20,7 @@ public sealed class UpdateCategoryHandlerTests
 		var guildRepo = new FakeGuildRepository();
 		var catRepo = new FakeChannelCategoryRepository();
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 999, CategoryId: 1, Name: "x", Position: null));
@@ -37,7 +37,7 @@ public sealed class UpdateCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 99 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "x", Position: null));
@@ -56,7 +56,7 @@ public sealed class UpdateCategoryHandlerTests
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 2 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "x", Position: null));
@@ -73,7 +73,7 @@ public sealed class UpdateCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1, seedCategory: false);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 9999, Name: "x", Position: null));
@@ -90,7 +90,7 @@ public sealed class UpdateCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "", Position: null));
@@ -109,7 +109,7 @@ public sealed class UpdateCategoryHandlerTests
 		var originalPosition = original.Position;
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "Renamed", Position: null));
@@ -128,7 +128,7 @@ public sealed class UpdateCategoryHandlerTests
 		var originalName = catRepo.Store[500].Name;
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: null, Position: 9));
@@ -146,7 +146,7 @@ public sealed class UpdateCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "New", Position: 12));
@@ -167,7 +167,7 @@ public sealed class UpdateCategoryHandlerTests
 		var originalPosition = catRepo.Store[500].Position;
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: null, Position: null));
@@ -192,7 +192,7 @@ public sealed class UpdateCategoryHandlerTests
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<UpdateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateCategoryCommand(GuildId: 100, CategoryId: 500, Name: "Renamed", Position: null));

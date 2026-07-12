@@ -20,7 +20,7 @@ public sealed class CreateCategoryHandlerTests
 		var guildRepo = new FakeGuildRepository();
 		var catRepo = new FakeChannelCategoryRepository();
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 999, Name: "Text", Position: null));
@@ -36,7 +36,7 @@ public sealed class CreateCategoryHandlerTests
 		Seed(guildRepo, ownerId: 1);
 		var catRepo = new FakeChannelCategoryRepository();
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 99 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "Text", Position: null));
@@ -54,7 +54,7 @@ public sealed class CreateCategoryHandlerTests
 		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "Text", Position: null));
@@ -71,7 +71,7 @@ public sealed class CreateCategoryHandlerTests
 		Seed(guildRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "", Position: null));
@@ -89,7 +89,7 @@ public sealed class CreateCategoryHandlerTests
 		Seed(guildRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "Text", Position: 5));
@@ -110,7 +110,7 @@ public sealed class CreateCategoryHandlerTests
 		Seed(guildRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "First", Position: null));
@@ -131,7 +131,7 @@ public sealed class CreateCategoryHandlerTests
 		catRepo.Seed(ChannelCategory.Create(id: 9002, guildId: 100, name: "B", position: 5, now: Now).Value);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "C", Position: null));
@@ -155,7 +155,7 @@ public sealed class CreateCategoryHandlerTests
 		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateCategoryCommand, Result<CategoryResponse>>(
-			guildRepo, catRepo, new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new CreateCategoryCommand(GuildId: 100, Name: "General", Position: 0));

@@ -19,7 +19,7 @@ public sealed class DeleteCategoryHandlerTests
 		var guildRepo = new FakeGuildRepository();
 		var catRepo = new FakeChannelCategoryRepository();
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 999, CategoryId: 1));
@@ -36,7 +36,7 @@ public sealed class DeleteCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 99 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 100, CategoryId: 500));
@@ -55,7 +55,7 @@ public sealed class DeleteCategoryHandlerTests
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 2 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 100, CategoryId: 500));
@@ -72,7 +72,7 @@ public sealed class DeleteCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1, seedCategory: false);
 
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 100, CategoryId: 9999));
@@ -89,7 +89,7 @@ public sealed class DeleteCategoryHandlerTests
 		Seed(guildRepo, catRepo, ownerId: 1);
 
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 100, CategoryId: 500));
@@ -113,7 +113,7 @@ public sealed class DeleteCategoryHandlerTests
 		SeedCategory(catRepo, id: 500);
 
 		var handler = HandlerFactory.CreateCommand<DeleteCategoryCommand, Result>(
-			guildRepo, catRepo, new FakeCurrentUser { Id = 1 });
+			guildRepo, catRepo, new FakeEventBus(),new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new DeleteCategoryCommand(GuildId: 100, CategoryId: 500));

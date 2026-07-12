@@ -67,4 +67,27 @@ public sealed class ChannelConsumersTests
 		Assert.Equal(100L, call.GuildId);
 		Assert.Equal(500L, call.ChannelId);
 	}
+
+	[Fact]
+	public async Task CategoryCreated_BroadcastsToGuild()
+	{
+		var broadcaster = new FakeUserBroadcaster();
+		await using var provider = new ServiceCollection()
+			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddMassTransitTestHarness(x => x.AddConsumer<GuildCategoryCreatedConsumer>())
+			.BuildServiceProvider(true);
+
+		var harness = provider.GetRequiredService<ITestHarness>();
+		await harness.Start();
+
+		await harness.Bus.Publish(new GuildCategoryCreated(
+			GuildId: 100, Category: new CategoryPayload("30", "100", "General", 0)));
+
+		Assert.True(await harness.Consumed.Any<GuildCategoryCreated>());
+
+		var call = Assert.Single(broadcaster.CategoryCreatedCalls);
+		Assert.Equal(100L, call.GuildId);
+		Assert.Equal("30", call.Category.Id);
+		Assert.Equal("General", call.Category.Name);
+	}
 }

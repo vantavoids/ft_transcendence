@@ -41,3 +41,18 @@ public sealed record ChannelPayload(
 		IsNsfw: c.IsNsfw,
 		SlowmodeSeconds: c.SlowmodeSeconds);
 }
+
+// category-lifecycle events consumed by Chat. categories carry no per-member
+// read restriction, so Chat broadcasts them to the whole guild group.
+public sealed record GuildCategoryCreated(long GuildId, CategoryPayload Category);
+public sealed record GuildCategoryUpdated(long GuildId, CategoryPayload Category);
+public sealed record GuildCategoryDeleted(long GuildId, long CategoryId);
+
+public sealed record CategoryPayload(string Id, string GuildId, string Name, int Position)
+{
+	public static CategoryPayload From(ChannelCategory c) => new(
+		Id: c.Id.ToString(),
+		GuildId: c.GuildId.ToString(),
+		Name: c.Name,
+		Position: c.Position);
+}

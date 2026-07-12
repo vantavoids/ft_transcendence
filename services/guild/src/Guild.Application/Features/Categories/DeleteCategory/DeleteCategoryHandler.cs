@@ -1,7 +1,9 @@
+using Guild.Application.Abstractions;
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
@@ -10,6 +12,7 @@ namespace Guild.Application.Features.Categories.DeleteCategory;
 internal sealed class DeleteCategoryHandler(
 	IGuildRepository guilds,
 	IChannelCategoryRepository categories,
+	IEventBus eventBus,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
 	: ICommandHandler<DeleteCategoryCommand, Result>
@@ -29,6 +32,11 @@ internal sealed class DeleteCategoryHandler(
 			return GuildFailures.CategoryNotFound;
 
 		categories.Remove(category);
+
+		await eventBus.PublishAsync(
+			new GuildCategoryDeleted(command.GuildId, command.CategoryId),
+			cancellationToken);
+
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
 		return Result.Ok();
