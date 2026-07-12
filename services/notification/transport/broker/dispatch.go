@@ -19,6 +19,7 @@ const (
 	TypeMention                   = "mention"
 	TypeDM                        = "dm"
 	TypeFriendRequest             = "friend_request"
+	TypeFriendAccept              = "friend_accept"
 	TypeGuildInvite               = "guild_invite"
 	TypeGuildWelcome              = "guild_welcome"
 	TypeIncomingCall              = "incoming_call"
@@ -136,6 +137,22 @@ func dispatch(ctx context.Context, orch *core.Orchestrator, d amqp.Delivery) err
 			ActorID:  &ev.RequesterID,
 			SourceID: &ev.FriendshipID,
 			Payload:  FriendRequestPayload{},
+		})
+
+	case "friend.accepted":
+		ev, err := parse[FriendAcceptedEvent](d)
+		if err != nil {
+			return err
+		}
+
+		// the requester (who sent the pending request) is told the addressee
+		// accepted it; the addressee already knows (they clicked accept).
+		return orch.CreateNotif(ctx, core.CreateInput{
+			UserID:   ev.RequesterID,
+			Type:     TypeFriendAccept,
+			ActorID:  &ev.AddresseeID,
+			SourceID: &ev.FriendshipID,
+			Payload:  FriendAcceptPayload{},
 		})
 
 	case "guild.invite_created":

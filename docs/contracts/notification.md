@@ -63,6 +63,7 @@ Fetch notifications for the authenticated user. Dismissed notifications are excl
 | `mention` | `author_id` of the message | `message_id` | `{ channel_id, guild_id, preview }` |
 | `dm` | `sender_id` | `message_id` | `{ conversation_id, preview }` |
 | `friend_request` | `requester_id` | friendship row id | `{}` |
+| `friend_accept` | `addressee_id` (who accepted) | friendship row id | `{}` |
 | `guild_invite` | `invited_by_user_id` | `guild_id` | `{ guild_name }` |
 | `guild_welcome` | NULL (system event) | `guild_id` | `{ guild_name }` |
 | `incoming_call` | `caller_id` | NULL (call is ephemeral) | `{ call_type: "audio" \| "video" }` |
@@ -273,6 +274,7 @@ This is the internal-perspective twin of `GET /notifications/preferences`: every
 | `chat.dm_sent` | Always | `type: dm` for `recipient_id` |
 | `call.incoming` | Always | `type: incoming_call` for `callee_id` - prompts them to open the app |
 | `friend.request_sent` | Always | `type: friend_request` for `addressee_id` |
+| `friend.accepted` | Always | `type: friend_accept` for `requester_id` - tells them their request was accepted |
 | `guild.invite_created` | `invited_user_id` is present | `type: guild_invite` for `invited_user_id` |
 | `guild.member_joined` | Always | `type: guild_welcome` for the joining user |
 | `user.deleted` | Always | Delete every notification row where `user_id` or `actor_id` matches the deleted user, and drop the user's `notification_preferences` rows. Also sends the `account_deleted` confirmation email (see [Email delivery](#email-delivery)). |

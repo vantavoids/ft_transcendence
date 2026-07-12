@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
+import { dispatchFriendsChanged } from './friends-events';
 import {
   buildNotificationEventsUrl,
   deleteNotificationPreference,
@@ -230,6 +231,12 @@ export function useNotifications() {
           ? current
           : [notification, ...current]
       );
+
+      // a friend request we sent was accepted: our friend graph changed, so
+      // nudge the friends list to re-fetch.
+      if (notification.type === 'friend_accept') {
+        dispatchFriendsChanged();
+      }
     }
 
     function scheduleReconnect() {

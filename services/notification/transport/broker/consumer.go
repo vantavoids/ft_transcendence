@@ -22,6 +22,7 @@ const (
 // published to the shared `events` direct exchange by the Go/NestJS services
 var directEvents = []string{
 	"friend.request_sent",
+	"friend.accepted",
 	"data.export_ready",
 }
 

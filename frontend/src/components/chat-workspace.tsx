@@ -26,6 +26,7 @@ import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { onChatHubEvent, stopChatHub } from '../shared/api/chat-hub';
+import { subscribeFriendsChanged } from '../shared/lib/friends-events';
 import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
@@ -59,6 +60,7 @@ export function ChatWorkspace() {
   const [editingDraft, setEditingDraft] = useState('');
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendsReloadKey, setFriendsReloadKey] = useState(0);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -166,7 +168,16 @@ export function ChatWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId]);
+  }, [currentUserId, friendsReloadKey]);
+
+  // re-fetch the friends list when the friend graph changed elsewhere (a
+  // pending request we sent was accepted, delivered as a friend_accept
+  // notification over SSE).
+  useEffect(() => {
+    return subscribeFriendsChanged(() => {
+      setFriendsReloadKey((key) => key + 1);
+    });
+  }, []);
 
   // live presence: patch a friend's status dot when they go online/offline,
   // instead of only reflecting the status fetched at load.
@@ -632,6 +643,9 @@ export function ChatWorkspace() {
     } else if (notification.type === 'friend_request') {
       handleOpenDms();
       setIsFriendRequestsFocusPending(true);
+      setMobilePane('channels');
+    } else if (notification.type === 'friend_accept') {
+      handleOpenDms();
       setMobilePane('channels');
     } else if (notification.type === 'guild_invite') {
       // no "invites addressed to me" endpoint exists, so the closest target

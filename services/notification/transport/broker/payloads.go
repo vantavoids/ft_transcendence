@@ -14,6 +14,9 @@ type DmPayload struct {
 type FriendRequestPayload struct {
 }
 
+type FriendAcceptPayload struct {
+}
+
 type GuildInvitePayload struct {
 	GuildName string `json:"guild_name"`
 }

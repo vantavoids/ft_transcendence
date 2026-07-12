@@ -56,6 +56,7 @@ function hasNotificationTarget(notification: NotificationDto): boolean {
       return Boolean(notification.actor_id);
     case 'mention':
     case 'friend_request':
+    case 'friend_accept':
     case 'guild_invite':
       return true;
     case 'guild_welcome':
@@ -117,6 +118,15 @@ export function describeNotification(
         detail: actorName
           ? `${actorName} wants to add you as a friend.`
           : 'Someone wants to add you as a friend.',
+        tone: 'pink',
+        Icon: UserPlus
+      };
+    case 'friend_accept':
+      return {
+        title: 'Friend request accepted',
+        detail: actorName
+          ? `${actorName} accepted your friend request.`
+          : 'Your friend request was accepted.',
         tone: 'pink',
         Icon: UserPlus
       };

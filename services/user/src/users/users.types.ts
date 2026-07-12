@@ -76,6 +76,12 @@ export interface FriendRequestSentEvent {
   addressee_id: string;
 }
 
+export interface FriendAcceptedEvent {
+  friendship_id: string;
+  requester_id: string;
+  addressee_id: string;
+}
+
 export type UserDataExportFriendState =
   | 'accepted'
   | 'pending_outgoing'

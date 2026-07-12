@@ -5,6 +5,7 @@ export type NotificationType =
   | 'mention'
   | 'dm'
   | 'friend_request'
+  | 'friend_accept'
   | 'guild_invite'
   | 'guild_welcome'
   | 'incoming_call';
@@ -13,6 +14,7 @@ export type NotificationPayloadMap = {
   mention: { channel_id: string; guild_id: string; preview: string };
   dm: { conversation_id: string; preview: string };
   friend_request: Record<string, never>;
+  friend_accept: Record<string, never>;
   guild_invite: { guild_name: string };
   guild_welcome: { guild_name: string };
   incoming_call: { call_type: 'audio' | 'video' };

@@ -296,11 +296,23 @@ export class UsersService {
     callerId: string,
     status: 'accepted' | 'blocked',
   ): Promise<FriendshipResponse | 'not_found' | 'forbidden' | 'conflict'> {
-    return this.friendshipsRepository.updateFriendRequest(
+    const result = await this.friendshipsRepository.updateFriendRequest(
       friendshipId,
       callerId,
       status,
     );
+
+    // notify the requester that their pending request was accepted, so their
+    // client shows the notification and refreshes the friends list.
+    if (typeof result !== 'string' && result.status === 'accepted') {
+      await this.relationshipEventsPublisher.publishFriendAccepted({
+        friendship_id: result.id,
+        requester_id: result.requester_id,
+        addressee_id: result.addressee_id,
+      });
+    }
+
+    return result;
   }
 
   async deleteFriendRequest(
