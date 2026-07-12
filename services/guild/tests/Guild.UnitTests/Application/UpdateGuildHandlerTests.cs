@@ -19,7 +19,7 @@ public sealed class UpdateGuildHandlerTests
 	{
 		var repo = new FakeGuildRepository();
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
-			repo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			repo, new FakeEventBus(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateGuildCommand(GuildId: 999, Name: "x", Description: null, IconUrl: null, BannerUrl: null));
@@ -34,7 +34,7 @@ public sealed class UpdateGuildHandlerTests
 		var repo = new FakeGuildRepository();
 		Seed(repo, ownerId: 1);
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
-			repo, new FakeClock(), new FakeCurrentUser { Id = 99 });
+			repo, new FakeEventBus(), new FakeClock(), new FakeCurrentUser { Id = 99 });
 
 		var result = await handler.HandleAsync(
 			new UpdateGuildCommand(GuildId: 100, Name: "x", Description: null, IconUrl: null, BannerUrl: null));
@@ -61,7 +61,7 @@ public sealed class UpdateGuildHandlerTests
 		repo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
-			repo, new FakeClock(), new FakeCurrentUser { Id = 2 });
+			repo, new FakeEventBus(), new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new UpdateGuildCommand(GuildId: 100, Name: "x", Description: null, IconUrl: null, BannerUrl: null));
@@ -76,7 +76,7 @@ public sealed class UpdateGuildHandlerTests
 		var repo = new FakeGuildRepository();
 		Seed(repo, ownerId: 1);
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
-			repo, new FakeClock(), new FakeCurrentUser { Id = 1 });
+			repo, new FakeEventBus(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
 			new UpdateGuildCommand(GuildId: 100, Name: "Renamed", Description: null, IconUrl: null, BannerUrl: null));
@@ -101,7 +101,7 @@ public sealed class UpdateGuildHandlerTests
 		repo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<UpdateGuildCommand, Result<GuildDto>>(
-			repo, new FakeClock(), new FakeCurrentUser { Id = 2 });
+			repo, new FakeEventBus(), new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new UpdateGuildCommand(GuildId: 100, Name: "ByMod", Description: null, IconUrl: null, BannerUrl: null));

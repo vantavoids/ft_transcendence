@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
 using Guild.Application.Authorization;
+using Guild.Application.Contracts;
 using Guild.Application.Features.Guilds.Common;
 using Guild.Domain.Guild;
 using Guild.Domain.Results;
@@ -11,6 +12,7 @@ namespace Guild.Application.Features.Guilds.UpdateGuild;
 
 internal sealed class UpdateGuildHandler(
 	IGuildRepository repository,
+	IEventBus eventBus,
 	IClock clock,
 	ICurrentUser currentUser,
 	IUnitOfWork unitOfWork)
@@ -35,6 +37,10 @@ internal sealed class UpdateGuildHandler(
 
 		if (updateResult.IsFailure)
 			return updateResult.Error;
+
+		await eventBus.PublishAsync(
+			new GuildUpdated(guild.Id, guild.Name, guild.IconUrl),
+			cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

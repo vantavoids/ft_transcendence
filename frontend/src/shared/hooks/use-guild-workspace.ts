@@ -109,10 +109,17 @@ export function useGuildWorkspace(): GuildWorkspace {
       void refreshGuilds();
     });
 
+    // name/icon change: refresh the guild list so the sidebar + header pick up
+    // the new values.
+    const unsubscribeUpdated = onChatHubEvent('GuildUpdated', () => {
+      void refreshGuilds();
+    });
+
     return () => {
       unsubscribeJoined();
       unsubscribeLeft();
       unsubscribeDeleted();
+      unsubscribeUpdated();
     };
   }, [refreshGuilds]);
 

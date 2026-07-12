@@ -9,6 +9,7 @@ public sealed record GuildInviteCreated(long GuildId, string GuildName, long Inv
 // read Guild's DB) can purge each channel's message history.
 public sealed record GuildDeleted(long GuildId, IReadOnlyList<long> ChannelIds);
 public sealed record GuildOwnerTransferred(long GuildId, long OldOwnerId, long NewOwnerId);
+public sealed record GuildUpdated(long GuildId, string Name, string? IconUrl);
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
 
 // channel-lifecycle events consumed by Chat to push real-time structure updates.

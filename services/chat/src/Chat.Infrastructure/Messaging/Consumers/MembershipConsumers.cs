@@ -97,6 +97,19 @@ public sealed class GuildDeletedConsumer(
 	}
 }
 
+public sealed class GuildUpdatedConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildUpdatedConsumer> logger)
+	: IConsumer<GuildUpdated>
+{
+	public async Task Consume(ConsumeContext<GuildUpdated> context)
+	{
+		var msg = context.Message;
+		await broadcaster.BroadcastGuildUpdatedAsync(msg.GuildId, msg.Name, msg.IconUrl, context.CancellationToken);
+		logger.LogDebug("guild.updated consumed: guild_id={GuildId}", msg.GuildId);
+	}
+}
+
 public sealed class ChannelAccessRevokedConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<ChannelAccessRevokedConsumer> logger)

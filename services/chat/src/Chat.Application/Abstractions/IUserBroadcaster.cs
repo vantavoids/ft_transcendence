@@ -21,6 +21,12 @@ public interface IUserBroadcaster
 	Task BroadcastGuildDeletedAsync(long guildId, CancellationToken ct);
 
 	/// <summary>
+	/// tells the guild:{guildId} group the guild's name/icon changed so members'
+	/// sidebar + header update live.
+	/// </summary>
+	Task BroadcastGuildUpdatedAsync(long guildId, string name, string? iconUrl, CancellationToken ct);
+
+	/// <summary>
 	/// subscribes every open connection of <paramref name="userId"/> to the
 	/// <c>guild:{guildId}</c> group so they receive that guild's real-time
 	/// broadcasts. called when the user joins a guild while already connected
