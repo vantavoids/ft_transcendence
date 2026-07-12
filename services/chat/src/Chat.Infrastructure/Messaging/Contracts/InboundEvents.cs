@@ -30,6 +30,9 @@ public sealed record GuildMemberUpdated(long GuildId, long UserId);
 [MessageUrn("Guild.Application.Contracts:ChannelAccessRevoked")]
 public sealed record ChannelAccessRevoked(long ChannelId, long UserId);
 
+[MessageUrn("Guild.Application.Contracts:ChannelAccessGranted")]
+public sealed record ChannelAccessGranted(long ChannelId, long GuildId, long UserId);
+
 [MessageUrn("Guild.Application.Contracts:GuildChannelCreated")]
 public sealed record GuildChannelCreated(long GuildId, ChannelPayload Channel, IReadOnlyList<long> EligibleUserIds);
 

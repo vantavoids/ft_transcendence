@@ -88,7 +88,7 @@ internal sealed class PutOverwriteHandler(
 			after = [.. channelOverwrites, createResult.Value];
 		}
 
-		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, channel.Id, after, cancellationToken);
+		await ChannelAccess.PublishAccessChangesAsync(eventBus, guild, snapshot, channel.Id, after, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

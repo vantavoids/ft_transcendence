@@ -86,6 +86,11 @@ export type CategoryDeletedEvent = {
   category_id: string;
 };
 
+export type ChannelAccessGrantedEvent = {
+  guild_id: string;
+  channel_id: string;
+};
+
 export type GuildMemberEvent = {
   guild_id: string;
   user_id: string;
@@ -119,6 +124,7 @@ export type ChatHubEvents = {
   CategoryCreated: (event: GuildCategoryDto) => void;
   CategoryUpdated: (event: GuildCategoryDto) => void;
   CategoryDeleted: (event: CategoryDeletedEvent) => void;
+  ChannelAccessGranted: (event: ChannelAccessGrantedEvent) => void;
   MemberJoined: (event: GuildMemberEvent) => void;
   MemberLeft: (event: GuildMemberEvent) => void;
   MemberUpdated: (event: GuildMemberEvent) => void;

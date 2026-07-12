@@ -209,9 +209,10 @@ public sealed class ChannelAccessRevokedTests
 	}
 
 	[Fact]
-	public async Task UpdateRole_GrantsReadBit_NoRevocation()
+	public async Task UpdateRole_GrantsReadBit_PublishesGrant_NotRevocation()
 	{
-		// a grant can never revoke (base perms are additive), so no event
+		// granting a read bit flips the holder from denied to readable, so the
+		// mirror grant fires (never a revocation, base perms are additive).
 		var (guilds, channels, ow, guild) = Setup(everyonePerms: 0);
 		DomainSeed.AddCustomRole(guild, 200, "R", permissions: 0, position: 1, Now);
 		DomainSeed.AssignRole(guild, Member, 200, Now);
@@ -224,6 +225,9 @@ public sealed class ChannelAccessRevokedTests
 
 		Assert.True(result.Succeeded);
 		Assert.False(bus.Has<ChannelAccessRevoked>());
+		var grant = bus.Single<ChannelAccessGranted>();
+		Assert.Equal(Member, grant.UserId);
+		Assert.Equal(100, grant.GuildId);
 	}
 
 	[Fact]

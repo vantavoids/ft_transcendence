@@ -43,7 +43,7 @@ internal sealed class UnassignRoleHandler(
 		if (unassignResult.IsFailure)
 			return unassignResult.Error;
 
-		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, cancellationToken);
+		await ChannelAccess.PublishAccessChangesAsync(eventBus, guild, snapshot, cancellationToken);
 
 		await eventBus.PublishAsync(
 			new GuildMemberUpdated(command.GuildId, command.TargetUserId), cancellationToken);

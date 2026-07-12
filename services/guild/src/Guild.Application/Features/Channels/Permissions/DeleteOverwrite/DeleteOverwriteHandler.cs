@@ -46,7 +46,7 @@ internal sealed class DeleteOverwriteHandler(
 		overwrites.Remove(match);
 
 		var after = channelOverwrites.Where(o => o.Id != match.Id).ToList();
-		await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snapshot, channel.Id, after, cancellationToken);
+		await ChannelAccess.PublishAccessChangesAsync(eventBus, guild, snapshot, channel.Id, after, cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 

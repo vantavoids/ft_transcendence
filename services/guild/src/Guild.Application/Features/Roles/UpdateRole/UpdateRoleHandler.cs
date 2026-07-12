@@ -47,11 +47,12 @@ internal sealed class UpdateRoleHandler(
 		    && !PermissionResolver.CanGrantPermissions(mask, newPerms))
 			return GuildFailures.CannotGrantPermissionsYouLack;
 
-		// read can only be revoked when the role loses READ_MESSAGES or ADMINISTRATOR
-		// (base perms are additive, so a grant never removes read)
+		// capture whenever READ_MESSAGES or ADMINISTRATOR is toggled (added OR
+		// removed): removing flips holders to denied (revocation), adding flips
+		// them to readable (grant). XOR catches both directions.
 		const long readAffecting = (long)Permission.ReadMessages | (long)Permission.Administrator;
 		ChannelReadSnapshot? snapshot = null;
-		if (command.Permissions is long updatedPerms && (role.Permissions & ~updatedPerms & readAffecting) != 0)
+		if (command.Permissions is long updatedPerms && ((role.Permissions ^ updatedPerms) & readAffecting) != 0)
 		{
 			var affected = role.IsDefault
 				? guild.Members.Select(m => m.UserId).ToList()
@@ -72,7 +73,7 @@ internal sealed class UpdateRoleHandler(
 			return updateResult.Error;
 
 		if (snapshot is { } snap)
-			await ChannelAccess.PublishRevocationsAsync(eventBus, guild, snap, cancellationToken);
+			await ChannelAccess.PublishAccessChangesAsync(eventBus, guild, snap, cancellationToken);
 
 		await eventBus.PublishAsync(new GuildRolesChanged(command.GuildId), cancellationToken);
 
