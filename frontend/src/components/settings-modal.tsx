@@ -26,6 +26,7 @@ import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user
 import { AvatarWithStatus } from './avatar-with-status';
 import { ProfileEditorPanel } from './profile-editor-panel';
 import { useCurrentUserProfile } from '../shared/user/user-store';
+import { useToast } from '../shared/ui/toast';
 
 type SettingsModalProps = {
   currentUser: CurrentUserProfile | null;
@@ -387,6 +388,17 @@ function CredentialsForm({ currentEmail, onBack }: CredentialsFormProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Credentials',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function handleSubmit(formData: FormData) {
     const email = String(formData.get('email') ?? '').trim();
@@ -461,11 +473,6 @@ function CredentialsForm({ currentEmail, onBack }: CredentialsFormProps) {
         autoComplete="current-password"
       />
 
-      {error ? (
-        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-          {error}
-        </p>
-      ) : null}
       {success ? (
         <p className="rounded-md border border-lime/25 bg-lime/10 px-3 py-2 text-sm text-lime">
           {success}
@@ -500,6 +507,17 @@ type DeleteAccountPanelProps = {
 function DeleteAccountPanel({ onBack, onDeleted }: DeleteAccountPanelProps) {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Delete account',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function handleDelete() {
     setError('');
@@ -519,12 +537,6 @@ function DeleteAccountPanel({ onBack, onDeleted }: DeleteAccountPanelProps) {
         This permanently deletes your account and frees your email for re-registration. This cannot
         be undone.
       </p>
-
-      {error ? (
-        <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-          {error}
-        </p>
-      ) : null}
 
       <div className="grid grid-cols-2 gap-2.5">
         <button

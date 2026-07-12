@@ -20,8 +20,8 @@ import {
 import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
 import { getGuildAccentClasses } from './guild-icon';
-import { FormError } from './guild-forms';
 import { MemberRoleChips, MemberRolesPopover } from './member-roles-popover';
+import { useToast } from '../../shared/ui/toast';
 
 const iconButtonClasses =
   'flex h-8 w-8 items-center justify-center rounded-md text-[#8b8b8f] transition hover:bg-frame hover:text-white';
@@ -244,6 +244,7 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
   const [banTarget, setBanTarget] = useState<HydratedGuildMember | null>(null);
   const [banReason, setBanReason] = useState('');
   const [isActionBusy, setIsActionBusy] = useState(false);
+  const { pushToast } = useToast();
 
   // Gate the role controls to callers the server would authorize; the caller
   // missing from the loaded members (pagination edge) safely hides them.
@@ -264,6 +265,26 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
       isOwner: callerMember.isOwner
     };
   }, [members, roles, currentUserId]);
+
+  useEffect(() => {
+    if (actionError) {
+      pushToast({
+        title: 'Members',
+        description: actionError,
+        tone: 'error'
+      });
+    }
+  }, [actionError, pushToast]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Members',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function confirmKickMember() {
     if (!kickTarget) {
@@ -306,8 +327,6 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
 
   return (
     <div className="grid gap-3">
-      {actionError ? <FormError message={actionError} /> : null}
-      {error ? <FormError message={error} /> : null}
       {isLoading && members.length === 0 ? (
         <div className="h-32 animate-pulse rounded-md bg-panel" />
       ) : (

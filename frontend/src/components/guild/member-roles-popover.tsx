@@ -10,7 +10,7 @@ import {
 import { canToggleRole, type RoleCaller } from '../../shared/guilds/role-permissions';
 import type { HydratedGuildMember } from '../../shared/guilds/use-guild-members';
 import { useCloseOnEscape } from '../../shared/hooks/use-close-on-escape';
-import { FormError } from './guild-forms';
+import { useToast } from '../../shared/ui/toast';
 
 export function MemberRoleChips({ roles }: { roles: GuildRoleDto[] }) {
   if (roles.length === 0) {
@@ -57,6 +57,7 @@ export function MemberRolesPopover({
 }: MemberRolesPopoverProps) {
   const [pendingRoleIds, setPendingRoleIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  const { pushToast } = useToast();
 
   useCloseOnEscape(onClose);
 
@@ -70,6 +71,16 @@ export function MemberRolesPopover({
     document.addEventListener('mousedown', handleMouseDown);
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [containerRef, onClose]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Member roles',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   const assignableRoles = roles
     .filter((role) => !role.is_default)
@@ -112,7 +123,6 @@ export function MemberRolesPopover({
           <X className="h-3.5 w-3.5" strokeWidth={2} />
         </button>
       </div>
-      {error ? <FormError message={error} /> : null}
       {assignableRoles.length === 0 ? (
         <p className="px-1 pb-1 text-sm text-white/35">
           No roles yet. Create one in the Roles tab.

@@ -10,7 +10,7 @@ import {
   type GuildRoleDto
 } from '../../shared/api/guild';
 import { ActionModal } from '../action-modal';
-import { FormError } from './guild-forms';
+import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
   'h-10 w-full rounded-md border border-transparent bg-input-bg px-3 text-sm text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -173,6 +173,7 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   const [editDraft, setEditDraft] = useState<RoleDraft>(emptyDraft);
   const [isBusy, setIsBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GuildRoleDto | null>(null);
+  const { pushToast } = useToast();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -191,6 +192,16 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Roles',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function handleCreate() {
     setError('');
@@ -285,8 +296,6 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
           isBusy={isBusy}
         />
       </div>
-
-      {error ? <FormError message={error} /> : null}
 
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-md bg-panel" />

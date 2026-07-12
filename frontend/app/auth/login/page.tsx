@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
@@ -9,6 +9,7 @@ import { establishSession } from '../../../src/shared/lib/session';
 import { describeLoginError } from '../../../src/shared/lib/auth-errors';
 import { useGuilds } from '../../../src/shared/guilds/guild-store';
 import { validateLoginForm, type LoginFormErrors } from '../../../src/shared/lib/validators/auth';
+import { useToast } from '../../../src/shared/ui/toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,17 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (serverError) {
+      pushToast({
+        title: 'Login failed',
+        description: serverError,
+        tone: 'error'
+      });
+    }
+  }, [serverError, pushToast]);
 
   async function handleSubmit(formData: FormData) {
     const email = String(formData.get('email') ?? '');
@@ -78,11 +90,6 @@ export default function LoginPage() {
           />
           {errors.password ? <p className="text-sm text-pink">{errors.password}</p> : null}
         </div>
-        {serverError ? (
-          <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-            {serverError}
-          </p>
-        ) : null}
         <button
           type="submit"
           disabled={isSubmitting}

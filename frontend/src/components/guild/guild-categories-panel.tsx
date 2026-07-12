@@ -11,7 +11,7 @@ import {
   type GuildCategoryDto
 } from '../../shared/api/guild';
 import { ActionModal } from '../action-modal';
-import { FormError } from './guild-forms';
+import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
   'h-10 w-full rounded-md border border-transparent bg-input-bg px-3 text-sm text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -33,6 +33,7 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
   const [editPosition, setEditPosition] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GuildCategoryDto | null>(null);
+  const { pushToast } = useToast();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -51,6 +52,16 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Categories',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,8 +162,6 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
           </button>
         </div>
       </form>
-
-      {error ? <FormError message={error} /> : null}
 
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-md bg-panel" />

@@ -29,6 +29,7 @@ import {
   type UseNotificationsResult
 } from '../shared/lib/use-notifications';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
+import { useToast } from '../shared/ui/toast';
 
 type NotificationTone = 'aqua' | 'yellow' | 'pink';
 
@@ -354,6 +355,17 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
   const [duration, setDuration] = useState<MuteDuration>('forever');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (formError) {
+      pushToast({
+        title: 'Notification mutes',
+        description: formError,
+        tone: 'error'
+      });
+    }
+  }, [formError, pushToast]);
 
   async function handleAddMute() {
     const trimmedId = scopeId.trim();
@@ -420,7 +432,6 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
             </button>
           ))}
         </div>
-        {formError ? <p className="mt-2 text-xs text-pink">{formError}</p> : null}
         <button
           type="button"
           onClick={handleAddMute}
@@ -501,6 +512,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
   const [muteError, setMuteError] = useState('');
   const [actorNamesById, setActorNamesById] = useState<Map<string, string>>(new Map());
+  const { pushToast } = useToast();
   // ids already requested (found or not), so deleted actors aren't refetched
   // on every render; rows fall back to actor-less copy for them
   const requestedActorIdsRef = useRef<Set<string>>(new Set());
@@ -540,6 +552,26 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
         // best effort: rows keep their actor-less wording
       });
   }, [notifications]);
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Notifications',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
+
+  useEffect(() => {
+    if (muteError) {
+      pushToast({
+        title: 'Notification mutes',
+        description: muteError,
+        tone: 'error'
+      });
+    }
+  }, [muteError, pushToast]);
 
   async function handleRowMute(scope: NotificationMuteScope) {
     setMuteError('');
@@ -625,7 +657,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <p className="text-sm text-white/45">{error}</p>
+              <p className="text-sm text-white/45">Notifications unavailable.</p>
               <button
                 type="button"
                 onClick={refresh}
@@ -644,11 +676,6 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
             </div>
           ) : (
             <div className="space-y-2">
-              {muteError ? (
-                <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-                  {muteError}
-                </p>
-              ) : null}
               {notifications.map((notification) => (
                 <NotificationRow
                   key={notification.id}

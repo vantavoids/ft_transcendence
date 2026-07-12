@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Crown, Shield } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
@@ -12,6 +13,7 @@ import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-
 import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { hashToIndex } from '../shared/lib/hash';
+import { useToast } from '../shared/ui/toast';
 
 export type GuildMember = {
   id: string;
@@ -203,6 +205,17 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
     selectedGuild?.owner_id ?? null
   );
   const groupByRole = useGroupMembersByRole();
+  const { pushToast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      pushToast({
+        title: 'Members',
+        description: error,
+        tone: 'error'
+      });
+    }
+  }, [error, pushToast]);
 
   const memberGroups = buildMemberGroups(members, groupByRole);
   const onlineCount = members.filter((member) => member.status !== 'offline').length;
@@ -226,8 +239,8 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
             ))}
           </div>
         ) : error && members.length === 0 ? (
-          <p className="rounded-md border border-pink/25 bg-pink/10 px-3 py-2 text-sm text-pink">
-            {error}
+          <p className="rounded-md border border-stroke bg-frame px-3 py-2 text-sm text-white/45">
+            Members unavailable.
           </p>
         ) : !selectedGuild ? (
           <p className="px-1 text-sm text-white/35">Select a guild to see its members.</p>
