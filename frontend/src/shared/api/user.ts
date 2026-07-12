@@ -29,6 +29,7 @@ export type UpdateUserProfilePayload = {
 
 export type FriendDto = {
   id: string;
+  friendship_id: string;
   username: string;
   display_name: string;
   avatar_url?: string | null;

@@ -40,6 +40,7 @@ export interface UpdateUserProfileInput {
 
 export interface FriendSummaryResponse {
   id: string;
+  friendship_id: string;
   username: string;
   display_name: string | null;
   avatar_url: string | null;

@@ -26,13 +26,13 @@ import { clearSession, getUserId } from '../shared/lib/session';
 import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { onChatHubEvent, stopChatHub } from '../shared/api/chat-hub';
-import { subscribeFriendsChanged } from '../shared/lib/friends-events';
+import { dispatchFriendsChanged, subscribeFriendsChanged } from '../shared/lib/friends-events';
 import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
 import { useConversationHistory } from '../shared/hooks/use-conversation-history';
 import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
-import { getUsersByIds, listFriends, type UserSummaryDto } from '../shared/api/user';
+import { deleteFriendship, getUsersByIds, listFriends, type UserSummaryDto } from '../shared/api/user';
 import { toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
@@ -458,6 +458,23 @@ export function ChatWorkspace() {
     setMobilePane('messages');
     window.sessionStorage.setItem(LAST_CHAT_MODE_KEY, 'dm');
     setProfileMember(null);
+  }
+
+  async function handleUnfriend(member: GuildMember) {
+    const friend = friends.find((entry) => entry.id === member.id);
+    if (!friend) {
+      return;
+    }
+
+    setProfileMember(null);
+    // optimistic: drop them locally, then confirm with the server and re-sync.
+    setFriends((current) => current.filter((entry) => entry.id !== member.id));
+    try {
+      await deleteFriendship(friend.friendshipId);
+    } catch {
+      // best effort: a failed delete reconciles on the next friends re-fetch
+    }
+    dispatchFriendsChanged();
   }
 
   function handleToggleMicMute() {
@@ -944,6 +961,11 @@ export function ChatWorkspace() {
               member={profileMember}
               onClose={handleCloseAuthorProfile}
               onSendMessage={handleSendMessageToProfile}
+              onUnfriend={
+                friends.some((entry) => entry.id === profileMember.id)
+                  ? handleUnfriend
+                  : undefined
+              }
             />
           ) : null}
 
