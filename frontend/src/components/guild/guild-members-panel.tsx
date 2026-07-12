@@ -17,6 +17,7 @@ import {
   memberRank,
   type RoleCaller
 } from '../../shared/guilds/role-permissions';
+import { ActionModal } from '../action-modal';
 import { formatDate } from './guild-overview';
 import { getGuildAccentClasses } from './guild-icon';
 import { FormError } from './guild-forms';
@@ -57,9 +58,20 @@ type MemberRowProps = {
   caller: RoleCaller | null;
   onChanged: () => void;
   onError: (message: string) => void;
+  onRequestKick: (member: HydratedGuildMember) => void;
+  onRequestBan: (member: HydratedGuildMember) => void;
 };
 
-function MemberRow({ guildId, member, roles, caller, onChanged, onError }: MemberRowProps) {
+function MemberRow({
+  guildId,
+  member,
+  roles,
+  caller,
+  onChanged,
+  onError,
+  onRequestKick,
+  onRequestBan
+}: MemberRowProps) {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [isRolesOpen, setIsRolesOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState(member.nickname ?? '');
@@ -85,26 +97,6 @@ function MemberRow({ guildId, member, roles, caller, onChanged, onError }: Membe
       'Failed to update nickname.'
     );
     setIsEditingNickname(false);
-  }
-
-  function handleKick() {
-    if (!window.confirm(`Kick ${member.displayName} from the guild?`)) {
-      return;
-    }
-
-    void run(() => kickGuildMember(guildId, member.userId), 'Failed to kick member.');
-  }
-
-  function handleBan() {
-    const reason = window.prompt(`Ban ${member.displayName}? Optional reason:`);
-    if (reason === null) {
-      return;
-    }
-
-    void run(
-      () => banGuildMember(guildId, member.userId, reason.trim() || undefined),
-      'Failed to ban member.'
-    );
   }
 
   return (
@@ -211,7 +203,7 @@ function MemberRow({ guildId, member, roles, caller, onChanged, onError }: Membe
             <>
               <button
                 type="button"
-                onClick={handleKick}
+                onClick={() => onRequestKick(member)}
                 disabled={isBusy}
                 className={iconButtonClasses}
                 aria-label={`Kick ${member.displayName}`}
@@ -221,7 +213,7 @@ function MemberRow({ guildId, member, roles, caller, onChanged, onError }: Membe
               </button>
               <button
                 type="button"
-                onClick={handleBan}
+                onClick={() => onRequestBan(member)}
                 disabled={isBusy}
                 className={iconButtonClasses}
                 aria-label={`Ban ${member.displayName}`}
@@ -248,6 +240,10 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
     selectedGuild?.id === guildId ? selectedGuild.owner_id : null
   );
   const [actionError, setActionError] = useState('');
+  const [kickTarget, setKickTarget] = useState<HydratedGuildMember | null>(null);
+  const [banTarget, setBanTarget] = useState<HydratedGuildMember | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [isActionBusy, setIsActionBusy] = useState(false);
 
   // Gate the role controls to callers the server would authorize; the caller
   // missing from the loaded members (pagination edge) safely hides them.
@@ -269,6 +265,45 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
     };
   }, [members, roles, currentUserId]);
 
+  async function confirmKickMember() {
+    if (!kickTarget) {
+      return;
+    }
+
+    setActionError('');
+
+    try {
+      setIsActionBusy(true);
+      await kickGuildMember(guildId, kickTarget.userId);
+      void refresh();
+      setKickTarget(null);
+    } catch (kickError) {
+      setActionError(kickError instanceof Error ? kickError.message : 'Failed to kick member.');
+    } finally {
+      setIsActionBusy(false);
+    }
+  }
+
+  async function confirmBanMember() {
+    if (!banTarget) {
+      return;
+    }
+
+    setActionError('');
+
+    try {
+      setIsActionBusy(true);
+      await banGuildMember(guildId, banTarget.userId, banReason.trim() || undefined);
+      void refresh();
+      setBanTarget(null);
+      setBanReason('');
+    } catch (banError) {
+      setActionError(banError instanceof Error ? banError.message : 'Failed to ban member.');
+    } finally {
+      setIsActionBusy(false);
+    }
+  }
+
   return (
     <div className="grid gap-3">
       {actionError ? <FormError message={actionError} /> : null}
@@ -289,10 +324,54 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
                 void refresh();
               }}
               onError={setActionError}
+              onRequestKick={setKickTarget}
+              onRequestBan={(target) => {
+                setBanTarget(target);
+                setBanReason('');
+              }}
             />
           ))}
         </ul>
       )}
+
+      {kickTarget ? (
+        <ActionModal
+          title={`Kick ${kickTarget.displayName}?`}
+          description="This will remove the member from the guild."
+          confirmLabel="Kick member"
+          destructive
+          isBusy={isActionBusy}
+          onClose={() => setKickTarget(null)}
+          onConfirm={confirmKickMember}
+        />
+      ) : null}
+
+      {banTarget ? (
+        <ActionModal
+          title={`Ban ${banTarget.displayName}?`}
+          description="This will remove the member from the guild and block them from rejoining until unbanned."
+          confirmLabel="Ban member"
+          destructive
+          isBusy={isActionBusy}
+          onClose={() => {
+            setBanTarget(null);
+            setBanReason('');
+          }}
+          onConfirm={confirmBanMember}
+        >
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-white/70">Reason (optional)</span>
+            <textarea
+              value={banReason}
+              onChange={(event) => setBanReason(event.target.value)}
+              rows={4}
+              maxLength={512}
+              placeholder="Optional moderation note"
+              className="min-h-[7rem] w-full rounded-md border border-transparent bg-input-bg px-4 py-3 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35"
+            />
+          </label>
+        </ActionModal>
+      ) : null}
     </div>
   );
 }

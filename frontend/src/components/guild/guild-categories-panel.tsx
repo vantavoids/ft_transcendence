@@ -10,6 +10,7 @@ import {
   updateGuildCategory,
   type GuildCategoryDto
 } from '../../shared/api/guild';
+import { ActionModal } from '../action-modal';
 import { FormError } from './guild-forms';
 
 const inputClasses =
@@ -31,6 +32,7 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
   const [editName, setEditName] = useState('');
   const [editPosition, setEditPosition] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GuildCategoryDto | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -100,7 +102,11 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
   }
 
   async function handleDelete(category: GuildCategoryDto) {
-    if (!window.confirm(`Delete category "${category.name}"? Its channels become uncategorised.`)) {
+    setDeleteTarget(category);
+  }
+
+  async function confirmDeleteCategory() {
+    if (!deleteTarget) {
       return;
     }
 
@@ -108,8 +114,9 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
 
     try {
       setIsBusy(true);
-      await deleteGuildCategory(guildId, category.id);
+      await deleteGuildCategory(guildId, deleteTarget.id);
       await load();
+      setDeleteTarget(null);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete category.');
     } finally {
@@ -225,6 +232,18 @@ export function GuildCategoriesPanel({ guildId }: GuildCategoriesPanelProps) {
           ))}
         </ul>
       )}
+
+      {deleteTarget ? (
+        <ActionModal
+          title={`Delete category "${deleteTarget.name}"?`}
+          description="The category will be removed and its channels will become uncategorised."
+          confirmLabel="Delete category"
+          destructive
+          isBusy={isBusy}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDeleteCategory}
+        />
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { AlertTriangle, Save } from 'lucide-react';
 import { deleteGuild, getGuild, updateGuild, type GuildDto } from '../../shared/api/guild';
 import { useGuilds } from '../../shared/guilds/guild-store';
 import { FormError } from './guild-forms';
+import { ActionModal } from '../action-modal';
 
 const inputClasses =
   'h-11 w-full rounded-md border border-transparent bg-input-bg px-4 text-base text-white outline-none transition placeholder:text-input-placeholder focus:border-aqua/35';
@@ -27,6 +28,7 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -96,14 +98,21 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
       return;
     }
 
-    if (!window.confirm(`Delete "${guild.name}" permanently? This cannot be undone.`)) {
+    setIsDeleteModalOpen(true);
+  }
+
+  async function confirmDeleteGuild() {
+    if (!guild) {
       return;
     }
+
+    setDeleteError('');
 
     try {
       setIsDeleting(true);
       await deleteGuild(guildId);
       await refreshGuilds();
+      setIsDeleteModalOpen(false);
     } catch (removeError) {
       setDeleteError(
         removeError instanceof Error ? removeError.message : 'Failed to delete guild.'
@@ -204,6 +213,23 @@ export function GuildSettingsPanel({ guildId }: GuildSettingsPanelProps) {
           </div>
           {deleteError ? <FormError message={deleteError} /> : null}
         </form>
+      ) : null}
+
+      {isDeleteModalOpen && guild ? (
+        <ActionModal
+          title={`Delete "${guild.name}"?`}
+          description={
+            <>
+              This will permanently delete the guild and remove all of its data. This cannot be
+              undone.
+            </>
+          }
+          confirmLabel="Delete guild"
+          destructive
+          isBusy={isDeleting}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDeleteGuild}
+        />
       ) : null}
     </div>
   );
