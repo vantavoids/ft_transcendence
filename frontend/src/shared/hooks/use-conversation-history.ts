@@ -17,8 +17,8 @@ import {
 import { ApiError } from '../api/client';
 import { getUsersByIds, type UserSummaryDto } from '../api/user';
 import { onChatHubEvent } from '../api/chat-hub';
+import { accentForId } from '../lib/accent';
 import {
-  accentForAuthor,
   authorLabel,
   formatMessageTimestamp,
   mapChannelMessage,
@@ -408,7 +408,7 @@ export function useConversationHistory(
       id: nonce,
       authorId: currentUserId ?? undefined,
       author: authorLabel(currentUserId ?? '', currentUserId),
-      accent: accentForAuthor(currentUserId ?? ''),
+      accent: accentForId(currentUserId ?? ''),
       content: content ? splitMessageLines(content) : [],
       timestamp: formatMessageTimestamp(nowIso),
       createdAt: nowIso,

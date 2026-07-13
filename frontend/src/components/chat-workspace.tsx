@@ -40,7 +40,8 @@ import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
-import { accentForUserId, toSidebarStatus } from '../shared/mappers/user';
+import { toSidebarStatus } from '../shared/mappers/user';
+import { accentForId } from '../shared/lib/accent';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -107,7 +108,7 @@ export function ChatWorkspace() {
       name: user.display_name || user.username,
       role: 'Member' as const,
       status: toSidebarStatus(user.status),
-      accent: accentForUserId(user.id),
+      accent: accentForId(user.id),
       activity: 'No recent activity',
       bio: user.bio,
       avatarUrl: user.avatar_url ?? null,
@@ -746,7 +747,7 @@ export function ChatWorkspace() {
               name: currentUser.displayName,
               role: 'Member',
               status: toSidebarStatus(currentUser.status),
-              accent: accentForUserId(currentUser.id),
+              accent: accentForId(currentUser.id),
               activity: 'No recent activity',
               bio: currentUser.bio,
               avatarUrl: currentUser.avatarUrl,

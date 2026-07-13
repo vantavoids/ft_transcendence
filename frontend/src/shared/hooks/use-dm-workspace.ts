@@ -6,8 +6,8 @@ import { archiveDirectMessageConversation, listDirectMessages } from '../api/cha
 import { getUsersByIds } from '../api/user';
 import { onChatHubEvent } from '../api/chat-hub';
 import { subscribeProfileUpdated } from '../lib/profile-events';
+import { accentForId } from '../lib/accent';
 import {
-  accentForAuthor,
   authorLabel,
   formatMessageTimestamp,
   mapDirectMessageConversation,
@@ -131,7 +131,7 @@ export function useDmWorkspace(currentUserId: string | null): DmWorkspace {
             id: partnerId,
             name: authorLabel(partnerId, currentUserId),
             status: 'offline',
-            accent: accentForAuthor(partnerId),
+            accent: accentForId(partnerId),
             lastMessage: preview,
             lastMessageAt,
             lastActivityAt,

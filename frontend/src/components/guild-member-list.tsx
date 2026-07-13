@@ -12,7 +12,7 @@ import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
 import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
-import { hashToIndex } from '../shared/lib/hash';
+import { accentForId } from '../shared/lib/accent';
 import { useToast } from '../shared/ui/toast';
 
 export type GuildMember = {
@@ -33,12 +33,6 @@ export type GuildMember = {
 // TODO(api:chat): message authors still come from mocks until Epic 4 wires real chat history.
 export function getGuildMemberByName(name: string) {
   return guildMembers.find((member) => member.name.toLowerCase() === name.toLowerCase()) ?? null;
-}
-
-const ACCENTS: ChatMessageData['accent'][] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
-
-function getAccentForId(id: string): ChatMessageData['accent'] {
-  return ACCENTS[hashToIndex(id, ACCENTS.length)];
 }
 
 function toSidebarStatus(status: UserStatus): DirectMessage['status'] {
@@ -62,7 +56,7 @@ export function toProfileMember(member: HydratedGuildMember): GuildMember {
     role: member.isOwner ? 'Owner' : (topRole?.name ?? 'Member'),
     roleColor: member.isOwner ? null : (topRole?.color ?? null),
     status: toSidebarStatus(member.status),
-    accent: getAccentForId(member.userId),
+    accent: accentForId(member.userId),
     activity: member.joinedAt ? `Joined ${formatJoinedAt(member.joinedAt)}` : 'Member',
     bio: member.bio,
     avatarUrl: member.avatarUrl,
@@ -109,7 +103,7 @@ function MemberRow({
       <AvatarWithStatus
         size="sm"
         name={member.displayName}
-        accent={getAccentForId(member.userId)}
+        accent={accentForId(member.userId)}
         status={toSidebarStatus(member.status)}
         avatarUrl={member.avatarUrl}
       />
