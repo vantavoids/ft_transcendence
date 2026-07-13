@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
@@ -16,19 +16,8 @@ import { useToast } from '../../../src/shared/ui/toast';
 export default function RegisterPage() {
   const router = useRouter();
   const [errors, setErrors] = useState<RegisterFormErrors>({});
-  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { pushToast } = useToast();
-
-  useEffect(() => {
-    if (serverError) {
-      pushToast({
-        title: 'Registration failed',
-        description: serverError,
-        tone: 'error'
-      });
-    }
-  }, [serverError, pushToast]);
 
   async function handleSubmit(formData: FormData) {
     const email = String(formData.get('email') ?? '');
@@ -37,7 +26,6 @@ export default function RegisterPage() {
     const nextErrors = validateRegisterForm({ email, password, confirm });
 
     setErrors(nextErrors);
-    setServerError('');
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -49,7 +37,11 @@ export default function RegisterPage() {
       establishSession(access_token, user_id);
       router.push('/chat');
     } catch (error) {
-      setServerError(describeRegisterError(error));
+      pushToast({
+        title: 'Registration failed',
+        description: describeRegisterError(error),
+        tone: 'error'
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { AuthCard } from '../../../src/components/auth-card';
@@ -15,19 +15,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { refreshGuilds } = useGuilds();
   const [errors, setErrors] = useState<LoginFormErrors>({});
-  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { pushToast } = useToast();
-
-  useEffect(() => {
-    if (serverError) {
-      pushToast({
-        title: 'Login failed',
-        description: serverError,
-        tone: 'error'
-      });
-    }
-  }, [serverError, pushToast]);
 
   async function handleSubmit(formData: FormData) {
     const email = String(formData.get('email') ?? '');
@@ -35,7 +24,6 @@ export default function LoginPage() {
 
     const nextErrors = validateLoginForm({ email, password });
     setErrors(nextErrors);
-    setServerError('');
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -48,7 +36,11 @@ export default function LoginPage() {
       void refreshGuilds();
       router.push('/chat');
     } catch (error) {
-      setServerError(describeLoginError(error));
+      pushToast({
+        title: 'Login failed',
+        description: describeLoginError(error),
+        tone: 'error'
+      });
     } finally {
       setIsSubmitting(false);
     }
