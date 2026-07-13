@@ -539,11 +539,16 @@ Create a channel. Requires `MANAGE_CHANNELS` permission.
   "position": 0,
   "topic": "general chat",
   "is_nsfw": false,
-  "slowmode_seconds": 0
+  "slowmode_seconds": 0,
+  "overwrites": [
+    { "target_id": "<snowflake>", "target_type": "role", "allow": 0, "deny": 2 }
+  ]
 }
 ```
 
 `name` must follow channel naming rules (see above). `type` must be `text` or `announcement`. `category_id` is optional (null = uncategorised).
+
+`overwrites` is optional. When present, the listed permission overwrites are applied atomically as the channel is created, so it spawns already carrying its intended per-role/per-member permissions (no window where it is briefly world-readable before overwrites are `PUT`). Each entry has the same shape and rules as `PUT /channels/{channel_id}/permissions/{target_id}`: `target_type` is `"role"` or `"user"`, `target_id` must reference a real role or member of this guild, a target may appear at most once, `allow` and `deny` may not overlap, and only channel-scoped bits are permitted (see [Channel overwrite permissions](#channel-overwrite-permissions)).
 
 > Voice channels are intentionally not supported. The voice/video bonus module is 1-on-1 peer-to-peer WebRTC, initiated between two users via the Chat Service signaling hub (see `chat.md`). A Discord-style N-way voice channel would require an SFU which is WAY beyond the scope, please have some consideration for your infra cats (me)
 
@@ -552,7 +557,7 @@ Create a channel. Requires `MANAGE_CHANNELS` permission.
 **Errors:**
 | Status | Reason |
 |--------|--------|
-| 400 | Invalid name or type |
+| 400 | Invalid name or type; overwrite `target_id` not a snowflake string; overwrite target not a role/member of the guild; duplicate overwrite target; `allow`/`deny` overlap; non-channel-scoped bit in `allow`/`deny` |
 | 403 | Missing `MANAGE_CHANNELS` permission |
 
 ---
@@ -934,7 +939,13 @@ Create or update a permission overwrite. Requires `MANAGE_CHANNELS`.
 
 `target_type`: `"role"` or `"user"`. `target_id` is the role or user snowflake.
 
+`allow` and `deny` may not share a bit, and only channel-scoped bits are accepted (see below); either violation returns `400`.
+
 **Response `204`:** No content.
+
+#### Channel overwrite permissions
+
+A channel overwrite may only set channel-scoped bits: `SEND_MESSAGES`, `READ_MESSAGES`, `MANAGE_MESSAGES`, `MANAGE_CHANNELS`, `CREATE_INVITE`, `MENTION_EVERYONE`. Guild-wide authority (`KICK_MEMBERS`, `BAN_MEMBERS`, `MANAGE_ROLES`, `MANAGE_GUILD`, `ADMINISTRATOR`, `MANAGE_NICKNAMES`) is rejected with `400`, so an overwrite can never escalate a member past their role-granted guild permissions. This applies wherever overwrites are supplied: `PUT /channels/{channel_id}/permissions/{target_id}` and the `overwrites` array on `POST /guilds/{id}/channels`.
 
 ---
 
