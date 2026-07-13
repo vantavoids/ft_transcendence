@@ -190,6 +190,15 @@ export function deleteGuild(guildId: string) {
   });
 }
 
+// hand the guild over to another member; the current owner becomes a regular
+// member. owner-only, irreversible without the new owner transferring it back.
+export function transferGuildOwnership(guildId: string, newOwnerId: string) {
+  return apiFetch<GuildDto>('guild', `/guilds/${guildId}/owner`, {
+    method: 'PATCH',
+    body: { new_owner_id: newOwnerId }
+  });
+}
+
 export function joinGuild(guildId: string, inviteCode: string) {
   return apiFetch<GuildDto>('guild', `/guilds/${guildId}/join`, {
     method: 'POST',

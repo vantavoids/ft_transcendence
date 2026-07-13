@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { Crown, Shield } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import type { DirectMessage } from './dm-list';
 import { guildMembers } from './mocks/guild-member-mocks';
+import { ActionModal } from './action-modal';
 import type { GuildRoleDto } from '../shared/api/guild';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useChannelReaders } from '../shared/guilds/use-channel-readers';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
 import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
+import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { accentForId } from '../shared/lib/accent';
 import { useToast } from '../shared/ui/toast';
@@ -86,10 +89,12 @@ function RoleIcon({ member }: { member: HydratedGuildMember }) {
 
 function MemberRow({
   member,
-  onOpenProfile
+  onOpenProfile,
+  onContextMenu
 }: {
   member: HydratedGuildMember;
   onOpenProfile: (member: GuildMember) => void;
+  onContextMenu?: (event: MouseEvent, member: HydratedGuildMember) => void;
 }) {
   const topRole = member.isOwner ? 'Owner' : (member.roles[0]?.name ?? null);
   const joined = formatJoinedAt(member.joinedAt);
@@ -99,6 +104,7 @@ function MemberRow({
     <button
       type="button"
       onClick={() => onOpenProfile(toProfileMember(member))}
+      onContextMenu={onContextMenu ? (event) => onContextMenu(event, member) : undefined}
       className="flex h-14 w-full items-center gap-3 rounded-md px-2 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
     >
       <AvatarWithStatus
@@ -189,20 +195,81 @@ export function buildMemberGroups(
     : roleGroups;
 }
 
+type MemberMenuState = {
+  member: HydratedGuildMember;
+  x: number;
+  y: number;
+};
+
+function MemberContextMenu({
+  menu,
+  onTransferOwnership,
+  onClose
+}: {
+  menu: MemberMenuState;
+  onTransferOwnership: (member: HydratedGuildMember) => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useCloseOnEscape(onClose);
+
+  useEffect(() => {
+    function handleMouseDown(event: globalThis.MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 w-56 rounded-md border border-stroke bg-panel p-1.5 shadow-lg"
+      style={{
+        left: Math.min(menu.x, window.innerWidth - 240),
+        top: Math.min(menu.y, window.innerHeight - 88)
+      }}
+    >
+      <p className="mono-detail truncate px-2 py-1 text-xs text-white/35">{menu.member.displayName}</p>
+      <button
+        type="button"
+        onClick={() => {
+          onTransferOwnership(menu.member);
+          onClose();
+        }}
+        className="flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm font-semibold text-white/70 transition hover:bg-frame hover:text-white"
+      >
+        <Crown className="h-4 w-4 shrink-0 text-yellow" strokeWidth={1.9} />
+        Transfer ownership
+      </button>
+    </div>
+  );
+}
+
 type GuildMemberListProps = {
   activeChannelId: string | null;
   onOpenProfile: (member: GuildMember) => void;
 };
 
 export function GuildMemberList({ activeChannelId, onOpenProfile }: GuildMemberListProps) {
-  const { selectedGuild } = useGuilds();
-  const { members, isLoading, error } = useGuildMembers(
+  const { selectedGuild, currentUserId, transferOwnership } = useGuilds();
+  const { members, isLoading, error, refresh } = useGuildMembers(
     selectedGuild?.id ?? null,
     selectedGuild?.owner_id ?? null
   );
   const readerIds = useChannelReaders(selectedGuild?.id ?? null, activeChannelId);
   const groupByRole = useGroupMembersByRole();
   const { pushToast } = useToast();
+  const [memberMenu, setMemberMenu] = useState<MemberMenuState | null>(null);
+  const [transferTarget, setTransferTarget] = useState<HydratedGuildMember | null>(null);
+  const [isTransferBusy, setIsTransferBusy] = useState(false);
+
+  const isCurrentUserOwner =
+    Boolean(currentUserId) && selectedGuild?.owner_id === currentUserId;
 
   useEffect(() => {
     if (error) {
@@ -213,6 +280,37 @@ export function GuildMemberList({ activeChannelId, onOpenProfile }: GuildMemberL
       });
     }
   }, [error, pushToast]);
+
+  // owner-only right-click action; never on the owner's own row.
+  const handleMemberContextMenu = (event: MouseEvent, member: HydratedGuildMember) => {
+    if (!isCurrentUserOwner || member.isOwner || member.isDeleted) {
+      return;
+    }
+    event.preventDefault();
+    setMemberMenu({ member, x: event.clientX, y: event.clientY });
+  };
+
+  async function confirmTransferOwnership() {
+    if (!transferTarget) {
+      return;
+    }
+
+    try {
+      setIsTransferBusy(true);
+      await transferOwnership(selectedGuild!.id, transferTarget.userId);
+      void refresh();
+      setTransferTarget(null);
+    } catch (transferError) {
+      pushToast({
+        title: 'Transfer ownership',
+        description:
+          transferError instanceof Error ? transferError.message : 'Failed to transfer ownership.',
+        tone: 'error'
+      });
+    } finally {
+      setIsTransferBusy(false);
+    }
+  }
 
   // scope to the members who can read the active channel (Discord parity); a
   // null reader set means "unknown" (no channel, loading, or lookup failed), in
@@ -265,7 +363,12 @@ export function GuildMemberList({ activeChannelId, onOpenProfile }: GuildMemberL
                 ) : null}
                 <div className="mt-2 space-y-1">
                   {group.members.map((member) => (
-                    <MemberRow key={member.userId} member={member} onOpenProfile={onOpenProfile} />
+                    <MemberRow
+                      key={member.userId}
+                      member={member}
+                      onOpenProfile={onOpenProfile}
+                      onContextMenu={isCurrentUserOwner ? handleMemberContextMenu : undefined}
+                    />
                   ))}
                 </div>
               </section>
@@ -273,6 +376,26 @@ export function GuildMemberList({ activeChannelId, onOpenProfile }: GuildMemberL
           </div>
         )}
       </div>
+
+      {memberMenu ? (
+        <MemberContextMenu
+          menu={memberMenu}
+          onTransferOwnership={setTransferTarget}
+          onClose={() => setMemberMenu(null)}
+        />
+      ) : null}
+
+      {transferTarget ? (
+        <ActionModal
+          title={`Transfer ownership to ${transferTarget.displayName}?`}
+          description="They become the guild owner with full control. You keep your membership but lose owner privileges. This can only be undone if the new owner transfers it back."
+          confirmLabel="Transfer ownership"
+          destructive
+          isBusy={isTransferBusy}
+          onClose={() => setTransferTarget(null)}
+          onConfirm={confirmTransferOwnership}
+        />
+      ) : null}
     </aside>
   );
 }
