@@ -91,7 +91,7 @@ function RoleEditor({
           Color
           <input
             type="color"
-            value={draft.color}
+            value={draft.color ?? '#000000'}
             onChange={(event) => onChange({ ...draft, color: event.target.value })}
             className="h-10 w-14 cursor-pointer rounded-md border border-stroke bg-input-bg p-1"
           />
