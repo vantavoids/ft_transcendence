@@ -80,6 +80,7 @@ export function GuildSidebar({ activeMode, onOpenDms, onOpenGuild }: GuildSideba
     event.preventDefault();
     setTooltip(null);
     setContextMenu({
+      scope: 'guild',
       guildId: guild.id,
       guildName: guild.name,
       ownerId: guild.owner_id,

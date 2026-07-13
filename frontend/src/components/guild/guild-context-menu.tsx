@@ -1,18 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bell, BellOff, ChevronRight, Link2, LogOut } from 'lucide-react';
+import { Bell, BellOff, ChevronRight, Copy, Link2, Lock as LockIcon, LogOut } from 'lucide-react';
 import { ActionModal } from '../action-modal';
 import { useCloseOnEscape } from '../../shared/hooks/use-close-on-escape';
 import { useCurrentUserId } from '../../shared/hooks/use-current-user-id';
 import { useToast } from '../../shared/ui/toast';
-import { muteDurations, muteDurationToIso, type MuteDuration } from '../../shared/lib/mute-durations';
+import { useNotificationPrefs } from '../../shared/lib/notification-prefs-store';
+import { muteDurations, type MuteDuration } from '../../shared/lib/mute-durations';
 import { createGuildInvite, leaveGuild } from '../../shared/api/guild';
-import {
-  deleteNotificationPreference,
-  listNotificationPreferences,
-  setNotificationPreference
-} from '../../shared/api/notification';
 
 // invites can only expire on whole-hour boundaries (the guild service takes an
 // int? of hours), so the "fast" invite settles on the shortest sensible window.
@@ -24,35 +20,53 @@ const MENU_WIDTH_PX = 224;
 const SUBMENU_WIDTH_PX = 160;
 const MENU_MARGIN_PX = 8;
 
-export type GuildContextMenuTarget = {
-  guildId: string;
-  guildName: string;
-  ownerId: string;
-  x: number;
-  y: number;
-};
+// a guild target carries owner/name for the invite + leave actions; a channel
+// target only ever offers mute + copy-id.
+export type GuildContextMenuTarget =
+  | {
+      scope: 'guild';
+      guildId: string;
+      guildName: string;
+      ownerId: string;
+      x: number;
+      y: number;
+    }
+  | {
+      scope: 'channel';
+      channelId: string;
+      channelName: string;
+      // present only when the viewer may manage the channel; renders the
+      // "Channel permissions" entry
+      onOpenPermissions?: () => void;
+      x: number;
+      y: number;
+    };
 
 type GuildContextMenuProps = {
   target: GuildContextMenuTarget;
   onClose: () => void;
-  onLeft: (guildId: string) => void;
+  /** Only fired for guild targets, when the user leaves the guild. */
+  onLeft?: (guildId: string) => void;
 };
-
-// null while the mute preference is still loading; false/true once known.
-type MuteState = { muted: boolean } | null;
 
 export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const { pushToast } = useToast();
   const currentUserId = useCurrentUserId();
-  const [muteState, setMuteState] = useState<MuteState>(null);
+  const { isMuted, mute, unmute } = useNotificationPrefs();
+
   const [isInviting, setIsInviting] = useState(false);
   const [isTogglingMute, setIsTogglingMute] = useState(false);
   const [isMuteSubmenuOpen, setIsMuteSubmenuOpen] = useState(false);
   const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  const isOwner = currentUserId != null && currentUserId === target.ownerId;
+  const scopeType = target.scope;
+  const scopeId = target.scope === 'guild' ? target.guildId : target.channelId;
+  const scopeName = target.scope === 'guild' ? target.guildName : target.channelName;
+  const muted = isMuted(scopeType, scopeId);
+  const isOwner =
+    target.scope === 'guild' && currentUserId != null && currentUserId === target.ownerId;
 
   // a short grace period before closing the submenu tolerates the diagonal
   // mouse path from the parent item, which briefly leaves both elements
@@ -67,11 +81,14 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   function scheduleCloseMuteSubmenu() {
     closeSubmenuTimer.current = setTimeout(() => setIsMuteSubmenuOpen(false), 220);
   }
-  useEffect(() => () => {
-    if (closeSubmenuTimer.current) {
-      clearTimeout(closeSubmenuTimer.current);
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (closeSubmenuTimer.current) {
+        clearTimeout(closeSubmenuTimer.current);
+      }
+    },
+    []
+  );
 
   useCloseOnEscape(onClose);
 
@@ -93,31 +110,10 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [isConfirmingLeave, onClose]);
 
-  // load the current mute state so the entry shows the right label. a failure
-  // here just leaves the entry disabled rather than blocking the whole menu.
-  useEffect(() => {
-    let cancelled = false;
-
-    listNotificationPreferences()
-      .then((preferences) => {
-        if (cancelled) {
-          return;
-        }
-        const pref = preferences.find(
-          (candidate) => candidate.scope_type === 'guild' && candidate.scope_id === target.guildId
-        );
-        setMuteState({ muted: pref?.muted ?? false });
-      })
-      .catch(() => {
-        // best effort: leave muteState null so the entry renders disabled
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [target.guildId]);
-
   async function handleFastInvite() {
+    if (target.scope !== 'guild') {
+      return;
+    }
     setIsInviting(true);
     try {
       const invite = await createGuildInvite(target.guildId, {
@@ -141,20 +137,35 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
     }
   }
 
+  async function handleCopyId() {
+    try {
+      await navigator.clipboard.writeText(scopeId);
+      pushToast({
+        title: 'Copied',
+        description: `${scopeName} ID copied to the clipboard.`,
+        tone: 'success'
+      });
+      onClose();
+    } catch {
+      pushToast({
+        title: 'Copy failed',
+        description: 'Could not access the clipboard.',
+        tone: 'error'
+      });
+    }
+  }
+
   async function handleMuteFor(duration: MuteDuration) {
     setIsTogglingMute(true);
     try {
-      await setNotificationPreference('guild', target.guildId, {
-        muted: true,
-        muted_until: muteDurationToIso(duration)
-      });
+      await mute(scopeType, scopeId, duration);
       const chosen = muteDurations.find((option) => option.value === duration);
       pushToast({
-        title: 'Server muted',
+        title: scopeType === 'guild' ? 'Server muted' : 'Channel muted',
         description:
           duration === 'forever'
-            ? `You won't get notifications from ${target.guildName}.`
-            : `${target.guildName} muted for ${chosen?.longLabel ?? duration}.`,
+            ? `You won't get notifications from ${scopeName}.`
+            : `${scopeName} muted for ${chosen?.longLabel ?? duration}.`,
         tone: 'success'
       });
       onClose();
@@ -173,10 +184,10 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   async function handleUnmute() {
     setIsTogglingMute(true);
     try {
-      await deleteNotificationPreference('guild', target.guildId);
+      await unmute(scopeType, scopeId);
       pushToast({
-        title: 'Server unmuted',
-        description: `Notifications from ${target.guildName} are back on.`,
+        title: scopeType === 'guild' ? 'Server unmuted' : 'Channel unmuted',
+        description: `Notifications from ${scopeName} are back on.`,
         tone: 'success'
       });
       onClose();
@@ -193,10 +204,13 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   }
 
   async function confirmLeave() {
+    if (target.scope !== 'guild') {
+      return;
+    }
     setIsLeaving(true);
     try {
       await leaveGuild(target.guildId);
-      onLeft(target.guildId);
+      onLeft?.(target.guildId);
       pushToast({
         title: 'Left server',
         description: `You left ${target.guildName}.`,
@@ -218,35 +232,37 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   const top = Math.min(target.y, window.innerHeight - MENU_MARGIN_PX);
   const menuLeft = Math.max(MENU_MARGIN_PX, left);
   // flip the submenu to the left of the menu when it would overflow the viewport
-  const submenuOnLeft = menuLeft + MENU_WIDTH_PX + SUBMENU_WIDTH_PX + MENU_MARGIN_PX > window.innerWidth;
-
-  const isMuted = muteState?.muted ?? false;
+  const submenuOnLeft =
+    menuLeft + MENU_WIDTH_PX + SUBMENU_WIDTH_PX + MENU_MARGIN_PX > window.innerWidth;
 
   return (
     <>
       <div
         ref={menuRef}
         role="menu"
-        aria-label={`${target.guildName} actions`}
+        aria-label={`${scopeName} actions`}
         className="fixed z-[60] w-56 rounded-lg border border-stroke bg-panel py-1.5 text-sm shadow-2xl shadow-black/50"
         style={{ left: menuLeft, top: Math.max(MENU_MARGIN_PX, top) }}
       >
         <p className="truncate px-3 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wide text-white/35">
-          {target.guildName}
+          {scopeName}
         </p>
-        <MenuItem
-          icon={Link2}
-          label="Fast invite"
-          hint="Copy a 1h link"
-          disabled={isInviting}
-          onClick={() => void handleFastInvite()}
-        />
 
-        {isMuted ? (
+        {target.scope === 'guild' ? (
+          <MenuItem
+            icon={Link2}
+            label="Fast invite"
+            hint="Copy a 1h link"
+            disabled={isInviting}
+            onClick={() => void handleFastInvite()}
+          />
+        ) : null}
+
+        {muted ? (
           <MenuItem
             icon={Bell}
             label="Unmute notifications"
-            disabled={muteState === null || isTogglingMute}
+            disabled={isTogglingMute}
             onClick={() => void handleUnmute()}
           />
         ) : (
@@ -258,11 +274,11 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
             <MenuItem
               icon={BellOff}
               label="Mute notifications"
-              disabled={muteState === null || isTogglingMute}
+              disabled={isTogglingMute}
               trailing={<ChevronRight className="h-4 w-4 text-white/40" strokeWidth={1.9} />}
               onClick={openMuteSubmenu}
             />
-            {isMuteSubmenuOpen && muteState !== null ? (
+            {isMuteSubmenuOpen ? (
               // overlap the parent by 1px (no visual gap) so the diagonal path to
               // the submenu never crosses dead space and dismisses it
               <div
@@ -285,18 +301,40 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
           </div>
         )}
 
-        <div className="my-1 border-t border-stroke" />
-        <MenuItem
-          icon={LogOut}
-          label="Leave server"
-          destructive
-          disabled={isOwner}
-          hint={isOwner ? 'Owner' : undefined}
-          onClick={() => setIsConfirmingLeave(true)}
-        />
+        {target.scope === 'channel' ? (
+          <MenuItem icon={Copy} label="Copy channel ID" onClick={() => void handleCopyId()} />
+        ) : null}
+
+        {target.scope === 'channel' && target.onOpenPermissions ? (
+          <>
+            <div className="my-1 border-t border-stroke" />
+            <MenuItem
+              icon={LockIcon}
+              label="Channel permissions"
+              onClick={() => {
+                target.onOpenPermissions?.();
+                onClose();
+              }}
+            />
+          </>
+        ) : null}
+
+        {target.scope === 'guild' ? (
+          <>
+            <div className="my-1 border-t border-stroke" />
+            <MenuItem
+              icon={LogOut}
+              label="Leave server"
+              destructive
+              disabled={isOwner}
+              hint={isOwner ? 'Owner' : undefined}
+              onClick={() => setIsConfirmingLeave(true)}
+            />
+          </>
+        ) : null}
       </div>
 
-      {isConfirmingLeave ? (
+      {isConfirmingLeave && target.scope === 'guild' ? (
         <ActionModal
           title={`Leave ${target.guildName}?`}
           description="You'll lose access to its channels until someone invites you back."
