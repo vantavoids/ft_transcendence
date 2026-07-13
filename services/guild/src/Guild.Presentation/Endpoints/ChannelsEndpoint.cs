@@ -49,6 +49,18 @@ public sealed class ChannelsEndpoint : ICarterModule
 			categoryId = parsed;
 		}
 
+		List<ChannelOverwriteInput>? overwrites = null;
+		if (request.Overwrites is { Count: > 0 } rawOverwrites)
+		{
+			overwrites = new List<ChannelOverwriteInput>(rawOverwrites.Count);
+			foreach (var entry in rawOverwrites)
+			{
+				if (!long.TryParse(entry.TargetId, out var targetId))
+					return TypedResults.Json(new ErrorBody("Each overwrite target_id must be a snowflake string."), statusCode: StatusCodes.Status400BadRequest);
+				overwrites.Add(new ChannelOverwriteInput(targetId, entry.TargetType, entry.Allow, entry.Deny));
+			}
+		}
+
 		var result = await handler.HandleAsync(
 			new CreateChannelCommand(
 				GuildId: id,
@@ -58,7 +70,8 @@ public sealed class ChannelsEndpoint : ICarterModule
 				Topic: request.Topic,
 				Position: request.Position,
 				IsNsfw: request.IsNsfw,
-				SlowmodeSeconds: request.SlowmodeSeconds),
+				SlowmodeSeconds: request.SlowmodeSeconds,
+				Overwrites: overwrites),
 			cancellationToken);
 
 		return result.Succeeded
@@ -133,7 +146,16 @@ public sealed class ChannelsEndpoint : ICarterModule
 		string? Topic,
 		int? Position,
 		bool? IsNsfw,
-		int? SlowmodeSeconds);
+		int? SlowmodeSeconds,
+		IReadOnlyList<CreateChannelOverwriteRequest>? Overwrites);
+
+	// snowflake target_id arrives as a quoted string (JS precision); allow/deny are
+	// permission bitmasks. parsed/validated into ChannelOverwriteInput by CreateAsync
+	private sealed record CreateChannelOverwriteRequest(
+		string? TargetId,
+		string? TargetType,
+		long Allow,
+		long Deny);
 
 	private sealed record UpdateChannelRequest(
 		string? Name,

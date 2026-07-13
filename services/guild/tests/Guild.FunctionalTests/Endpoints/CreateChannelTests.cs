@@ -160,6 +160,65 @@ public sealed class CreateChannelTests(GuildApiFactory factory) : IClassFixture<
 	}
 
 	[Fact]
+	public async Task WithMemberDenyReadOverwrite_ChannelSpawnsHiddenFromThatMember()
+	{
+		// creating with an overwrite applies it atomically: the denied member never
+		// sees the channel, so there is no window where it is world-readable
+		var owner = factory.CreateAuthenticatedClient(userId: 5113);
+		var created = await owner.CreateGuildAsync("guild");
+		var guildId = long.Parse(created.GetProperty("id").GetString()!);
+		await factory.AddBareMemberAsync(guildId, userId: 5114);
+
+		var resp = await owner.PostAsJsonAsync(
+			$"/v1/guilds/{guildId}/channels",
+			new
+			{
+				name = "secret",
+				type = "text",
+				overwrites = new[]
+				{
+					new { target_id = "5114", target_type = "member", allow = 0, deny = 2 }
+				}
+			},
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+
+		// the denied member does not see the freshly-created channel in their list
+		var member = factory.CreateAuthenticatedClient(userId: 5114);
+		var memberList = await member.GetAsync($"/v1/guilds/{guildId}/channels");
+		Assert.Equal(HttpStatusCode.OK, memberList.StatusCode);
+		Assert.Equal(0, (await memberList.ReadJsonAsync()).GetArrayLength());
+
+		// ...but the owner (Administrator short-circuit) still sees it
+		var ownerList = await owner.GetAsync($"/v1/guilds/{guildId}/channels");
+		Assert.Equal(1, (await ownerList.ReadJsonAsync()).GetArrayLength());
+	}
+
+	[Fact]
+	public async Task WithNonNumericOverwriteTargetId_Returns_400()
+	{
+		var owner = factory.CreateAuthenticatedClient(userId: 5115);
+		var created = await owner.CreateGuildAsync("guild");
+		var id = created.GetProperty("id").GetString()!;
+
+		var resp = await owner.PostAsJsonAsync(
+			$"/v1/guilds/{id}/channels",
+			new
+			{
+				name = "secret",
+				type = "text",
+				overwrites = new[]
+				{
+					new { target_id = "not-a-snowflake", target_type = "member", allow = 0, deny = 2 }
+				}
+			},
+			JsonOptions.SnakeCase);
+
+		Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+	}
+
+	[Fact]
 	public async Task WithoutPosition_AutoAppendsPerCategory()
 	{
 		var client = factory.CreateAuthenticatedClient(userId: 5109);

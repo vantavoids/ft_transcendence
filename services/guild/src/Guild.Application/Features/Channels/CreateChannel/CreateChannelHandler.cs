@@ -14,6 +14,7 @@ internal sealed class CreateChannelHandler(
 	IGuildRepository guilds,
 	IChannelRepository channels,
 	IChannelCategoryRepository categories,
+	IChannelPermissionOverwriteRepository overwrites,
 	IEventBus eventBus,
 	IIdGenerator ids,
 	IClock clock,
@@ -68,19 +69,78 @@ internal sealed class CreateChannelHandler(
 		if (channelResult.IsFailure)
 			return channelResult.Error;
 
-		channels.Add(channelResult.Value);
+		var channel = channelResult.Value;
 
-		// a freshly-created channel has no overwrites yet, so eligibility is the
-		// base-permission ReadMessages set. publish before SaveChanges so the
-		// outbox binds the event to the same transaction as the insert.
-		var eligible = ChannelAccess.ReadersOf(guild, channelResult.Value.Id, []);
+		// build any requested overwrites atomically so the channel is created
+		// already carrying its intended permissions -- there is no window where it
+		// is world-readable, and the GuildChannelCreated event below targets only
+		// members who can actually read it.
+		var overwritesResult = BuildOverwrites(guild, channel.Id, command.Overwrites, clock.UtcNow);
+		if (overwritesResult.IsFailure)
+			return overwritesResult.Error;
+		var createdOverwrites = overwritesResult.Value;
+
+		channels.Add(channel);
+		foreach (var overwrite in createdOverwrites)
+			overwrites.Add(overwrite);
+
+		// publish before SaveChanges so the outbox binds the event to the same
+		// transaction as the inserts.
+		var eligible = ChannelAccess.ReadersOf(guild, channel.Id, createdOverwrites);
 		await eventBus.PublishAsync(
-			new GuildChannelCreated(command.GuildId, ChannelPayload.From(channelResult.Value), eligible),
+			new GuildChannelCreated(command.GuildId, ChannelPayload.From(channel), eligible),
 			cancellationToken);
 
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
-		return ChannelResponse.From(channelResult.Value);
+		return ChannelResponse.From(channel);
+	}
+
+	private Result<IReadOnlyList<ChannelPermissionOverwrite>> BuildOverwrites(
+		Domain.Guild.Guild guild,
+		long channelId,
+		IReadOnlyList<ChannelOverwriteInput>? inputs,
+		DateTimeOffset now)
+	{
+		if (inputs is not { Count: > 0 })
+			return Result.Ok<IReadOnlyList<ChannelPermissionOverwrite>>([]);
+
+		var built = new List<ChannelPermissionOverwrite>(inputs.Count);
+		var seen = new HashSet<(OverwriteTargetType, long)>();
+
+		foreach (var input in inputs)
+		{
+			if (!TryParseTargetType(input.TargetType, out var targetType))
+				return GuildFailures.OverwriteInvalidTarget;
+
+			// target_id must reference a real role or member of *this* guild
+			var targetExists = targetType == OverwriteTargetType.Role
+				? guild.Roles.Any(r => r.Id == input.TargetId)
+				: guild.Members.Any(m => m.UserId == input.TargetId);
+			if (!targetExists)
+				return GuildFailures.OverwriteInvalidTarget;
+
+			// a target may only be listed once; a duplicate is a client error
+			if (!seen.Add((targetType, input.TargetId)))
+				return GuildFailures.OverwriteInvalidTarget;
+
+			var overwriteResult = ChannelPermissionOverwrite.Create(
+				id: ids.NextId(),
+				guildId: guild.Id,
+				channelId: channelId,
+				targetType: targetType,
+				targetId: input.TargetId,
+				allow: input.Allow,
+				deny: input.Deny,
+				now: now);
+
+			if (overwriteResult.IsFailure)
+				return overwriteResult.Error;
+
+			built.Add(overwriteResult.Value);
+		}
+
+		return Result.Ok<IReadOnlyList<ChannelPermissionOverwrite>>(built);
 	}
 
 	private static bool TryParseType(string? raw, out ChannelType type)
@@ -95,6 +155,23 @@ internal sealed class CreateChannelHandler(
 				return true;
 			case "announcement":
 				type = ChannelType.Announcement;
+				return true;
+			default:
+				type = default;
+				return false;
+		}
+	}
+
+	private static bool TryParseTargetType(string? raw, out OverwriteTargetType type)
+	{
+		switch (raw?.Trim().ToLowerInvariant())
+		{
+			case "role":
+				type = OverwriteTargetType.Role;
+				return true;
+			case "member":
+			case "user":
+				type = OverwriteTargetType.Member;
 				return true;
 			default:
 				type = default;
