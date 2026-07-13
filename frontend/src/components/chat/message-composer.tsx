@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { useEffect, useRef } from 'react';
 import { ArrowRight, CornerUpLeft, MessageCircle, Paperclip, Smile, X } from 'lucide-react';
 import type { ChatMessageData } from '../chat-message';
 import type { PendingAttachment } from '../../shared/hooks/use-conversation-history';
@@ -48,6 +49,24 @@ export function MessageComposer({
   onSubmitMessage,
   onShowMobileSidebar
 }: MessageComposerProps) {
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isEmojiOpen) return;
+
+    const handleClickAway = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (emojiPickerRef.current?.contains(target) || emojiButtonRef.current?.contains(target)) {
+        return;
+      }
+      onToggleEmojiPicker();
+    };
+
+    document.addEventListener('mousedown', handleClickAway);
+    return () => document.removeEventListener('mousedown', handleClickAway);
+  }, [isEmojiOpen, onToggleEmojiPicker]);
+
   return (
     <div className="shrink-0 border-t border-stroke px-4 py-4 sm:px-5">
       <input ref={fileInputRef} type="file" multiple onChange={onFilesSelected} className="hidden" />
@@ -97,7 +116,7 @@ export function MessageComposer({
         </div>
       ) : null}
       {isEmojiOpen ? (
-        <div className="mb-3 rounded-xl border border-stroke bg-panel p-3">
+        <div ref={emojiPickerRef} className="mb-3 rounded-xl border border-stroke bg-panel p-3">
           <div className="grid grid-cols-6 gap-2">
             {emojiOptions.map((emoji) => (
               <button
@@ -143,6 +162,7 @@ export function MessageComposer({
             <Paperclip className="h-5 w-5" strokeWidth={1.8} />
           </button>
           <button
+            ref={emojiButtonRef}
             type="button"
             onClick={onToggleEmojiPicker}
             className="text-[#7e7e82] transition hover:text-white"
@@ -161,8 +181,7 @@ export function MessageComposer({
           </button>
         </div>
       </div>
-      <div className="mt-3 flex justify-between text-xs text-white/35">
-        <span>{chatMode === 'dm' ? 'Local direct conversation' : 'Local channel'}</span>
+      <div className="mt-3 flex justify-end text-xs text-white/35">
         <button
           type="button"
           onClick={onShowMobileSidebar}
