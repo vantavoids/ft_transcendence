@@ -52,8 +52,8 @@ public sealed class CreateChannelHandlerTests
 		guildRepo.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guildRepo, channelRepo, categoryRepo, new FakeEventBus(),
-			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
+			guildRepo, channelRepo, categoryRepo, new FakeChannelPermissionOverwriteRepository(),
+			new FakeEventBus(), new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 2 });
 
 		var result = await handler.HandleAsync(
 			new CreateChannelCommand(GuildId: 100, Name: "general", Type: "text",
@@ -76,7 +76,7 @@ public sealed class CreateChannelHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, cats, bus,
+			guilds, channels, cats, new FakeChannelPermissionOverwriteRepository(), bus,
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
@@ -225,7 +225,7 @@ public sealed class CreateChannelHandlerTests
 		guilds.Add(guild);
 
 		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, cats, new FakeEventBus(),
+			guilds, channels, cats, new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
 
 		var result = await handler.HandleAsync(
@@ -233,6 +233,71 @@ public sealed class CreateChannelHandlerTests
 				CategoryId: null, Topic: null, Position: 0));
 
 		Assert.True(result.Succeeded);
+	}
+
+	[Fact]
+	public async Task WithMemberDenyReadOverwrite_PersistsOverwrite_AndExcludesFromEligible()
+	{
+		// an overwrite supplied at creation must be applied atomically: the row is
+		// stored and the GuildChannelCreated eligibility already reflects it, so a
+		// member denied READ never appears in the eligible set (no all-readers window)
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var cats = new FakeChannelCategoryRepository();
+		var overwrites = new FakeChannelPermissionOverwriteRepository();
+		var bus = new FakeEventBus();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		guilds.Add(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, cats, overwrites, bus,
+			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "secret", Type: "text",
+				CategoryId: null, Topic: null, Position: 0,
+				Overwrites: [new ChannelOverwriteInput(
+					TargetId: 2, TargetType: "member", Allow: 0L, Deny: (long)Permission.ReadMessages)]));
+
+		Assert.True(result.Succeeded);
+		var stored = Assert.Single(overwrites.Store.Values);
+		Assert.Equal(2, stored.TargetId);
+		Assert.Equal((long)Permission.ReadMessages, stored.Deny);
+
+		var evt = bus.Single<GuildChannelCreated>();
+		Assert.Contains(1L, evt.EligibleUserIds);
+		Assert.DoesNotContain(2L, evt.EligibleUserIds);
+	}
+
+	[Fact]
+	public async Task WithOverwriteForUnknownTarget_ReturnsInvalidTarget_AndCreatesNothing()
+	{
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var cats = new FakeChannelCategoryRepository();
+		var overwrites = new FakeChannelPermissionOverwriteRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		guilds.Add(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, cats, overwrites, new FakeEventBus(),
+			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "secret", Type: "text",
+				CategoryId: null, Topic: null, Position: 0,
+				Overwrites: [new ChannelOverwriteInput(
+					TargetId: 999999, TargetType: "member", Allow: 0L, Deny: (long)Permission.ReadMessages)]));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.OverwriteInvalidTarget", result.Error.Code);
+		Assert.Empty(channels.Store);
+		Assert.Empty(overwrites.Store);
 	}
 
 	private static Guild.Application.Abstractions.Messaging.ICommandHandler<CreateChannelCommand, Result<ChannelResponse>>
@@ -256,7 +321,7 @@ public sealed class CreateChannelHandlerTests
 		}
 
 		return HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
-			guilds, channels, categories, new FakeEventBus(),
+			guilds, channels, categories, new FakeChannelPermissionOverwriteRepository(), new FakeEventBus(),
 			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = currentUser });
 	}
 
