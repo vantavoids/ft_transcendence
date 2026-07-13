@@ -984,7 +984,7 @@ export function ChatWorkspace() {
             <ProfileCard
               member={profileMember}
               onClose={handleCloseAuthorProfile}
-              onSendMessage={handleSendMessageToProfile}
+              onSendMessage={profileMember.id === currentUserId ? undefined : handleSendMessageToProfile}
               onUnfriend={
                 friends.some((entry) => entry.id === profileMember.id)
                   ? handleUnfriend
