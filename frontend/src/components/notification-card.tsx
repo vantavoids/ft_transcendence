@@ -22,12 +22,7 @@ import type {
   NotificationScopeType
 } from '../shared/api/notification';
 import { getUsersByIds } from '../shared/api/user';
-import {
-  getNotificationMuteScopes,
-  isScopeMuted,
-  type NotificationMuteScope,
-  type UseNotificationsResult
-} from '../shared/lib/use-notifications';
+import { type UseNotificationsResult } from '../shared/lib/use-notifications';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { useToast } from '../shared/ui/toast';
 
@@ -224,35 +219,24 @@ function FilterChip({ active, label, onClick }: FilterChipProps) {
   );
 }
 
-function getScopeLabel(scopeType: NotificationScopeType) {
-  return scopeType === 'guild' ? 'the guild' : 'the channel';
-}
-
 type NotificationRowProps = {
   notification: NotificationDto;
   actorName: string | null;
-  preferences: NotificationPreferenceDto[];
   onMarkRead: (notificationId: string) => void;
   onDismiss: (notificationId: string) => void;
-  onMute: (scope: NotificationMuteScope) => void;
   onOpen: (notification: NotificationDto) => void;
 };
 
 function NotificationRow({
   notification,
   actorName,
-  preferences,
   onMarkRead,
   onDismiss,
-  onMute,
   onOpen
 }: NotificationRowProps) {
   const { title, detail, tone, Icon } = describeNotification(notification, actorName);
   const isDismissed = Boolean(notification.dismissed_at);
   const isClickable = hasNotificationTarget(notification);
-  const muteScopes = getNotificationMuteScopes(notification).filter(
-    (scope) => !isScopeMuted(preferences, scope.scopeType, scope.scopeId)
-  );
 
   return (
     <article
@@ -304,18 +288,6 @@ function NotificationRow({
                   <Check className="h-3.5 w-3.5" strokeWidth={2} />
                 </button>
               ) : null}
-              {muteScopes.map((scope) => (
-                <button
-                  key={`${scope.scopeType}-${scope.scopeId}`}
-                  type="button"
-                  onClick={() => onMute(scope)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-white/35 transition hover:bg-frame hover:text-yellow"
-                  aria-label={`Mute ${getScopeLabel(scope.scopeType)}`}
-                  title={`Mute ${getScopeLabel(scope.scopeType)}`}
-                >
-                  <BellOff className="h-3.5 w-3.5" strokeWidth={2} />
-                </button>
-              ))}
               {!isDismissed ? (
                 <button
                   type="button"
@@ -334,20 +306,6 @@ function NotificationRow({
       </div>
     </article>
   );
-}
-
-const muteDurations = [
-  { value: '1h', label: '1h', hours: 1 },
-  { value: '8h', label: '8h', hours: 8 },
-  { value: '24h', label: '24h', hours: 24 },
-  { value: 'forever', label: 'Forever', hours: null }
-] as const;
-
-type MuteDuration = (typeof muteDurations)[number]['value'];
-
-function muteDurationToIso(duration: MuteDuration): string | null {
-  const hours = muteDurations.find((option) => option.value === duration)?.hours ?? null;
-  return hours === null ? null : new Date(Date.now() + hours * 3_600_000).toISOString();
 }
 
 function describeMuteState(preference: NotificationPreferenceDto): string {
@@ -370,108 +328,12 @@ function describeMuteState(preference: NotificationPreferenceDto): string {
 
 type MutePanelProps = {
   preferences: NotificationPreferenceDto[];
-  onMute: (
-    scopeType: NotificationScopeType,
-    scopeId: string,
-    mutedUntil: string | null
-  ) => Promise<void>;
   onUnmute: (scopeType: NotificationScopeType, scopeId: string) => Promise<void>;
 };
 
-function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
-  const [scopeType, setScopeType] = useState<NotificationScopeType>('guild');
-  const [scopeId, setScopeId] = useState('');
-  const [duration, setDuration] = useState<MuteDuration>('forever');
-  const [formError, setFormError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { pushToast } = useToast();
-
-  useEffect(() => {
-    if (formError) {
-      pushToast({
-        title: 'Notification mutes',
-        description: formError,
-        tone: 'error'
-      });
-    }
-  }, [formError, pushToast]);
-
-  async function handleAddMute() {
-    const trimmedId = scopeId.trim();
-    if (!/^\d+$/.test(trimmedId)) {
-      setFormError('Enter the guild or channel snowflake ID.');
-      return;
-    }
-
-    setFormError('');
-    setIsSubmitting(true);
-    try {
-      await onMute(scopeType, trimmedId, muteDurationToIso(duration));
-      setScopeId('');
-    } catch {
-      setFormError('Could not save the mute.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
+function MutePanel({ preferences, onUnmute }: MutePanelProps) {
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-stroke bg-panel px-3 py-3">
-        <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
-          New mute
-        </p>
-        <div className="mt-2.5 flex gap-2">
-          {(['guild', 'channel'] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setScopeType(option)}
-              aria-pressed={scopeType === option}
-              className={`h-8 flex-1 rounded-md border text-xs font-semibold transition ${
-                scopeType === option
-                  ? 'border-aqua/45 bg-aqua/10 text-aqua'
-                  : 'border-stroke text-white/40 hover:text-white/70'
-              }`}
-              >
-              {option === 'guild' ? 'Guild' : 'Channel'}
-            </button>
-          ))}
-        </div>
-        <input
-          value={scopeId}
-          onChange={(event) => setScopeId(event.target.value)}
-          placeholder={`ID of the ${scopeType === 'guild' ? 'guild' : 'channel'}`}
-          className="mono-detail mt-2 h-9 w-full rounded-md bg-input-bg px-3 text-sm text-white outline-none placeholder:text-input-placeholder focus:ring-1 focus:ring-aqua/35"
-        />
-        <div className="mt-2 flex gap-2">
-          {muteDurations.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setDuration(option.value)}
-              aria-pressed={duration === option.value}
-              className={`h-7 flex-1 rounded-md border text-[0.68rem] font-semibold transition ${
-                duration === option.value
-                  ? 'border-yellow/45 bg-yellow/10 text-yellow'
-                  : 'border-stroke text-white/40 hover:text-white/70'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={handleAddMute}
-          disabled={isSubmitting}
-          className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-frame text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          <BellOff className="h-4 w-4" strokeWidth={1.9} />
-          {isSubmitting ? 'Saving...' : 'Mute'}
-        </button>
-      </div>
-
       {preferences.length === 0 ? (
         <p className="py-3 text-center text-sm text-white/40">No mutes configured.</p>
       ) : (
@@ -540,12 +402,10 @@ export function NotificationCard({
     markAllRead,
     dismiss,
     preferences,
-    mute,
     unmute
   } = feed;
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
   const [position, setPosition] = useState<PopupPosition | null>(null);
-  const [muteError, setMuteError] = useState('');
 
   // measure the bell and re-anchor the popup above it; recompute on resize so
   // it tracks the bell if the layout reflows while the popup is open
@@ -611,25 +471,6 @@ export function NotificationCard({
       });
     }
   }, [error, pushToast]);
-
-  useEffect(() => {
-    if (muteError) {
-      pushToast({
-        title: 'Notification mutes',
-        description: muteError,
-        tone: 'error'
-      });
-    }
-  }, [muteError, pushToast]);
-
-  async function handleRowMute(scope: NotificationMuteScope) {
-    setMuteError('');
-    try {
-      await mute(scope.scopeType, scope.scopeId, null);
-    } catch {
-      setMuteError('Could not save the mute.');
-    }
-  }
 
   useCloseOnEscape(onClose);
 
@@ -702,7 +543,7 @@ export function NotificationCard({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {view === 'mutes' ? (
-            <MutePanel preferences={preferences} onMute={mute} onUnmute={unmute} />
+            <MutePanel preferences={preferences} onUnmute={unmute} />
           ) : isLoading ? (
             <div className="space-y-2" aria-label="Loading notifications">
               {[0, 1, 2].map((index) => (
@@ -742,12 +583,8 @@ export function NotificationCard({
                       ? (actorNamesById.get(notification.actor_id) ?? null)
                       : null
                   }
-                  preferences={preferences}
                   onMarkRead={markRead}
                   onDismiss={dismiss}
-                  onMute={(scope) => {
-                    void handleRowMute(scope);
-                  }}
                   onOpen={onOpenNotification}
                 />
               ))}
