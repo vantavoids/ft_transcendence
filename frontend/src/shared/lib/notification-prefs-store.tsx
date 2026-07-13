@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   deleteNotificationPreference,
@@ -57,8 +57,34 @@ function removeScope(
   );
 }
 
+function scopeKey(scopeType: NotificationScopeType, scopeId: string) {
+  return `${scopeType}:${scopeId}`;
+}
+
+// the mount-time fetch below can resolve after a mute/unmute has already landed
+// locally; for any scope the user has since mutated, that local state is newer
+// than the fetch snapshot, so keep it and only take the fetch's word for the
+// untouched scopes.
+function mergeFetchedPreferences(
+  fetched: NotificationPreferenceDto[],
+  current: NotificationPreferenceDto[],
+  mutatedScopes: ReadonlySet<string>
+): NotificationPreferenceDto[] {
+  if (mutatedScopes.size === 0) {
+    return fetched;
+  }
+  const fromFetch = fetched.filter(
+    (pref) => !mutatedScopes.has(scopeKey(pref.scope_type, pref.scope_id))
+  );
+  const fromCurrent = current.filter(
+    (pref) => mutatedScopes.has(scopeKey(pref.scope_type, pref.scope_id))
+  );
+  return [...fromFetch, ...fromCurrent];
+}
+
 export function NotificationPrefsProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<NotificationPreferenceDto[]>([]);
+  const mutatedScopesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!hasSession()) {
@@ -69,7 +95,9 @@ export function NotificationPrefsProvider({ children }: { children: ReactNode })
     listNotificationPreferences()
       .then((prefs) => {
         if (!cancelled) {
-          setPreferences(prefs);
+          setPreferences((current) =>
+            mergeFetchedPreferences(prefs, current, mutatedScopesRef.current)
+          );
         }
       })
       .catch(() => {
@@ -93,6 +121,7 @@ export function NotificationPrefsProvider({ children }: { children: ReactNode })
         muted: true,
         muted_until: mutedUntil
       });
+      mutatedScopesRef.current.add(scopeKey(scopeType, scopeId));
       setPreferences((current) => upsert(current, updated));
     },
     []
@@ -107,6 +136,7 @@ export function NotificationPrefsProvider({ children }: { children: ReactNode })
         throw err;
       }
     }
+    mutatedScopesRef.current.add(scopeKey(scopeType, scopeId));
     setPreferences((current) => removeScope(current, scopeType, scopeId));
   }, []);
 
