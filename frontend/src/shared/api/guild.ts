@@ -132,6 +132,21 @@ export type CreateRolePayload = {
 
 export type UpdateRolePayload = Partial<CreateRolePayload>;
 
+export type ChannelOverwriteTargetType = 'role' | 'user';
+
+export type ChannelOverwriteDto = {
+  target_id: string;
+  target_type: ChannelOverwriteTargetType;
+  allow: number;
+  deny: number;
+};
+
+export type PutChannelOverwritePayload = {
+  target_type: ChannelOverwriteTargetType;
+  allow: number;
+  deny: number;
+};
+
 export type CreateCategoryPayload = {
   name: string;
   position?: number;
@@ -254,6 +269,27 @@ export function updateGuildChannel(
 
 export function deleteGuildChannel(guildId: string, channelId: string) {
   return apiFetch<void>('guild', `/guilds/${guildId}/channels/${channelId}`, {
+    method: 'DELETE'
+  });
+}
+
+export function listChannelPermissionOverwrites(channelId: string) {
+  return apiFetch<ChannelOverwriteDto[]>('guild', `/channels/${channelId}/permissions`);
+}
+
+export function putChannelPermissionOverwrite(
+  channelId: string,
+  targetId: string,
+  payload: PutChannelOverwritePayload
+) {
+  return apiFetch<void>('guild', `/channels/${channelId}/permissions/${targetId}`, {
+    method: 'PUT',
+    body: payload
+  });
+}
+
+export function deleteChannelPermissionOverwrite(channelId: string, targetId: string) {
+  return apiFetch<void>('guild', `/channels/${channelId}/permissions/${targetId}`, {
     method: 'DELETE'
   });
 }
