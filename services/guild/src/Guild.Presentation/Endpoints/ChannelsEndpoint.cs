@@ -3,6 +3,7 @@ using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Features.Channels.Common;
 using Guild.Application.Features.Channels.CreateChannel;
 using Guild.Application.Features.Channels.DeleteChannel;
+using Guild.Application.Features.Channels.ListChannelMembers;
 using Guild.Application.Features.Channels.ListChannels;
 using Guild.Application.Features.Channels.UpdateChannel;
 using Guild.Domain.Results;
@@ -17,9 +18,23 @@ public sealed class ChannelsEndpoint : ICarterModule
 	{
 		var group = endpoints.MapGroup("/guilds/{id:long}/channels");
 		group.MapGet("/", ListAsync).ProducesGuildErrors();
+		group.MapGet("/{channelId:long}/members", ListMembersAsync).ProducesGuildErrors();
 		group.MapPost("/", CreateAsync).ProducesGuildErrors();
 		group.MapPatch("/{channelId:long}", UpdateAsync).ProducesGuildErrors();
 		group.MapDelete("/{channelId:long}", DeleteAsync).ProducesGuildErrors();
+	}
+
+	private static async Task<Results<Ok<ChannelMembersResponse>, JsonHttpResult<ErrorBody>>>
+	ListMembersAsync(
+		long id,
+		long channelId,
+		IQueryHandler<ListChannelMembersQuery, Result<ChannelMembersResponse>> handler,
+		CancellationToken cancellationToken)
+	{
+		var result = await handler.HandleAsync(new ListChannelMembersQuery(id, channelId), cancellationToken);
+		return result.Succeeded
+			? TypedResults.Ok(result.Value)
+			: EndpointResults.Problem(result.Error);
 	}
 
 	private static async Task<Results<Ok<IReadOnlyList<ChannelResponse>>, JsonHttpResult<ErrorBody>>>

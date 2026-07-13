@@ -511,6 +511,21 @@ List all channels in a guild. Caller must be a member.
 
 ---
 
+### GET /guilds/{id}/channels/{channel_id}/members
+
+The snowflake ids of the members who can `READ_MESSAGES` on the channel. Caller must be a member (any member, no `MANAGE_CHANNELS` needed). Used by the frontend to scope the guild member list to who can actually see the currently open channel (Discord parity). Owner and `ADMINISTRATOR` short-circuit to all bits, per-channel overwrites applied: same resolution as `GET /internal/channels/{channel_id}/membership`.
+
+**Response `200`:**
+```json
+{
+  "user_ids": ["<snowflake>", "<snowflake>"]
+}
+```
+
+Returns `404` if the channel does not exist or belongs to a different guild, `403` if the caller is not a member. Order is unspecified.
+
+---
+
 ### POST /guilds/{id}/channels
 
 Create a channel. Requires `MANAGE_CHANNELS` permission.

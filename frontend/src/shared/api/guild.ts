@@ -257,6 +257,16 @@ export function listGuildChannels(guildId: string) {
   return apiFetch<GuildChannelDto[]>('guild', `/guilds/${guildId}/channels`);
 }
 
+// snowflake ids of the members who can READ the channel; used to scope the
+// guild member list to who can actually see the currently open channel.
+export async function listChannelReaders(guildId: string, channelId: string) {
+  const { user_ids } = await apiFetch<{ user_ids: string[] }>(
+    'guild',
+    `/guilds/${guildId}/channels/${channelId}/members`
+  );
+  return user_ids;
+}
+
 export function createGuildChannel(guildId: string, payload: CreateChannelPayload) {
   return apiFetch<GuildChannelDto>('guild', `/guilds/${guildId}/channels`, {
     method: 'POST',

@@ -9,6 +9,7 @@ import { guildMembers } from './mocks/guild-member-mocks';
 import type { GuildRoleDto } from '../shared/api/guild';
 import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
+import { useChannelReaders } from '../shared/guilds/use-channel-readers';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
 import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
@@ -189,15 +190,17 @@ export function buildMemberGroups(
 }
 
 type GuildMemberListProps = {
+  activeChannelId: string | null;
   onOpenProfile: (member: GuildMember) => void;
 };
 
-export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
+export function GuildMemberList({ activeChannelId, onOpenProfile }: GuildMemberListProps) {
   const { selectedGuild } = useGuilds();
   const { members, isLoading, error } = useGuildMembers(
     selectedGuild?.id ?? null,
     selectedGuild?.owner_id ?? null
   );
+  const readerIds = useChannelReaders(selectedGuild?.id ?? null, activeChannelId);
   const groupByRole = useGroupMembersByRole();
   const { pushToast } = useToast();
 
@@ -211,8 +214,15 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
     }
   }, [error, pushToast]);
 
-  const memberGroups = buildMemberGroups(members, groupByRole);
-  const onlineCount = members.filter((member) => member.status !== 'offline').length;
+  // scope to the members who can read the active channel (Discord parity); a
+  // null reader set means "unknown" (no channel, loading, or lookup failed), in
+  // which case we show everyone rather than blanking the list.
+  const visibleMembers = readerIds
+    ? members.filter((member) => readerIds.has(member.userId))
+    : members;
+
+  const memberGroups = buildMemberGroups(visibleMembers, groupByRole);
+  const onlineCount = visibleMembers.filter((member) => member.status !== 'offline').length;
 
   return (
     <aside className="hidden min-h-0 w-[18rem] shrink-0 flex-col overflow-hidden rounded-[1rem] bg-secondary-bg ring-1 ring-stroke xl:flex">
@@ -220,7 +230,7 @@ export function GuildMemberList({ onOpenProfile }: GuildMemberListProps) {
         <div>
           <h2 className="text-[1.05rem] font-bold tracking-[-0.03em] text-white">Members</h2>
           <p className="font-category mt-1 text-[0.7rem] uppercase tracking-[0.14em] text-white/35">
-            {onlineCount} online · {members.length - onlineCount} offline
+            {onlineCount} online · {visibleMembers.length - onlineCount} offline
           </p>
         </div>
       </div>

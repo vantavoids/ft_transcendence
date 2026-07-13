@@ -975,7 +975,10 @@ export function ChatWorkspace() {
           </section>
 
           {chatMode === 'guild' && isMemberListOpen ? (
-            <GuildMemberList onOpenProfile={setProfileMember} />
+            <GuildMemberList
+              activeChannelId={guildWorkspace.activeChannel ?? null}
+              onOpenProfile={setProfileMember}
+            />
           ) : null}
 
           {chatMode === 'dm' && isDmProfileOpen && activeDmProfileMember ? (
