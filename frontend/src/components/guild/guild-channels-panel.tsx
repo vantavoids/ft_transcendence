@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Check, Hash, Lock, Pencil, Trash2, X } from 'lucide-react';
+import { Check, Hash, Lock, Pencil, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import {
   createGuildChannel,
   deleteGuildChannel,
@@ -13,6 +13,7 @@ import {
   type GuildChannelDto
 } from '../../shared/api/guild';
 import { ActionModal } from '../action-modal';
+import { ChannelCreateModal } from './channel-create-modal';
 import { ChannelPermissionsModal } from './channel-permissions-modal';
 import { useToast } from '../../shared/ui/toast';
 
@@ -60,6 +61,7 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
   const [isBusy, setIsBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GuildChannelDto | null>(null);
   const [permissionsTarget, setPermissionsTarget] = useState<GuildChannelDto | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { pushToast } = useToast();
 
   const load = useCallback(async () => {
@@ -231,6 +233,16 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
             <option value="announcement">Announcement</option>
           </select>
           <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            disabled={isBusy}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-stroke px-4 text-sm font-bold text-white/60 transition hover:border-aqua/40 hover:text-aqua disabled:cursor-not-allowed disabled:opacity-50"
+            title="Create with permissions"
+          >
+            <SlidersHorizontal className="h-4 w-4" strokeWidth={1.9} />
+            Permissions
+          </button>
+          <button
             type="submit"
             disabled={isBusy}
             className="h-10 shrink-0 rounded-md bg-aqua px-5 text-sm font-bold text-primary-bg transition hover:bg-white disabled:cursor-not-allowed disabled:bg-frame disabled:text-white/25"
@@ -387,6 +399,22 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
           ))}
         </ul>
       )}
+
+      {isCreateModalOpen ? (
+        <ChannelCreateModal
+          guildId={guildId}
+          initialName={newName.trim()}
+          initialType={newType}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreated={() => {
+            setIsCreateModalOpen(false);
+            setNewName('');
+            setNewType('text');
+            void load();
+            onChannelsChanged?.();
+          }}
+        />
+      ) : null}
 
       {permissionsTarget ? (
         <ChannelPermissionsModal

@@ -19,7 +19,7 @@ import { ActionModal } from '../action-modal';
 // Channel-scoped subset of the permission bitmask: bits that make sense as a
 // per-channel allow/deny overwrite. Guild-wide bits (kick, ban, manage guild,
 // administrator...) are deliberately left out of the editor.
-const OVERWRITE_FLAGS = [
+export const OVERWRITE_FLAGS = [
   {
     value: PERMISSIONS.ReadMessages,
     label: 'Read messages',
@@ -52,13 +52,13 @@ const OVERWRITE_FLAGS = [
   }
 ];
 
-type OverwriteState = 'allow' | 'inherit' | 'deny';
+export type OverwriteState = 'allow' | 'inherit' | 'deny';
 
-function overwriteKey(overwrite: Pick<ChannelOverwriteDto, 'target_type' | 'target_id'>) {
+export function overwriteKey(overwrite: Pick<ChannelOverwriteDto, 'target_type' | 'target_id'>) {
   return `${overwrite.target_type}:${overwrite.target_id}`;
 }
 
-function bitState(overwrite: ChannelOverwriteDto, bit: number): OverwriteState {
+export function bitState(overwrite: ChannelOverwriteDto, bit: number): OverwriteState {
   if ((overwrite.allow & bit) !== 0) {
     return 'allow';
   }
@@ -68,7 +68,7 @@ function bitState(overwrite: ChannelOverwriteDto, bit: number): OverwriteState {
   return 'inherit';
 }
 
-function TriStateControl({
+export function TriStateControl({
   state,
   disabled,
   onSelect
@@ -110,7 +110,7 @@ function TriStateControl({
   );
 }
 
-function RoleDot({ role }: { role: GuildRoleDto }) {
+export function RoleDot({ role }: { role: GuildRoleDto }) {
   return (
     <span
       className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -128,7 +128,13 @@ type AddTargetPopoverProps = {
   containerRef: RefObject<HTMLElement | null>;
 };
 
-function AddTargetPopover({ roles, members, onAdd, onClose, containerRef }: AddTargetPopoverProps) {
+export function AddTargetPopover({
+  roles,
+  members,
+  onAdd,
+  onClose,
+  containerRef
+}: AddTargetPopoverProps) {
   useEffect(() => {
     function handleMouseDown(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
