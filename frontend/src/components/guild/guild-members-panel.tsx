@@ -58,10 +58,12 @@ type MemberRowProps = {
   roles: GuildRoleDto[];
   caller: RoleCaller | null;
   canBan: boolean;
+  canTransferOwnership: boolean;
   onChanged: () => void;
   onError: (message: string) => void;
   onRequestKick: (member: HydratedGuildMember) => void;
   onRequestBan: (member: HydratedGuildMember) => void;
+  onRequestTransfer: (member: HydratedGuildMember) => void;
 };
 
 function MemberRow({
@@ -70,10 +72,12 @@ function MemberRow({
   roles,
   caller,
   canBan,
+  canTransferOwnership,
   onChanged,
   onError,
   onRequestKick,
-  onRequestBan
+  onRequestBan,
+  onRequestTransfer
 }: MemberRowProps) {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [isRolesOpen, setIsRolesOpen] = useState(false);
@@ -204,6 +208,18 @@ function MemberRow({
           </button>
           {!member.isOwner ? (
             <>
+              {canTransferOwnership && !member.isDeleted ? (
+                <button
+                  type="button"
+                  onClick={() => onRequestTransfer(member)}
+                  disabled={isBusy}
+                  className={iconButtonClasses}
+                  aria-label={`Transfer ownership to ${member.displayName}`}
+                  title="Transfer ownership"
+                >
+                  <Crown className="h-4 w-4 text-yellow" strokeWidth={1.9} />
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => onRequestKick(member)}
@@ -239,7 +255,7 @@ type GuildMembersPanelProps = {
 };
 
 export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
-  const { selectedGuild, currentUserId } = useGuilds();
+  const { selectedGuild, currentUserId, transferOwnership } = useGuilds();
   const { members, roles, isLoading, error, refresh } = useGuildMembers(
     guildId,
     selectedGuild?.id === guildId ? selectedGuild.owner_id : null
@@ -248,8 +264,14 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
   const [kickTarget, setKickTarget] = useState<HydratedGuildMember | null>(null);
   const [banTarget, setBanTarget] = useState<HydratedGuildMember | null>(null);
   const [banReason, setBanReason] = useState('');
+  const [transferTarget, setTransferTarget] = useState<HydratedGuildMember | null>(null);
   const [isActionBusy, setIsActionBusy] = useState(false);
   const { pushToast } = useToast();
+
+  // only the owner may hand the guild over; derived from the loaded roster so a
+  // caller missing from the page safely hides the action.
+  const isCurrentUserOwner =
+    members.find((member) => member.userId === currentUserId)?.isOwner ?? false;
 
   // Base info for the caller's own permissions; the caller missing from the
   // loaded members (pagination edge) safely resolves to no permissions.
@@ -337,6 +359,27 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
     }
   }
 
+  async function confirmTransferOwnership() {
+    if (!transferTarget) {
+      return;
+    }
+
+    setActionError('');
+
+    try {
+      setIsActionBusy(true);
+      await transferOwnership(guildId, transferTarget.userId);
+      void refresh();
+      setTransferTarget(null);
+    } catch (transferError) {
+      setActionError(
+        transferError instanceof Error ? transferError.message : 'Failed to transfer ownership.'
+      );
+    } finally {
+      setIsActionBusy(false);
+    }
+  }
+
   return (
     <div className="grid gap-3">
       {isLoading && members.length === 0 ? (
@@ -351,6 +394,7 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
               roles={roles}
               caller={caller}
               canBan={canBan}
+              canTransferOwnership={isCurrentUserOwner}
               onChanged={() => {
                 setActionError('');
                 void refresh();
@@ -361,6 +405,7 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
                 setBanTarget(target);
                 setBanReason('');
               }}
+              onRequestTransfer={setTransferTarget}
             />
           ))}
         </ul>
@@ -403,6 +448,18 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
             />
           </label>
         </ActionModal>
+      ) : null}
+
+      {transferTarget ? (
+        <ActionModal
+          title={`Transfer ownership to ${transferTarget.displayName}?`}
+          description="They become the guild owner with full control. You keep your membership but lose owner privileges. This can only be undone if the new owner transfers it back."
+          confirmLabel="Transfer ownership"
+          destructive
+          isBusy={isActionBusy}
+          onClose={() => setTransferTarget(null)}
+          onConfirm={confirmTransferOwnership}
+        />
       ) : null}
     </div>
   );

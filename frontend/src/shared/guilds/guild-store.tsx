@@ -8,6 +8,7 @@ import {
   joinGuild,
   listMyGuilds,
   previewInvite,
+  transferGuildOwnership,
   type CreateGuildPayload,
   type GuildDto,
   type MyGuildDto
@@ -31,6 +32,7 @@ type GuildStoreValue = {
   refreshGuilds: () => Promise<void>;
   createGuild: (payload: CreateGuildPayload) => Promise<GuildDto>;
   joinGuildWithCode: (code: string) => Promise<GuildDto>;
+  transferOwnership: (guildId: string, newOwnerId: string) => Promise<void>;
 };
 
 const GuildStoreContext = createContext<GuildStoreValue | null>(null);
@@ -172,6 +174,16 @@ export function GuildProvider({ children }: { children: ReactNode }) {
     [applyGuilds]
   );
 
+  // after handing ownership over, re-fetch the guild list so owner_id (and the
+  // owner-only UI derived from it) reflects the new owner everywhere.
+  const transferOwnership = useCallback(
+    async (guildId: string, newOwnerId: string) => {
+      await transferGuildOwnership(guildId, newOwnerId);
+      await refreshGuilds();
+    },
+    [refreshGuilds]
+  );
+
   const selectedGuild = useMemo(
     () => guilds.find((guild) => guild.id === selectedGuildId) ?? null,
     [guilds, selectedGuildId]
@@ -189,7 +201,8 @@ export function GuildProvider({ children }: { children: ReactNode }) {
       selectGuild,
       refreshGuilds,
       createGuild,
-      joinGuildWithCode
+      joinGuildWithCode,
+      transferOwnership
     }),
     [
       guilds,
@@ -202,7 +215,8 @@ export function GuildProvider({ children }: { children: ReactNode }) {
       selectGuild,
       refreshGuilds,
       createGuild,
-      joinGuildWithCode
+      joinGuildWithCode,
+      transferOwnership
     ]
   );
 
