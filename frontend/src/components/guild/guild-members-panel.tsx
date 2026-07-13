@@ -12,6 +12,7 @@ import {
 import { useGuilds } from '../../shared/guilds/guild-store';
 import { useGuildMembers, type HydratedGuildMember } from '../../shared/guilds/use-guild-members';
 import {
+  canBanMembers,
   canManageMemberRoles,
   effectivePermissions,
   memberRank,
@@ -56,6 +57,7 @@ type MemberRowProps = {
   member: HydratedGuildMember;
   roles: GuildRoleDto[];
   caller: RoleCaller | null;
+  canBan: boolean;
   onChanged: () => void;
   onError: (message: string) => void;
   onRequestKick: (member: HydratedGuildMember) => void;
@@ -67,6 +69,7 @@ function MemberRow({
   member,
   roles,
   caller,
+  canBan,
   onChanged,
   onError,
   onRequestKick,
@@ -211,16 +214,18 @@ function MemberRow({
               >
                 <UserX className="h-4 w-4 text-orange" strokeWidth={1.9} />
               </button>
-              <button
-                type="button"
-                onClick={() => onRequestBan(member)}
-                disabled={isBusy}
-                className={iconButtonClasses}
-                aria-label={`Ban ${member.displayName}`}
-                title="Ban member"
-              >
-                <Gavel className="h-4 w-4 text-pink" strokeWidth={1.9} />
-              </button>
+              {canBan ? (
+                <button
+                  type="button"
+                  onClick={() => onRequestBan(member)}
+                  disabled={isBusy}
+                  className={iconButtonClasses}
+                  aria-label={`Ban ${member.displayName}`}
+                  title="Ban member"
+                >
+                  <Gavel className="h-4 w-4 text-pink" strokeWidth={1.9} />
+                </button>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -246,25 +251,32 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
   const [isActionBusy, setIsActionBusy] = useState(false);
   const { pushToast } = useToast();
 
-  // Gate the role controls to callers the server would authorize; the caller
-  // missing from the loaded members (pagination edge) safely hides them.
-  const caller = useMemo<RoleCaller | null>(() => {
+  // Base info for the caller's own permissions; the caller missing from the
+  // loaded members (pagination edge) safely resolves to no permissions.
+  const callerInfo = useMemo<RoleCaller | null>(() => {
     const callerMember = members.find((member) => member.userId === currentUserId);
     if (!callerMember) {
       return null;
     }
 
     const permissions = effectivePermissions(callerMember.roles, roles, callerMember.isOwner);
-    if (!canManageMemberRoles(permissions, callerMember.isOwner)) {
-      return null;
-    }
-
     return {
       rank: memberRank(callerMember.roles, callerMember.isOwner),
       permissions,
       isOwner: callerMember.isOwner
     };
   }, [members, roles, currentUserId]);
+
+  // Gate the role controls to callers the server would authorize.
+  const caller = useMemo<RoleCaller | null>(() => {
+    if (!callerInfo || !canManageMemberRoles(callerInfo.permissions, callerInfo.isOwner)) {
+      return null;
+    }
+
+    return callerInfo;
+  }, [callerInfo]);
+
+  const canBan = callerInfo ? canBanMembers(callerInfo.permissions, callerInfo.isOwner) : false;
 
   useEffect(() => {
     if (actionError) {
@@ -338,6 +350,7 @@ export function GuildMembersPanel({ guildId }: GuildMembersPanelProps) {
               member={member}
               roles={roles}
               caller={caller}
+              canBan={canBan}
               onChanged={() => {
                 setActionError('');
                 void refresh();

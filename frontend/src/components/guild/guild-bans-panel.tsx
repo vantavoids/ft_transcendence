@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Gavel } from 'lucide-react';
+import { Gavel, ShieldOff } from 'lucide-react';
+import { ApiError } from '../../shared/api/client';
 import {
   banGuildMember,
   listGuildBans,
@@ -26,6 +27,7 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   const [usersById, setUsersById] = useState<Map<string, UserSummaryDto>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isForbidden, setIsForbidden] = useState(false);
   const [banUserId, setBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,6 +38,7 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
   const load = useCallback(async () => {
     setIsLoading(true);
     setError('');
+    setIsForbidden(false);
 
     try {
       const rows = await listGuildBans(guildId, { limit: 100 });
@@ -47,7 +50,13 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
       const users = await getUsersByIds(ids);
       setUsersById(new Map(users.map((user) => [user.id, user])));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load bans.');
+      // Missing BAN_MEMBERS is an expected permission state, not an error to
+      // alert on - show a calm inline notice instead of an action-error toast.
+      if (loadError instanceof ApiError && loadError.status === 403) {
+        setIsForbidden(true);
+      } else {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load bans.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +129,19 @@ export function GuildBansPanel({ guildId }: GuildBansPanelProps) {
     } finally {
       setIsUnbanning(false);
     }
+  }
+
+  if (isForbidden) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-md border border-stroke bg-panel px-5 py-10 text-center">
+        <ShieldOff className="h-8 w-8 text-white/25" strokeWidth={1.6} />
+        <p className="text-sm font-bold text-white/70">You don&apos;t have permission to manage bans</p>
+        <p className="max-w-[22rem] text-xs text-white/35">
+          Ask someone with the <span className="font-semibold text-white/50">Ban Members</span>{' '}
+          permission in this guild to make changes here.
+        </p>
+      </div>
+    );
   }
 
   return (

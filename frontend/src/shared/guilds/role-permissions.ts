@@ -117,6 +117,10 @@ export function canManageMemberRoles(mask: number, isOwner: boolean): boolean {
   return isOwner || hasPermission(mask, PERMISSIONS.ManageRoles);
 }
 
+export function canBanMembers(mask: number, isOwner: boolean): boolean {
+  return isOwner || hasPermission(mask, PERMISSIONS.BanMembers);
+}
+
 export type RoleCaller = {
   rank: number;
   permissions: number;
