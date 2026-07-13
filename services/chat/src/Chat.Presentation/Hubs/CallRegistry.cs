@@ -37,16 +37,30 @@ public sealed class CallRegistry(
 			_connected[userId] = _connected.GetValueOrDefault(userId) + 1;
 	}
 
-	public void Disconnect(long userId)
+	// drops one signaling connection. when the user's *last* connection goes away
+	// while they are in a call, that call is abandoned and returned so the hub can
+	// notify the other party: a page refresh tears down the RTCPeerConnection
+	// without ever sending a hangup, so this is the only chance to reclaim the
+	// call and free both participants (otherwise they stay "busy" forever).
+	public CallInfo? Disconnect(long userId)
 	{
 		lock (_gate)
 		{
 			if (!_connected.TryGetValue(userId, out var count))
-				return;
-			if (count <= 1)
-				_connected.Remove(userId);
-			else
+				return null;
+			if (count > 1)
+			{
 				_connected[userId] = count - 1;
+				return null;   // other connections (tabs) still hold the presence
+			}
+
+			_connected.Remove(userId);
+
+			if (!_userCall.TryGetValue(userId, out var callId) || !_byCall.TryGetValue(callId, out var entry))
+				return null;
+
+			RemoveLocked(callId);
+			return entry.Info;
 		}
 	}
 

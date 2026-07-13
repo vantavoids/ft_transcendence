@@ -80,6 +80,40 @@ public sealed class CallRegistryTests
 	}
 
 	[Fact]
+	public void Disconnect_AbandonsActiveCall_WhenLastConnectionDrops_FreeingBothUsers()
+	{
+		var (registry, _) = NewRegistry();
+		registry.Connect(Caller);
+		registry.Connect(Callee);
+		registry.TryOffer(Offer());
+		registry.Answer(CallId, Callee);   // active, no longer ringing
+
+		// caller refreshes: their last connection drops and the call is abandoned
+		var abandoned = registry.Disconnect(Caller);
+		Assert.NotNull(abandoned);
+		Assert.Equal(CallId, abandoned!.CallId);
+
+		// both participants are free again; the now-stale callee disconnect is a no-op
+		Assert.Null(registry.Disconnect(Callee));
+		Assert.True(registry.TryOffer(new CallInfo(906, Caller, Third, "audio", "x")));
+		Assert.True(registry.TryOffer(new CallInfo(907, Callee, 4, "audio", "x")));
+	}
+
+	[Fact]
+	public void Disconnect_DoesNotAbandonCall_WhileOtherConnectionRemains()
+	{
+		var (registry, _) = NewRegistry();
+		registry.Connect(Caller);
+		registry.Connect(Caller);   // two tabs
+		registry.TryOffer(Offer());
+
+		Assert.Null(registry.Disconnect(Caller));   // one tab left, call stays
+		Assert.False(registry.TryOffer(new CallInfo(908, Caller, Third, "audio", "x")));
+
+		Assert.NotNull(registry.Disconnect(Caller)); // last tab gone, call abandoned
+	}
+
+	[Fact]
 	public void CountsSnapshot_Reflects_Connections_And_Calls()
 	{
 		var (registry, _) = NewRegistry();
