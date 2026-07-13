@@ -354,6 +354,18 @@ export function deleteGuildRole(guildId: string, roleId: string) {
   });
 }
 
+export type ReorderRoleEntry = { id: string; position: number };
+
+// bulk reorder: `moves` must cover every non-@everyone role, and their target
+// positions must be a permutation of the positions those roles currently hold.
+// returns the full, freshly-ordered role list.
+export function reorderGuildRoles(guildId: string, moves: ReorderRoleEntry[]) {
+  return apiFetch<GuildRoleDto[]>('guild', `/guilds/${guildId}/roles`, {
+    method: 'PATCH',
+    body: moves
+  });
+}
+
 export function createGuildInvite(guildId: string, payload: CreateInvitePayload = {}) {
   return apiFetch<GuildInviteDto>('guild', `/guilds/${guildId}/invites`, {
     method: 'POST',

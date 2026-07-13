@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { ShieldPlus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
+import { GripVertical, ShieldPlus, Trash2 } from 'lucide-react';
 import {
   createGuildRole,
   deleteGuildRole,
   listGuildRoles,
+  reorderGuildRoles,
   updateGuildRole,
-  type GuildRoleDto
+  type GuildRoleDto,
+  type ReorderRoleEntry
 } from '../../shared/api/guild';
 import { ActionModal } from '../action-modal';
 import { useToast } from '../../shared/ui/toast';
@@ -54,6 +56,34 @@ function draftFromRole(role: GuildRoleDto): RoleDraft {
     isHoisted: role.is_hoisted,
     isMentionable: role.is_mentionable
   };
+}
+
+// reorder the draggable (non-default) roles so `draggedId` takes `targetId`'s
+// slot, keeping the pinned @everyone role (position 0) at the bottom.
+function reorderRoleList(
+  roles: GuildRoleDto[],
+  draggedId: string,
+  targetId: string
+): GuildRoleDto[] {
+  const nonDefault = roles.filter((role) => !role.is_default);
+  const defaults = roles.filter((role) => role.is_default);
+  const from = nonDefault.findIndex((role) => role.id === draggedId);
+  const to = nonDefault.findIndex((role) => role.id === targetId);
+  if (from === -1 || to === -1 || from === to) {
+    return roles;
+  }
+  const next = [...nonDefault];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return [...next, ...defaults];
+}
+
+// map the visual order (top row = highest rank) onto the position values the
+// moved roles currently occupy, yielding a permutation the backend accepts.
+function movesFromOrder(roles: GuildRoleDto[]): ReorderRoleEntry[] {
+  const nonDefault = roles.filter((role) => !role.is_default);
+  const positionsDesc = nonDefault.map((role) => role.position).sort((a, b) => b - a);
+  return nonDefault.map((role, index) => ({ id: role.id, position: positionsDesc[index] }));
 }
 
 type RoleEditorProps = {
@@ -173,6 +203,8 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
   const [editDraft, setEditDraft] = useState<RoleDraft>(emptyDraft);
   const [isBusy, setIsBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GuildRoleDto | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const preDragRolesRef = useRef<GuildRoleDto[] | null>(null);
   const { pushToast } = useToast();
 
   const load = useCallback(async () => {
@@ -262,6 +294,53 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
     setDeleteTarget(role);
   }
 
+  function handleDragStart(role: GuildRoleDto) {
+    if (role.is_default) {
+      return;
+    }
+    preDragRolesRef.current = roles;
+    setDraggingId(role.id);
+  }
+
+  function handleDragOver(event: DragEvent, overRole: GuildRoleDto) {
+    if (!draggingId) {
+      return;
+    }
+    event.preventDefault();
+    if (draggingId === overRole.id || overRole.is_default) {
+      return;
+    }
+    setRoles((current) => reorderRoleList(current, draggingId, overRole.id));
+  }
+
+  async function handleDragEnd() {
+    const snapshot = preDragRolesRef.current;
+    setDraggingId(null);
+    preDragRolesRef.current = null;
+
+    if (!snapshot) {
+      return;
+    }
+
+    // nothing to persist if the drag left the order unchanged
+    const before = snapshot.map((role) => role.id).join(',');
+    const after = roles.map((role) => role.id).join(',');
+    if (before === after) {
+      return;
+    }
+
+    try {
+      setIsBusy(true);
+      const updated = await reorderGuildRoles(guildId, movesFromOrder(roles));
+      setRoles([...updated].sort((a, b) => b.position - a.position));
+    } catch (reorderError) {
+      setRoles(snapshot);
+      setError(reorderError instanceof Error ? reorderError.message : 'Failed to reorder roles.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function confirmDeleteRole() {
     if (!deleteTarget) {
       return;
@@ -302,7 +381,16 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
       ) : (
         <ul className="grid gap-2">
           {roles.map((role) => (
-            <li key={role.id} className="rounded-md border border-stroke bg-panel px-3 py-2.5">
+            <li
+              key={role.id}
+              draggable={!role.is_default && editingRoleId !== role.id}
+              onDragStart={() => handleDragStart(role)}
+              onDragOver={(event) => handleDragOver(event, role)}
+              onDragEnd={() => void handleDragEnd()}
+              className={`rounded-md border bg-panel px-3 py-2.5 transition ${
+                draggingId === role.id ? 'border-aqua/50 opacity-50' : 'border-stroke'
+              }`}
+            >
               {editingRoleId === role.id ? (
                 <RoleEditor
                   draft={editDraft}
@@ -315,6 +403,15 @@ export function GuildRolesPanel({ guildId }: GuildRolesPanelProps) {
                 />
               ) : (
                 <div className="flex items-center gap-3">
+                  {role.is_default ? (
+                    <span className="w-4 shrink-0" aria-hidden />
+                  ) : (
+                    <GripVertical
+                      className="h-4 w-4 shrink-0 cursor-grab text-white/25 transition hover:text-white/50 active:cursor-grabbing"
+                      strokeWidth={1.9}
+                      aria-hidden
+                    />
+                  )}
                   <span
                     className="h-3.5 w-3.5 shrink-0 rounded-full"
                     style={{ backgroundColor: role.color || '#8b8b8f' }}
