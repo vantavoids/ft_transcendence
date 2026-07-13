@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import Link from 'next/link';
 import { Archive, Check, UserPlus, UserRound, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
@@ -41,6 +41,7 @@ type DmListProps = {
   focusFriendRequests?: boolean;
   onFriendRequestsFocused?: () => void;
   onOpenFriendProfile: (friend: Friend) => void;
+  bellRef?: RefObject<HTMLButtonElement | null>;
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
@@ -75,6 +76,7 @@ export function DmList({
   isMicMuted,
   isDeafened,
   unreadNotifications,
+  bellRef,
   focusFriendRequests = false,
   onFriendRequestsFocused,
   onOpenFriendProfile,
@@ -324,6 +326,7 @@ export function DmList({
         isMicMuted={isMicMuted}
         isDeafened={isDeafened}
         unreadNotifications={unreadNotifications}
+        bellRef={bellRef}
         onToggleMicMute={onToggleMicMute}
         onToggleDeafen={onToggleDeafen}
         onOpenNotifications={onOpenNotifications}

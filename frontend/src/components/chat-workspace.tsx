@@ -65,6 +65,8 @@ export function ChatWorkspace() {
   const [friendsReloadKey, setFriendsReloadKey] = useState(0);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
+  // the bell button in the sidebar footer; the notification popup anchors above it
+  const bellRef = useRef<HTMLButtonElement>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuildSettingsOpen, setIsGuildSettingsOpen] = useState(false);
   const [permissionsChannel, setPermissionsChannel] = useState<TextChannel | null>(null);
@@ -860,6 +862,7 @@ export function ChatWorkspace() {
     onToggleDeafen: handleToggleDeafen,
     onToggleMicMute: handleToggleMicMute,
     onOpenNotifications: handleOpenNotifications,
+    bellRef,
     onOpenSettings: handleOpenSettings,
     onOpenGuildSettings: handleOpenGuildSettings
   };
@@ -996,6 +999,7 @@ export function ChatWorkspace() {
           {isNotificationCardOpen ? (
             <NotificationCard
               feed={notificationFeed}
+              anchorRef={bellRef}
               onClose={handleCloseNotifications}
               onOpenNotification={handleOpenNotification}
             />
