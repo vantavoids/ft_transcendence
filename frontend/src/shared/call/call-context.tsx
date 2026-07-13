@@ -27,6 +27,11 @@ const IDLE_STATE: CallState = {
 // how long the "ended" banner lingers before returning to idle
 const ENDED_LINGER_MS = 2500;
 
+// auto-dismiss a still-ringing incoming call. The server abandons an unanswered
+// call after AnswerTimeoutSeconds (120s) but only notifies the caller, so the
+// callee must time its own ring out or the overlay lingers forever.
+const RING_TIMEOUT_MS = 120_000;
+
 type CallContextValue = {
   state: CallState;
   localStream: MediaStream | null;
@@ -62,6 +67,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteDescSetRef = useRef(false);
   const liveRef = useRef(false);
   const endedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // keep the latest invoke reachable from stable (dep-free) callbacks
   const invokeRef = useRef(invoke);
@@ -96,6 +102,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       liveRef.current = false;
       callIdRef.current = null;
       pendingOfferRef.current = null;
+      if (ringTimerRef.current) {
+        clearTimeout(ringTimerRef.current);
+        ringTimerRef.current = null;
+      }
       teardownMedia();
 
       if (reason) {
@@ -139,6 +149,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed') {
+        // a locally-detected drop: tell the server so the peer is freed and the
+        // call is cleared. Server-originated ends (CallHungUp/…) never reach here.
+        if (callIdRef.current) {
+          send('CallHangup', { call_id: callIdRef.current });
+        }
         endCall('Connection lost');
       }
     };
@@ -203,16 +218,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           sdp: offer.sdp ?? ''
         });
       } catch {
+        // the offer may have registered before the invoke rejected; clear it so a
+        // half-sent offer never leaves us "busy" server-side.
+        if (callIdRef.current) {
+          send('CallHangup', { call_id: callIdRef.current });
+        }
         endCall('Could not reach the call service');
       }
     },
-    [acquireLocalMedia, createPeerConnection, endCall]
+    [acquireLocalMedia, createPeerConnection, endCall, send]
   );
 
   const acceptCall = useCallback(async () => {
     const pending = pendingOfferRef.current;
     if (!pending) {
       return;
+    }
+
+    // the ring was answered; stop the auto-dismiss timer so it can't fire mid-call
+    if (ringTimerRef.current) {
+      clearTimeout(ringTimerRef.current);
+      ringTimerRef.current = null;
     }
 
     const stream = await acquireLocalMedia(pending.call_type);
@@ -305,6 +331,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         isCameraOff: false,
         endedReason: null
       });
+
+      // dismiss the ring if it is never answered (caller vanished / server timeout)
+      ringTimerRef.current = setTimeout(() => {
+        if (pendingOfferRef.current) {
+          send('CallReject', { call_id: pendingOfferRef.current.call_id });
+        }
+        endCall(null);
+      }, RING_TIMEOUT_MS);
     };
 
     const handleAnswered = async (payload: CallAnsweredEvent) => {
@@ -365,6 +399,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (endedTimerRef.current) {
         clearTimeout(endedTimerRef.current);
+      }
+      if (ringTimerRef.current) {
+        clearTimeout(ringTimerRef.current);
       }
       teardownMedia();
     };
