@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Bell, BellOff, ChevronRight, Copy, Link2, Lock as LockIcon, LogOut } from 'lucide-react';
 import { ActionModal } from '../action-modal';
 import { useCloseOnEscape } from '../../shared/hooks/use-close-on-escape';
-import { useCurrentUserId } from '../../shared/hooks/use-current-user-id';
+import { useCurrentUserProfile } from '../../shared/user/user-store';
 import { useToast } from '../../shared/ui/toast';
 import { useNotificationPrefs } from '../../shared/lib/notification-prefs-store';
-import { muteDurations, type MuteDuration } from '../../shared/lib/mute-durations';
+import { muteDurations, muteDurationToIso, type MuteDuration } from '../../shared/lib/mute-durations';
 import { createGuildInvite, leaveGuild } from '../../shared/api/guild';
 
 // invites can only expire on whole-hour boundaries (the guild service takes an
@@ -52,7 +52,8 @@ type GuildContextMenuProps = {
 export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const { pushToast } = useToast();
-  const currentUserId = useCurrentUserId();
+  const { currentUser } = useCurrentUserProfile();
+  const currentUserId = currentUser?.id ?? null;
   const { isMuted, mute, unmute } = useNotificationPrefs();
 
   const [isInviting, setIsInviting] = useState(false);
@@ -60,6 +61,9 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   const [isMuteSubmenuOpen, setIsMuteSubmenuOpen] = useState(false);
   const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  // measured after mount so the vertical clamp can reserve the real menu height;
+  // 0 until then, which just means the first frame uses the raw cursor y
+  const [menuHeight, setMenuHeight] = useState(0);
 
   const scopeType = target.scope;
   const scopeId = target.scope === 'guild' ? target.guildId : target.channelId;
@@ -67,6 +71,13 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   const muted = isMuted(scopeType, scopeId);
   const isOwner =
     target.scope === 'guild' && currentUserId != null && currentUserId === target.ownerId;
+
+  // measure the rendered menu so the vertical clamp knows its real height
+  useLayoutEffect(() => {
+    if (menuRef.current) {
+      setMenuHeight(menuRef.current.offsetHeight);
+    }
+  }, [muted, target.scope]);
 
   // a short grace period before closing the submenu tolerates the diagonal
   // mouse path from the parent item, which briefly leaves both elements
@@ -158,7 +169,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   async function handleMuteFor(duration: MuteDuration) {
     setIsTogglingMute(true);
     try {
-      await mute(scopeType, scopeId, duration);
+      await mute(scopeType, scopeId, muteDurationToIso(duration));
       const chosen = muteDurations.find((option) => option.value === duration);
       pushToast({
         title: scopeType === 'guild' ? 'Server muted' : 'Channel muted',
@@ -229,7 +240,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
   }
 
   const left = Math.min(target.x, window.innerWidth - MENU_WIDTH_PX - MENU_MARGIN_PX);
-  const top = Math.min(target.y, window.innerHeight - MENU_MARGIN_PX);
+  const top = Math.min(target.y, window.innerHeight - menuHeight - MENU_MARGIN_PX);
   const menuLeft = Math.max(MENU_MARGIN_PX, left);
   // flip the submenu to the left of the menu when it would overflow the viewport
   const submenuOnLeft =

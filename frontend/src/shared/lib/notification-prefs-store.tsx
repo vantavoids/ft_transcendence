@@ -9,17 +9,19 @@ import {
   type NotificationPreferenceDto,
   type NotificationScopeType
 } from '../api/notification';
+import { ApiError } from '../api/client';
 import { getAccessToken } from './session';
-import { isScopeMuted } from './use-notifications';
-import { muteDurationToIso, type MuteDuration } from './mute-durations';
+import { isScopeMuted } from './notification-mute';
 
 type NotificationPrefsValue = {
+  /** The raw preference rows, so consumers can filter live SSE inserts. */
+  preferences: NotificationPreferenceDto[];
   /** True (and still in the future) if this scope is currently muted. */
   isMuted: (scopeType: NotificationScopeType, scopeId: string) => boolean;
   mute: (
     scopeType: NotificationScopeType,
     scopeId: string,
-    duration: MuteDuration
+    mutedUntil: string | null
   ) => Promise<void>;
   unmute: (scopeType: NotificationScopeType, scopeId: string) => Promise<void>;
 };
@@ -86,10 +88,10 @@ export function NotificationPrefsProvider({ children }: { children: ReactNode })
   );
 
   const mute = useCallback(
-    async (scopeType: NotificationScopeType, scopeId: string, duration: MuteDuration) => {
+    async (scopeType: NotificationScopeType, scopeId: string, mutedUntil: string | null) => {
       const updated = await setNotificationPreference(scopeType, scopeId, {
         muted: true,
-        muted_until: muteDurationToIso(duration)
+        muted_until: mutedUntil
       });
       setPreferences((current) => upsert(current, updated));
     },
@@ -97,11 +99,21 @@ export function NotificationPrefsProvider({ children }: { children: ReactNode })
   );
 
   const unmute = useCallback(async (scopeType: NotificationScopeType, scopeId: string) => {
-    await deleteNotificationPreference(scopeType, scopeId);
+    try {
+      await deleteNotificationPreference(scopeType, scopeId);
+    } catch (err) {
+      // 404 means no preference row, which is already the unmuted default
+      if (!(err instanceof ApiError && err.status === 404)) {
+        throw err;
+      }
+    }
     setPreferences((current) => removeScope(current, scopeType, scopeId));
   }, []);
 
-  const value = useMemo(() => ({ isMuted, mute, unmute }), [isMuted, mute, unmute]);
+  const value = useMemo(
+    () => ({ preferences, isMuted, mute, unmute }),
+    [preferences, isMuted, mute, unmute]
+  );
 
   return (
     <NotificationPrefsContext.Provider value={value}>{children}</NotificationPrefsContext.Provider>
