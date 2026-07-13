@@ -24,8 +24,19 @@ public sealed class SignalingHub(
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
-		calls.Disconnect(Context.GetUserId());
-		logger.LogDebug("Signaling: {User} disconnected", Context.GetUserId());
+		var userId = Context.GetUserId();
+		var abandoned = calls.Disconnect(userId);
+		logger.LogDebug("Signaling: {User} disconnected", userId);
+
+		// last connection gone mid-call (e.g. a page refresh): the call was cleared,
+		// so tell the other party it ended rather than leaving them stuck "in" it.
+		if (abandoned is not null)
+		{
+			logger.LogInformation("Call {CallId}: abandoned by {User} on disconnect", abandoned.CallId, userId);
+			await Clients.User(Other(abandoned, userId).ToString())
+				.CallHungUp(new CallIdEvent(abandoned.CallId.ToString()));
+		}
+
 		await base.OnDisconnectedAsync(exception);
 	}
 
