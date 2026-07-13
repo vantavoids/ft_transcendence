@@ -4,8 +4,18 @@ import type { GuildRoleDto } from '../api/guild';
 // the member-role UI so users don't see actions the server would 403. The
 // server remains the source of truth for every mutation.
 export const PERMISSIONS = {
+  SendMessages: 1,
+  ReadMessages: 2,
+  ManageMessages: 4,
+  ManageChannels: 8,
+  KickMembers: 16,
+  BanMembers: 32,
   ManageRoles: 64,
-  Administrator: 256
+  ManageGuild: 128,
+  Administrator: 256,
+  CreateInvite: 512,
+  MentionEveryone: 1024,
+  ManageNicknames: 2048
 } as const;
 
 export function rolePermissionBits(role: GuildRoleDto): number {
