@@ -1,8 +1,8 @@
 using Guild.Application.Abstractions.Messaging;
 using Guild.Application.Abstractions.Persistence;
 using Guild.Application.Abstractions.Security;
+using Guild.Application.Authorization;
 using Guild.Application.Features.Channels.Common;
-using Guild.Domain.Guild;
 using Guild.Domain.Results;
 
 namespace Guild.Application.Features.Channels.ListChannels;
@@ -27,22 +27,13 @@ internal sealed class ListChannelsHandler(
 
 		var entities = await channels.GetByGuildAsync(query.GuildId, cancellationToken);
 		var guildOverwrites = await overwrites.GetForGuildAsync(query.GuildId, cancellationToken);
-		var overwritesByChannel = guildOverwrites
-			.GroupBy(o => o.ChannelId)
-			.ToDictionary(g => g.Key, g => (IReadOnlyList<ChannelPermissionOverwrite>)g.ToList());
+		var overwritesByChannel = ChannelAccess.GroupByChannel(guildOverwrites);
 
 		// list only channels the caller can actually read: a READ_CHANNEL deny
 		// overwrite (on the member or one of their roles) hides the channel here,
-		// mirroring GetVisibleChannelsHandler so the sidebar no longer shows a
-		// channel the member was denied. owners/admins short-circuit to all
-		// permissions in the resolver, so management access is unaffected.
-		var dtos = entities
-			.Where(channel =>
-			{
-				var channelOverwrites = overwritesByChannel.TryGetValue(channel.Id, out var ows) ? ows : [];
-				var permissions = PermissionResolver.Resolve(guild, currentUser.Id, channelOverwrites);
-				return PermissionResolver.HasPermission(permissions, Permission.ReadMessages);
-			})
+		// so the sidebar no longer shows a channel the member was denied.
+		var dtos = ChannelAccess
+			.ReadableChannels(guild, currentUser.Id, entities, overwritesByChannel)
 			.Select(ChannelResponse.From)
 			.ToList();
 
