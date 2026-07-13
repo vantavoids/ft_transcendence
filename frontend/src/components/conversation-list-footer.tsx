@@ -1,6 +1,7 @@
 import { Bell, Headphones, Mic, MicOff, Settings } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
+import { accentForId } from '../shared/lib/accent';
 
 type ConversationListFooterProps = {
   currentUser: CurrentUserProfile | null;
@@ -30,7 +31,7 @@ export function ConversationListFooter({
           <AvatarWithStatus
             size="sm"
             name={currentUser?.displayName ?? currentUser?.username ?? 'Guest'}
-            accent="aqua"
+            accent={accentForId(currentUser?.id ?? '')}
             status={currentUser ? toSidebarStatus(currentUser.status) : 'offline'}
             avatarUrl={currentUser?.avatarUrl}
           />
