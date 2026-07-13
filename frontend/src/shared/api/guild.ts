@@ -52,6 +52,13 @@ export type GuildChannelDto = {
   slowmode_seconds?: number;
 };
 
+export type CreateChannelOverwriteInput = {
+  target_id: string;
+  target_type: ChannelOverwriteTargetType;
+  allow: number;
+  deny: number;
+};
+
 export type CreateChannelPayload = {
   name: string;
   type: 'text' | 'announcement';
@@ -60,6 +67,7 @@ export type CreateChannelPayload = {
   topic?: string | null;
   is_nsfw?: boolean;
   slowmode_seconds?: number;
+  overwrites?: CreateChannelOverwriteInput[];
 };
 
 export type UpdateChannelPayload = Partial<CreateChannelPayload>;
