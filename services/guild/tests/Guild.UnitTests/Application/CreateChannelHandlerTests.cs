@@ -300,6 +300,38 @@ public sealed class CreateChannelHandlerTests
 		Assert.Empty(overwrites.Store);
 	}
 
+	[Fact]
+	public async Task WithOverwriteGrantingGuildWidePermission_ReturnsUnsupported_AndCreatesNothing()
+	{
+		// a channel overwrite may only carry channel-scoped bits; allowing a
+		// guild-wide bit (here Administrator) would escalate the target past their
+		// role permissions in the resolver, so creation is rejected outright
+		var guilds = new FakeGuildRepository();
+		var channels = new FakeChannelRepository();
+		var cats = new FakeChannelCategoryRepository();
+		var overwrites = new FakeChannelPermissionOverwriteRepository();
+		var guild = GuildEntity.Create(
+			id: 100, name: "Test", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: 1, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(guild, userId: 2, joinedAt: Now);
+		guilds.Add(guild);
+
+		var handler = HandlerFactory.CreateCommand<CreateChannelCommand, Result<ChannelResponse>>(
+			guilds, channels, cats, overwrites, new FakeEventBus(),
+			new FakeIdGenerator(), new FakeClock(), new FakeCurrentUser { Id = 1 });
+
+		var result = await handler.HandleAsync(
+			new CreateChannelCommand(GuildId: 100, Name: "secret", Type: "text",
+				CategoryId: null, Topic: null, Position: 0,
+				Overwrites: [new ChannelOverwriteInput(
+					TargetId: 2, TargetType: "member", Allow: (long)Permission.Administrator, Deny: 0L)]));
+
+		Assert.True(result.IsFailure);
+		Assert.Equal("Guild.OverwriteUnsupportedPermission", result.Error.Code);
+		Assert.Empty(channels.Store);
+		Assert.Empty(overwrites.Store);
+	}
+
 	private static Guild.Application.Abstractions.Messaging.ICommandHandler<CreateChannelCommand, Result<ChannelResponse>>
 		MakeHandler(
 			out FakeGuildRepository guilds,

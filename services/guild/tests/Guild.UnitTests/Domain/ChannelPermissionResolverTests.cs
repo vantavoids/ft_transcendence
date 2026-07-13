@@ -60,12 +60,12 @@ public sealed class ChannelPermissionResolverTests
 		DomainSeed.AssignRole(guild, userId: 2, roleId: admin.Id, now: Now);
 		var channel = MakeChannel(guild.Id);
 
-		// even with deny-all overwrites, Administrator short-circuits before
+		// even with a deny-all overwrite, Administrator short-circuits before
 		// overwrites are applied
 		var denyAll = ChannelPermissionOverwrite.Create(
 			id: 9001, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Member, targetId: 2,
-			allow: 0, deny: 0xFFFF, now: Now).Value;
+			allow: 0, deny: ChannelPermissionOverwrite.ChannelScopedMask, now: Now).Value;
 
 		var mask = PermissionResolver.Resolve(
 			guild, userId: 2,
@@ -114,7 +114,7 @@ public sealed class ChannelPermissionResolverTests
 
 		var channel = MakeChannel(guild.Id);
 
-		// role1 allows ManageMessages(4); role2 denies ReadMessages(2) and allows BanMembers(32)
+		// role1 allows ManageMessages(4); role2 denies ReadMessages(2) and allows ManageChannels(8)
 		var ow1 = ChannelPermissionOverwrite.Create(
 			id: 1, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role1.Id,
@@ -122,16 +122,16 @@ public sealed class ChannelPermissionResolverTests
 		var ow2 = ChannelPermissionOverwrite.Create(
 			id: 2, guildId: 10, channelId: channel.Id,
 			targetType: OverwriteTargetType.Role, targetId: role2.Id,
-			allow: (long)Permission.BanMembers,
+			allow: (long)Permission.ManageChannels,
 			deny: (long)Permission.ReadMessages, now: Now).Value;
 
 		var mask = PermissionResolver.Resolve(
 			guild, userId: 2,
 			overwrites: new[] { ow1, ow2 });
 
-		// base = 515 (1|2|512). aggDeny = 2, aggAllow = 4 | 32 = 36
-		// (515 & ~2) | 36 = 513 | 36 = 549
-		Assert.Equal(549L, mask);
+		// base = 515 (1|2|512). aggDeny = 2, aggAllow = 4 | 8 = 12
+		// (515 & ~2) | 12 = 513 | 12 = 525
+		Assert.Equal(525L, mask);
 	}
 
 	[Fact]

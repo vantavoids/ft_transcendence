@@ -34,6 +34,15 @@ public sealed class ChannelPermissionOverwrite
 		UpdatedAt = updatedAt;
 	}
 
+	// bits meaningful as a per-channel allow/deny overwrite. guild-wide authority
+	// (kick, ban, manage roles/guild, administrator, manage nicknames) is excluded
+	// so an overwrite can never escalate a member past their guild-level
+	// permissions -- critically, allowing ADMINISTRATOR here would short-circuit
+	// every channel permission check for the target.
+	public const long ChannelScopedMask =
+		(long)(Permission.SendMessages | Permission.ReadMessages | Permission.ManageMessages
+			| Permission.ManageChannels | Permission.CreateInvite | Permission.MentionEveryone);
+
 	public long Id { get; private set; }
 	public long GuildId { get; private set; }
 	public long ChannelId { get; private set; }
@@ -60,6 +69,9 @@ public sealed class ChannelPermissionOverwrite
 		if ((allow & deny) != 0L)
 			return GuildFailures.OverwriteAllowDenyOverlap;
 
+		if (((allow | deny) & ~ChannelScopedMask) != 0L)
+			return GuildFailures.OverwriteUnsupportedPermission;
+
 		return new ChannelPermissionOverwrite(
 			id: id,
 			guildId: guildId,
@@ -76,6 +88,9 @@ public sealed class ChannelPermissionOverwrite
 	{
 		if ((allow & deny) != 0L)
 			return GuildFailures.OverwriteAllowDenyOverlap;
+
+		if (((allow | deny) & ~ChannelScopedMask) != 0L)
+			return GuildFailures.OverwriteUnsupportedPermission;
 
 		Allow = allow;
 		Deny = deny;

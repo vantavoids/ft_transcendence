@@ -80,6 +80,9 @@ public static class GuildFailures
 	public static readonly Failure OverwriteAllowDenyOverlap =
 		new("Guild.OverwriteAllowDenyOverlap", "A bit cannot be both allowed and denied by the same overwrite.");
 
+	public static readonly Failure OverwriteUnsupportedPermission =
+		new("Guild.OverwriteUnsupportedPermission", "Only channel-scoped permissions may be set on a channel overwrite.");
+
 	public static readonly Failure OverwriteNotFound =
 		new("Guild.OverwriteNotFound", "Channel permission overwrite not found.");
 

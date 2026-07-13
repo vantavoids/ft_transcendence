@@ -27,12 +27,29 @@ internal static class ChannelAccess
 	{
 		var guildChannels = await channels.GetByGuildAsync(guild.Id, cancellationToken);
 		var allOverwrites = await overwrites.GetForGuildAsync(guild.Id, cancellationToken);
-		var byChannel = allOverwrites
-			.GroupBy(o => o.ChannelId)
-			.ToDictionary(g => g.Key, g => (IReadOnlyList<ChannelPermissionOverwrite>)g.ToList());
+		var byChannel = GroupByChannel(allOverwrites);
 
 		return Capture(guild, Pairs(guildChannels.Select(c => c.Id), affectedUserIds), byChannel);
 	}
+
+	// group a flat guild-wide overwrite list into per-channel lists, the shape the
+	// resolver consumes.
+	public static IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> GroupByChannel(
+		IEnumerable<ChannelPermissionOverwrite> overwrites) =>
+		overwrites
+			.GroupBy(o => o.ChannelId)
+			.ToDictionary(g => g.Key, g => (IReadOnlyList<ChannelPermissionOverwrite>)g.ToList());
+
+	// the channels in <paramref name="channels"/> that <paramref name="userId"/>
+	// may READ, given the guild's overwrites. single home for the channel-list
+	// read rule shared by ListChannels and GetVisibleChannels; owners/admins
+	// short-circuit to all permissions in the resolver.
+	public static IEnumerable<Channel> ReadableChannels(
+		GuildEntity guild,
+		long userId,
+		IEnumerable<Channel> channels,
+		IReadOnlyDictionary<long, IReadOnlyList<ChannelPermissionOverwrite>> overwritesByChannel) =>
+		channels.Where(channel => CanRead(guild, channel.Id, userId, overwritesByChannel));
 
 	// overwrite mutations touch a single channel; the caller supplies the changed
 	// after-overwrites when publishing.
