@@ -406,6 +406,11 @@ export function NotificationCard({
   } = feed;
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
   const [position, setPosition] = useState<PopupPosition | null>(null);
+  const [actorNamesById, setActorNamesById] = useState<Map<string, string>>(new Map());
+  const { pushToast } = useToast();
+  // ids already requested (found or not), so deleted actors aren't refetched
+  // on every render; rows fall back to actor-less copy for them
+  const requestedActorIdsRef = useRef<Set<string>>(new Set());
 
   // measure the bell and re-anchor the popup above it; recompute on resize so
   // it tracks the bell if the layout reflows while the popup is open
@@ -420,11 +425,6 @@ export function NotificationCard({
     window.addEventListener('resize', reposition);
     return () => window.removeEventListener('resize', reposition);
   }, [anchorRef]);
-  const [actorNamesById, setActorNamesById] = useState<Map<string, string>>(new Map());
-  const { pushToast } = useToast();
-  // ids already requested (found or not), so deleted actors aren't refetched
-  // on every render; rows fall back to actor-less copy for them
-  const requestedActorIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const missingIds = notifications
@@ -521,11 +521,13 @@ export function NotificationCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2 border-b border-stroke px-5 py-3">
-          <FilterChip
-            active={filter.unreadOnly}
-            label="Unread"
-            onClick={() => setFilter({ ...filter, unreadOnly: !filter.unreadOnly })}
-          />
+          {view === 'feed' ? (
+            <FilterChip
+              active={filter.unreadOnly}
+              label="Unread"
+              onClick={() => setFilter({ ...filter, unreadOnly: !filter.unreadOnly })}
+            />
+          ) : null}
           <button
             type="button"
             onClick={() => setView((current) => (current === 'feed' ? 'mutes' : 'feed'))}
