@@ -44,7 +44,7 @@ ENV_CRYPT_PAIRS := \
 
 get_color = $(if $(filter Purple,$(1)),$(shell tput setaf 5),$(if $(filter Red,$(1)),$(shell tput setaf 1),$(if $(filter Cyan,$(1)),$(shell tput setaf 6),$(if $(filter Blue,$(1)),$(shell tput setaf 4),$(if $(filter Yellow,$(1)),$(shell tput setaf 3),$(if $(filter Green,$(1)),$(shell tput setaf 2),$(shell tput sgr0)))))))
 ann = $(call get_color,$(1))[$(call get_color,Off)$(ANNOUNCER)$(call get_color,$(1))]$(call get_color,Off)
-LAN_HOST := $(shell h=$$(avahi-resolve -a $$(hostname -I 2>/dev/null | awk '{print $$1}') 2>/dev/null | awk '{print $$2}'); echo $${h:-$$(hostnamectl hostname 2>/dev/null || hostname -f 2>/dev/null || hostname)})
+LAN_HOST := $(shell hostnamectl hostname 2>/dev/null)
 
 .PHONY: all help build up down re clean fclean logs ps login dev check-env _build _up _certs _migrate secrets-setup secrets-decrypt secrets-encrypt secrets-refresh
 
