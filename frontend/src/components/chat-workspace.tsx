@@ -28,7 +28,6 @@ import { logout } from '../shared/api/auth';
 import { markChannelRead, markDirectMessageRead } from '../shared/api/chat';
 import { onChatHubEvent, stopChatHub } from '../shared/api/chat-hub';
 import { dispatchFriendsChanged, subscribeFriendsChanged } from '../shared/lib/friends-events';
-import { useCurrentUserId } from '../shared/hooks/use-current-user-id';
 import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
 import { useConversationHistory } from '../shared/hooks/use-conversation-history';
@@ -93,7 +92,7 @@ export function ChatWorkspace() {
   // open - avoids retrying in a loop when the PATCH fails
   const consumedDmNotificationIdsRef = useRef<Set<string>>(new Set());
 
-  const currentUserId = useCurrentUserId();
+  const currentUserId = currentUser?.id ?? null;
   const guildWorkspace = useGuildWorkspace();
   const dmWorkspace = useDmWorkspace(currentUserId);
   const { members: currentGuildMembers, roles: currentGuildRoles } = useGuildMembers(
