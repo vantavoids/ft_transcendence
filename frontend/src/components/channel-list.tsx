@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CircleEllipsis,
   Bell,
   Hash,
   Headphones,
+  Lock,
   Mic,
   MicOff,
   Settings,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { SearchInput } from './search-input';
 import { useGuilds } from '../shared/guilds/guild-store';
+import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
 import { AvatarWithStatus } from './avatar-with-status';
 import { FortyTwoIcon } from './icons/brand-icons';
@@ -38,13 +40,71 @@ type ChannelListProps = {
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
+  /** Enables the right-click channel menu; keep off for callers the server would 403. */
+  canManageChannels?: boolean;
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
   onOpenSettings: () => void;
   onOpenGuildSettings: () => void;
   onSelectChannel: (channelId: string) => void;
+  onOpenChannelPermissions?: (channel: TextChannel) => void;
 };
+
+type ChannelMenuState = {
+  channel: TextChannel;
+  x: number;
+  y: number;
+};
+
+function ChannelContextMenu({
+  menu,
+  onOpenPermissions,
+  onClose
+}: {
+  menu: ChannelMenuState;
+  onOpenPermissions: (channel: TextChannel) => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useCloseOnEscape(onClose);
+
+  useEffect(() => {
+    function handleMouseDown(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 w-56 rounded-md border border-stroke bg-panel p-1.5 shadow-lg"
+      style={{
+        left: Math.min(menu.x, window.innerWidth - 240),
+        top: Math.min(menu.y, window.innerHeight - 88)
+      }}
+    >
+      <p className="mono-detail truncate px-2 py-1 text-xs text-white/35"># {menu.channel.name}</p>
+      <button
+        type="button"
+        onClick={() => {
+          onOpenPermissions(menu.channel);
+          onClose();
+        }}
+        className="flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm font-semibold text-white/70 transition hover:bg-frame hover:text-white"
+      >
+        <Lock className="h-4 w-4 shrink-0 text-aqua" strokeWidth={1.9} />
+        Channel permissions
+      </button>
+    </div>
+  );
+}
 
 export function getChannelName(channelId: string, channels: TextChannel[]) {
   if (channelId.length === 0)
@@ -65,15 +125,18 @@ export function ChannelList({
   isMicMuted,
   isDeafened,
   unreadNotifications,
+  canManageChannels = false,
   onToggleDeafen,
   onToggleMicMute,
   onOpenNotifications,
   onOpenSettings,
   onOpenGuildSettings,
-  onSelectChannel
+  onSelectChannel,
+  onOpenChannelPermissions
 }: ChannelListProps) {
   const { selectedGuild } = useGuilds();
   const [search, setSearch] = useState('');
+  const [channelMenu, setChannelMenu] = useState<ChannelMenuState | null>(null);
 
   const filteredCategories = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -140,6 +203,13 @@ export function ChannelList({
                       key={channel.id}
                       type="button"
                       onClick={() => onSelectChannel(channel.id)}
+                      onContextMenu={(event) => {
+                        if (!canManageChannels || !onOpenChannelPermissions) {
+                          return;
+                        }
+                        event.preventDefault();
+                        setChannelMenu({ channel, x: event.clientX, y: event.clientY });
+                      }}
                       className={`mono-detail flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[1rem] transition ${
                         isActive ? 'bg-frame text-white' : 'text-grey-link hover:bg-frame/60'
                       }`}
@@ -236,6 +306,14 @@ export function ChannelList({
           </div>
         </div>
       </div>
+
+      {channelMenu && onOpenChannelPermissions ? (
+        <ChannelContextMenu
+          menu={channelMenu}
+          onOpenPermissions={onOpenChannelPermissions}
+          onClose={() => setChannelMenu(null)}
+        />
+      ) : null}
     </div>
   );
 }

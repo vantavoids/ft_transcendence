@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Check, Hash, Pencil, Trash2, X } from 'lucide-react';
+import { Check, Hash, Lock, Pencil, Trash2, X } from 'lucide-react';
 import {
   createGuildChannel,
   deleteGuildChannel,
@@ -13,6 +13,7 @@ import {
   type GuildChannelDto
 } from '../../shared/api/guild';
 import { ActionModal } from '../action-modal';
+import { ChannelPermissionsModal } from './channel-permissions-modal';
 import { useToast } from '../../shared/ui/toast';
 
 const inputClasses =
@@ -58,6 +59,7 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GuildChannelDto | null>(null);
+  const [permissionsTarget, setPermissionsTarget] = useState<GuildChannelDto | null>(null);
   const { pushToast } = useToast();
 
   const load = useCallback(async () => {
@@ -355,6 +357,15 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
                   </div>
                   <button
                     type="button"
+                    onClick={() => setPermissionsTarget(channel)}
+                    className={iconButtonClasses}
+                    aria-label={`Edit permissions of channel ${channel.name}`}
+                    title="Channel permissions"
+                  >
+                    <Lock className="h-4 w-4 text-aqua" strokeWidth={1.9} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => startEdit(channel)}
                     className={iconButtonClasses}
                     aria-label={`Edit channel ${channel.name}`}
@@ -376,6 +387,15 @@ export function GuildChannelsPanel({ guildId, onChannelsChanged }: GuildChannels
           ))}
         </ul>
       )}
+
+      {permissionsTarget ? (
+        <ChannelPermissionsModal
+          guildId={guildId}
+          channelId={permissionsTarget.id}
+          channelName={permissionsTarget.name}
+          onClose={() => setPermissionsTarget(null)}
+        />
+      ) : null}
 
       {deleteTarget ? (
         <ActionModal

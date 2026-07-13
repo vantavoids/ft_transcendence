@@ -6,7 +6,7 @@ import { type ChatMessageData } from './chat-message';
 import { ConversationHeader } from './chat/conversation-header';
 import { MessageComposer } from './chat/message-composer';
 import { MessageList } from './chat/message-list';
-import { ChannelList, getChannelName } from './channel-list';
+import { ChannelList, getChannelName, type TextChannel } from './channel-list';
 import { DmList, getDmDetails, getDmName } from './dm-list';
 import {
   getGuildMemberByName,
@@ -16,6 +16,7 @@ import {
 } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
 import { GuildSettingsModal } from './guild/guild-settings-modal';
+import { ChannelPermissionsModal } from './guild/channel-permissions-modal';
 import { NotificationCard } from './notification-card';
 import { ProfileCard } from './profile-card';
 import { SettingsModal } from './settings-modal';
@@ -40,6 +41,7 @@ import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
+import { effectivePermissions, hasPermission, PERMISSIONS } from '../shared/guilds/role-permissions';
 import { toSidebarStatus } from '../shared/mappers/user';
 import { accentForId } from '../shared/lib/accent';
 
@@ -66,6 +68,7 @@ export function ChatWorkspace() {
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuildSettingsOpen, setIsGuildSettingsOpen] = useState(false);
+  const [permissionsChannel, setPermissionsChannel] = useState<TextChannel | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isMemberListOpen, setIsMemberListOpen] = useState(true);
@@ -93,7 +96,7 @@ export function ChatWorkspace() {
   const currentUserId = useCurrentUserId();
   const guildWorkspace = useGuildWorkspace();
   const dmWorkspace = useDmWorkspace(currentUserId);
-  const { members: currentGuildMembers } = useGuildMembers(
+  const { members: currentGuildMembers, roles: currentGuildRoles } = useGuildMembers(
     selectedGuild?.id ?? null,
     selectedGuild?.owner_id ?? null
   );
@@ -101,6 +104,25 @@ export function ChatWorkspace() {
     () => currentGuildMembers.find((member) => member.userId === currentUserId) ?? null,
     [currentGuildMembers, currentUserId]
   );
+  // Gates the channel right-click menu to callers the server would authorize
+  // for the channel-permissions endpoints (ManageChannels).
+  const canManageChannels = useMemo(() => {
+    if (!currentGuildMember) {
+      return false;
+    }
+
+    const mask = effectivePermissions(
+      currentGuildMember.roles,
+      currentGuildRoles,
+      currentGuildMember.isOwner
+    );
+    return hasPermission(mask, PERMISSIONS.ManageChannels);
+  }, [currentGuildMember, currentGuildRoles]);
+
+  // A guild switch invalidates any channel-scoped dialog left open.
+  useEffect(() => {
+    setPermissionsChannel(null);
+  }, [selectedGuild?.id]);
 
   function toProfileMemberFromUser(user: UserSummaryDto) {
     return {
@@ -875,7 +897,9 @@ export function ChatWorkspace() {
               activeChannel={guildWorkspace.activeChannel ?? ''}
               categories={guildWorkspace.channelCategories}
               unreadCounts={channelUnreadCounts}
+              canManageChannels={canManageChannels}
               onSelectChannel={handleSelectChannel}
+              onOpenChannelPermissions={setPermissionsChannel}
             />
           )}
 
@@ -991,6 +1015,15 @@ export function ChatWorkspace() {
               guildId={selectedGuild.id}
               onClose={handleCloseGuildSettings}
               onChannelsChanged={guildWorkspace.refreshChannels}
+            />
+          ) : null}
+
+          {permissionsChannel && selectedGuild ? (
+            <ChannelPermissionsModal
+              guildId={selectedGuild.id}
+              channelId={permissionsChannel.id}
+              channelName={permissionsChannel.name}
+              onClose={() => setPermissionsChannel(null)}
             />
           ) : null}
 
