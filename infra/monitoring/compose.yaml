@@ -20,7 +20,7 @@ services:
     # no host port: Grafana queries it over the compose network as prometheus:9090.
     volumes:
       - ${PWD}/infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
-      - prometheus_data:/prometheus
+      - prometheus_data:/prometheus:U
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 15s

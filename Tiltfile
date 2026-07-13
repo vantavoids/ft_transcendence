@@ -149,7 +149,7 @@ local_resource(
         '--network ft_transcendence ' +
         '-p 127.0.0.1:9090:9090 ' +
         '-v $(pwd)/infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro ' +
-        '-v prometheus_data:/prometheus ' +
+        '-v prometheus_data:/prometheus:U ' +
         'docker.io/prom/prometheus:v2.55.1 ' +
         '--config.file=/etc/prometheus/prometheus.yml ' +
         '--storage.tsdb.path=/prometheus ' +
