@@ -301,9 +301,11 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
           </div>
         )}
 
-        {target.scope === 'channel' ? (
-          <MenuItem icon={Copy} label="Copy channel ID" onClick={() => void handleCopyId()} />
-        ) : null}
+        <MenuItem
+          icon={Copy}
+          label={target.scope === 'guild' ? 'Copy server ID' : 'Copy channel ID'}
+          onClick={() => void handleCopyId()}
+        />
 
         {target.scope === 'channel' && target.onOpenPermissions ? (
           <>
