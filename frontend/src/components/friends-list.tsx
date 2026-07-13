@@ -15,12 +15,8 @@ import { AvatarWithStatus } from './avatar-with-status';
 import type { ChatMessageData } from './chat-message';
 import type { DirectMessage } from './dm-list';
 import { SearchInput } from './search-input';
-import {
-  accentForUserId,
-  toSidebarStatus,
-  toUserStatusLabel,
-  type CurrentUserProfile
-} from '../shared/mappers/user';
+import { accentForId } from '../shared/lib/accent';
+import { toSidebarStatus, toUserStatusLabel } from '../shared/mappers/user';
 import {
   blockUser,
   deleteFriendship,
@@ -455,7 +451,7 @@ export function FriendsList({
                     >
                       <AvatarWithStatus
                         name={user.display_name || user.username}
-                        accent={accentForUserId(user.id)}
+                        accent={accentForId(user.id)}
                         status={toSidebarStatus(user.status)}
                         avatarUrl={user.avatar_url ?? null}
                       />
@@ -659,7 +655,7 @@ function RequestRow({
     <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-grey-link transition hover:bg-frame/60 hover:text-white">
       <AvatarWithStatus
         name={request.user.display_name || request.user.username}
-        accent={accentForUserId(request.user.id)}
+        accent={accentForId(request.user.id)}
         status={toSidebarStatus(request.user.status)}
         avatarUrl={request.user.avatar_url ?? null}
       />

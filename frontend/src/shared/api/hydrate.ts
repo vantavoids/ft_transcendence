@@ -1,20 +1,8 @@
-import type { ChatMessageData } from '../../components/chat-message';
 import type { DirectMessage } from '../../components/dm-list';
 import type { Friend } from '../../components/friends-list';
 import type { DirectMessageConversationDto } from './chat';
 import type { FriendDto, UserProfileDto, UserStatus } from './user';
-
-const ACCENTS: ChatMessageData['accent'][] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
-
-// deterministic accent so a given user keeps the same colour across renders
-// (the avatar chips are colour-coded but the API carries no accent field).
-export function accentForId(id: string): ChatMessageData['accent'] {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  return ACCENTS[hash % ACCENTS.length];
-}
+import { accentForId } from '../lib/accent';
 
 // the sidebar only renders three presence dots; collapse the richer user status
 // set onto them (dnd is shown idle-style, anything unknown as offline).

@@ -1,9 +1,5 @@
-import type { ChatMessageData } from '../../components/chat-message';
 import type { DirectMessage } from '../../components/dm-list';
-import type { Friend } from '../../components/friends-list';
 import type { UserProfileDto, UserStatus } from '../api/user';
-
-const ACCENTS: ChatMessageData['accent'][] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
 
 export type CurrentUserProfile = {
   id: string;
@@ -16,18 +12,6 @@ export type CurrentUserProfile = {
   lastSeenAt: string;
   lastSeenLabel: string;
 };
-
-function hashToAccent(id: string): ChatMessageData['accent'] {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) {
-    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  }
-  return ACCENTS[hash % ACCENTS.length];
-}
-
-export function accentForUserId(id: string): ChatMessageData['accent'] {
-  return hashToAccent(id);
-}
 
 export function toSidebarStatus(status: UserStatus): DirectMessage['status'] {
   switch (status) {

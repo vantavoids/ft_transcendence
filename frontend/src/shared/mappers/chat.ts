@@ -7,11 +7,7 @@ import type {
   MessageReactionDto
 } from '../api/chat';
 import type { UserSummaryDto } from '../api/user';
-import { hashToIndex } from '../lib/hash';
-
-type MessageAccent = ChatMessageData['accent'];
-
-const MESSAGE_ACCENTS: MessageAccent[] = ['aqua', 'yellow', 'lime', 'lavender', 'pink'];
+import { accentForId } from '../lib/accent';
 
 export function formatMessageTimestamp(isoTimestamp: string): string {
   return new Date(isoTimestamp).toLocaleTimeString('en-US', {
@@ -22,10 +18,6 @@ export function formatMessageTimestamp(isoTimestamp: string): string {
 
 export function splitMessageLines(content: string): string[] {
   return content.split(/\r?\n/);
-}
-
-export function accentForAuthor(authorId: string): MessageAccent {
-  return MESSAGE_ACCENTS[hashToIndex(authorId, MESSAGE_ACCENTS.length)];
 }
 
 export function authorLabel(
@@ -66,7 +58,7 @@ export function mapChannelMessage(
     id: dto.id,
     authorId: dto.author_id,
     author: authorLabel(dto.author_id, currentUserId, usersById),
-    accent: accentForAuthor(dto.author_id),
+    accent: accentForId(dto.author_id),
     content: splitMessageLines(dto.content ?? ''),
     timestamp: formatMessageTimestamp(dto.created_at),
     createdAt: dto.created_at,
@@ -87,7 +79,7 @@ export function mapDirectMessage(
     id: dto.id,
     authorId: dto.sender_id,
     author: authorLabel(dto.sender_id, currentUserId, usersById),
-    accent: accentForAuthor(dto.sender_id),
+    accent: accentForId(dto.sender_id),
     content: splitMessageLines(dto.content ?? ''),
     timestamp: formatMessageTimestamp(dto.created_at),
     createdAt: dto.created_at,
@@ -105,7 +97,7 @@ export function mapDirectMessageConversation(
     id: dto.partner_id,
     name: profile?.display_name || profile?.username || `User ${dto.partner_id}`,
     status: 'offline',
-    accent: accentForAuthor(dto.partner_id),
+    accent: accentForId(dto.partner_id),
     lastMessage: dto.last_preview,
     lastMessageAt: formatMessageTimestamp(dto.last_message_at),
     lastActivityAt: Date.parse(dto.last_message_at),
