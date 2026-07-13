@@ -101,7 +101,9 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
     []
   );
 
-  useCloseOnEscape(onClose);
+  // while the leave-confirmation modal is open, let it own Escape (it has its
+  // own handler); otherwise one press would close both the modal and the menu
+  useCloseOnEscape(isConfirmingLeave ? () => {} : onClose);
 
   // close when clicking anywhere outside the menu. the leave-confirmation modal
   // renders its own overlay, so suspend this while it is open to avoid the menu
@@ -172,7 +174,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
       await mute(scopeType, scopeId, muteDurationToIso(duration));
       const chosen = muteDurations.find((option) => option.value === duration);
       pushToast({
-        title: scopeType === 'guild' ? 'Server muted' : 'Channel muted',
+        title: scopeType === 'guild' ? 'Guild muted' : 'Channel muted',
         description:
           duration === 'forever'
             ? `You won't get notifications from ${scopeName}.`
@@ -197,7 +199,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
     try {
       await unmute(scopeType, scopeId);
       pushToast({
-        title: scopeType === 'guild' ? 'Server unmuted' : 'Channel unmuted',
+        title: scopeType === 'guild' ? 'Guild unmuted' : 'Channel unmuted',
         description: `Notifications from ${scopeName} are back on.`,
         tone: 'success'
       });
@@ -223,15 +225,15 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
       await leaveGuild(target.guildId);
       onLeft?.(target.guildId);
       pushToast({
-        title: 'Left server',
+        title: 'Left guild',
         description: `You left ${target.guildName}.`,
         tone: 'success'
       });
       onClose();
     } catch (error) {
       pushToast({
-        title: 'Leave server',
-        description: error instanceof Error ? error.message : 'Could not leave the server.',
+        title: 'Leave guild',
+        description: error instanceof Error ? error.message : 'Could not leave the guild.',
         tone: 'error'
       });
       setIsLeaving(false);
@@ -248,6 +250,9 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
 
   return (
     <>
+      {/* hidden while confirming a leave so it doesn't sit on top of the modal's
+          dimmed backdrop (the modal renders below at z-50) */}
+      {!isConfirmingLeave ? (
       <div
         ref={menuRef}
         role="menu"
@@ -314,7 +319,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
 
         <MenuItem
           icon={Copy}
-          label={target.scope === 'guild' ? 'Copy server ID' : 'Copy channel ID'}
+          label={target.scope === 'guild' ? 'Copy guild ID' : 'Copy channel ID'}
           onClick={() => void handleCopyId()}
         />
 
@@ -337,7 +342,7 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
             <div className="my-1 border-t border-stroke" />
             <MenuItem
               icon={LogOut}
-              label="Leave server"
+              label="Leave guild"
               destructive
               disabled={isOwner}
               hint={isOwner ? 'Owner' : undefined}
@@ -346,12 +351,13 @@ export function GuildContextMenu({ target, onClose, onLeft }: GuildContextMenuPr
           </>
         ) : null}
       </div>
+      ) : null}
 
       {isConfirmingLeave && target.scope === 'guild' ? (
         <ActionModal
           title={`Leave ${target.guildName}?`}
           description="You'll lose access to its channels until someone invites you back."
-          confirmLabel="Leave server"
+          confirmLabel="Leave guild"
           destructive
           isBusy={isLeaving}
           onClose={() => setIsConfirmingLeave(false)}
