@@ -93,7 +93,7 @@ export function useNotifications() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<NotificationFilter>({
-    unreadOnly: false,
+    unreadOnly: true,
     includeDismissed: false
   });
   const [preferences, setPreferences] = useState<NotificationPreferenceDto[]>([]);
