@@ -204,6 +204,12 @@ This mirrors how real companies running microservices actually operate. At place
 
 ---
 
+## Overall architecture
+
+One-page architecture: services own their data, RabbitMQ spreads gossip, SignalR screams live updates, WebRTC negotiates who gets to hear you, and NGINX slaps TLS on all of it so it looks professional.
+
+![architecture](docs/images/architecture.png)
+
 ## Project Management
 
 ### Task Distribution
