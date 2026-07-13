@@ -1,23 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import Link from 'next/link';
-import {
-  CircleEllipsis,
-  Bell,
-  Hash,
-  Headphones,
-  Lock,
-  Mic,
-  MicOff,
-  Settings
-} from 'lucide-react';
+import { CircleEllipsis, Hash, Lock } from 'lucide-react';
 import { ConversationListFooter } from './conversation-list-footer';
 import { SearchInput } from './search-input';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
-import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
-import { AvatarWithStatus } from './avatar-with-status';
+import type { CurrentUserProfile } from '../shared/mappers/user';
 import { FortyTwoIcon } from './icons/brand-icons';
 
 export type TextChannel = {
@@ -42,6 +32,8 @@ type ChannelListProps = {
   unreadNotifications: number;
   /** Enables the right-click channel menu; keep off for callers the server would 403. */
   canManageChannels?: boolean;
+  /** Attached to the bell button so the notification popup can anchor above it. */
+  bellRef?: RefObject<HTMLButtonElement | null>;
   onToggleDeafen: () => void;
   onToggleMicMute: () => void;
   onOpenNotifications: () => void;
@@ -126,6 +118,7 @@ export function ChannelList({
   isDeafened,
   unreadNotifications,
   canManageChannels = false,
+  bellRef,
   onToggleDeafen,
   onToggleMicMute,
   onOpenNotifications,
@@ -241,11 +234,20 @@ export function ChannelList({
         isMicMuted={isMicMuted}
         isDeafened={isDeafened}
         unreadNotifications={unreadNotifications}
+        bellRef={bellRef}
         onToggleMicMute={onToggleMicMute}
         onToggleDeafen={onToggleDeafen}
         onOpenNotifications={onOpenNotifications}
         onOpenSettings={onOpenSettings}
       />
+
+      {channelMenu && onOpenChannelPermissions ? (
+        <ChannelContextMenu
+          menu={channelMenu}
+          onOpenPermissions={onOpenChannelPermissions}
+          onClose={() => setChannelMenu(null)}
+        />
+      ) : null}
     </div>
   );
 }

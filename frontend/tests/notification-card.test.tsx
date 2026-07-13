@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { NotificationCard, describeNotification } from '../src/components/notification-card';
 import type { NotificationDto } from '../src/shared/api/notification';
@@ -61,6 +62,7 @@ describe('NotificationCard', () => {
     const html = renderToStaticMarkup(
       <NotificationCard
         feed={buildFeed([dmNotification, friendRequestNotification, incomingCallNotification])}
+        anchorRef={createRef<HTMLButtonElement>()}
         onClose={() => undefined}
         onOpenNotification={() => undefined}
       />

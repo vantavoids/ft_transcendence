@@ -1,4 +1,5 @@
 import { Bell, Headphones, Mic, MicOff, Settings } from 'lucide-react';
+import type { RefObject } from 'react';
 import { AvatarWithStatus } from './avatar-with-status';
 import { toSidebarStatus, type CurrentUserProfile } from '../shared/mappers/user';
 import { accentForId } from '../shared/lib/accent';
@@ -8,6 +9,8 @@ type ConversationListFooterProps = {
   isMicMuted: boolean;
   isDeafened: boolean;
   unreadNotifications: number;
+  /** Attached to the bell button so the notification popup can anchor above it. */
+  bellRef?: RefObject<HTMLButtonElement | null>;
   onToggleMicMute: () => void;
   onToggleDeafen: () => void;
   onOpenNotifications: () => void;
@@ -19,13 +22,14 @@ export function ConversationListFooter({
   isMicMuted,
   isDeafened,
   unreadNotifications,
+  bellRef,
   onToggleMicMute,
   onToggleDeafen,
   onOpenNotifications,
   onOpenSettings
 }: ConversationListFooterProps) {
   return (
-    <div className="shrink-0 border-t border-stroke px-4 py-4">
+    <div data-sidebar-footer className="shrink-0 border-t border-stroke px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <AvatarWithStatus
@@ -72,6 +76,7 @@ export function ConversationListFooter({
             <Headphones className="h-6 w-6" strokeWidth={1.8} />
           </button>
           <button
+            ref={bellRef}
             type="button"
             onClick={onOpenNotifications}
             className="relative text-[#8b8b8f] transition hover:text-white"

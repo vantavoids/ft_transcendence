@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import {
   AtSign,
   Bell,
@@ -42,9 +42,28 @@ type NotificationView = {
 
 type NotificationCardProps = {
   feed: UseNotificationsResult;
+  /** The bell button the popup anchors above (bottom-left sidebar footer). */
+  anchorRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
   onOpenNotification: (notification: NotificationDto) => void;
 };
+
+// gap between the sidebar footer and the popup, in pixels
+const ANCHOR_GAP = 12;
+
+type PopupPosition = { centerX: number; bottom: number };
+
+// place the popup above the sidebar footer, horizontally centered on the
+// sidebar column (the footer spans its full width). we anchor to the footer
+// the bell lives in so the popup clears the whole account strip.
+function computePopupPosition(anchor: HTMLElement): PopupPosition {
+  const panel = anchor.closest('[data-sidebar-footer]') ?? anchor;
+  const rect = panel.getBoundingClientRect();
+  return {
+    centerX: rect.left + rect.width / 2,
+    bottom: window.innerHeight - rect.top + ANCHOR_GAP
+  };
+}
 
 // which notifications can deep-link somewhere: a DM opens the sender's
 // conversation (the actor is the partner), a mention carries its guild/channel
@@ -500,7 +519,12 @@ function MutePanel({ preferences, onMute, onUnmute }: MutePanelProps) {
   );
 }
 
-export function NotificationCard({ feed, onClose, onOpenNotification }: NotificationCardProps) {
+export function NotificationCard({
+  feed,
+  anchorRef,
+  onClose,
+  onOpenNotification
+}: NotificationCardProps) {
   const {
     notifications,
     unreadCount,
@@ -520,7 +544,22 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
     unmute
   } = feed;
   const [view, setView] = useState<'feed' | 'mutes'>('feed');
+  const [position, setPosition] = useState<PopupPosition | null>(null);
   const [muteError, setMuteError] = useState('');
+
+  // measure the bell and re-anchor the popup above it; recompute on resize so
+  // it tracks the bell if the layout reflows while the popup is open
+  useLayoutEffect(() => {
+    function reposition() {
+      const anchor = anchorRef.current;
+      if (anchor) {
+        setPosition(computePopupPosition(anchor));
+      }
+    }
+    reposition();
+    window.addEventListener('resize', reposition);
+    return () => window.removeEventListener('resize', reposition);
+  }, [anchorRef]);
   const [actorNamesById, setActorNamesById] = useState<Map<string, string>>(new Map());
   const { pushToast } = useToast();
   // ids already requested (found or not), so deleted actors aren't refetched
@@ -595,15 +634,28 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
   useCloseOnEscape(onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6">
+    <div className="fixed inset-0 z-50">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
         onClick={onClose}
         aria-label="Close notifications"
       />
-      <section className="relative w-full max-w-[25rem] overflow-hidden rounded-[1rem] bg-secondary-bg shadow-2xl shadow-black/50 ring-1 ring-stroke">
-        <div className="flex h-[4.75rem] items-center justify-between border-b border-stroke px-5">
+      {/* anchored above the bell, which sits in the bottom-left user panel */}
+      <section
+        style={
+          position
+            ? {
+                left: position.centerX,
+                bottom: position.bottom,
+                transform: 'translateX(-50%)',
+                visibility: 'visible'
+              }
+            : { visibility: 'hidden' }
+        }
+        className="absolute flex max-h-[calc(100vh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[0.9rem] bg-secondary-bg shadow-2xl shadow-black/60 ring-1 ring-stroke"
+      >
+        <div className="flex h-[4.75rem] shrink-0 items-center justify-between border-b border-stroke px-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-aqua/10 text-aqua">
               <Bell className="h-5 w-5" strokeWidth={1.9} />
@@ -627,16 +679,11 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
           </button>
         </div>
 
-        <div className="flex items-center gap-2 border-b border-stroke px-5 py-3">
+        <div className="flex shrink-0 items-center gap-2 border-b border-stroke px-5 py-3">
           <FilterChip
             active={filter.unreadOnly}
             label="Unread"
             onClick={() => setFilter({ ...filter, unreadOnly: !filter.unreadOnly })}
-          />
-          <FilterChip
-            active={filter.includeDismissed}
-            label="Dismissed"
-            onClick={() => setFilter({ ...filter, includeDismissed: !filter.includeDismissed })}
           />
           <button
             type="button"
@@ -653,7 +700,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
           </button>
         </div>
 
-        <div className="max-h-[24rem] overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {view === 'mutes' ? (
             <MutePanel preferences={preferences} onMute={mute} onUnmute={unmute} />
           ) : isLoading ? (
@@ -718,7 +765,7 @@ export function NotificationCard({ feed, onClose, onOpenNotification }: Notifica
           )}
         </div>
 
-        <div className="border-t border-stroke px-4 py-4">
+        <div className="shrink-0 border-t border-stroke px-4 py-4">
           <button
             type="button"
             onClick={markAllRead}
