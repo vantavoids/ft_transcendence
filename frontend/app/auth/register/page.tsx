@@ -7,6 +7,7 @@ import { AuthCard } from '../../../src/components/auth-card';
 import { register } from '../../../src/shared/api/auth';
 import { establishSession } from '../../../src/shared/lib/session';
 import { describeRegisterError } from '../../../src/shared/lib/auth-errors';
+import { useGuilds } from '../../../src/shared/guilds/guild-store';
 import {
   validateRegisterForm,
   type RegisterFormErrors
@@ -15,6 +16,7 @@ import { useToast } from '../../../src/shared/ui/toast';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { refreshGuilds } = useGuilds();
   const [errors, setErrors] = useState<RegisterFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { pushToast } = useToast();
@@ -35,6 +37,7 @@ export default function RegisterPage() {
       setIsSubmitting(true);
       const { access_token, user_id } = await register({ email: email.trim(), password });
       establishSession(access_token, user_id);
+      void refreshGuilds();
       router.push('/chat');
     } catch (error) {
       pushToast({
