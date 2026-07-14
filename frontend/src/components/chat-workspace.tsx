@@ -430,7 +430,7 @@ export function ChatWorkspace() {
     let cancelled = false;
 
     async function loadProfileRelationship() {
-      if (!currentUserId || !profileMember) {
+      if (!currentUserId || !profileMember || profileMember.id === currentUserId) {
         setProfileRelationshipStatus(null);
         setIsProfileRelationshipKnown(true);
         return;
