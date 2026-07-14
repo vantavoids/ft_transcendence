@@ -170,6 +170,16 @@ export function describeNotification(
         Icon: Phone
       };
     }
+    default:
+      // a type the frontend doesn't know (new backend type, or a malformed row):
+      // render it generically rather than returning undefined and crashing the
+      // whole notification list on one bad entry.
+      return {
+        title: 'Notification',
+        detail: actorName ?? '',
+        tone: 'aqua',
+        Icon: Bell
+      };
   }
 }
 
