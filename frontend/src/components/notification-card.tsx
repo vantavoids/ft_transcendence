@@ -7,6 +7,7 @@ import {
   BellOff,
   Check,
   CheckCheck,
+  Crown,
   Mail,
   MessageCircle,
   Phone,
@@ -160,6 +161,15 @@ export function describeNotification(
         detail: `You are now a member of ${notification.payload.guild_name}!`,
         tone: 'yellow',
         Icon: Sparkles
+      };
+    case 'guild_ownership_transferred':
+      return {
+        title: 'Ownership transferred',
+        detail: actorName
+          ? `${actorName} made you the owner of their guild.`
+          : 'You are now the owner of the guild.',
+        tone: 'yellow',
+        Icon: Crown
       };
     case 'incoming_call': {
       const kind = notification.payload.call_type === 'video' ? 'video' : 'audio';

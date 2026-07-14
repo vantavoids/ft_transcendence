@@ -8,6 +8,7 @@ export type NotificationType =
   | 'friend_accept'
   | 'guild_invite'
   | 'guild_welcome'
+  | 'guild_ownership_transferred'
   | 'incoming_call';
 
 export type NotificationPayloadMap = {
@@ -17,6 +18,8 @@ export type NotificationPayloadMap = {
   friend_accept: Record<string, never>;
   guild_invite: { guild_name: string };
   guild_welcome: { guild_name: string };
+  // actor_id is the previous owner, source_id is the guild id; payload is empty.
+  guild_ownership_transferred: Record<string, never>;
   incoming_call: { call_type: 'audio' | 'video' };
 };
 
