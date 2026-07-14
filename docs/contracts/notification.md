@@ -66,6 +66,7 @@ Fetch notifications for the authenticated user. Dismissed notifications are excl
 | `friend_accept` | `addressee_id` (who accepted) | friendship row id | `{}` |
 | `guild_invite` | `invited_by_user_id` | `guild_id` | `{ guild_name }` |
 | `guild_welcome` | NULL (system event) | `guild_id` | `{ guild_name }` |
+| `guild_ownership_transferred` | `old_owner_id` | `guild_id` | `{}` |
 | `incoming_call` | `caller_id` | NULL (call is ephemeral) | `{ call_type: "audio" \| "video" }` |
 
 ---
@@ -278,6 +279,7 @@ This is the internal-perspective twin of `GET /notifications/preferences`: every
 | `friend.removed` | Always | no stored notification; pushes a transient `friends_changed` SSE signal to both `requester_id` and `addressee_id` so their friends lists re-fetch |
 | `guild.invite_created` | `invited_user_id` is present | `type: guild_invite` for `invited_user_id` |
 | `guild.member_joined` | Always | `type: guild_welcome` for the joining user |
+| `guild.owner_transferred` | Always | `type: guild_ownership_transferred` for `new_owner_id`; `actor_id` is `old_owner_id`, `source_id` is `guild_id` |
 | `user.deleted` | Always | Delete every notification row where `user_id` or `actor_id` matches the deleted user, and drop the user's `notification_preferences` rows. Also sends the `account_deleted` confirmation email (see [Email delivery](#email-delivery)). |
 | `data.export_ready` | Always | No in-app notification row. Sends the `data_export_ready` email carrying the presigned `download_url` (see [Email delivery](#email-delivery)). |
 

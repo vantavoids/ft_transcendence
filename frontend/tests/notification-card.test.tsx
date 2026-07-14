@@ -115,12 +115,30 @@ describe('describeNotification', () => {
     );
   });
 
+  it('describes a guild ownership transfer, naming the previous owner as actor', () => {
+    const ownershipNotification = {
+      ...dmNotification,
+      type: 'guild_ownership_transferred',
+      payload: {}
+    } as unknown as NotificationDto;
+
+    assert.equal(describeNotification(ownershipNotification, 'Testa').title, 'Ownership transferred');
+    assert.equal(
+      describeNotification(ownershipNotification, 'Testa').detail,
+      'Testa made you the owner of their guild.'
+    );
+    assert.equal(
+      describeNotification(ownershipNotification, null).detail,
+      'You are now the owner of the guild.'
+    );
+  });
+
   it('falls back to a generic view for an unknown type instead of returning undefined', () => {
-    // a type the frontend does not handle (e.g. a newer backend type) must not
+    // a type the frontend does not handle (e.g. a future backend type) must not
     // crash the whole notification list when destructured.
     const unknownNotification = {
       ...dmNotification,
-      type: 'guild_owner_transferred'
+      type: 'some_future_type'
     } as unknown as NotificationDto;
 
     const view = describeNotification(unknownNotification, 'Testa');
