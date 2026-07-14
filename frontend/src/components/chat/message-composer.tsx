@@ -15,6 +15,8 @@ type MessageComposerProps = {
   isComposerDisabled: boolean;
   isSendDisabled: boolean;
   isActiveDmArchived: boolean;
+  isActiveDmBlocked: boolean;
+  isActiveDmBlockedByThem: boolean;
   replyTarget: ChatMessageData | null;
   pendingAttachments: PendingAttachment[];
   isEmojiOpen: boolean;
@@ -37,6 +39,8 @@ export function MessageComposer({
   isComposerDisabled,
   isSendDisabled,
   isActiveDmArchived,
+  isActiveDmBlocked,
+  isActiveDmBlockedByThem,
   replyTarget,
   pendingAttachments,
   isEmojiOpen,
@@ -144,7 +148,11 @@ export function MessageComposer({
           }}
           disabled={isComposerDisabled}
           placeholder={
-            isActiveDmArchived
+            isActiveDmBlockedByThem
+              ? 'This user blocked you. You cannot send messages.'
+              : isActiveDmBlocked
+              ? 'This user is blocked. Unblock to send messages.'
+              : isActiveDmArchived
               ? 'This conversation is archived -- send a message to unarchive it.'
               : `Message ${chatMode === 'dm' ? '@' : '#'}${activeConversationName}`
           }
