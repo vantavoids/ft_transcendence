@@ -528,7 +528,7 @@ export function ChatWorkspace() {
         role: 'Member',
         status: activeDmDetails.status,
         accent: activeDmDetails.accent,
-        activity: activeDmDetails.lastMessage,
+        activity: 'No recent activity',
         bio: activeDmDetails.bio ?? null,
         avatarUrl: activeDmDetails.avatarUrl ?? null,
         bannerUrl: activeDmDetails.bannerUrl ?? null
@@ -877,7 +877,7 @@ export function ChatWorkspace() {
         role: 'Member',
         status: directMessage.status,
         accent: directMessage.accent,
-        activity: directMessage.lastMessage,
+        activity: 'No recent activity',
         bio: directMessage.bio ?? null,
         avatarUrl: directMessage.avatarUrl ?? null,
         bannerUrl: directMessage.bannerUrl ?? null
@@ -952,7 +952,7 @@ export function ChatWorkspace() {
         role: 'Member',
         status: directMessage.status,
         accent: directMessage.accent,
-        activity: directMessage.lastMessage,
+        activity: 'No recent activity',
         bio: directMessage.bio ?? null,
         avatarUrl: directMessage.avatarUrl ?? null,
         bannerUrl: directMessage.bannerUrl ?? null
