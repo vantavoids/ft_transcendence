@@ -60,6 +60,7 @@ describe('chat mappers', () => {
       content: 'hi',
       reply_to_id: null,
       created_at: '2026-07-11T00:00:00Z',
+      edited_at: null,
       attachments: []
     };
     const conversation: DirectMessageConversationDto = {
@@ -73,5 +74,20 @@ describe('chat mappers', () => {
     assert.equal(mapDirectMessage(message, null, usersById).author, 'TStephan');
     assert.equal(mapDirectMessage(message, null, usersById).avatarUrl, 'https://cdn.example/avatar.png');
     assert.equal(mapDirectMessageConversation(conversation, usersById).name, 'TStephan');
+  });
+
+  it('carries a DM edited_at through so the "edited" label survives a refresh', () => {
+    const edited: DirectMessageDto = {
+      id: 'm4',
+      sender_id: '123',
+      recipient_id: '999',
+      content: 'fixed typo',
+      reply_to_id: null,
+      created_at: '2026-07-11T00:00:00Z',
+      edited_at: '2026-07-11T00:05:00Z',
+      attachments: []
+    };
+
+    assert.equal(mapDirectMessage(edited, null, usersById).editedAt, '2026-07-11T00:05:00Z');
   });
 });
