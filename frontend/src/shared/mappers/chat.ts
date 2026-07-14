@@ -70,7 +70,7 @@ export function mapChannelMessage(
   };
 }
 
-// DMs never carry edited_at or reactions in this response shape (docs/contracts/chat.md)
+// DMs carry no reactions in this response shape (docs/contracts/chat.md)
 export function mapDirectMessage(
   dto: DirectMessageDto,
   currentUserId: string | null,
@@ -86,6 +86,7 @@ export function mapDirectMessage(
     timestamp: formatMessageTimestamp(dto.created_at),
     createdAt: dto.created_at,
     replyToId: dto.reply_to_id,
+    editedAt: dto.edited_at,
     attachments: dto.attachments
   };
 }

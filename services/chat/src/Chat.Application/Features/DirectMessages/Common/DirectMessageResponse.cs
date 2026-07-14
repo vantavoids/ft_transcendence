@@ -19,6 +19,7 @@ public sealed record DirectMessageResponse(
 	string? Content,
 	string? ReplyToId,
 	DateTimeOffset CreatedAt,
+	DateTimeOffset? EditedAt,
 	IReadOnlyList<AttachmentResponse> Attachments,
 	string? Nonce) : IMessageWireResponse<DirectMessageResponse>
 {
@@ -34,6 +35,7 @@ public sealed record DirectMessageResponse(
 		Content: m.Content,
 		ReplyToId: m.ReplyToId?.ToString(),
 		CreatedAt: m.CreatedAt,
+		EditedAt: m.EditedAt,
 		Attachments: attachments is null or { Count: 0 }
 			? []
 			: attachments.Select(AttachmentResponse.From).ToArray(),

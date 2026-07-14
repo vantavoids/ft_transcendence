@@ -43,6 +43,7 @@ export type DirectMessageDto = {
   content: string | null;
   reply_to_id: string | null;
   created_at: string;
+  edited_at: string | null;
   attachments: MessageAttachmentDto[];
 };
 
@@ -75,6 +76,7 @@ export type SendDirectMessageResponse = {
   content: string | null;
   reply_to_id: string | null;
   created_at: string;
+  edited_at: string | null;
   attachments: MessageAttachmentDto[];
   nonce: string | null;
 };

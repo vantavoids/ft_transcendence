@@ -238,6 +238,7 @@ Field semantics match `POST /channels/{channel_id}/messages`. `reply_to_id` must
   "content": "devine qui c'est qui tourne :)",
   "reply_to_id": null,
   "created_at": "2026-03-09T12:00:00Z",
+  "edited_at": null,
   "attachments": [],
   "nonce": "1a4b9-optimistic-bubble-key"
 }
@@ -280,6 +281,7 @@ Fetch DM message history with a specific user.
     "content": "faut normer ta partie d'ailleurs :wittle_guy:",
     "reply_to_id": null,
     "created_at": "2026-03-09T11:00:00Z",
+    "edited_at": null,
     "attachments": []
   }
 ]
@@ -660,6 +662,7 @@ Sent to the recipient's personal group when a DM arrives, **and** to the sender'
     "content": "y a des merge conflicts d'ailleurs",
     "reply_to_id": null,
     "created_at": "2026-03-09T12:00:00Z",
+    "edited_at": null,
     "attachments": [],
     "nonce": "1a4b9-optimistic-bubble-key"
   }]
