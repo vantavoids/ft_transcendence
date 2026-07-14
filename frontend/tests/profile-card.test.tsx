@@ -72,6 +72,40 @@ describe('ProfileCard', () => {
     assert.ok(!html.includes('Block'));
   });
 
+  it('shows unblock instead of block for already blocked users', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={member}
+        currentUserId="456"
+        isBlocked
+        onUnblock={() => undefined}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(html.includes('Unblock'));
+    assert.ok(!html.includes('Block'));
+    assert.ok(!html.includes('Add friend'));
+    assert.ok(!html.includes('Send message'));
+  });
+
+  it('hides sending actions when the other user blocked you', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={member}
+        currentUserId="456"
+        isBlockedByThem
+        onAddFriend={() => undefined}
+        onBlock={() => undefined}
+        onSendMessage={() => undefined}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(!html.includes('Profile actions'));
+    assert.ok(!html.includes('Send message'));
+  });
+
   it('hides relationship actions on the current user profile', () => {
     const html = renderToStaticMarkup(
       <ProfileCard
@@ -79,6 +113,7 @@ describe('ProfileCard', () => {
         currentUserId={member.id}
         onAddFriend={() => undefined}
         onBlock={() => undefined}
+        onUnblock={() => undefined}
         onClose={() => undefined}
       />
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Ban, Menu, MessageCircle, Shield, UserMinus, UserPlus, X } from 'lucide-react';
+import { Ban, Check, Menu, MessageCircle, Shield, UserMinus, UserPlus, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import { topRoleByPosition, type GuildMember, type GuildMemberRole } from './guild-member-list';
 import { RoleToggleList } from './guild/member-roles-popover';
@@ -24,10 +24,13 @@ type ProfileCardProps = {
   member: GuildMember;
   variant?: 'modal' | 'side';
   currentUserId?: string | null;
+  isBlocked?: boolean;
+  isBlockedByThem?: boolean;
   roleManagement?: ProfileRoleManagement;
   onClose: () => void;
   onAddFriend?: (member: GuildMember) => void | Promise<void>;
   onBlock?: (member: GuildMember) => void | Promise<void>;
+  onUnblock?: (member: GuildMember) => void | Promise<void>;
   onSendMessage?: (member: GuildMember) => void;
   onUnfriend?: (member: GuildMember) => void;
 };
@@ -36,10 +39,13 @@ export function ProfileCard({
   member,
   variant = 'modal',
   currentUserId = null,
+  isBlocked = false,
+  isBlockedByThem = false,
   roleManagement,
   onClose,
   onAddFriend,
   onBlock,
+  onUnblock,
   onSendMessage,
   onUnfriend
 }: ProfileCardProps) {
@@ -142,7 +148,7 @@ export function ProfileCard({
             >
               {badgeLabel}
             </span>
-            {!isOwnProfile && (onAddFriend || onBlock) ? (
+            {!isOwnProfile && !isBlockedByThem && (onAddFriend || onBlock || onUnblock) ? (
               <div className="relative shrink-0">
                 <button
                   type="button"
@@ -156,7 +162,7 @@ export function ProfileCard({
                 </button>
                 {isActionsOpen ? (
                   <div className="absolute right-0 top-full z-10 mt-2 min-w-[12rem] overflow-hidden rounded-md border border-stroke bg-secondary-bg shadow-2xl shadow-black/45">
-                    {onAddFriend ? (
+                    {isBlocked ? null : onAddFriend ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -165,12 +171,26 @@ export function ProfileCard({
                         }}
                         className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm font-semibold text-white/75 transition hover:bg-frame hover:text-white"
                         role="menuitem"
+                        >
+                          <UserPlus className="h-3.5 w-3.5 text-aqua" strokeWidth={2} />
+                          Add friend
+                        </button>
+                    ) : null}
+                    {isBlocked && onUnblock ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          void onUnblock(member);
+                        }}
+                        className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm font-semibold text-lime transition hover:bg-lime/10"
+                        role="menuitem"
                       >
-                        <UserPlus className="h-3.5 w-3.5 text-aqua" strokeWidth={2} />
-                        Add friend
+                        <Check className="h-3.5 w-3.5 text-lime" strokeWidth={2} />
+                        Unblock
                       </button>
                     ) : null}
-                    {onBlock ? (
+                    {!isBlocked && onBlock ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -179,10 +199,10 @@ export function ProfileCard({
                         }}
                         className="flex h-10 w-full items-center gap-2 border-t border-stroke px-3 text-left text-sm font-semibold text-pink transition hover:bg-pink/10"
                         role="menuitem"
-                      >
-                        <Ban className="h-3.5 w-3.5 text-pink" strokeWidth={2} />
-                        Block
-                      </button>
+                        >
+                          <Ban className="h-3.5 w-3.5 text-pink" strokeWidth={2} />
+                          Block
+                        </button>
                     ) : null}
                   </div>
                 ) : null}
@@ -259,7 +279,7 @@ export function ProfileCard({
           </div>
         ) : null}
 
-        {!isOwnProfile && onSendMessage ? (
+        {!isOwnProfile && !isBlocked && !isBlockedByThem && onSendMessage ? (
           <button
             type="button"
             onClick={() => onSendMessage(member)}

@@ -36,10 +36,13 @@ import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
 import {
   blockUser,
   deleteFriendship,
+  getFriendshipState,
   getUsersByIds,
   listFriends,
   listBlockedUsers,
   sendFriendRequest,
+  unblockUser,
+  type FriendshipStateDto,
   type UserSummaryDto
 } from '../shared/api/user';
 import { toFriend } from '../shared/api/hydrate';
@@ -82,6 +85,12 @@ export function ChatWorkspace() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsReloadKey, setFriendsReloadKey] = useState(0);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [activeDmRelationshipStatus, setActiveDmRelationshipStatus] = useState<
+    FriendshipStateDto['status'] | null
+  >(null);
+  const [profileRelationshipStatus, setProfileRelationshipStatus] = useState<
+    FriendshipStateDto['status'] | null
+  >(null);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   // the bell button in the sidebar footer; the notification popup anchors above it
@@ -304,6 +313,10 @@ export function ChatWorkspace() {
     chatMode === 'dm' && dmWorkspace.activeDm
       ? getDmDetails(dmWorkspace.activeDm, dmWorkspace.dmConversations)
       : null;
+  const isActiveDmBlockedByThem = activeDmRelationshipStatus === 'blocked_by_them';
+  const isActiveDmBlocked =
+    Boolean(activeDmDetails && blockedUserIds.includes(activeDmDetails.id)) ||
+    isActiveDmBlockedByThem;
   const activeConversationId =
     chatMode === 'dm' ? (activeDmDetails?.id ?? null) : guildWorkspace.activeChannel;
   function startDmCall(callType: 'audio' | 'video') {
@@ -382,6 +395,54 @@ export function ChatWorkspace() {
       return message;
     });
   }, [chatMode, activeMessages, guildMemberDisplayById, currentUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActiveDmRelationship() {
+      if (!currentUserId || chatMode !== 'dm' || !activeDmDetails) {
+        setActiveDmRelationshipStatus(null);
+        return;
+      }
+
+      const relationship = await getFriendshipState(activeDmDetails.id).catch(() => null);
+      if (cancelled) {
+        return;
+      }
+
+      setActiveDmRelationshipStatus(relationship?.status ?? null);
+    }
+
+    void loadActiveDmRelationship();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, chatMode, activeDmDetails]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfileRelationship() {
+      if (!currentUserId || !profileMember) {
+        setProfileRelationshipStatus(null);
+        return;
+      }
+
+      const relationship = await getFriendshipState(profileMember.id).catch(() => null);
+      if (cancelled) {
+        return;
+      }
+
+      setProfileRelationshipStatus(relationship?.status ?? null);
+    }
+
+    void loadProfileRelationship();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, profileMember]);
 
   const scroll = useScrollPreservation(
     activeConversationId,
@@ -529,7 +590,7 @@ export function ChatWorkspace() {
   }, [activeConversationId, activeMessages]);
 
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
-  const isComposerDisabled = !activeConversationId;
+  const isComposerDisabled = !activeConversationId || isActiveDmBlocked;
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
   // an uploading/errored attachment has no confirmed id yet - block send entirely
   // until it's ready or removed, rather than silently sending without it.
@@ -611,7 +672,11 @@ export function ChatWorkspace() {
   }
 
   function handleSendMessageToProfile(member: GuildMember) {
-    if (member.id === currentUserId) {
+    if (
+      member.id === currentUserId ||
+      blockedUserIds.includes(member.id) ||
+      profileRelationshipStatus === 'blocked_by_them'
+    ) {
       setProfileMember(null);
       return;
     }
@@ -694,6 +759,29 @@ export function ChatWorkspace() {
     }
   }
 
+  async function handleUnblock(member: GuildMember) {
+    if (member.id === currentUserId) {
+      return;
+    }
+
+    try {
+      await unblockUser(member.id);
+      setBlockedUserIds((current) => current.filter((id) => id !== member.id));
+      dispatchFriendsChanged();
+      pushToast({
+        title: 'Friends',
+        description: `${member.name} unblocked.`,
+        tone: 'success'
+      });
+    } catch (error) {
+      pushToast({
+        title: 'Friends',
+        description: error instanceof Error ? error.message : 'Failed to unblock user.',
+        tone: 'error'
+      });
+    }
+  }
+
   function handleToggleMicMute() {
     setIsMicMuted((current) => !current);
   }
@@ -750,7 +838,11 @@ export function ChatWorkspace() {
     const hasReadyAttachment = conversationHistory.pendingAttachments.some(
       (attachment) => attachment.status === 'ready'
     );
-    if ((!content && !hasReadyAttachment) || !activeConversationId || isSendDisabled) {
+    if (!activeConversationId || isActiveDmBlocked) {
+      return;
+    }
+
+    if ((!content && !hasReadyAttachment) || isSendDisabled) {
       return;
     }
 
@@ -1156,6 +1248,8 @@ export function ChatWorkspace() {
               isComposerDisabled={isComposerDisabled}
               isSendDisabled={isSendDisabled}
               isActiveDmArchived={isActiveDmArchived}
+              isActiveDmBlockedByThem={isActiveDmBlockedByThem}
+              isActiveDmBlocked={isActiveDmBlocked}
               replyTarget={replyTarget}
               pendingAttachments={conversationHistory.pendingAttachments}
               isEmojiOpen={isEmojiOpen}
@@ -1182,13 +1276,27 @@ export function ChatWorkspace() {
               member={activeDmProfileMember}
               variant="side"
               currentUserId={currentUserId}
+              isBlocked={blockedUserIds.includes(activeDmProfileMember.id)}
+              isBlockedByThem={isActiveDmBlockedByThem}
               onAddFriend={
                 activeDmProfileMember.id !== currentUserId &&
+                !blockedUserIds.includes(activeDmProfileMember.id) &&
                 !friends.some((entry) => entry.id === activeDmProfileMember.id)
                   ? handleAddFriend
                   : undefined
               }
-              onBlock={activeDmProfileMember.id !== currentUserId ? handleBlock : undefined}
+              onBlock={
+                activeDmProfileMember.id !== currentUserId &&
+                !blockedUserIds.includes(activeDmProfileMember.id)
+                  ? handleBlock
+                  : undefined
+              }
+              onUnblock={
+                activeDmProfileMember.id !== currentUserId &&
+                blockedUserIds.includes(activeDmProfileMember.id)
+                  ? handleUnblock
+                  : undefined
+              }
               onClose={handleCloseDmProfile}
             />
           ) : null}
@@ -1197,16 +1305,39 @@ export function ChatWorkspace() {
             <ProfileCard
               member={profileMember}
               currentUserId={currentUserId}
+              isBlocked={blockedUserIds.includes(profileMember.id)}
+              isBlockedByThem={profileRelationshipStatus === 'blocked_by_them'}
               roleManagement={profileRoleManagement}
               onClose={handleCloseAuthorProfile}
               onAddFriend={
                 profileMember.id !== currentUserId &&
+                profileRelationshipStatus !== 'blocked_by_them' &&
+                !blockedUserIds.includes(profileMember.id) &&
                 !friends.some((entry) => entry.id === profileMember.id)
                   ? handleAddFriend
                   : undefined
               }
-              onBlock={profileMember.id !== currentUserId ? handleBlock : undefined}
-              onSendMessage={handleSendMessageToProfile}
+              onBlock={
+                profileMember.id !== currentUserId &&
+                profileRelationshipStatus !== 'blocked_by_them' &&
+                !blockedUserIds.includes(profileMember.id)
+                  ? handleBlock
+                  : undefined
+              }
+              onUnblock={
+                profileMember.id !== currentUserId &&
+                profileRelationshipStatus !== 'blocked_by_them' &&
+                blockedUserIds.includes(profileMember.id)
+                  ? handleUnblock
+                  : undefined
+              }
+              onSendMessage={
+                profileMember.id !== currentUserId &&
+                profileRelationshipStatus !== 'blocked_by_them' &&
+                !blockedUserIds.includes(profileMember.id)
+                  ? handleSendMessageToProfile
+                  : undefined
+              }
               onUnfriend={
                 friends.some((entry) => entry.id === profileMember.id)
                   ? handleUnfriend
