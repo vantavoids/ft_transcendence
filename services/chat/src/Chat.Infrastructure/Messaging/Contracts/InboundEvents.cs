@@ -21,6 +21,9 @@ public sealed record GuildDeleted(long GuildId, IReadOnlyList<long> ChannelIds);
 [MessageUrn("Guild.Application.Contracts:GuildUpdated")]
 public sealed record GuildUpdated(long GuildId, string Name, string? IconUrl);
 
+[MessageUrn("Guild.Application.Contracts:GuildOwnerTransferred")]
+public sealed record GuildOwnerTransferred(long GuildId, long OldOwnerId, long NewOwnerId);
+
 [MessageUrn("Guild.Application.Contracts:GuildRolesChanged")]
 public sealed record GuildRolesChanged(long GuildId);
 

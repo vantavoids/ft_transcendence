@@ -56,6 +56,15 @@ public sealed class FakeUserBroadcaster : IUserBroadcaster
 		return Task.CompletedTask;
 	}
 
+	private readonly List<(long GuildId, long OldOwnerId, long NewOwnerId)> _guildOwnerTransferredCalls = [];
+	public IReadOnlyList<(long GuildId, long OldOwnerId, long NewOwnerId)> GuildOwnerTransferredCalls => _guildOwnerTransferredCalls;
+
+	public Task BroadcastGuildOwnerTransferredAsync(long guildId, long oldOwnerId, long newOwnerId, CancellationToken ct)
+	{
+		_guildOwnerTransferredCalls.Add((guildId, oldOwnerId, newOwnerId));
+		return Task.CompletedTask;
+	}
+
 	public Task AddUserToGuildGroupAsync(long userId, long guildId, CancellationToken ct)
 	{
 		_addGuildGroupCalls.Add((userId, guildId));

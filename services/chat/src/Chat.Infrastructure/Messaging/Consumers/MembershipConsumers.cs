@@ -110,6 +110,26 @@ public sealed class GuildUpdatedConsumer(
 	}
 }
 
+public sealed class GuildOwnerTransferredConsumer(
+	IUserBroadcaster broadcaster,
+	ILogger<GuildOwnerTransferredConsumer> logger)
+	: IConsumer<GuildOwnerTransferred>
+{
+	public async Task Consume(ConsumeContext<GuildOwnerTransferred> context)
+	{
+		var msg = context.Message;
+
+		// ownership changes no group membership (both owners stay members), so we
+		// only tell the guild group to flip their owner-only UI live.
+		await broadcaster.BroadcastGuildOwnerTransferredAsync(
+			msg.GuildId, msg.OldOwnerId, msg.NewOwnerId, context.CancellationToken);
+
+		logger.LogDebug(
+			"guild.owner_transferred consumed: guild_id={GuildId} old_owner={OldOwner} new_owner={NewOwner}",
+			msg.GuildId, msg.OldOwnerId, msg.NewOwnerId);
+	}
+}
+
 public sealed class GuildRolesChangedConsumer(
 	IUserBroadcaster broadcaster,
 	ILogger<GuildRolesChangedConsumer> logger)

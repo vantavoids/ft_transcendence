@@ -14,6 +14,7 @@ import {
   type MyGuildDto
 } from '../api/guild';
 import { ApiError } from '../api/client';
+import { onChatHubEvent } from '../api/chat-hub';
 import { getCurrentUser } from '../api/user';
 import { getAccessToken, invalidateSession } from '../lib/session';
 
@@ -128,6 +129,24 @@ export function GuildProvider({ children }: { children: ReactNode }) {
     setSelectedGuildId(guildId);
     persistGuildId(guildId);
   }, []);
+
+  // live ownership changes (broadcast by Chat to the guild group): patch owner_id
+  // in place so every owner-derived view (crown, management controls) flips for
+  // both the old and new owner without a refresh. gated on a session so we never
+  // open the hub before login.
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
+    }
+
+    return onChatHubEvent('GuildOwnerTransferred', (event) => {
+      setGuilds((current) =>
+        current.map((guild) =>
+          guild.id === event.guild_id ? { ...guild, owner_id: event.new_owner_id } : guild
+        )
+      );
+    });
+  }, [currentUserId]);
 
   const createGuild = useCallback(
     async (payload: CreateGuildPayload) => {

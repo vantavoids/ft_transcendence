@@ -56,6 +56,7 @@ public static class DependencyInjection
 			x.AddConsumer<GuildMemberLeftConsumer>();
 			x.AddConsumer<GuildDeletedConsumer>();
 			x.AddConsumer<GuildUpdatedConsumer>();
+			x.AddConsumer<GuildOwnerTransferredConsumer>();
 			x.AddConsumer<GuildRolesChangedConsumer>();
 			x.AddConsumer<GuildMemberUpdatedConsumer>();
 			x.AddConsumer<ChannelAccessRevokedConsumer>();
