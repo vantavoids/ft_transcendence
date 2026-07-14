@@ -1,7 +1,9 @@
+using Guild.Application.Contracts;
 using Guild.Application.Features.Users.PurgeUserData;
 using Guild.Domain.Guild;
 using Guild.UnitTests.Fakes;
 using Xunit;
+using GuildEntity = Guild.Domain.Guild.Guild;
 
 namespace Guild.UnitTests.Application;
 
@@ -20,7 +22,8 @@ public sealed class PurgeUserDataHandlerTests
 		var bans = new FakeGuildBanRepository();
 		var invites = new FakeGuildInviteRepository();
 		var overwrites = new FakeChannelPermissionOverwriteRepository();
-		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(guilds, bans, invites, overwrites);
+		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(
+			guilds, bans, invites, overwrites, new FakeEventBus());
 
 		await handler.HandleAsync(new PurgeUserDataCommand(DeletedUser));
 
@@ -41,7 +44,8 @@ public sealed class PurgeUserDataHandlerTests
 		invites.Seed(GuildInvite.Create("THEIRS", guildId: 100, createdBy: OtherUser, maxUses: null, expiresAt: null, now: Now).Value);
 
 		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(
-			new FakeGuildRepository(), new FakeGuildBanRepository(), invites, new FakeChannelPermissionOverwriteRepository());
+			new FakeGuildRepository(), new FakeGuildBanRepository(), invites,
+			new FakeChannelPermissionOverwriteRepository(), new FakeEventBus());
 
 		await handler.HandleAsync(new PurgeUserDataCommand(DeletedUser));
 
@@ -61,7 +65,8 @@ public sealed class PurgeUserDataHandlerTests
 		overwrites.Seed(ChannelPermissionOverwrite.Create(3, 100, 200, OverwriteTargetType.Role, DeletedUser, 0, 0, Now).Value);
 
 		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(
-			new FakeGuildRepository(), new FakeGuildBanRepository(), new FakeGuildInviteRepository(), overwrites);
+			new FakeGuildRepository(), new FakeGuildBanRepository(), new FakeGuildInviteRepository(),
+			overwrites, new FakeEventBus());
 
 		await handler.HandleAsync(new PurgeUserDataCommand(DeletedUser));
 
@@ -80,12 +85,47 @@ public sealed class PurgeUserDataHandlerTests
 		bans.Seed(GuildBan.Create(guildId: 100, userId: OtherUser, bannedBy: DeletedUser, reason: null, now: Now).Value);
 
 		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(
-			new FakeGuildRepository(), bans, new FakeGuildInviteRepository(), new FakeChannelPermissionOverwriteRepository());
+			new FakeGuildRepository(), bans, new FakeGuildInviteRepository(),
+			new FakeChannelPermissionOverwriteRepository(), new FakeEventBus());
 
 		await handler.HandleAsync(new PurgeUserDataCommand(DeletedUser));
 
 		Assert.False(bans.Store.ContainsKey((100, DeletedUser))); // ban against them gone
 		Assert.True(bans.Store.ContainsKey((100, OtherUser)));     // ban they issued stays in force
 		Assert.Equal(DeletedUser, bans.LastScrubbedModerator);     // and their moderator ref was scrubbed
+	}
+
+	[Fact]
+	public async Task Purge_EmitsMemberLeft_ForEachGuildTheUserBelongedTo()
+	{
+		var guilds = new FakeGuildRepository();
+		var inGuildA = GuildEntity.Create(
+			id: 100, name: "A", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: OtherUser, everyoneRoleId: 101, adminRoleId: 102, now: Now).Value;
+		DomainSeed.AddMember(inGuildA, userId: DeletedUser, joinedAt: Now);
+		var inGuildB = GuildEntity.Create(
+			id: 200, name: "B", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: OtherUser, everyoneRoleId: 201, adminRoleId: 202, now: Now).Value;
+		DomainSeed.AddMember(inGuildB, userId: DeletedUser, joinedAt: Now);
+		var notAMember = GuildEntity.Create(
+			id: 300, name: "C", description: null, iconUrl: null, bannerUrl: null,
+			ownerId: OtherUser, everyoneRoleId: 301, adminRoleId: 302, now: Now).Value;
+		guilds.Add(inGuildA);
+		guilds.Add(inGuildB);
+		guilds.Add(notAMember);
+
+		var bus = new FakeEventBus();
+		var handler = HandlerFactory.CreateCommand<PurgeUserDataCommand>(
+			guilds, new FakeGuildBanRepository(), new FakeGuildInviteRepository(),
+			new FakeChannelPermissionOverwriteRepository(), bus);
+
+		await handler.HandleAsync(new PurgeUserDataCommand(DeletedUser));
+
+		var left = bus.Published.OfType<GuildMemberLeft>().ToList();
+		Assert.Equal(2, left.Count);
+		Assert.All(left, e => Assert.Equal(DeletedUser, e.UserId));
+		Assert.Contains(left, e => e.GuildId == 100);
+		Assert.Contains(left, e => e.GuildId == 200);
+		Assert.DoesNotContain(left, e => e.GuildId == 300);
 	}
 }
