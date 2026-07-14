@@ -33,6 +33,7 @@ type MessageListProps = {
   isDmEmptyState: boolean;
   activeMessages: ChatMessageData[];
   currentUserId: string | null;
+  blockedUserIds: string[];
   editingMessageId: string | null;
   editingDraft: string;
   highlightedMessageId: string | null;
@@ -58,6 +59,7 @@ export function MessageList({
   isDmEmptyState,
   activeMessages,
   currentUserId,
+  blockedUserIds,
   editingMessageId,
   editingDraft,
   highlightedMessageId,
@@ -76,6 +78,7 @@ export function MessageList({
   onOpenAuthorProfile,
   onScrollToBottom
 }: MessageListProps) {
+  const blockedUserIdSet = useMemo(() => new Set(blockedUserIds), [blockedUserIds]);
   const activeMessageItems = useMemo(() => {
     const messagesById = new Map(activeMessages.map((message) => [message.id, message]));
 
@@ -95,9 +98,15 @@ export function MessageList({
           : { author: '', snippet: 'an earlier message' };
       }
 
-      return { message, isGrouped, replyPreview };
+      const isBlockedMessage =
+        message.authorId != null &&
+        currentUserId != null &&
+        message.authorId !== currentUserId &&
+        blockedUserIdSet.has(message.authorId);
+
+      return { message, isGrouped, replyPreview, isBlockedMessage };
     });
-  }, [activeMessages]);
+  }, [activeMessages, blockedUserIdSet, currentUserId]);
 
   return (
     <div
@@ -119,7 +128,7 @@ export function MessageList({
         </div>
       ) : (
         <div>
-          {activeMessageItems.map(({ message, isGrouped, replyPreview }) => {
+          {activeMessageItems.map(({ message, isGrouped, replyPreview, isBlockedMessage }) => {
             const isOwnMessage = message.authorId != null && message.authorId === currentUserId;
             const isEditing = editingMessageId === message.id;
 
@@ -132,6 +141,7 @@ export function MessageList({
                 isOwnMessage={isOwnMessage}
                 isEditing={isEditing}
                 isHighlighted={highlightedMessageId === message.id}
+                isBlockedMessage={isBlockedMessage}
                 editingDraft={editingDraft}
                 canReact={canReact}
                 onEditDraftChange={onEditDraftChange}

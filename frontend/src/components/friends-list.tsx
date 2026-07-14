@@ -291,6 +291,7 @@ export function FriendsList({
     try {
       await blockUser(userId);
       setActionSuccess('User blocked.');
+      dispatchFriendsChanged();
       await refreshEverything();
     } catch (blockError) {
       setActionError(blockError instanceof Error ? blockError.message : 'Failed to block user.');
@@ -303,6 +304,7 @@ export function FriendsList({
     try {
       await unblockUser(userId);
       setActionSuccess('User unblocked.');
+      dispatchFriendsChanged();
       await refreshEverything();
     } catch (unblockError) {
       setActionError(unblockError instanceof Error ? unblockError.message : 'Failed to unblock user.');

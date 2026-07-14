@@ -33,7 +33,15 @@ import { useGuildWorkspace } from '../shared/hooks/use-guild-workspace';
 import { useDmWorkspace } from '../shared/hooks/use-dm-workspace';
 import { useConversationHistory } from '../shared/hooks/use-conversation-history';
 import { useScrollPreservation } from '../shared/hooks/use-scroll-preservation';
-import { deleteFriendship, getUsersByIds, listFriends, type UserSummaryDto } from '../shared/api/user';
+import {
+  blockUser,
+  deleteFriendship,
+  getUsersByIds,
+  listFriends,
+  listBlockedUsers,
+  sendFriendRequest,
+  type UserSummaryDto
+} from '../shared/api/user';
 import { toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
@@ -51,6 +59,7 @@ import {
 } from '../shared/guilds/role-permissions';
 import { toSidebarStatus } from '../shared/mappers/user';
 import { accentForId } from '../shared/lib/accent';
+import { useToast } from '../shared/ui/toast';
 
 const LAST_CHAT_MODE_KEY = 'ft_transcendence_last_chat_mode';
 const TOP_THRESHOLD_PX = 96;
@@ -60,6 +69,7 @@ type ChatMode = 'guild' | 'dm';
 export function ChatWorkspace() {
   const router = useRouter();
   const { startCall } = useCall();
+  const { pushToast } = useToast();
   const { currentUser, refreshCurrentUser, setCurrentUser } = useCurrentUserProfile();
   const { guilds, hasLoadedGuilds, selectedGuild, selectGuild } = useGuilds();
   const [chatMode, setChatMode] = useState<ChatMode>('guild');
@@ -71,6 +81,7 @@ export function ChatWorkspace() {
   const [mobilePane, setMobilePane] = useState<'channels' | 'messages'>('messages');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsReloadKey, setFriendsReloadKey] = useState(0);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   // the bell button in the sidebar footer; the notification popup anchors above it
@@ -235,20 +246,26 @@ export function ChatWorkspace() {
     // than surface a console error (III: zero console errors in Chrome).
     let cancelled = false;
 
-    async function loadFriends() {
+    async function loadSocialState() {
       if (!currentUserId) {
+        setFriends([]);
+        setBlockedUserIds([]);
         return;
       }
 
-      const friendList = await listFriends(currentUserId).catch(() => []);
+      const [friendList, blockedList] = await Promise.all([
+        listFriends(currentUserId).catch(() => []),
+        listBlockedUsers().catch(() => [])
+      ]);
       if (cancelled) {
         return;
       }
 
       setFriends(friendList.map(toFriend));
+      setBlockedUserIds(blockedList.map((entry) => entry.id));
     }
 
-    void loadFriends();
+    void loadSocialState();
 
     return () => {
       cancelled = true;
@@ -629,6 +646,52 @@ export function ChatWorkspace() {
       // best effort: a failed delete reconciles on the next friends re-fetch
     }
     dispatchFriendsChanged();
+  }
+
+  async function handleAddFriend(member: GuildMember) {
+    if (member.id === currentUserId) {
+      return;
+    }
+
+    try {
+      await sendFriendRequest(member.id);
+      setProfileMember(null);
+      pushToast({
+        title: 'Friends',
+        description: `Friend request sent to ${member.name}.`,
+        tone: 'success'
+      });
+    } catch (error) {
+      pushToast({
+        title: 'Friends',
+        description: error instanceof Error ? error.message : 'Failed to send friend request.',
+        tone: 'error'
+      });
+    }
+  }
+
+  async function handleBlock(member: GuildMember) {
+    if (member.id === currentUserId) {
+      return;
+    }
+
+    try {
+      await blockUser(member.id);
+      setProfileMember(null);
+      setFriends((current) => current.filter((entry) => entry.id !== member.id));
+      dispatchFriendsChanged();
+      pushToast({
+        title: 'Friends',
+        description: `${member.name} blocked.`,
+        tone: 'success'
+      });
+    } catch (error) {
+      pushToast({
+        title: 'Friends',
+        description: error instanceof Error ? error.message : 'Failed to block user.',
+        tone: 'error'
+      });
+    }
   }
 
   function handleToggleMicMute() {
@@ -1064,6 +1127,7 @@ export function ChatWorkspace() {
               isDmEmptyState={isDmEmptyState}
               activeMessages={displayMessages}
               currentUserId={currentUserId}
+              blockedUserIds={chatMode === 'guild' ? blockedUserIds : []}
               editingMessageId={editingMessageId}
               editingDraft={editingDraft}
               highlightedMessageId={highlightedMessageId}
@@ -1117,6 +1181,14 @@ export function ChatWorkspace() {
             <ProfileCard
               member={activeDmProfileMember}
               variant="side"
+              currentUserId={currentUserId}
+              onAddFriend={
+                activeDmProfileMember.id !== currentUserId &&
+                !friends.some((entry) => entry.id === activeDmProfileMember.id)
+                  ? handleAddFriend
+                  : undefined
+              }
+              onBlock={activeDmProfileMember.id !== currentUserId ? handleBlock : undefined}
               onClose={handleCloseDmProfile}
             />
           ) : null}
@@ -1124,9 +1196,17 @@ export function ChatWorkspace() {
           {profileMember ? (
             <ProfileCard
               member={profileMember}
+              currentUserId={currentUserId}
               roleManagement={profileRoleManagement}
               onClose={handleCloseAuthorProfile}
-              onSendMessage={profileMember.id === currentUserId ? undefined : handleSendMessageToProfile}
+              onAddFriend={
+                profileMember.id !== currentUserId &&
+                !friends.some((entry) => entry.id === profileMember.id)
+                  ? handleAddFriend
+                  : undefined
+              }
+              onBlock={profileMember.id !== currentUserId ? handleBlock : undefined}
+              onSendMessage={handleSendMessageToProfile}
               onUnfriend={
                 friends.some((entry) => entry.id === profileMember.id)
                   ? handleUnfriend
