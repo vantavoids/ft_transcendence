@@ -85,12 +85,14 @@ export function ChatWorkspace() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsReloadKey, setFriendsReloadKey] = useState(0);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
-  const [activeDmRelationshipStatus, setActiveDmRelationshipStatus] = useState<
-    FriendshipStateDto['status'] | null
-  >(null);
+  const [activeDmRelationship, setActiveDmRelationship] = useState<{
+    userId: string | null;
+    status: FriendshipStateDto['status'] | null;
+  }>({ userId: null, status: null });
   const [profileRelationshipStatus, setProfileRelationshipStatus] = useState<
     FriendshipStateDto['status'] | null
   >(null);
+  const [isProfileRelationshipKnown, setIsProfileRelationshipKnown] = useState(false);
   const [profileMember, setProfileMember] = useState<GuildMember | null>(null);
   const [isNotificationCardOpen, setIsNotificationCardOpen] = useState(false);
   // the bell button in the sidebar footer; the notification popup anchors above it
@@ -313,7 +315,11 @@ export function ChatWorkspace() {
     chatMode === 'dm' && dmWorkspace.activeDm
       ? getDmDetails(dmWorkspace.activeDm, dmWorkspace.dmConversations)
       : null;
-  const isActiveDmBlockedByThem = activeDmRelationshipStatus === 'blocked_by_them';
+  const isActiveDmRelationshipKnown = !activeDmDetails
+    ? true
+    : activeDmRelationship.userId === activeDmDetails.id;
+  const isActiveDmBlockedByThem =
+    isActiveDmRelationshipKnown && activeDmRelationship.status === 'blocked_by_them';
   const isActiveDmBlocked =
     Boolean(activeDmDetails && blockedUserIds.includes(activeDmDetails.id)) ||
     isActiveDmBlockedByThem;
@@ -401,7 +407,7 @@ export function ChatWorkspace() {
 
     async function loadActiveDmRelationship() {
       if (!currentUserId || chatMode !== 'dm' || !activeDmDetails) {
-        setActiveDmRelationshipStatus(null);
+        setActiveDmRelationship({ userId: null, status: null });
         return;
       }
 
@@ -410,7 +416,7 @@ export function ChatWorkspace() {
         return;
       }
 
-      setActiveDmRelationshipStatus(relationship?.status ?? null);
+      setActiveDmRelationship({ userId: activeDmDetails.id, status: relationship?.status ?? null });
     }
 
     void loadActiveDmRelationship();
@@ -426,15 +432,18 @@ export function ChatWorkspace() {
     async function loadProfileRelationship() {
       if (!currentUserId || !profileMember) {
         setProfileRelationshipStatus(null);
+        setIsProfileRelationshipKnown(true);
         return;
       }
 
+      setIsProfileRelationshipKnown(false);
       const relationship = await getFriendshipState(profileMember.id).catch(() => null);
       if (cancelled) {
         return;
       }
 
       setProfileRelationshipStatus(relationship?.status ?? null);
+      setIsProfileRelationshipKnown(true);
     }
 
     void loadProfileRelationship();
@@ -590,7 +599,10 @@ export function ChatWorkspace() {
   }, [activeConversationId, activeMessages]);
 
   const activeDraft = (activeConversationId && draftsByConversation[activeConversationId]) ?? '';
-  const isComposerDisabled = !activeConversationId || isActiveDmBlocked;
+  const isComposerDisabled =
+    !activeConversationId ||
+    isActiveDmBlocked ||
+    (chatMode === 'dm' && Boolean(activeDmDetails) && !isActiveDmRelationshipKnown);
   const isActiveDmArchived = chatMode === 'dm' && (activeDmDetails?.isArchived ?? false);
   // an uploading/errored attachment has no confirmed id yet - block send entirely
   // until it's ready or removed, rather than silently sending without it.
@@ -838,7 +850,11 @@ export function ChatWorkspace() {
     const hasReadyAttachment = conversationHistory.pendingAttachments.some(
       (attachment) => attachment.status === 'ready'
     );
-    if (!activeConversationId || isActiveDmBlocked) {
+    if (
+      !activeConversationId ||
+      isActiveDmBlocked ||
+      (chatMode === 'dm' && Boolean(activeDmDetails) && !isActiveDmRelationshipKnown)
+    ) {
       return;
     }
 
@@ -1306,11 +1322,12 @@ export function ChatWorkspace() {
               member={profileMember}
               currentUserId={currentUserId}
               isBlocked={blockedUserIds.includes(profileMember.id)}
-              isBlockedByThem={profileRelationshipStatus === 'blocked_by_them'}
+              isBlockedByThem={isProfileRelationshipKnown && profileRelationshipStatus === 'blocked_by_them'}
               roleManagement={profileRoleManagement}
               onClose={handleCloseAuthorProfile}
               onAddFriend={
                 profileMember.id !== currentUserId &&
+                isProfileRelationshipKnown &&
                 profileRelationshipStatus !== 'blocked_by_them' &&
                 !blockedUserIds.includes(profileMember.id) &&
                 !friends.some((entry) => entry.id === profileMember.id)
@@ -1319,6 +1336,7 @@ export function ChatWorkspace() {
               }
               onBlock={
                 profileMember.id !== currentUserId &&
+                isProfileRelationshipKnown &&
                 profileRelationshipStatus !== 'blocked_by_them' &&
                 !blockedUserIds.includes(profileMember.id)
                   ? handleBlock
@@ -1326,6 +1344,7 @@ export function ChatWorkspace() {
               }
               onUnblock={
                 profileMember.id !== currentUserId &&
+                isProfileRelationshipKnown &&
                 profileRelationshipStatus !== 'blocked_by_them' &&
                 blockedUserIds.includes(profileMember.id)
                   ? handleUnblock
@@ -1333,6 +1352,7 @@ export function ChatWorkspace() {
               }
               onSendMessage={
                 profileMember.id !== currentUserId &&
+                isProfileRelationshipKnown &&
                 profileRelationshipStatus !== 'blocked_by_them' &&
                 !blockedUserIds.includes(profileMember.id)
                   ? handleSendMessageToProfile
