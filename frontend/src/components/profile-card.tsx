@@ -91,6 +91,28 @@ export function ProfileCard({
           </p>
         </div>
 
+        {member.roles && member.roles.length > 0 ? (
+          <div className="mt-4 rounded-md border border-stroke bg-panel px-3 py-3">
+            <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
+              Roles
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {member.roles.map((role) => (
+                <span
+                  key={role.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-stroke bg-frame px-2 py-0.5 text-[0.72rem] font-semibold text-white/70"
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: role.color || '#8b8b8f' }}
+                  />
+                  {role.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {onSendMessage ? (
           <button
             type="button"
