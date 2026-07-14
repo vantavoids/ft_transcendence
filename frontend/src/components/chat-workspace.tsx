@@ -12,6 +12,7 @@ import {
   getGuildMemberByName,
   GuildMemberList,
   toProfileMember,
+  topRoleByPosition,
   type GuildMember
 } from './guild-member-list';
 import { GuildSidebar } from './guild-sidebar';
@@ -36,7 +37,7 @@ import { deleteFriendship, getUsersByIds, listFriends, type UserSummaryDto } fro
 import { toFriend } from '../shared/api/hydrate';
 import { useCall } from '../shared/call/call-context';
 import { IncomingCallOverlay } from './call/incoming-call-overlay';
-import { CallWindow } from './call/call-window';
+import { CallWindow, type CallPeer } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
@@ -288,14 +289,6 @@ export function ChatWorkspace() {
       : null;
   const activeConversationId =
     chatMode === 'dm' ? (activeDmDetails?.id ?? null) : guildWorkspace.activeChannel;
-  const resolvePeerName = useCallback(
-    (peerId: string | null) =>
-      peerId
-        ? (dmWorkspace.dmConversations.find((dm) => dm.id === peerId)?.name ?? 'Unknown user')
-        : 'Unknown user',
-    [dmWorkspace.dmConversations]
-  );
-
   function startDmCall(callType: 'audio' | 'video') {
     if (!activeDmDetails) {
       return;
@@ -325,12 +318,75 @@ export function ChatWorkspace() {
     [activeConversationId, conversationHistory.messagesByConversation]
   );
 
+  // per-member display overrides for the active guild: nickname, avatar, and top
+  // role colour, keyed by user id. Empty outside guild mode.
+  const guildMemberDisplayById = useMemo(() => {
+    const map = new Map<string, { name: string; avatarUrl: string | null; nameColor: string | null }>();
+    for (const member of currentGuildMembers) {
+      map.set(member.userId, {
+        name: member.displayName,
+        avatarUrl: member.avatarUrl,
+        nameColor: topRoleByPosition(member.roles)?.color ?? null
+      });
+    }
+    return map;
+  }, [currentGuildMembers]);
+
+  // messages as rendered: in a guild, overlay each author's nickname, avatar and
+  // role colour so they match the member list. DMs render the mapper output as-is.
+  const displayMessages = useMemo(() => {
+    if (chatMode !== 'guild') {
+      return activeMessages;
+    }
+    return activeMessages.map((message) => {
+      const display = message.authorId ? guildMemberDisplayById.get(message.authorId) : undefined;
+      if (!display) {
+        return message;
+      }
+      return {
+        ...message,
+        author: display.name,
+        avatarUrl: display.avatarUrl ?? message.avatarUrl,
+        nameColor: display.nameColor
+      };
+    });
+  }, [chatMode, activeMessages, guildMemberDisplayById]);
+
   const scroll = useScrollPreservation(
     activeConversationId,
     activeMessages,
     conversationHistory.messagesByConversation,
     isHydrated
   );
+
+  // resolve a call peer's display name + avatar: prefer the guild member (so a
+  // nickname wins), then the DM conversation, then the fetched user profile.
+  const resolvePeer = useCallback(
+    (peerId: string | null): CallPeer => {
+      if (!peerId) {
+        return { name: 'Unknown user', avatarUrl: null };
+      }
+      const member = guildMemberDisplayById.get(peerId);
+      if (member) {
+        return { name: member.name, avatarUrl: member.avatarUrl };
+      }
+      const dm = dmWorkspace.dmConversations.find((entry) => entry.id === peerId);
+      if (dm) {
+        return { name: dm.name, avatarUrl: dm.avatarUrl ?? null };
+      }
+      const profile = userProfilesById[peerId];
+      if (profile) {
+        return {
+          name: profile.display_name || profile.username,
+          avatarUrl: profile.avatar_url ?? null
+        };
+      }
+      return { name: 'Unknown user', avatarUrl: null };
+    },
+    [guildMemberDisplayById, dmWorkspace.dmConversations, userProfilesById]
+  );
+
+  const callSelf: CallPeer = { name: 'You', avatarUrl: currentUser?.avatarUrl ?? null };
 
   const channelUnreadCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -990,7 +1046,7 @@ export function ChatWorkspace() {
               viewportRef={scroll.messagesViewportRef}
               onScroll={handleMessagesScroll}
               isDmEmptyState={isDmEmptyState}
-              activeMessages={activeMessages}
+              activeMessages={displayMessages}
               currentUserId={currentUserId}
               editingMessageId={editingMessageId}
               editingDraft={editingDraft}
@@ -1097,8 +1153,8 @@ export function ChatWorkspace() {
             />
           ) : null}
 
-          <IncomingCallOverlay resolvePeerName={resolvePeerName} />
-          <CallWindow resolvePeerName={resolvePeerName} />
+          <IncomingCallOverlay resolvePeer={resolvePeer} />
+          <CallWindow resolvePeer={resolvePeer} self={callSelf} />
         </>
       )}
     </div>

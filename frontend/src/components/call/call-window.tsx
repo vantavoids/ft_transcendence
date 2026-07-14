@@ -15,6 +15,7 @@ const SPEAKING_RING_INSET = 'ring-2 ring-inset ring-aqua shadow-[inset_0_0_20px_
 type CallTileProps = {
   stream: MediaStream | null;
   label: string;
+  avatarUrl?: string | null;
   // this tile is the local user: mirror the video (audio is handled elsewhere)
   self: boolean;
   isVideo: boolean;
@@ -29,6 +30,7 @@ type CallTileProps = {
 function CallTile({
   stream,
   label,
+  avatarUrl,
   self,
   isVideo,
   cameraOff,
@@ -63,12 +65,22 @@ function CallTile({
       {!showVideo ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <span
-            className={`relative flex items-center justify-center rounded-full bg-aqua/10 font-bold text-aqua ring-1 ring-aqua/30 ${avatarSize}`}
+            className={`relative flex items-center justify-center overflow-hidden rounded-full bg-aqua/10 font-bold text-aqua ring-1 ring-aqua/30 ${avatarSize}`}
           >
             {ringing ? (
               <span className="absolute inset-0 animate-ping rounded-full ring-2 ring-aqua/50" aria-hidden />
             ) : null}
-            {label.slice(0, 1).toUpperCase()}
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              label.slice(0, 1).toUpperCase()
+            )}
           </span>
           {ringing && !compact ? (
             <span className="font-category animate-pulse text-[0.7rem] uppercase tracking-[0.18em] text-aqua/70">
@@ -87,11 +99,17 @@ function CallTile({
   );
 }
 
-type CallWindowProps = {
-  resolvePeerName?: (peerId: string | null) => string;
+export type CallPeer = {
+  name: string;
+  avatarUrl: string | null;
 };
 
-export function CallWindow({ resolvePeerName }: CallWindowProps) {
+type CallWindowProps = {
+  resolvePeer?: (peerId: string | null) => CallPeer;
+  self?: CallPeer;
+};
+
+export function CallWindow({ resolvePeer, self }: CallWindowProps) {
   const { state, localStream, remoteStream, hangUp, toggleMic, toggleCamera } = useCall();
   const [minimized, setMinimized] = useState(false);
   // remote audio lives here so it keeps playing across the minimize/maximize swap
@@ -115,7 +133,9 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
     return null;
   }
 
-  const peerName = resolvePeerName?.(state.peerId) ?? 'Unknown user';
+  const peer = resolvePeer?.(state.peerId) ?? { name: 'Unknown user', avatarUrl: null };
+  const peerName = peer.name;
+  const selfLabel = self?.name ?? 'You';
   const isVideo = state.callType === 'video';
   const ringing = state.status === 'outgoing';
 
@@ -178,6 +198,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
             <CallTile
               stream={remoteStream}
               label={peerName}
+              avatarUrl={peer.avatarUrl}
               self={false}
               isVideo={isVideo}
               cameraOff={false}
@@ -223,6 +244,7 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
             <CallTile
               stream={remoteStream}
               label={peerName}
+              avatarUrl={peer.avatarUrl}
               self={false}
               isVideo={isVideo}
               cameraOff={false}
@@ -231,7 +253,8 @@ export function CallWindow({ resolvePeerName }: CallWindowProps) {
             />
             <CallTile
               stream={localStream}
-              label="You"
+              label={selfLabel}
+              avatarUrl={self?.avatarUrl ?? null}
               self
               isVideo={isVideo}
               cameraOff={state.isCameraOff}
