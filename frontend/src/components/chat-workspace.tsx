@@ -40,7 +40,14 @@ import { CallWindow } from './call/call-window';
 import { useCurrentUserProfile } from '../shared/user/user-store';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useGuildMembers } from '../shared/guilds/use-guild-members';
-import { effectivePermissions, hasPermission, PERMISSIONS } from '../shared/guilds/role-permissions';
+import {
+  canManageMemberRoles,
+  effectivePermissions,
+  hasPermission,
+  memberRank,
+  PERMISSIONS,
+  type RoleCaller
+} from '../shared/guilds/role-permissions';
 import { toSidebarStatus } from '../shared/mappers/user';
 import { accentForId } from '../shared/lib/accent';
 
@@ -97,10 +104,11 @@ export function ChatWorkspace() {
   const currentUserId = currentUser?.id ?? null;
   const guildWorkspace = useGuildWorkspace();
   const dmWorkspace = useDmWorkspace(currentUserId);
-  const { members: currentGuildMembers, roles: currentGuildRoles } = useGuildMembers(
-    selectedGuild?.id ?? null,
-    selectedGuild?.owner_id ?? null
-  );
+  const {
+    members: currentGuildMembers,
+    roles: currentGuildRoles,
+    refresh: refreshGuildMembers
+  } = useGuildMembers(selectedGuild?.id ?? null, selectedGuild?.owner_id ?? null);
   const currentGuildMember = useMemo(
     () => currentGuildMembers.find((member) => member.userId === currentUserId) ?? null,
     [currentGuildMembers, currentUserId]
@@ -119,6 +127,58 @@ export function ChatWorkspace() {
     );
     return hasPermission(mask, PERMISSIONS.ManageChannels);
   }, [currentGuildMember, currentGuildRoles]);
+
+  // Callers holding MANAGE_ROLES (or the owner) may assign roles; null hides the
+  // profile-card role editor. Mirrors the members panel's gating.
+  const roleCaller = useMemo<RoleCaller | null>(() => {
+    if (!currentGuildMember) {
+      return null;
+    }
+
+    const permissions = effectivePermissions(
+      currentGuildMember.roles,
+      currentGuildRoles,
+      currentGuildMember.isOwner
+    );
+    if (!canManageMemberRoles(permissions, currentGuildMember.isOwner)) {
+      return null;
+    }
+
+    return {
+      rank: memberRank(currentGuildMember.roles, currentGuildMember.isOwner),
+      permissions,
+      isOwner: currentGuildMember.isOwner
+    };
+  }, [currentGuildMember, currentGuildRoles]);
+
+  // Role management for the open profile card: only when the profile is a member
+  // of the current guild and the viewer can manage roles.
+  const profileRoleManagement = useMemo(() => {
+    if (chatMode !== 'guild' || !selectedGuild || !roleCaller || !profileMember) {
+      return undefined;
+    }
+
+    const target = currentGuildMembers.find((member) => member.userId === profileMember.id);
+    if (!target) {
+      return undefined;
+    }
+
+    return {
+      guildId: selectedGuild.id,
+      member: target,
+      roles: currentGuildRoles,
+      caller: roleCaller,
+      onChanged: () => void refreshGuildMembers()
+    };
+  }, [
+    chatMode,
+    selectedGuild,
+    roleCaller,
+    profileMember,
+    currentGuildMembers,
+    currentGuildRoles,
+    refreshGuildMembers
+  ]);
 
   // A guild switch invalidates any channel-scoped dialog left open.
   useEffect(() => {
@@ -992,6 +1052,7 @@ export function ChatWorkspace() {
           {profileMember ? (
             <ProfileCard
               member={profileMember}
+              roleManagement={profileRoleManagement}
               onClose={handleCloseAuthorProfile}
               onSendMessage={profileMember.id === currentUserId ? undefined : handleSendMessageToProfile}
               onUnfriend={

@@ -35,42 +35,21 @@ export function MemberRoleChips({ roles }: { roles: GuildRoleDto[] }) {
   );
 }
 
-type MemberRolesPopoverProps = {
+type RoleToggleListProps = {
   guildId: string;
   member: HydratedGuildMember;
   roles: GuildRoleDto[];
   caller: RoleCaller;
-  /** Wrapper holding the trigger button and this popover; clicks outside it close the popover. */
-  containerRef: RefObject<HTMLElement | null>;
   onChanged: () => void;
-  onClose: () => void;
 };
 
-export function MemberRolesPopover({
-  guildId,
-  member,
-  roles,
-  caller,
-  containerRef,
-  onChanged,
-  onClose
-}: MemberRolesPopoverProps) {
+// Assignable-role checklist with hierarchy-aware gating; each toggle assigns or
+// unassigns via the guild API. Shared by the members-panel popover and the
+// profile card so the assignment rules live in one place.
+export function RoleToggleList({ guildId, member, roles, caller, onChanged }: RoleToggleListProps) {
   const [pendingRoleIds, setPendingRoleIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const { pushToast } = useToast();
-
-  useCloseOnEscape(onClose);
-
-  useEffect(() => {
-    function handleMouseDown(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    }
-
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [containerRef, onClose]);
 
   useEffect(() => {
     if (error) {
@@ -110,6 +89,80 @@ export function MemberRolesPopover({
     }
   }
 
+  if (assignableRoles.length === 0) {
+    return (
+      <p className="px-1 pb-1 text-sm text-white/35">No roles yet. Create one in the Roles tab.</p>
+    );
+  }
+
+  return (
+    <ul className="grid max-h-64 gap-0.5 overflow-y-auto">
+      {assignableRoles.map((role) => {
+        const isAssigned = assignedRoleIds.has(role.id);
+        const isPending = pendingRoleIds.has(role.id);
+        const check = canToggleRole(role, isAssigned, caller);
+
+        return (
+          <li key={role.id}>
+            <label
+              title={check.reason ?? undefined}
+              className={`flex items-center gap-2 rounded-md px-1.5 py-1 text-sm text-white/60 ${
+                check.allowed ? 'cursor-pointer hover:bg-frame' : 'cursor-not-allowed opacity-50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isAssigned}
+                disabled={!check.allowed || isPending}
+                onChange={() => void handleToggle(role, isAssigned)}
+                className="h-4 w-4 accent-[#78dce8]"
+              />
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: role.color || '#8b8b8f' }}
+              />
+              <span className="min-w-0 flex-1 truncate">{role.name}</span>
+            </label>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+type MemberRolesPopoverProps = {
+  guildId: string;
+  member: HydratedGuildMember;
+  roles: GuildRoleDto[];
+  caller: RoleCaller;
+  /** Wrapper holding the trigger button and this popover; clicks outside it close the popover. */
+  containerRef: RefObject<HTMLElement | null>;
+  onChanged: () => void;
+  onClose: () => void;
+};
+
+export function MemberRolesPopover({
+  guildId,
+  member,
+  roles,
+  caller,
+  containerRef,
+  onChanged,
+  onClose
+}: MemberRolesPopoverProps) {
+  useCloseOnEscape(onClose);
+
+  useEffect(() => {
+    function handleMouseDown(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [containerRef, onClose]);
+
   return (
     <div className="absolute right-0 top-9 z-20 w-64 rounded-md border border-stroke bg-panel p-2 shadow-lg">
       <div className="mb-1 flex items-center justify-between">
@@ -123,45 +176,13 @@ export function MemberRolesPopover({
           <X className="h-3.5 w-3.5" strokeWidth={2} />
         </button>
       </div>
-      {assignableRoles.length === 0 ? (
-        <p className="px-1 pb-1 text-sm text-white/35">
-          No roles yet. Create one in the Roles tab.
-        </p>
-      ) : (
-        <ul className="grid max-h-64 gap-0.5 overflow-y-auto">
-          {assignableRoles.map((role) => {
-            const isAssigned = assignedRoleIds.has(role.id);
-            const isPending = pendingRoleIds.has(role.id);
-            const check = canToggleRole(role, isAssigned, caller);
-
-            return (
-              <li key={role.id}>
-                <label
-                  title={check.reason ?? undefined}
-                  className={`flex items-center gap-2 rounded-md px-1.5 py-1 text-sm text-white/60 ${
-                    check.allowed
-                      ? 'cursor-pointer hover:bg-frame'
-                      : 'cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isAssigned}
-                    disabled={!check.allowed || isPending}
-                    onChange={() => void handleToggle(role, isAssigned)}
-                    className="h-4 w-4 accent-[#78dce8]"
-                  />
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: role.color || '#8b8b8f' }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{role.name}</span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <RoleToggleList
+        guildId={guildId}
+        member={member}
+        roles={roles}
+        caller={caller}
+        onChanged={onChanged}
+      />
     </div>
   );
 }
