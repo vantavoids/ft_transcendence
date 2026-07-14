@@ -64,6 +64,31 @@ public sealed class GuildMemberLeftConsumerTests
 	}
 }
 
+public sealed class GuildOwnerTransferredConsumerTests
+{
+	[Fact]
+	public async Task Consume_ForwardsOwnerChangeToGuildGroup()
+	{
+		var broadcaster = new FakeUserBroadcaster();
+		await using var provider = new ServiceCollection()
+			.AddSingleton<IUserBroadcaster>(broadcaster)
+			.AddMassTransitTestHarness(x => x.AddConsumer<GuildOwnerTransferredConsumer>())
+			.BuildServiceProvider(true);
+
+		var harness = provider.GetRequiredService<ITestHarness>();
+		await harness.Start();
+
+		await harness.Bus.Publish(new GuildOwnerTransferred(GuildId: 100, OldOwnerId: 1, NewOwnerId: 2));
+
+		Assert.True(await harness.Consumed.Any<GuildOwnerTransferred>());
+
+		var call = Assert.Single(broadcaster.GuildOwnerTransferredCalls);
+		Assert.Equal(100L, call.GuildId);
+		Assert.Equal(1L, call.OldOwnerId);
+		Assert.Equal(2L, call.NewOwnerId);
+	}
+}
+
 public sealed class GuildDeletedConsumerTests
 {
 	[Fact]

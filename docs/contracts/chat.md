@@ -1155,5 +1155,6 @@ Relayed verbatim from the remote peer.
 |-------|--------|
 | `guild.member_joined` | Broadcast `GuildJoined` to all connections of the user; clients call `JoinChannel` themselves when navigating to a channel in that guild |
 | `guild.member_left` | Broadcast `GuildLeft` to all connections of the user; clients call `LeaveChannel` for any open subscription in that guild |
+| `guild.owner_transferred` | Broadcast `GuildOwnerTransferred { guild_id, old_owner_id, new_owner_id }` to the `guild:{guild_id}` group so members' clients flip owner-only UI live. No group membership changes (both owners stay members). |
 | `user.logged_out` | Force-disconnect any active WebSocket for that user |
 | `user.deleted` | Force-disconnect any active WebSocket; delete the user's `user_conversations`, `channel_read_states`, and `dm_unread_counts` rows. Messages stay - the user's profile becomes unresolvable in User Service, so the frontend renders them as "Deleted User". |

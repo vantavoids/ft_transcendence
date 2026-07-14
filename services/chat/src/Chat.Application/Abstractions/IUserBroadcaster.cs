@@ -27,6 +27,13 @@ public interface IUserBroadcaster
 	Task BroadcastGuildUpdatedAsync(long guildId, string name, string? iconUrl, CancellationToken ct);
 
 	/// <summary>
+	/// tells the guild:{guildId} group that ownership moved from
+	/// <paramref name="oldOwnerId"/> to <paramref name="newOwnerId"/>, so members'
+	/// owner-only UI (crown, management controls) updates live without a refresh.
+	/// </summary>
+	Task BroadcastGuildOwnerTransferredAsync(long guildId, long oldOwnerId, long newOwnerId, CancellationToken ct);
+
+	/// <summary>
 	/// subscribes every open connection of <paramref name="userId"/> to the
 	/// <c>guild:{guildId}</c> group so they receive that guild's real-time
 	/// broadcasts. called when the user joins a guild while already connected
