@@ -114,4 +114,17 @@ describe('describeNotification', () => {
       'Incoming audio call.'
     );
   });
+
+  it('falls back to a generic view for an unknown type instead of returning undefined', () => {
+    // a type the frontend does not handle (e.g. a newer backend type) must not
+    // crash the whole notification list when destructured.
+    const unknownNotification = {
+      ...dmNotification,
+      type: 'guild_owner_transferred'
+    } as unknown as NotificationDto;
+
+    const view = describeNotification(unknownNotification, 'Testa');
+    assert.equal(view.title, 'Notification');
+    assert.ok(view.Icon);
+  });
 });
