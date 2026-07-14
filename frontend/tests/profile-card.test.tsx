@@ -56,6 +56,38 @@ describe('ProfileCard', () => {
     assert.ok(!html.includes('border-color'));
   });
 
+  it('renders a profile actions menu for other users', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={member}
+        currentUserId="456"
+        onAddFriend={() => undefined}
+        onBlock={() => undefined}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(html.includes('Profile actions'));
+    assert.ok(!html.includes('Add friend'));
+    assert.ok(!html.includes('Block'));
+  });
+
+  it('hides relationship actions on the current user profile', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={member}
+        currentUserId={member.id}
+        onAddFriend={() => undefined}
+        onBlock={() => undefined}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(!html.includes('Profile actions'));
+    assert.ok(!html.includes('Add friend'));
+    assert.ok(!html.includes('Block'));
+  });
+
   it('lists every assigned role in a Roles section', () => {
     const html = renderToStaticMarkup(
       <ProfileCard

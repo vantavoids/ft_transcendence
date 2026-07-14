@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Ban, CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import type { MessageAttachmentDto } from '../shared/api/chat';
 import { downloadAuthedAttachment, openAuthedAttachment } from '../shared/lib/attachments';
 import { AuthedImage } from './authed-image';
@@ -70,6 +70,7 @@ type ChatMessageProps = {
   isOwnMessage: boolean;
   isEditing: boolean;
   isHighlighted?: boolean;
+  isBlockedMessage?: boolean;
   editingDraft: string;
   canReact: boolean;
   onEditDraftChange: (value: string) => void;
@@ -109,6 +110,7 @@ export function ChatMessage({
   isOwnMessage,
   isEditing,
   isHighlighted,
+  isBlockedMessage = false,
   editingDraft,
   canReact,
   onEditDraftChange,
@@ -124,7 +126,9 @@ export function ChatMessage({
   setMessageRef
 }: ChatMessageProps) {
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isBlockedMessageRevealed, setIsBlockedMessageRevealed] = useState(false);
   const reactions = message.reactions ?? [];
+  const isBlockedMessageCollapsed = isBlockedMessage && !isBlockedMessageRevealed;
 
   function renderFailedMarker() {
     if (!message.failed) {
@@ -173,6 +177,10 @@ export function ChatMessage({
     window.addEventListener('keydown', handleEscape, { capture: true });
     return () => window.removeEventListener('keydown', handleEscape, { capture: true });
   }, [isEditing, message.id, onCancelEdit]);
+
+  useEffect(() => {
+    setIsBlockedMessageRevealed(false);
+  }, [message.id, isBlockedMessage]);
 
   return (
     <article
@@ -268,7 +276,7 @@ export function ChatMessage({
           </div>
         )}
 
-        {!isEditing && replyPreview ? (
+        {!isEditing && !isBlockedMessageCollapsed && replyPreview ? (
           <button
             type="button"
             onClick={() => message.replyToId && onJumpToReply(message.replyToId)}
@@ -288,7 +296,22 @@ export function ChatMessage({
           </button>
         ) : null}
 
-        {isEditing ? (
+        {isBlockedMessageCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setIsBlockedMessageRevealed(true)}
+            className="mt-2 flex w-full items-center gap-3 rounded-md border border-stroke bg-panel px-3 py-3 text-left text-white/75 transition hover:border-aqua/40 hover:bg-frame"
+            aria-label={`Reveal blocked message from ${message.author}`}
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-pink/10 text-pink">
+              <Ban className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-white/85">Blocked message</span>
+              <span className="block text-xs text-white/35">Click to reveal the content</span>
+            </span>
+          </button>
+        ) : isEditing ? (
           <div className={isGrouped ? '' : 'mt-2'}>
             <textarea
               ref={editTextareaRef}
@@ -343,9 +366,9 @@ export function ChatMessage({
           </div>
         )}
 
-        {!isEditing ? renderFailedMarker() : null}
+        {!isEditing && !isBlockedMessageCollapsed ? renderFailedMarker() : null}
 
-        {!isEditing && message.attachments && message.attachments.length > 0 ? (
+        {!isEditing && !isBlockedMessageCollapsed && message.attachments && message.attachments.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
             {message.attachments.map((attachment) =>
               attachment.mime_type.startsWith('image/') ? (
@@ -385,7 +408,7 @@ export function ChatMessage({
           </div>
         ) : null}
 
-        {reactions.length > 0 ? (
+        {!isBlockedMessageCollapsed && reactions.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
             {reactions.map(({ emoji, count, meReacted }) => (
               <button

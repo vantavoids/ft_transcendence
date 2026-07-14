@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { MessageCircle, Shield, Trophy, UserMinus, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Ban, Menu, MessageCircle, Shield, UserMinus, UserPlus, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
 import { topRoleByPosition, type GuildMember, type GuildMemberRole } from './guild-member-list';
 import { RoleToggleList } from './guild/member-roles-popover';
@@ -23,8 +23,11 @@ export type ProfileRoleManagement = {
 type ProfileCardProps = {
   member: GuildMember;
   variant?: 'modal' | 'side';
+  currentUserId?: string | null;
   roleManagement?: ProfileRoleManagement;
   onClose: () => void;
+  onAddFriend?: (member: GuildMember) => void | Promise<void>;
+  onBlock?: (member: GuildMember) => void | Promise<void>;
   onSendMessage?: (member: GuildMember) => void;
   onUnfriend?: (member: GuildMember) => void;
 };
@@ -32,13 +35,39 @@ type ProfileCardProps = {
 export function ProfileCard({
   member,
   variant = 'modal',
+  currentUserId = null,
   roleManagement,
   onClose,
+  onAddFriend,
+  onBlock,
   onSendMessage,
   onUnfriend
 }: ProfileCardProps) {
   useCloseOnEscape(onClose);
   const [isEditingRoles, setIsEditingRoles] = useState(false);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const isOwnProfile = currentUserId === member.id;
+
+  useEffect(() => {
+    if (!isActionsOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: Event) {
+      if (actionsRef.current && !actionsRef.current.contains(event.target as Node)) {
+        setIsActionsOpen(false);
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isActionsOpen]);
 
   // when the caller can manage roles, derive from the live guild member so the
   // chips AND the top-role badge stay in sync as roles are toggled; otherwise
@@ -97,21 +126,69 @@ export function ProfileCard({
             status={member.status}
             avatarUrl={member.avatarUrl ?? undefined}
           />
-          <span
-            className="font-category mb-2 max-w-[11rem] truncate rounded-full border border-stroke bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
-            style={
-              badgeColor
-                ? {
-                    color: badgeColor,
-                    borderColor: `${badgeColor}59`,
-                    backgroundColor: `${badgeColor}1a`
-                  }
-                : undefined
-            }
-            title={badgeLabel}
-          >
-            {badgeLabel}
-          </span>
+          <div className="mb-2 flex max-w-[11rem] flex-col items-end gap-2" ref={actionsRef}>
+            <span
+              className="font-category truncate rounded-full border border-stroke bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
+              style={
+                badgeColor
+                  ? {
+                      color: badgeColor,
+                      borderColor: `${badgeColor}59`,
+                      backgroundColor: `${badgeColor}1a`
+                    }
+                  : undefined
+              }
+              title={badgeLabel}
+            >
+              {badgeLabel}
+            </span>
+            {!isOwnProfile && (onAddFriend || onBlock) ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsActionsOpen((open) => !open)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stroke bg-panel text-white/55 transition hover:bg-frame hover:text-white"
+                  aria-label="Profile actions"
+                  aria-expanded={isActionsOpen}
+                  aria-haspopup="menu"
+                >
+                  <Menu className="h-4 w-4" strokeWidth={2} />
+                </button>
+                {isActionsOpen ? (
+                  <div className="absolute right-0 top-full z-10 mt-2 min-w-[12rem] overflow-hidden rounded-md border border-stroke bg-secondary-bg shadow-2xl shadow-black/45">
+                    {onAddFriend ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          void onAddFriend(member);
+                        }}
+                        className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm font-semibold text-white/75 transition hover:bg-frame hover:text-white"
+                        role="menuitem"
+                      >
+                        <UserPlus className="h-3.5 w-3.5 text-aqua" strokeWidth={2} />
+                        Add friend
+                      </button>
+                    ) : null}
+                    {onBlock ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          void onBlock(member);
+                        }}
+                        className="flex h-10 w-full items-center gap-2 border-t border-stroke px-3 text-left text-sm font-semibold text-pink transition hover:bg-pink/10"
+                        role="menuitem"
+                      >
+                        <Ban className="h-3.5 w-3.5 text-pink" strokeWidth={2} />
+                        Block
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-4">
@@ -182,7 +259,7 @@ export function ProfileCard({
           </div>
         ) : null}
 
-        {onSendMessage ? (
+        {!isOwnProfile && onSendMessage ? (
           <button
             type="button"
             onClick={() => onSendMessage(member)}
@@ -193,7 +270,7 @@ export function ProfileCard({
           </button>
         ) : null}
 
-        {onUnfriend ? (
+        {!isOwnProfile && onUnfriend ? (
           <button
             type="button"
             onClick={() => onUnfriend(member)}
