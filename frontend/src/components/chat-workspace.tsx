@@ -333,24 +333,38 @@ export function ChatWorkspace() {
   }, [currentGuildMembers]);
 
   // messages as rendered: in a guild, overlay each author's nickname, avatar and
-  // role colour so they match the member list. DMs render the mapper output as-is.
+  // role colour so they match the member list. The current user's own messages
+  // always carry their name + avatar (even in a DM, where the fetched-profile map
+  // does not include self), so nobody shows up as a bare "You" with no picture.
   const displayMessages = useMemo(() => {
-    if (chatMode !== 'guild') {
-      return activeMessages;
-    }
     return activeMessages.map((message) => {
-      const display = message.authorId ? guildMemberDisplayById.get(message.authorId) : undefined;
-      if (!display) {
+      if (!message.authorId) {
         return message;
       }
-      return {
-        ...message,
-        author: display.name,
-        avatarUrl: display.avatarUrl ?? message.avatarUrl,
-        nameColor: display.nameColor
-      };
+
+      if (chatMode === 'guild') {
+        const member = guildMemberDisplayById.get(message.authorId);
+        if (member) {
+          return {
+            ...message,
+            author: member.name,
+            avatarUrl: member.avatarUrl ?? message.avatarUrl,
+            nameColor: member.nameColor
+          };
+        }
+      }
+
+      if (currentUser && message.authorId === currentUser.id) {
+        return {
+          ...message,
+          author: currentUser.displayName,
+          avatarUrl: currentUser.avatarUrl ?? message.avatarUrl
+        };
+      }
+
+      return message;
     });
-  }, [chatMode, activeMessages, guildMemberDisplayById]);
+  }, [chatMode, activeMessages, guildMemberDisplayById, currentUser]);
 
   const scroll = useScrollPreservation(
     activeConversationId,
@@ -872,8 +886,10 @@ export function ChatWorkspace() {
     }
 
     if (isCurrentUserMessage && currentUser) {
+      // only surface guild roles on the card when actually viewing a guild; a DM
+      // is not guild-scoped, so it must not show the selected guild's roles.
       setProfileMember(
-        currentGuildMember
+        chatMode === 'guild' && currentGuildMember
           ? {
               ...toProfileMember(currentGuildMember),
               name: currentUser.displayName,
