@@ -53,4 +53,30 @@ describe('ProfileCard', () => {
     assert.ok(html.includes('>Owner</span>'));
     assert.ok(!html.includes('border-color'));
   });
+
+  it('lists every assigned role in a Roles section', () => {
+    const html = renderToStaticMarkup(
+      <ProfileCard
+        member={{
+          ...member,
+          roles: [
+            { id: 'r-a', name: 'Maintainer', color: '#ff6188' },
+            { id: 'r-b', name: 'Reviewer', color: null }
+          ]
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    assert.ok(html.includes('Roles'));
+    assert.ok(html.includes('>Maintainer</span>'));
+    assert.ok(html.includes('>Reviewer</span>'));
+    assert.ok(html.includes('background-color:#ff6188'));
+  });
+
+  it('omits the Roles section when the member has no roles', () => {
+    const html = renderToStaticMarkup(<ProfileCard member={member} onClose={() => undefined} />);
+
+    assert.ok(!html.includes('Roles'));
+  });
 });

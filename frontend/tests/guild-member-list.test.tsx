@@ -62,17 +62,33 @@ describe('toProfileMember', () => {
     assert.equal(profile.role, 'Member');
     assert.equal(profile.roleColor, null);
   });
+
+  it('exposes every assigned role (minus @everyone) for the profile card', () => {
+    const a = makeRole({ id: 'r-a', name: 'A', color: '#ff6188' });
+    const b = makeRole({ id: 'r-b', name: 'B', color: '#a9dc76' });
+    const everyone = makeRole({ id: 'r-everyone', name: 'everyone', is_default: true });
+    const profile = toProfileMember(makeMember({ roles: [a, b, everyone] }));
+
+    assert.deepEqual(
+      profile.roles?.map((role) => role.name),
+      ['A', 'B']
+    );
+    assert.deepEqual(
+      profile.roles?.map((role) => role.color),
+      ['#ff6188', '#a9dc76']
+    );
+  });
 });
 
 describe('buildMemberGroups', () => {
-  const test = makeRole({ id: 'r-test', name: 'test', color: '#ff6188', permissions: '4095' });
-  const plouf = makeRole({ id: 'r-plouf', name: 'plouf', color: '#a9dc76', permissions: '0' });
+  const test = makeRole({ id: 'r-test', name: 'test', color: '#ff6188', is_hoisted: true, position: 5 });
+  const plouf = makeRole({ id: 'r-plouf', name: 'plouf', color: '#a9dc76', is_hoisted: true, position: 2 });
   const tester = makeMember({ userId: 'u-tester', displayName: 'Tester', roles: [test] });
   const ploufer = makeMember({ userId: 'u-ploufer', displayName: 'Ploufer', roles: [plouf] });
   const owner = makeMember({ userId: 'u-owner', displayName: 'Owner', isOwner: true });
   const nobody = makeMember({ userId: 'u-nobody', displayName: 'Anna' });
 
-  it('groups each member under their top role, ordered by permission count', () => {
+  it('groups members under their highest hoisted role, ordered by position', () => {
     const groups = buildMemberGroups([nobody, ploufer, tester], true);
 
     assert.deepEqual(
@@ -90,6 +106,35 @@ describe('buildMemberGroups', () => {
     );
   });
 
+  it('does not create a section for a non-hoisted role', () => {
+    const casual = makeRole({ id: 'r-casual', name: 'casual', is_hoisted: false, position: 9 });
+    const casualMember = makeMember({ userId: 'u-casual', displayName: 'Casual', roles: [casual] });
+
+    const groups = buildMemberGroups([casualMember], true);
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['Members']
+    );
+    assert.deepEqual(
+      groups[0].members.map((member) => member.displayName),
+      ['Casual']
+    );
+  });
+
+  it('groups under the highest hoisted role even when a non-hoisted role sits higher', () => {
+    const bigNonHoist = makeRole({ id: 'r-big', name: 'Big', is_hoisted: false, position: 20 });
+    const modHoist = makeRole({ id: 'r-mod', name: 'Mod', is_hoisted: true, position: 3 });
+    const member = makeMember({ userId: 'u-mixed', displayName: 'Mixed', roles: [bigNonHoist, modHoist] });
+
+    const groups = buildMemberGroups([member], true);
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['Mod']
+    );
+  });
+
   it('pins the owner in an Owner group at the top', () => {
     const groups = buildMemberGroups([tester, owner], true);
 
@@ -103,27 +148,9 @@ describe('buildMemberGroups', () => {
     );
   });
 
-  it('keeps the owner on top even when another role grants more permissions', () => {
-    const adminRole = makeRole({ id: 'r-admin', name: 'Administrator', permissions: '256' });
-    const richOwner = makeMember({
-      userId: 'u-owner',
-      displayName: 'Owner',
-      isOwner: true,
-      roles: [adminRole]
-    });
-
-    // "test" has all 12 permission flags; the owner's Administrator role has 1
-    const groups = buildMemberGroups([tester, richOwner], true);
-
-    assert.deepEqual(
-      groups.map((group) => group.title),
-      ['Owner', 'test']
-    );
-  });
-
-  it('breaks equal permission counts alphabetically', () => {
-    const zeta = makeRole({ id: 'r-z', name: 'zeta', permissions: '1' });
-    const alpha = makeRole({ id: 'r-a', name: 'alpha', permissions: '2' });
+  it('orders hoisted groups by position, highest first', () => {
+    const zeta = makeRole({ id: 'r-z', name: 'zeta', is_hoisted: true, position: 1 });
+    const alpha = makeRole({ id: 'r-a', name: 'alpha', is_hoisted: true, position: 2 });
     const groups = buildMemberGroups(
       [makeMember({ userId: 'u-1', roles: [zeta] }), makeMember({ userId: 'u-2', roles: [alpha] })],
       true
@@ -132,6 +159,20 @@ describe('buildMemberGroups', () => {
     assert.deepEqual(
       groups.map((group) => group.title),
       ['alpha', 'zeta']
+    );
+  });
+
+  it('breaks equal positions alphabetically', () => {
+    const bb = makeRole({ id: 'r-bb', name: 'bb', is_hoisted: true, position: 5 });
+    const aa = makeRole({ id: 'r-aa', name: 'aa', is_hoisted: true, position: 5 });
+    const groups = buildMemberGroups(
+      [makeMember({ userId: 'u-1', roles: [bb] }), makeMember({ userId: 'u-2', roles: [aa] })],
+      true
+    );
+
+    assert.deepEqual(
+      groups.map((group) => group.title),
+      ['aa', 'bb']
     );
   });
 

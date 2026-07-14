@@ -13,11 +13,16 @@ import type { UserStatus } from '../shared/api/user';
 import { useGuilds } from '../shared/guilds/guild-store';
 import { useChannelReaders } from '../shared/guilds/use-channel-readers';
 import { useGuildMembers, type HydratedGuildMember } from '../shared/guilds/use-guild-members';
-import { countPermissionBits, rolePermissionBits } from '../shared/guilds/role-permissions';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
 import { useGroupMembersByRole } from '../shared/hooks/use-group-members-by-role';
 import { accentForId } from '../shared/lib/accent';
 import { useToast } from '../shared/ui/toast';
+
+export type GuildMemberRole = {
+  id: string;
+  name: string;
+  color: string | null;
+};
 
 export type GuildMember = {
   id: string;
@@ -26,6 +31,8 @@ export type GuildMember = {
   role: string;
   /** The highest role's color, used to tint the role token. */
   roleColor?: string | null;
+  /** All assigned (non-@everyone) roles, for the profile card. Absent for non-guild profiles (DMs). */
+  roles?: GuildMemberRole[];
   status: DirectMessage['status'];
   accent: ChatMessageData['accent'];
   activity: string;
@@ -59,6 +66,10 @@ export function toProfileMember(member: HydratedGuildMember): GuildMember {
     name: member.displayName,
     role: member.isOwner ? 'Owner' : (topRole?.name ?? 'Member'),
     roleColor: member.isOwner ? null : (topRole?.color ?? null),
+    // every assigned role (minus @everyone), so the profile card lists them all
+    roles: member.roles
+      .filter((role) => !role.is_default)
+      .map((role) => ({ id: role.id, name: role.name, color: role.color })),
     status: toSidebarStatus(member.status),
     accent: accentForId(member.userId),
     activity: member.joinedAt ? `Joined ${formatJoinedAt(member.joinedAt)}` : 'Member',
@@ -134,11 +145,28 @@ export type MemberGroup = {
   members: HydratedGuildMember[];
 };
 
-// The guild owner is pinned first in a dedicated "Owner" section no matter
-// what roles they hold. Everyone else sections under their top role (most
-// permissions first, matching the display priority of the roles themselves);
-// role-less members go last under "Members". With grouping off, everyone
-// merges into one alphabetical list.
+// A member's section is their highest HOISTED role (Discord's "Display role
+// members separately"); a role with hoisting off never creates a section, so
+// its members fall through to their next hoisted role or to "Members". Highest
+// = greatest position in the role hierarchy.
+function highestHoistedRole(member: HydratedGuildMember): GuildRoleDto | null {
+  let best: GuildRoleDto | null = null;
+  for (const role of member.roles) {
+    if (!role.is_hoisted || role.is_default) {
+      continue;
+    }
+    if (!best || role.position > best.position) {
+      best = role;
+    }
+  }
+  return best;
+}
+
+// The guild owner is pinned first in a dedicated "Owner" section no matter what
+// roles they hold. Everyone else sections under their highest hoisted role
+// (highest position first, matching the hierarchy); members with no hoisted
+// role go last under "Members". With grouping off, everyone merges into one
+// alphabetical list.
 export function buildMemberGroups(
   members: HydratedGuildMember[],
   groupByRole: boolean
@@ -161,9 +189,9 @@ export function buildMemberGroups(
       continue;
     }
 
-    const topRole = member.roles[0] ?? null;
-    const key = topRole?.id ?? 'members';
-    const group = groupsByRole.get(key) ?? { role: topRole, members: [] };
+    const hoisted = highestHoistedRole(member);
+    const key = hoisted?.id ?? 'members';
+    const group = groupsByRole.get(key) ?? { role: hoisted, members: [] };
     group.members.push(member);
     groupsByRole.set(key, group);
   }
@@ -173,14 +201,9 @@ export function buildMemberGroups(
       if (!a.role || !b.role) {
         return a.role ? -1 : b.role ? 1 : 0;
       }
-
-      const byPermissionCount =
-        countPermissionBits(rolePermissionBits(b.role)) -
-        countPermissionBits(rolePermissionBits(a.role));
-      if (byPermissionCount !== 0) {
-        return byPermissionCount;
+      if (a.role.position !== b.role.position) {
+        return b.role.position - a.role.position;
       }
-
       return a.role.name.localeCompare(b.role.name);
     })
     .map((group) => ({
