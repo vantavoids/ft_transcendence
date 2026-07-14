@@ -976,7 +976,7 @@ export function ChatWorkspace() {
           display_name: friend.name,
           status: friend.status,
           bio: null,
-          avatar_url: null,
+          avatar_url: friend.avatarUrl,
           banner_url: null
         }
       )
