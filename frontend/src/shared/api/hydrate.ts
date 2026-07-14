@@ -53,6 +53,7 @@ export function toFriend(friend: FriendDto): Friend {
     name: friend.display_name || friend.username,
     status: toSidebarStatus(friend.status),
     accent: accentForId(friend.id),
+    avatarUrl: friend.avatar_url ?? null,
     note: friend.friendship_status === 'pending' ? 'Pending request' : ''
   };
 }

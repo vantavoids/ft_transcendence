@@ -39,6 +39,7 @@ export type Friend = {
   name: string;
   status: DirectMessage['status'];
   accent: ChatMessageData['accent'];
+  avatarUrl: string | null;
   note: string;
 };
 
@@ -583,7 +584,12 @@ export function FriendsList({
                     onClick={() => onOpenProfile(friend)}
                     className="flex h-[4.25rem] w-full items-center gap-3 rounded-lg px-3 text-left text-grey-link transition hover:bg-frame/60 hover:text-white"
                   >
-                    <AvatarWithStatus name={friend.name} accent={friend.accent} status={friend.status} />
+                    <AvatarWithStatus
+                      name={friend.name}
+                      accent={friend.accent}
+                      status={friend.status}
+                      avatarUrl={friend.avatarUrl}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[1rem] font-bold">{friend.name}</span>
                       <span className="mt-0.5 block truncate text-sm text-white/35">
