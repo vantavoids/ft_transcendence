@@ -126,7 +126,7 @@ export function ProfileCard({
             status={member.status}
             avatarUrl={member.avatarUrl ?? undefined}
           />
-          <div className="mb-2 flex max-w-[11rem] flex-col items-end gap-2" ref={actionsRef}>
+          <div className="mb-2 flex max-w-[11rem] items-center gap-2" ref={actionsRef}>
             <span
               className="font-category truncate rounded-full border border-stroke bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
               style={
@@ -143,7 +143,7 @@ export function ProfileCard({
               {badgeLabel}
             </span>
             {!isOwnProfile && (onAddFriend || onBlock) ? (
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsActionsOpen((open) => !open)}
