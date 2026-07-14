@@ -57,9 +57,23 @@ function formatJoinedAt(joinedAt: string) {
     : date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// The member's "top" role for display (name badge / color): the highest by
+// hierarchy position, so assigning a higher role promotes the badge to it.
+export function topRoleByPosition(roles: GuildRoleDto[]): GuildRoleDto | null {
+  let top: GuildRoleDto | null = null;
+  for (const role of roles) {
+    if (role.is_default) {
+      continue;
+    }
+    if (!top || role.position > top.position) {
+      top = role;
+    }
+  }
+  return top;
+}
+
 export function toProfileMember(member: HydratedGuildMember): GuildMember {
-  // roles come sorted by display priority, so [0] is the highest role
-  const topRole = member.roles[0] ?? null;
+  const topRole = topRoleByPosition(member.roles);
 
   return {
     id: member.userId,

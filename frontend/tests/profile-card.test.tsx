@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ProfileCard } from '../src/components/profile-card';
+import { ProfileCard, type ProfileRoleManagement } from '../src/components/profile-card';
 import type { GuildMember } from '../src/components/guild-member-list';
+import type { HydratedGuildMember } from '../src/shared/guilds/use-guild-members';
+import { PERMISSIONS } from '../src/shared/guilds/role-permissions';
 
 const member: GuildMember = {
   id: '123',
@@ -78,5 +80,50 @@ describe('ProfileCard', () => {
     const html = renderToStaticMarkup(<ProfileCard member={member} onClose={() => undefined} />);
 
     assert.ok(!html.includes('Roles'));
+  });
+
+  it('offers a Manage control and live roles when the viewer can manage roles', () => {
+    const liveMember: HydratedGuildMember = {
+      userId: '123',
+      displayName: 'SkyDogzz',
+      username: 'skydogzz',
+      avatarUrl: null,
+      bannerUrl: null,
+      bio: null,
+      nickname: null,
+      status: 'online',
+      roles: [
+        {
+          id: 'r-live',
+          guild_id: 'g-1',
+          name: 'LiveRole',
+          color: '#78dce8',
+          permissions: '0',
+          position: 3,
+          is_hoisted: false,
+          is_mentionable: false,
+          is_default: false
+        }
+      ],
+      joinedAt: '2026-07-11T00:00:00Z',
+      isOwner: false,
+      isDeleted: false
+    };
+
+    const roleManagement: ProfileRoleManagement = {
+      guildId: 'g-1',
+      member: liveMember,
+      roles: liveMember.roles,
+      caller: { rank: 10, permissions: PERMISSIONS.ManageRoles, isOwner: false },
+      onChanged: () => undefined
+    };
+
+    const html = renderToStaticMarkup(
+      <ProfileCard member={member} roleManagement={roleManagement} onClose={() => undefined} />
+    );
+
+    // read-only chip reflects the live guild-member roles, and a Manage toggle appears
+    assert.ok(html.includes('>LiveRole</span>'));
+    assert.ok(html.includes('Manage'));
   });
 });

@@ -1,13 +1,29 @@
 'use client';
 
+import { useState } from 'react';
 import { MessageCircle, Shield, Trophy, UserMinus, X } from 'lucide-react';
 import { AvatarWithStatus } from './avatar-with-status';
-import type { GuildMember } from './guild-member-list';
+import { topRoleByPosition, type GuildMember, type GuildMemberRole } from './guild-member-list';
+import { RoleToggleList } from './guild/member-roles-popover';
+import type { GuildRoleDto } from '../shared/api/guild';
+import type { RoleCaller } from '../shared/guilds/role-permissions';
+import type { HydratedGuildMember } from '../shared/guilds/use-guild-members';
 import { useCloseOnEscape } from '../shared/hooks/use-close-on-escape';
+
+// When present, the caller may assign/unassign roles on this member from the
+// card. Only supplied for guild members whose viewer holds MANAGE_ROLES.
+export type ProfileRoleManagement = {
+  guildId: string;
+  member: HydratedGuildMember;
+  roles: GuildRoleDto[];
+  caller: RoleCaller;
+  onChanged: () => void;
+};
 
 type ProfileCardProps = {
   member: GuildMember;
   variant?: 'modal' | 'side';
+  roleManagement?: ProfileRoleManagement;
   onClose: () => void;
   onSendMessage?: (member: GuildMember) => void;
   onUnfriend?: (member: GuildMember) => void;
@@ -16,11 +32,34 @@ type ProfileCardProps = {
 export function ProfileCard({
   member,
   variant = 'modal',
+  roleManagement,
   onClose,
   onSendMessage,
   onUnfriend
 }: ProfileCardProps) {
   useCloseOnEscape(onClose);
+  const [isEditingRoles, setIsEditingRoles] = useState(false);
+
+  // when the caller can manage roles, derive from the live guild member so the
+  // chips AND the top-role badge stay in sync as roles are toggled; otherwise
+  // fall back to the snapshot captured when the card opened.
+  const liveMember = roleManagement?.member ?? null;
+
+  const displayedRoles: GuildMemberRole[] = liveMember
+    ? liveMember.roles
+        .filter((role) => !role.is_default)
+        .map((role) => ({ id: role.id, name: role.name, color: role.color }))
+    : (member.roles ?? []);
+
+  // badge tracks the live highest role (by hierarchy) when managing, so putting a
+  // higher role on the member promotes the tag immediately; snapshot otherwise.
+  const topRole = liveMember ? topRoleByPosition(liveMember.roles) : null;
+  const badgeLabel = liveMember
+    ? liveMember.isOwner
+      ? 'Owner'
+      : (topRole?.name ?? 'Member')
+    : member.role;
+  const badgeColor = liveMember ? (liveMember.isOwner ? null : (topRole?.color ?? null)) : member.roleColor;
 
   const card = (
     <section
@@ -61,17 +100,17 @@ export function ProfileCard({
           <span
             className="font-category mb-2 max-w-[11rem] truncate rounded-full border border-stroke bg-panel px-3 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-white/45"
             style={
-              member.roleColor
+              badgeColor
                 ? {
-                    color: member.roleColor,
-                    borderColor: `${member.roleColor}59`,
-                    backgroundColor: `${member.roleColor}1a`
+                    color: badgeColor,
+                    borderColor: `${badgeColor}59`,
+                    backgroundColor: `${badgeColor}1a`
                   }
                 : undefined
             }
-            title={member.role}
+            title={badgeLabel}
           >
-            {member.role}
+            {badgeLabel}
           </span>
         </div>
 
@@ -91,25 +130,55 @@ export function ProfileCard({
           </p>
         </div>
 
-        {member.roles && member.roles.length > 0 ? (
+        {displayedRoles.length > 0 || roleManagement ? (
           <div className="mt-4 rounded-md border border-stroke bg-panel px-3 py-3">
-            <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
-              Roles
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {member.roles.map((role) => (
-                <span
-                  key={role.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-stroke bg-frame px-2 py-0.5 text-[0.72rem] font-semibold text-white/70"
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-category text-[0.68rem] uppercase tracking-[0.14em] text-white/35">
+                Roles
+              </p>
+              {roleManagement ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingRoles((open) => !open)}
+                  className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-white/50 transition hover:bg-frame hover:text-white"
+                  aria-label="Manage roles"
                 >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: role.color || '#8b8b8f' }}
-                  />
-                  {role.name}
-                </span>
-              ))}
+                  <Shield className="h-3.5 w-3.5 text-aqua" strokeWidth={1.9} />
+                  {isEditingRoles ? 'Done' : 'Manage'}
+                </button>
+              ) : null}
             </div>
+
+            {displayedRoles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {displayedRoles.map((role) => (
+                  <span
+                    key={role.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stroke bg-frame px-2 py-0.5 text-[0.72rem] font-semibold text-white/70"
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: role.color || '#8b8b8f' }}
+                    />
+                    {role.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-white/35">No roles assigned.</p>
+            )}
+
+            {roleManagement && isEditingRoles ? (
+              <div className="mt-3 border-t border-stroke pt-3">
+                <RoleToggleList
+                  guildId={roleManagement.guildId}
+                  member={roleManagement.member}
+                  roles={roleManagement.roles}
+                  caller={roleManagement.caller}
+                  onChanged={roleManagement.onChanged}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
 
