@@ -33,6 +33,23 @@ describe('chat mappers', () => {
     const mapped = mapChannelMessage(dto, null, usersById);
 
     assert.equal(mapped.author, 'TStephan');
+    assert.equal(mapped.avatarUrl, 'https://cdn.example/avatar.png');
+  });
+
+  it('leaves avatarUrl null when the author profile is not loaded', () => {
+    const dto: ChannelMessageDto = {
+      id: 'm3',
+      channel_id: 'c1',
+      author_id: 'unknown',
+      content: 'hello',
+      reply_to_id: null,
+      edited_at: null,
+      created_at: '2026-07-11T00:00:00Z',
+      attachments: [],
+      reactions: []
+    };
+
+    assert.equal(mapChannelMessage(dto, null, usersById).avatarUrl, null);
   });
 
   it('hydrates direct message authors and conversations from user profiles', () => {
@@ -54,6 +71,7 @@ describe('chat mappers', () => {
     };
 
     assert.equal(mapDirectMessage(message, null, usersById).author, 'TStephan');
+    assert.equal(mapDirectMessage(message, null, usersById).avatarUrl, 'https://cdn.example/avatar.png');
     assert.equal(mapDirectMessageConversation(conversation, usersById).name, 'TStephan');
   });
 });

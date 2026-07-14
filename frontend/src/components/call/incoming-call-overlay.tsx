@@ -2,30 +2,41 @@
 
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { useCall } from '../../shared/call/call-context';
+import type { CallPeer } from './call-window';
 
 type IncomingCallOverlayProps = {
-  // resolve a peer user id to a display name (mock DMs / guild members for now)
-  resolvePeerName?: (peerId: string | null) => string;
+  // resolve a peer user id to their display name + avatar (guild member or DM)
+  resolvePeer?: (peerId: string | null) => CallPeer;
 };
 
-export function IncomingCallOverlay({ resolvePeerName }: IncomingCallOverlayProps) {
+export function IncomingCallOverlay({ resolvePeer }: IncomingCallOverlayProps) {
   const { state, acceptCall, rejectCall } = useCall();
 
   if (state.status !== 'incoming') {
     return null;
   }
 
-  const peerName = resolvePeerName?.(state.peerId) ?? 'Unknown user';
+  const peer = resolvePeer?.(state.peerId) ?? { name: 'Unknown user', avatarUrl: null };
   const isVideo = state.callType === 'video';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6">
       <section className="relative w-full max-w-[24rem] overflow-hidden rounded-[1rem] bg-secondary-bg p-6 text-center shadow-2xl shadow-black/50 ring-1 ring-stroke">
-        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-aqua/10 text-2xl font-bold text-aqua ring-1 ring-aqua/30">
-          {peerName.slice(0, 1).toUpperCase()}
+        <span className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-aqua/10 text-2xl font-bold text-aqua ring-1 ring-aqua/30">
+          {peer.avatarUrl ? (
+            <img
+              src={peer.avatarUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            peer.name.slice(0, 1).toUpperCase()
+          )}
         </span>
         <h2 className="mt-4 truncate text-[1.35rem] font-bold tracking-[-0.03em] text-white">
-          {peerName}
+          {peer.name}
         </h2>
         <p className="font-category mt-1 flex items-center justify-center gap-2 text-[0.72rem] uppercase tracking-[0.14em] text-white/40">
           <span className="inline-flex h-4 w-4 items-center justify-center">

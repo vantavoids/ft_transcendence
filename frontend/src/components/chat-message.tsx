@@ -36,6 +36,10 @@ export type ChatMessageData = {
   authorId?: string;
   author: string;
   accent: 'aqua' | 'yellow' | 'lime' | 'lavender' | 'pink';
+  // the author's avatar image; falls back to the accent initial when absent
+  avatarUrl?: string | null;
+  // in a guild, the author's top role colour to tint their name; absent = white
+  nameColor?: string | null;
   content: string[];
   timestamp: string;
   // ISO created_at, needed for before_time pagination cursors; absent for mocked messages
@@ -95,21 +99,6 @@ export function getAccentClasses(accent: ChatMessageData['accent']) {
       return 'bg-lavender text-primary-bg';
     default:
       return 'bg-pink text-primary-bg';
-  }
-}
-
-export function getAccentText(accent: ChatMessageData['accent']) {
-  switch (accent) {
-    case 'lime':
-      return 'text-lime';
-    case 'aqua':
-      return 'text-aqua';
-    case 'yellow':
-      return 'text-yellow';
-    case 'lavender':
-      return 'text-lavender';
-    default:
-      return 'text-pink';
   }
 }
 
@@ -242,12 +231,24 @@ export function ChatMessage({
         <button
           type="button"
           onClick={() => onOpenAuthorProfile?.(message)}
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${getAccentClasses(
-            message.accent
-          )} ${onOpenAuthorProfile ? 'transition hover:scale-105 hover:ring-2 hover:ring-stroke-strong' : ''}`}
+          className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-semibold ${
+            message.avatarUrl ? '' : getAccentClasses(message.accent)
+          } ${onOpenAuthorProfile ? 'transition hover:scale-105 hover:ring-2 hover:ring-stroke-strong' : ''}`}
           aria-label={`Open ${message.author} profile`}
         >
-          {message.author.slice(0, 1).toUpperCase()}
+          {message.avatarUrl ? (
+            <img
+              src={message.avatarUrl}
+              alt=""
+              width={48}
+              height={48}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            message.author.slice(0, 1).toUpperCase()
+          )}
         </button>
       )}
 
@@ -255,7 +256,8 @@ export function ChatMessage({
         {isGrouped ? null : (
           <div className="flex items-end gap-3">
             <h3
-              className={`text-[1.5rem] font-bold tracking-[-0.06em] ${getAccentText(message.accent)}`}
+              className="text-[1.5rem] font-bold tracking-[-0.06em] text-white"
+              style={message.nameColor ? { color: message.nameColor } : undefined}
             >
               {message.author}
             </h3>
